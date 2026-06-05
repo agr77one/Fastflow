@@ -1,0 +1,302 @@
+; ============================================================================
+;  Flowkey installer (Inno Setup 6.x)
+;
+;  Compile with:
+;     iscc installer.iss
+;
+;  Or via the build script:
+;     .\build_installer.ps1 -BundleAhk -BundleFlm
+;     (then run iscc — see step 6 in that script)
+;
+;  Produces:
+;     out\FastFlowPrompt-Setup-<version>.exe
+;
+;  Layout written to disk:
+;     {app}\                            Program Files\FastFlowPrompt (read-only)
+;       Flowkey\                 PyInstaller onedir bundle
+;         ffp-daemon.exe
+;         ffp-grammar-fix.exe
+;         ffp-chat.exe
+;         ffp-first-run.exe
+;         _internal\
+;         setup\defaults\
+;       ahk\
+;         AutoHotkey64.exe
+;         LICENSE.txt
+;       scripts\                        AHK source (consumed at runtime)
+;         grammarFix.ahk
+;         lib\*.ahk
+;         ui\*.ahk
+;       LICENSE.txt
+;       README.md
+;
+;     %LOCALAPPDATA%\FastFlowPrompt\    per-user writable state (created on first run)
+;       config\
+;       data\
+;       logs\
+;
+;  Per-machine, admin-required, x64 only.
+; ============================================================================
+
+#define AppName       "Flowkey"
+#define AppPublisher  "Flowkey"
+#define AppURL        "https://github.com/ORG/fastflowprompt"
+#define AppExeName    "Flowkey.exe"  ; symbolic — actual launchers below
+; Pulled from scripts\_version.py by build_installer.ps1, but Inno itself
+; needs a literal. Bump here in lockstep with _version.py for v1.4.0+.
+#define AppVersion    "1.4.0"
+
+[Setup]
+AppId={{8A4F1E6C-9B3D-4E62-9F7A-FASTFLOW140}}
+AppName={#AppName}
+AppVersion={#AppVersion}
+AppPublisher={#AppPublisher}
+AppPublisherURL={#AppURL}
+AppSupportURL={#AppURL}/issues
+AppUpdatesURL={#AppURL}/releases
+DefaultDirName={commonpf}\{#AppName}
+DefaultGroupName={#AppName}
+DisableProgramGroupPage=yes
+OutputDir=out
+OutputBaseFilename=Flowkey-Setup-{#AppVersion}
+PrivilegesRequired=admin
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
+Compression=lzma2/max
+SolidCompression=yes
+WizardStyle=modern
+SetupIconFile=setup\logo.ico
+UninstallDisplayIcon={app}\FastFlowPrompt\ffp-daemon.exe
+UninstallDisplayName={#AppName} {#AppVersion}
+CloseApplications=force
+RestartApplications=no
+MinVersion=10.0.17763  ; Windows 10 1809+ (NPU drivers need 22H2 anyway)
+
+[Languages]
+Name: "english"; MessagesFile: "compiler:Default.isl"
+
+[Tasks]
+Name: "autostart";    Description: "Launch {#AppName} when Windows starts (all users)"; \
+                      GroupDescription: "Additional options:"
+Name: "desktopicon";  Description: "Create a desktop shortcut"; \
+                      GroupDescription: "Additional options:"; Flags: unchecked
+
+[Files]
+; --- PyInstaller bundle ---------------------------------------------------------
+Source: "dist\FastFlowPrompt\*"; DestDir: "{app}\FastFlowPrompt"; \
+  Flags: ignoreversion recursesubdirs createallsubdirs
+
+; --- AHK runtime ---------------------------------------------------------------
+Source: "vendor\ahk\AutoHotkey64.exe"; DestDir: "{app}\ahk"; Flags: ignoreversion
+Source: "vendor\ahk\LICENSE.txt";      DestDir: "{app}\ahk"; Flags: ignoreversion skipifsourcedoesntexist
+
+; --- AHK source scripts --------------------------------------------------------
+Source: "scripts\grammarFix.ahk"; DestDir: "{app}\scripts";        Flags: ignoreversion
+Source: "scripts\lib\*";          DestDir: "{app}\scripts\lib";    Flags: ignoreversion recursesubdirs
+Source: "scripts\ui\*";           DestDir: "{app}\scripts\ui";     Flags: ignoreversion recursesubdirs
+
+; --- Docs ---------------------------------------------------------------------
+Source: "LICENSE";   DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist; DestName: "LICENSE.txt"
+Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
+
+; --- FLM chained installer (extracted to tmp, run during install, then deleted)
+Source: "vendor\flm\flm-setup.exe"; DestDir: "{tmp}"; \
+  Flags: deleteafterinstall ignoreversion skipifsourcedoesntexist; Check: NeedsFLM
+
+[Run]
+; --- 1. Chain FLM install (skipped if FLM already on this machine) ------------
+Filename: "{tmp}\flm-setup.exe"; \
+  Parameters: "/VERYSILENT /SUPPRESSMSGBOXES /NOCANCEL /NORESTART /SP- /NOICONS /CLOSEAPPLICATIONS /FORCECLOSEAPPLICATIONS /LANG=english /LOG=""{tmp}\flm-install.log"""; \
+  StatusMsg: "Installing FastFlowLM runtime (~170 MB)..."; \
+  Check: NeedsFLM; \
+  Flags: waituntilterminated
+
+; --- 2. Mark that WE installed FLM (so uninstaller can clean it up later) -----
+;     Pascal code drops {app}\.flm_installed_by_us via CurStepChanged.
+;     See [Code] section below.
+
+; --- 3. Optional: launch first-run wizard right after install -----------------
+Filename: "{app}\FastFlowPrompt\ffp-first-run.exe"; \
+  Description: "Run the {#AppName} setup wizard"; \
+  Flags: postinstall nowait skipifsilent
+
+[Icons]
+Name: "{commonprograms}\{#AppName}";          Filename: "{app}\ahk\AutoHotkey64.exe"; \
+  Parameters: """{app}\scripts\grammarFix.ahk"""; WorkingDir: "{app}"; \
+  IconFilename: "{app}\FastFlowPrompt\ffp-daemon.exe"
+Name: "{commonprograms}\{#AppName} Dashboard"; Filename: "{app}\ahk\AutoHotkey64.exe"; \
+  Parameters: """{app}\scripts\grammarFix.ahk"" /dashboard"; WorkingDir: "{app}"; \
+  IconFilename: "{app}\FastFlowPrompt\ffp-daemon.exe"
+Name: "{commonprograms}\Uninstall {#AppName}"; Filename: "{uninstallexe}"
+Name: "{commondesktop}\{#AppName}";            Filename: "{app}\ahk\AutoHotkey64.exe"; \
+  Parameters: """{app}\scripts\grammarFix.ahk"""; WorkingDir: "{app}"; \
+  IconFilename: "{app}\FastFlowPrompt\ffp-daemon.exe"; Tasks: desktopicon
+
+[Registry]
+; --- Autostart (per-machine HKLM Run) — controlled by the autostart task -----
+Root: HKLM; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; \
+  ValueType: string; ValueName: "{#AppName}"; \
+  ValueData: """{app}\ahk\AutoHotkey64.exe"" ""{app}\scripts\grammarFix.ahk"""; \
+  Flags: uninsdeletevalue; Tasks: autostart
+
+[UninstallRun]
+; --- 1. Stop our processes before removing files -----------------------------
+;     CloseApplications=force handles in-use files but a windowless daemon
+;     won't always trip the close-apps prompt. Kill explicitly.
+Filename: "{sys}\taskkill.exe"; Parameters: "/F /IM ffp-daemon.exe /T"; \
+  RunOnceId: "KillDaemon"; Flags: runhidden waituntilterminated
+Filename: "{sys}\taskkill.exe"; Parameters: "/F /IM ffp-chat.exe /T"; \
+  RunOnceId: "KillChat"; Flags: runhidden waituntilterminated
+Filename: "{sys}\taskkill.exe"; \
+  Parameters: "/F /IM AutoHotkey64.exe /FI ""WINDOWTITLE eq grammarFix*"""; \
+  RunOnceId: "KillAhk"; Flags: runhidden waituntilterminated
+
+; --- 2. Chain FLM uninstaller — but ONLY if we installed it ------------------
+;     We tagged it with {app}\.flm_installed_by_us. Pascal helper reads the
+;     QuietUninstallString out of the registry and runs it silently.
+Filename: "{cmd}"; Parameters: "/c if exist ""{app}\.flm_installed_by_us"" call ""{code:FlmUninstallCmd}"""; \
+  RunOnceId: "FlmUninstallChain"; Flags: runhidden waituntilterminated
+
+[UninstallDelete]
+; Files the user can't easily clean by themselves. The user-data wipe (under
+; %LOCALAPPDATA%\FastFlowPrompt) is handled by CurUninstallStepChanged below,
+; behind an opt-in prompt — never wipe by default.
+Type: files;          Name: "{app}\.flm_installed_by_us"
+Type: filesandordirs; Name: "{app}\dist"
+Type: dirifempty;     Name: "{app}\ahk"
+Type: dirifempty;     Name: "{app}\scripts\lib"
+Type: dirifempty;     Name: "{app}\scripts\ui"
+Type: dirifempty;     Name: "{app}\scripts"
+Type: dirifempty;     Name: "{app}"
+
+; ============================================================================
+; [Code] — Pascal helpers
+; ============================================================================
+[Code]
+
+const
+  FLM_REG_PREFIX = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\flm version ';
+
+{ True if no FLM uninstall key is found AND no flm.exe exists in PF\FastFlowLM. }
+function NeedsFLM(): Boolean;
+var
+  Names: TArrayOfString;
+  i: Integer;
+  Dummy: String;
+begin
+  Result := True;
+
+  { Scan 32-bit uninstall hive for any 'flm version *' subkey. }
+  if RegGetSubkeyNames(HKLM, 'Software\Microsoft\Windows\CurrentVersion\Uninstall', Names) then
+  begin
+    for i := 0 to GetArrayLength(Names) - 1 do
+    begin
+      if Pos('flm version ', Names[i]) = 1 then
+      begin
+        Result := False;
+        Exit;
+      end;
+    end;
+  end;
+
+  { Fallback: probe the default install path. }
+  if FileExists(ExpandConstant('{commonpf}\FastFlowLM\flm.exe')) then
+    Result := False;
+
+  { Avoid 'Dummy unused' warning. }
+  Dummy := '';
+end;
+
+{ Locate the FLM QuietUninstallString from the 32-bit Uninstall hive.
+  Returns a cmd-runnable string, or '' if FLM isn't registered. }
+function FlmUninstallCmd(Param: String): String;
+var
+  Names: TArrayOfString;
+  i: Integer;
+  KeyPath, Quiet: String;
+begin
+  Result := 'echo FLM not registered';
+  if not RegGetSubkeyNames(HKLM, 'Software\Microsoft\Windows\CurrentVersion\Uninstall', Names) then
+    Exit;
+  for i := 0 to GetArrayLength(Names) - 1 do
+  begin
+    if Pos('flm version ', Names[i]) = 1 then
+    begin
+      KeyPath := 'Software\Microsoft\Windows\CurrentVersion\Uninstall\' + Names[i];
+      if RegQueryStringValue(HKLM, KeyPath, 'QuietUninstallString', Quiet) then
+      begin
+        Result := Quiet;
+        Exit;
+      end;
+    end;
+  end;
+end;
+
+{ After the FLM /VERYSILENT step finishes, drop a marker file so the
+  uninstaller knows we're responsible for chaining its removal. }
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  MarkerPath: String;
+begin
+  if CurStep = ssPostInstall then
+  begin
+    if NeedsFLM() then
+    begin
+      { This branch shouldn't fire — FLM should now BE installed because
+        the [Run] step ran. But if NeedsFLM still returns true here, FLM
+        install failed silently. Surface that. }
+      Log('WARNING: FLM still missing after install step.');
+    end
+    else
+    begin
+      MarkerPath := ExpandConstant('{app}\.flm_installed_by_us');
+      { Only write the marker if FLM wasn't there before we ran (NeedsFLM
+        was true pre-install — that case is captured by [Files] running
+        the FLM installer conditionally). If a marker already exists from
+        a prior install, leave it. }
+      if not FileExists(MarkerPath) then
+        SaveStringToFile(MarkerPath, 'Flowkey installed FLM', False);
+    end;
+  end;
+end;
+
+{ Resolve %LOCALAPPDATA%\FastFlowPrompt for the user running the uninstaller. }
+function UserDataDir(): String;
+begin
+  Result := ExpandConstant('{localappdata}') + '\FastFlowPrompt';
+end;
+
+{ During uninstall: ask whether to wipe per-user config/data/logs, then act.
+  Runs AFTER files in {app} are removed but BEFORE the uninstaller exits, so
+  the prompt isn't competing with file-in-use errors. }
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  Wipe: Integer;
+  Target: String;
+begin
+  if CurUninstallStep = usPostUninstall then
+  begin
+    Target := UserDataDir();
+    if not DirExists(Target) then
+      Exit;
+    Wipe := MsgBox(
+      'Remove your Flowkey config, notes, and logs?' + #13#10 + #13#10 +
+      Target + #13#10 + #13#10 +
+      'Click Yes to wipe everything. Click No to keep your data — ' +
+      'a future install will pick up where you left off.',
+      mbConfirmation,
+      MB_YESNO or MB_DEFBUTTON2
+    );
+    if Wipe = IDYES then
+    begin
+      if DelTree(Target, True, True, True) then
+        Log('User data removed: ' + Target)
+      else
+        Log('Failed to remove some files under: ' + Target);
+    end
+    else
+    begin
+      Log('User data kept: ' + Target);
+    end;
+  end;
+end;

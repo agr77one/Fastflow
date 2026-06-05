@@ -1,0 +1,104 @@
+# Flowkey — installable as a wheel.
+#
+#   pip install ./release                # production
+#   pip install -e ./release             # editable, for development
+#   python -m build --wheel ./release    # produces dist/fastflowprompt-X.Y.Z-py3-none-any.whl
+#
+# After install, two console scripts land in your PATH (or .venv\Scripts\):
+#   ffp-daemon       - long-running action daemon (started by AHK on app launch)
+#   ffp-grammar-fix  - CLI entry point used by AHK for grammar/prompt processing
+#
+# Currently stdlib-only. The `optional-dependencies` table is reserved for
+# future native-toast / WinRT additions.
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fastflowprompt"
+version = "1.5.0"
+description = "Local-LLM-powered grammar fix, prompt rewrite, chat, and dashboard for Windows."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+    { name = "Arseniy Grechenkov" },
+]
+keywords = ["llm", "grammar", "hotkey", "autohotkey", "fastflowlm", "local-ai"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Win32 (MS Windows)",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows :: Windows 10",
+    "Operating System :: Microsoft :: Windows :: Windows 11",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Text Processing :: Linguistic",
+    "Topic :: Utilities",
+]
+
+# Runtime deps — stdlib-only today. Add here when a real dep is needed.
+dependencies = []
+
+[project.optional-dependencies]
+# Reserved for a future native-toast backend.
+toast = []
+# Cleaner article-body extraction when capturing URL notes. Optional —
+# notes.py falls back to a stdlib HTMLParser when trafilatura is missing.
+readability = ["trafilatura>=1.8"]
+# Dev tooling for contributors.
+dev = [
+    "build>=1.0",
+    "ruff>=0.4",
+    "pytest>=7",
+]
+
+[project.urls]
+Homepage = "https://github.com/ORG/fastflowprompt"
+Issues = "https://github.com/ORG/fastflowprompt/issues"
+
+[project.scripts]
+ffp-daemon = "ffp_daemon:main"
+ffp-grammar-fix = "grammar_fix:main"
+ffp-chat = "chat_popup:main"
+ffp-first-run = "first_run:main"
+ffp-install = "install:main"
+
+# Flat module layout (not a package). Each .py file under scripts/ is installed
+# as a top-level module so the existing `HERE = Path(__file__).resolve().parent`
+# pattern keeps working when the install is editable (pip install -e .).
+
+[tool.setuptools]
+package-dir = { "" = "scripts" }
+py-modules = [
+    "_version",
+    "ffp_config",
+    "ffp_flm_server",
+    "ffp_llm_client",
+    "ffp_telemetry",
+    "ffp_updater",
+    "loopback_http",
+    "paths",
+    "grammar_fix",
+    "chat_popup",
+    "ffp_daemon",
+    "first_run",
+    "install",
+    "notes",
+    "subprocess_util",
+]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP"]
+ignore = [
+    "E501",  # line too long — many JSON/regex literals; not worth wrapping
+]
+

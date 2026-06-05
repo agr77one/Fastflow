@@ -1,0 +1,121 @@
+name: Build & release installer
+
+on:
+  push:
+    tags:
+      - 'v*'           # e.g. v1.4.0
+  workflow_dispatch:    # manual runs from the Actions tab
+    inputs:
+      tag:
+        description: 'Tag to attach the build to (defaults to current ref name)'
+        required: false
+        type: string
+
+jobs:
+  build-windows:
+    name: Build installer (windows-latest)
+    runs-on: windows-latest
+    permissions:
+      contents: write    # needed to upload to a GH Release
+    env:
+      # Self-signed cert material — see secrets setup in installer/README.md.
+      # FFP_SIGN_PFX_B64  : base64-encoded .pfx contents
+      # FFP_SIGN_PFX_PASSWORD : the .pfx password
+      FFP_SIGN_PFX_B64:      ${{ secrets.FFP_SIGN_PFX_B64 }}
+      FFP_SIGN_PFX_PASSWORD: ${{ secrets.FFP_SIGN_PFX_PASSWORD }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve version from _version.py
+        id: ver
+        shell: pwsh
+        run: |
+          $verLine = Select-String -Path release\scripts\_version.py -Pattern '__version__\s*=\s*"([0-9.]+)"' | Select-Object -First 1
+          if (-not $verLine) { throw "Could not parse version" }
+          $v = $verLine.Matches[0].Groups[1].Value
+          "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "Detected version: $v"
+
+      - name: Setup Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+
+      - name: Install Python build deps
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller build
+
+      - name: Install Inno Setup 6
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress -y
+          # iscc lands under "C:\Program Files (x86)\Inno Setup 6\". Add to GITHUB_PATH.
+          "$env:ProgramFiles (x86)\Inno Setup 6" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+          # Re-add quoted form (PowerShell variable expansion safety).
+          "${env:ProgramFiles(x86)}\Inno Setup 6" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+
+      - name: Decode signing cert
+        if: env.FFP_SIGN_PFX_B64 != ''
+        shell: pwsh
+        run: |
+          $certDir = "release\installer\certs"
+          if (-not (Test-Path $certDir)) { New-Item -ItemType Directory -Path $certDir -Force | Out-Null }
+          [IO.File]::WriteAllBytes(
+            "$certDir\fastflowprompt.pfx",
+            [Convert]::FromBase64String($env:FFP_SIGN_PFX_B64)
+          )
+          "Wrote $certDir\fastflowprompt.pfx"
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $sign = $env:FFP_SIGN_PFX_B64 -ne $null -and $env:FFP_SIGN_PFX_B64 -ne ''
+          if ($sign) {
+            .\release\installer\build.ps1 -BundleAhk -BundleFlm -Sign
+          } else {
+            Write-Warning "FFP_SIGN_PFX_B64 secret not set — building unsigned."
+            .\release\installer\build.ps1 -BundleAhk -BundleFlm
+          }
+
+      - name: Smoke check output exists
+        shell: pwsh
+        run: |
+          $v = "${{ steps.ver.outputs.version }}"
+          $exe = "release\out\FastFlowPrompt-Setup-$v.exe"
+          if (-not (Test-Path $exe)) { throw "Missing $exe" }
+          $sizeMb = [math]::Round(((Get-Item $exe).Length/1MB),1)
+          "Built: $exe ($sizeMb MB)"
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Flowkey-Setup-${{ steps.ver.outputs.version }}
+          path: release/out/FastFlowPrompt-Setup-${{ steps.ver.outputs.version }}.exe
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Create or update GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/out/FastFlowPrompt-Setup-${{ steps.ver.outputs.version }}.exe
+            release/installer/certs/fastflowprompt.cer
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          body: |
+            Flowkey ${{ steps.ver.outputs.version }} — see [CHANGELOG.md](release/CHANGELOG.md) for the full diff.
+
+            **Install:** download `Flowkey-Setup-${{ steps.ver.outputs.version }}.exe` and double-click.
+
+            **Hardware:** AMD Ryzen AI NPU required (Ryzen 7000-series + or any Lenovo 350 AI laptop class).
+
+            **SmartScreen:** the installer is self-signed. First-run shows _"Windows protected your PC"_ → click _More info → Run anyway_. To silence permanently, download `fastflowprompt.cer` and import to Trusted Publishers (admin).
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

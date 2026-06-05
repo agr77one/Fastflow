@@ -1,0 +1,99 @@
+name: ci
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    name: Python ${{ matrix.python }}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install package and dev tools
+        shell: pwsh
+        run: python -m pip install -e "./release[dev]"
+
+      - name: AST validate Python scripts
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem -Path release/scripts -Filter *.py -File
+          foreach ($f in $files) {
+            python -c "import ast; ast.parse(open(r'$($f.FullName)', encoding='utf-8').read()); print('OK $($f.Name)')"
+          }
+
+      - name: Validate JSON configs
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem -Path release/config -Filter *.json -File
+          foreach ($f in $files) {
+            python -c "import json; json.load(open(r'$($f.FullName)', encoding='utf-8')); print('OK $($f.Name)')"
+          }
+
+      - name: Ruff
+        shell: pwsh
+        run: ruff check release/scripts release/tests
+
+      - name: Pytest
+        shell: pwsh
+        run: pytest release/tests -q
+
+  ahk:
+    name: AutoHotkey syntax check
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install AutoHotkey v2
+        shell: pwsh
+        run: choco install autohotkey --version=2.0.11 -y --no-progress
+      - name: Validate AutoHotkey scripts (brace balance, all .ahk)
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem -Path release/scripts -Recurse -Filter *.ahk -File
+          $failed = $false
+          foreach ($f in $files) {
+            $script = Get-Content -Raw $f.FullName
+            $noComments = ($script -split "`n" | ForEach-Object { $_ -replace ';.*$','' }) -join "`n"
+            $noStrings = $noComments -replace '"[^"\n]*"','' -replace "'[^'\n]*'", ''
+            $opens = ($noStrings.ToCharArray() | Where-Object { $_ -eq '{' }).Count
+            $closes = ($noStrings.ToCharArray() | Where-Object { $_ -eq '}' }).Count
+            if ($opens -ne $closes) { Write-Host "FAIL $($f.Name): braces $opens / $closes"; $failed = $true }
+            else { Write-Host "OK   $($f.Name): braces $opens / $closes" }
+          }
+          if ($failed) { Write-Error "Brace mismatch in one or more .ahk files"; exit 1 }
+      - name: Parse-check whole include tree
+        shell: pwsh
+        run: |
+          $ahk = Get-ChildItem -Path "C:\Program Files\AutoHotkey" -Recurse -Filter AutoHotkey64.exe -File -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $ahk) { Write-Host "AutoHotkey64.exe not found; skipping parse-check"; exit 0 }
+          $stub = Join-Path $env:RUNNER_TEMP "_ci_syntaxcheck.ahk"
+          # ExitApp(0) runs before any hotkey binds; #Include pulls the whole tree.
+          Set-Content -LiteralPath $stub -Encoding UTF8 -Value "ExitApp(0)`n#Include grammarFix.ahk`n"
+          $errFile = Join-Path $env:RUNNER_TEMP "_ci_syntaxcheck.err"
+          $p = Start-Process -FilePath $ahk.FullName -ArgumentList @('/ErrorStdOut', "`"$stub`"") -WorkingDirectory "release/scripts" -RedirectStandardError $errFile -PassThru -Wait
+          $e = Get-Content -Raw -LiteralPath $errFile -ErrorAction SilentlyContinue
+          if ($e -and $e.Trim()) { Write-Error "AHK parse errors:`n$e"; exit 1 }
+          Write-Host "AHK parse-check clean (exit $($p.ExitCode))"
+      - name: AHK unit tests (clipboard classifier)
+        shell: pwsh
+        run: |
+          $ahk = Get-ChildItem -Path "C:\Program Files\AutoHotkey" -Recurse -Filter AutoHotkey64.exe -File -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $ahk) { Write-Host "AutoHotkey64.exe not found; skipping AHK unit tests"; exit 0 }
+          $errFile = Join-Path $env:RUNNER_TEMP "_ahk_test.err"
+          $p = Start-Process -FilePath $ahk.FullName -ArgumentList @('/ErrorStdOut', "release/tests/test_classify_clipboard.ahk") -RedirectStandardError $errFile -PassThru -Wait
+          $e = Get-Content -Raw -LiteralPath $errFile -ErrorAction SilentlyContinue
+          if ($p.ExitCode -ne 0) { Write-Error "AHK unit test failed (exit $($p.ExitCode)):`n$e"; exit 1 }
+          Write-Host "AHK unit tests passed"

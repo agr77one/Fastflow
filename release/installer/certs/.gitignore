@@ -1,0 +1,8 @@
+# Never commit signing material.
+*.pfx
+*.p12
+*.key
+*.pem
+# .cer is the public half — safe to commit if you want users to install it,
+# but most builds re-generate.
+*.cer

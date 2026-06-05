@@ -1,0 +1,58 @@
+# ──────────────────────────────────────────────────────────────
+# FastFlowPrompt — source repo ignore rules
+# Goal: never commit private user data, machine state, build output,
+# bundled binaries, or caches. Source + docs + config templates only.
+# ──────────────────────────────────────────────────────────────
+
+# Private runtime data (prompt/grammar history, notes, chat threads, counters, pids)
+release/data/
+data/
+
+# Live working config (personal hotkeys/paths). Regenerated on first run from
+# setup/defaults/ or the .example template — both of which ARE tracked.
+release/config/grammar_hotkey.config.json
+config/grammar_hotkey.config.json
+
+# Machine-specific logs
+release/logs/
+logs/
+*.log
+*.log.*
+
+# Build / packaging output
+release/build/
+release/dist/
+build/
+dist/
+*.egg-info/
+
+# Bundled third-party runtimes (AutoHotkey portable, FastFlowLM) — re-fetched at
+# build time by installer/build.ps1 -BundleAhk -BundleFlm. Keep the explainer README.
+release/vendor/*
+!release/vendor/README.md
+vendor/
+
+# Code-signing material — never commit private keys/certs
+release/installer/certs/*
+!release/installer/certs/.gitignore
+
+# Caches
+.ruff_cache/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+
+# Local agent / editor state
+.claude/
+*.local.json
+.vscode/
+.idea/
+
+# Process/runtime artifacts
+*.pid
+
+# OS junk
+Thumbs.db
+ehthumbs.db
+.DS_Store
+desktop.ini
