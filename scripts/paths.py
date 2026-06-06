@@ -46,6 +46,7 @@ forces single-tree layout (mode = "dev") rooted at the given path.
 from __future__ import annotations
 
 import os
+import shutil
 from pathlib import Path
 
 # ---------- Mode detection ---------------------------------------------------
@@ -239,8 +240,11 @@ def migrate_legacy_layout() -> list[str]:
             continue
         try:
             dst.parent.mkdir(parents=True, exist_ok=True)
-            src.replace(dst)
+            try:
+                src.replace(dst)
+            except OSError:
+                shutil.move(str(src), str(dst))
             moved.append(f"{src.name} -> {dst.parent.name}/{dst.name}")
-        except OSError as e:
+        except (OSError, shutil.Error) as e:
             moved.append(f"FAILED to move {src.name}: {e}")
     return moved

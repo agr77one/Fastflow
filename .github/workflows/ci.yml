@@ -81,7 +81,8 @@ jobs:
           if (-not $ahk) { Write-Host "AutoHotkey64.exe not found; skipping parse-check"; exit 0 }
           $stub = Join-Path $env:RUNNER_TEMP "_ci_syntaxcheck.ahk"
           # ExitApp(0) runs before any hotkey binds; #Include pulls the whole tree.
-          Set-Content -LiteralPath $stub -Encoding UTF8 -Value "ExitApp(0)`n#Include grammarFix.ahk`n"
+          $main = (Resolve-Path -LiteralPath "scripts\grammarFix.ahk").Path
+          Set-Content -LiteralPath $stub -Encoding UTF8 -Value "ExitApp(0)`n#Include `"$main`"`n"
           $errFile = Join-Path $env:RUNNER_TEMP "_ci_syntaxcheck.err"
           $p = Start-Process -FilePath $ahk.FullName -ArgumentList @('/ErrorStdOut', "`"$stub`"") -WorkingDirectory "scripts" -RedirectStandardError $errFile -PassThru -Wait
           $e = Get-Content -Raw -LiteralPath $errFile -ErrorAction SilentlyContinue
