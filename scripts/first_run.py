@@ -133,7 +133,7 @@ def detect_amd_npu() -> tuple[bool, str]:
         return False, f"Could not probe device list: {exc}"
     out = (result.stdout or "").strip()
     if not out:
-        return False, "No NPU device found. AMD Ryzen AI hardware is required."
+        return False, "No AMD NPU device was detected."
     try:
         data = json.loads(out)
     except json.JSONDecodeError:
@@ -141,7 +141,7 @@ def detect_amd_npu() -> tuple[bool, str]:
     if isinstance(data, dict):
         data = [data]
     if not data:
-        return False, "No NPU device found."
+        return False, "No AMD NPU device was detected."
     names = ", ".join(str(d.get("FriendlyName") or "?") for d in data)
     return True, names
 
@@ -182,6 +182,26 @@ def fetch_models(provider: str, base_url: str) -> list[str]:
         return []
     data = payload.get("data") or []
     return [str((m or {}).get("id") or "") for m in data if (m or {}).get("id")]
+
+
+def start_provider_via_daemon() -> tuple[bool, str]:
+    """POST /action/start for the currently configured provider."""
+    try:
+        payload = json_post(
+            DAEMON_URL + "/action/start",
+            {"args": {}},
+            headers=daemon_headers(),
+            timeout=12.0,
+        )
+    except urllib.error.HTTPError as exc:
+        if exc.code == 403:
+            return False, "Daemon rejected request (missing API header)."
+        return False, f"Daemon HTTP {exc.code}"
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, TypeError) as exc:
+        return False, f"Daemon unreachable: {exc}"
+    if not payload.get("ok"):
+        return False, str(payload.get("error") or "start failed")
+    return True, str(payload.get("result") or "started")
 
 
 def warmup_via_daemon(model: str) -> tuple[bool, str]:
@@ -344,7 +364,7 @@ class WizardApp:
                 "Flowkey routes selected text through a local LLM provider such as\n"
                 "Ollama or FastFlowLM. No cloud, no telemetry, no API key.\n\n"
                 "This wizard walks you through:\n"
-                "  • Verifying your hardware\n"
+                "  • Checking local provider availability\n"
                 "  • Accepting the license\n"
                 "  • Picking a model\n"
                 "  • Reviewing the hotkeys\n"
@@ -385,18 +405,18 @@ class WizardApp:
     def _provider_result(self, provider_ok: bool, provider_msg: str, npu_ok: bool, npu_msg: str) -> None:
         self.provider_found = provider_ok
         if provider_ok:
-            self.lbl_provider.configure(text=f"Found local provider support.\n{provider_msg}", foreground="#0a6b3a")
+            self.lbl_provider.configure(text=f"Local provider support detected.\n{provider_msg}", foreground="#0a6b3a")
         else:
-            self.lbl_provider.configure(text=f"{provider_msg}\n\nYou can continue and install one later.",
+            self.lbl_provider.configure(text=f"{provider_msg}\n\nYou can continue and start or install one later.",
                                         foreground="#a8201a")
         self._npu_result(npu_ok, npu_msg)
 
     def _npu_result(self, ok: bool, msg: str) -> None:
         self.npu_found = ok
         if ok:
-            self.lbl_npu.configure(text=f"Optional FastFlowLM NPU check: found {msg}", foreground="#0a6b3a")
+            self.lbl_npu.configure(text=f"Optional FastFlowLM hardware check: found {msg}", foreground="#0a6b3a")
         else:
-            self.lbl_npu.configure(text=f"Optional FastFlowLM NPU check: {msg}", foreground="#666")
+            self.lbl_npu.configure(text=f"Optional FastFlowLM hardware check: {msg}", foreground="#666")
         return
         if ok:
             self.lbl_npu.configure(text=f"✓ Found: {msg}", foreground="#0a6b3a")
@@ -428,8 +448,9 @@ class WizardApp:
     def _page_model(self, parent: ttk.Frame) -> ttk.Frame:
         f = ttk.Frame(parent)
         ttk.Label(f, wraplength=560, justify="left", foreground="#444",
-                  text=("Pick a local provider and model. If the provider is running, click Refresh "
-                        "to see installed models. To download a new one, type the model name and click Pull.")
+                  text=("Pick a local provider and model. Click Start provider to bring up the local API "
+                        "for the selected backend. Then use Refresh to see installed models, or Pull to "
+                        "download one by name.")
                   ).pack(anchor="w", pady=(0, 12))
 
         provider_row = ttk.Frame(f)
@@ -458,6 +479,7 @@ class WizardApp:
             values=DEFAULT_MODEL_CHOICES.get(self.var_provider.get(), DEFAULT_MODEL_CHOICES["fastflowlm"]),
         )
         self.model_combo.pack(side="left", fill="x", expand=True)
+        ttk.Button(row2, text="Start provider", command=self.on_start_provider).pack(side="left", padx=(4, 0))
         ttk.Button(row2, text="↻ Refresh", command=self.on_refresh_models).pack(side="left", padx=(4, 0))
         ttk.Button(row2, text="↓ Pull",    command=self.on_pull_model).pack(side="left", padx=(4, 0))
 
@@ -479,11 +501,30 @@ class WizardApp:
         self.model_status.configure(text=f"Provider set to {provider}. Click Refresh to check local models.",
                                     foreground="#666")
 
+    def on_start_provider(self) -> None:
+        provider = self.var_provider.get().strip().lower()
+        label = "Ollama" if provider == "ollama" else "FastFlowLM"
+        self.model_status.configure(text=f"Starting {label}...", foreground="#666")
+        self.root.update_idletasks()
+
+        def worker() -> None:
+            ok, msg = start_provider_via_daemon()
+            self.root.after(0, lambda: self._start_provider_result(label, ok, msg))
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _start_provider_result(self, label: str, ok: bool, msg: str) -> None:
+        if ok:
+            self.model_status.configure(text=f"{label}: {msg}", foreground="#0a6b3a")
+            self.on_refresh_models()
+            return
+        self.model_status.configure(text=f"{label}: {msg}", foreground="#a8201a")
+
     def on_refresh_models(self) -> None:
         models = fetch_models(self.var_provider.get(), self.var_base_url.get())
         if not models:
             self.model_status.configure(
-                text="No models returned. Is the provider running at this URL? Try pulling one below.",
+                text="No models returned. Start the provider or check the URL, then try Refresh again.",
                 foreground="#a8201a",
             )
             return
