@@ -20,6 +20,7 @@ import ffp_actions
 import ffp_config
 import ffp_flm_server
 import ffp_llm_client
+import ffp_provider_runtime
 import ffp_provider_status
 import ffp_telemetry
 import ffp_updater
@@ -165,6 +166,12 @@ def is_flm_server_reachable() -> bool:
     return ffp_flm_server.is_flm_server_reachable(FLM_BASE_URL)
 
 
+def is_llm_server_reachable() -> bool:
+    if LLM_PROVIDER == "fastflowlm":
+        return is_flm_server_reachable()
+    return ffp_provider_runtime.is_provider_reachable(LLM_PROVIDER, LLM_BASE_URL)
+
+
 def _read_pid() -> int:
     return ffp_flm_server.read_pid(PID_PATH)
 
@@ -213,6 +220,14 @@ def start_flm_server(force_restart: bool = False) -> str:
         force_restart=force_restart,
         stop_callback=stop_flm_server,
     )
+
+
+def start_llm_server(force_restart: bool = False) -> str:
+    if LLM_PROVIDER == "fastflowlm":
+        return start_flm_server(force_restart=force_restart)
+    if is_llm_server_reachable():
+        return "already_running"
+    raise RuntimeError("Ollama is not reachable. Start Ollama, then retry.")
 
 
 def stop_flm_server(force: bool = False) -> bool:
@@ -436,8 +451,8 @@ def call_flm(mode: str, input_text: str) -> tuple[str, float, str, str]:
         mode,
         input_text,
         _call_flm_api,
-        is_flm_server_reachable,
-        start_flm_server,
+        is_llm_server_reachable,
+        start_llm_server,
         _USAGE_ACC,
     )
 
@@ -480,6 +495,17 @@ def _flm_list(filter_kind: str) -> dict:
 def list_flm_models() -> dict:
     """Installed models on this FLM server (alias for filter=installed)."""
     return _flm_list("installed")
+
+
+def _provider_list(filter_kind: str) -> dict:
+    return ffp_provider_runtime.list_models(LLM_PROVIDER, filter_kind, LLM_MODEL, _NO_WINDOW, LLM_BASE_URL)
+
+
+def list_llm_models() -> dict:
+    """Installed models for the active provider."""
+    if LLM_PROVIDER == "fastflowlm":
+        return list_flm_models()
+    return _provider_list("installed")
 
 
 def run_doctor() -> str:
@@ -586,12 +612,20 @@ def apply_config_patch(patch: dict) -> str:
         provider = str((cfg.get("llm") or {}).get("provider") or "fastflowlm").strip().lower()
         if provider == "fastflowlm":
             models_info = list_flm_models()
-            if "error" not in models_info:
-                installed = models_info.get("models") or []
-                if new_model not in installed:
-                    raise RuntimeError(
-                        f"Model '{new_model}' is not installed. Pull it first or pick another."
-                    )
+        else:
+            models_info = ffp_provider_runtime.list_models(
+                provider,
+                "installed",
+                new_model,
+                _NO_WINDOW,
+                str((cfg.get("llm") or {}).get("base_url") or cfg.get("flm_base_url") or FLM_BASE_URL),
+            )
+        if "error" not in models_info:
+            installed = models_info.get("models") or []
+            if new_model not in installed:
+                raise RuntimeError(
+                    f"Model '{new_model}' is not installed for {provider}. Pull it first or pick another."
+                )
         chat = cfg.get("chat")
         if isinstance(chat, dict):
             chat.pop("llm_model", None)
@@ -731,7 +765,7 @@ def handle_server_cli() -> bool:
             print(json.dumps(build_config_snapshot()["provider_status"], ensure_ascii=False))
             return True
         if action == "models_list":
-            print(json.dumps(list_flm_models(), ensure_ascii=False))
+            print(json.dumps(list_llm_models(), ensure_ascii=False))
             return True
         if action == "tone_preset":
             print(get_tone_preset())
@@ -774,10 +808,10 @@ def handle_server_cli() -> bool:
             print(apply_config_patch(patch))
             return True
         if action == "models_installed":
-            print(json.dumps(_flm_list("installed"), ensure_ascii=False))
+            print(json.dumps(_provider_list("installed"), ensure_ascii=False))
             return True
         if action == "models_not_installed":
-            print(json.dumps(_flm_list("not-installed"), ensure_ascii=False))
+            print(json.dumps(_provider_list("not-installed"), ensure_ascii=False))
             return True
         if action == "remove_model":
             if "--value" not in args:
@@ -788,15 +822,7 @@ def handle_server_cli() -> bool:
             model_name = str(args[vidx + 1]).strip()
             if not model_name:
                 raise RuntimeError("Model name is empty.")
-            try:
-                result = subprocess.run(["flm", "remove", model_name],
-                                        capture_output=True, text=True, timeout=60, check=False, creationflags=_NO_WINDOW)
-            except FileNotFoundError:
-                raise RuntimeError("flm CLI not found in PATH.")
-            output = (result.stdout or "") + (result.stderr or "")
-            if result.returncode != 0:
-                raise RuntimeError(f"flm remove failed (exit {result.returncode}):\n{output.strip()}")
-            print(output.strip() or f"removed {model_name}")
+            print(ffp_provider_runtime.remove_model(LLM_PROVIDER, model_name, _NO_WINDOW))
             return True
         if action == "version":
             print(APP_VERSION)
@@ -816,21 +842,12 @@ def handle_server_cli() -> bool:
             model_name = str(args[vidx + 1]).strip()
             if not model_name:
                 raise RuntimeError("Model name is empty.")
-            try:
-                result = subprocess.run(
-                    ["flm", "pull", model_name],
-                    capture_output=True,
-                    text=True,
-                    timeout=ffp_actions.PULL_MODEL_TIMEOUT_SECONDS,
-                    check=False,
-                    creationflags=_NO_WINDOW,
-                )
-            except FileNotFoundError:
-                raise RuntimeError("flm CLI not found in PATH.")
-            output = (result.stdout or "") + (result.stderr or "")
-            if result.returncode != 0:
-                raise RuntimeError(f"flm pull failed (exit {result.returncode}):\n{output.strip()}")
-            print(output.strip() or f"pulled {model_name}")
+            print(ffp_provider_runtime.pull_model(
+                LLM_PROVIDER,
+                model_name,
+                _NO_WINDOW,
+                timeout=ffp_actions.PULL_MODEL_TIMEOUT_SECONDS,
+            ))
             return True
         raise RuntimeError("Unknown --app-action.")
 

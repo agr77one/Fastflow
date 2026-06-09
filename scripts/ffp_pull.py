@@ -44,9 +44,10 @@ def status() -> dict:
         return dict(_job)
 
 
-def _default_runner(model: str, no_window: int, on_line: Callable[[str], None]) -> int:
+def _default_runner(provider: str, model: str, no_window: int, on_line: Callable[[str], None]) -> int:
+    cli = "ollama" if str(provider).strip().lower() == "ollama" else "flm"
     proc = subprocess.Popen(
-        ["flm", "pull", model],
+        [cli, "pull", model],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
@@ -61,8 +62,8 @@ def _default_runner(model: str, no_window: int, on_line: Callable[[str], None]) 
     return proc.returncode
 
 
-def start_pull(model: str, no_window: int = NO_WINDOW, *,
-               runner: Callable[[str, int, Callable[[str], None]], int] | None = None) -> dict:
+def start_pull(model: str, no_window: int = NO_WINDOW, *, provider: str = "fastflowlm",
+               runner: Callable[[str, str, int, Callable[[str], None]], int] | None = None) -> dict:
     """Launch `flm pull <model>` on a background thread. Returns immediately;
     poll status(). Refuses a second concurrent pull."""
     global _thread
@@ -92,18 +93,20 @@ def start_pull(model: str, no_window: int = NO_WINDOW, *,
 
     def worker() -> None:
         try:
-            rc = run(model, no_window, on_line)
+            rc = run(provider, model, no_window, on_line)
             if rc == 0:
                 _update(state="done", percent=100.0, message=f"{model} downloaded.", finished_at=time.time())
             else:
-                _update(state="error", error=f"flm pull exited with code {rc}", finished_at=time.time())
+                cli = "ollama" if str(provider).strip().lower() == "ollama" else "flm"
+                _update(state="error", error=f"{cli} pull exited with code {rc}", finished_at=time.time())
         except FileNotFoundError:
-            log.warning("flm CLI not found in PATH while pulling %s", model)
-            _update(state="error", error="flm CLI not found in PATH", finished_at=time.time())
+            cli = "ollama" if str(provider).strip().lower() == "ollama" else "flm"
+            log.warning("%s CLI not found in PATH while pulling %s", cli, model)
+            _update(state="error", error=f"{cli} CLI not found in PATH", finished_at=time.time())
         except Exception as exc:
             log.exception("pull failed for %s", model)
             _update(state="error", error=str(exc), finished_at=time.time())
 
     _thread = threading.Thread(target=worker, name="ffp-pull", daemon=True)
     _thread.start()
-    return {"ok": True, "state": "running", "model": model}
+    return {"ok": True, "state": "running", "model": model, "provider": provider}
