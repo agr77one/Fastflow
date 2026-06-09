@@ -182,7 +182,7 @@ OpenDashboard_Impl() {
     dashGui.AddText("x40 y342 w356 cGray vAutostartStatus", "")
 
     ; ---- Server status & endpoint (left) ----
-    dashGui.AddGroupBox("x24 y382 w384 h150", "Server status & endpoint")
+    dashGui.AddGroupBox("x24 y382 w384 h150 vServerStatusGroup", "Local LLM status & endpoint")
     dashGui.AddText("x40 y406 w356 h46 vServerStatusBody", "Status loading…")
     dashGui.AddText("x40 y464 w90", "Base URL")
     dashGui.AddEdit("x134 y461 w250 vCfgBaseUrl")
@@ -190,25 +190,25 @@ OpenDashboard_Impl() {
     dashGui.AddEdit("x134 y489 w80 Number vCfgTimeout")
 
     ; ---- Installed models (left) ----
-    dashGui.AddGroupBox("x24 y542 w384 h150", "Installed models (flm list)")
+    dashGui.AddGroupBox("x24 y542 w384 h150 vServerModelsGroup", "Installed models")
     dashGui.AddListBox("x40 y566 w356 r3 vServerModelList")
-    dashGui.AddButton("x40 y626 w160", "Set as active").OnEvent("Click", (*) => OnServerSetActive())
-    dashGui.AddButton("x206 y626 w190", "Remove").OnEvent("Click", (*) => OnServerRemoveModel())
+    dashGui.AddButton("x40 y626 w160 vServerSetActiveBtn", "Set as active").OnEvent("Click", (*) => OnServerSetActive())
+    dashGui.AddButton("x206 y626 w190 vServerRemoveBtn", "Remove").OnEvent("Click", (*) => OnServerRemoveModel())
 
     ; ---- Pull a new model (right) ----
     dashGui.AddGroupBox("x420 y44 w384 h96", "Pull a new model")
     dashGui.AddDropDownList("x436 y70 w250 vServerPullName")
-    dashGui.AddButton("x694 y69 w94", "Download").OnEvent("Click", (*) => OnServerPullModel())
+    dashGui.AddButton("x694 y69 w94 vServerPullBtn", "Download").OnEvent("Click", (*) => OnServerPullModel())
     dashGui.AddText("x436 y102 w352 cGray vServerPullStatus", "")
 
     ; ---- FastFlowLM runtime (right) ----
-    dashGui.AddGroupBox("x420 y150 w384 h96", "FastFlowLM runtime")
+    dashGui.AddGroupBox("x420 y150 w384 h96 vFlmRuntimeGroup", "FastFlowLM runtime")
     dashGui.AddText("x436 y176 w352 vFlmVersionStatus", "FastFlowLM: checking…")
     dashGui.AddButton("x436 y204 w150", "Check for updates").OnEvent("Click", (*) => OnCheckFlmUpdate())
     dashGui.AddButton("x594 y204 w150 Disabled vFlmDownloadBtn", "Download update…").OnEvent("Click", (*) => OnOpenFlmDownload())
 
     ; ---- Performance && history (right) ----
-    dashGui.AddGroupBox("x420 y256 w384 h96", "Performance && history")
+    dashGui.AddGroupBox("x420 y256 w384 h96 vPerfHistoryGroup", "Performance && history")
     dashGui.AddRadio("x436 y282 w120 Group vCfgPerfBalanced", "🟡 Balanced")
     dashGui.AddRadio("x560 y282 w110 vCfgPerfMax", "🔴 Max")
     dashGui.AddCheckBox("x436 y312 w352 vCfgStoreText", "Store selected text (off = redacted)")
@@ -242,11 +242,11 @@ OpenDashboard_Impl() {
 
     tabs.UseTab(6)
     dashGui.AddGroupBox("x24 y44 w796 h138", "Run a benchmark")
-    dashGui.AddText("x40 y68 w764", "Benchmark a model with FastFlowLM's `flm bench` — sweeps 1k–32k context × 8 iterations and records time-to-first-token, prefill speed, and decode speed.")
-    dashGui.AddText("x40 y104 w764 cRed", "⚠ Takes ~10–20 min and fully saturates the NPU. The server is stopped for the run, so your hotkeys will be unresponsive. Best run when idle.")
+    dashGui.AddText("x40 y68 w764 vBenchIntro", "Run a local model benchmark. FastFlowLM supports the built-in benchmark flow today; Ollama systems will show this as unavailable.")
+    dashGui.AddText("x40 y104 w764 cRed vBenchWarning", "⚠ FastFlowLM benchmarks take ~10–20 min, saturate the NPU, and stop the local server during the run.")
     dashGui.AddText("x40 y146 w50", "Model")
     dashGui.AddDropDownList("x96 y143 w240 vBenchModel")
-    dashGui.AddButton("x346 y142 w140", "Run benchmark").OnEvent("Click", (*) => OnRunBenchmark())
+    dashGui.AddButton("x346 y142 w140 vBenchRunBtn", "Run benchmark").OnEvent("Click", (*) => OnRunBenchmark())
 
     dashGui.AddGroupBox("x24 y194 w796 h290", "Benchmark history (newest first — peak prefill / decode tok/s per run)")
     dashGui.AddText("x40 y218 w764 vBenchStatus", "Idle.")
@@ -466,8 +466,10 @@ ReadConfigSnapshotFromRaw(raw) {
     if (raw = "" || InStr(raw, "python launcher not found") || InStr(raw, "daemon unavailable"))
         return snap
     snap["version"] := SnapshotString(raw, "version", "1.3.0")
-    snap["base_url"] := SnapshotString(raw, "flm_base_url", "http://127.0.0.1:52625")
-    snap["model"] := SnapshotString(raw, "flm_model", "?")
+    llmBlock := SnapshotBlock(raw, "llm")
+    snap["provider"] := SnapshotString(llmBlock, "provider", "fastflowlm")
+    snap["base_url"] := SnapshotString(llmBlock, "base_url", "http://127.0.0.1:52625")
+    snap["model"] := SnapshotString(llmBlock, "model", "?")
     perfBlock := SnapshotBlock(raw, "server")
     snap["perf"] := SnapshotString(perfBlock, "performance_mode", "balanced")
     snap["history"] := SnapshotBool(raw, "history_store_text", false) ? "Visible (text stored)" : "Redacted (text not stored)"
@@ -484,8 +486,9 @@ PopulateConfigForm_Impl(raw := "") {
         raw := RunAction("config_snapshot")
     if (raw = "" || InStr(raw, "python launcher not found") || InStr(raw, "daemon unavailable"))
         return
-    dashGui["CfgBaseUrl"].Value := SnapshotString(raw, "flm_base_url", "http://127.0.0.1:52625")
-    dashGui["CfgTimeout"].Value := SnapshotNumber(raw, "flm_timeout_seconds", 30)
+    llmBlock := SnapshotBlock(raw, "llm")
+    dashGui["CfgBaseUrl"].Value := SnapshotString(llmBlock, "base_url", "http://127.0.0.1:52625")
+    dashGui["CfgTimeout"].Value := SnapshotNumber(llmBlock, "timeout_seconds", 30)
     serverBlock := SnapshotBlock(raw, "server")
     routingBlock := SnapshotBlock(raw, "routing")
     toneBlock := SnapshotBlock(raw, "tone")

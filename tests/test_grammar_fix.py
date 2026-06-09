@@ -7,6 +7,24 @@ from pathlib import Path
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def _default_fastflowlm_provider(monkeypatch):
+    import ffp_provider_status
+
+    monkeypatch.setattr(
+        ffp_provider_status,
+        "providers_status",
+        lambda provider, base_url: {
+            "active": provider,
+            "providers": {
+                "fastflowlm": {"available": True},
+                "ollama": {"available": False},
+            },
+            "available": ["fastflowlm"],
+        },
+    )
+
+
 def test_load_config_returns_defaults_when_file_missing(fresh_modules):
     grammar_fix = fresh_modules("grammar_fix")
 
@@ -72,6 +90,111 @@ def test_load_config_accepts_new_llm_block(fresh_modules):
     assert cfg["flm_base_url"] == "http://127.0.0.1:11434"
     assert cfg["flm_model"] == "llama3.2:3b"
     assert cfg["flm_timeout_seconds"] == 120
+
+
+def test_refresh_runtime_config_falls_back_to_ollama_when_fastflowlm_unavailable(fresh_modules, monkeypatch):
+    grammar_fix = fresh_modules("grammar_fix")
+    grammar_fix.CONFIG_PATH.write_text(
+        json.dumps(
+            {
+                "llm": {
+                    "provider": "fastflowlm",
+                    "base_url": "http://127.0.0.1:52625",
+                    "model": "qwen3.5:4b",
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        grammar_fix.ffp_provider_status,
+        "providers_status",
+        lambda provider, base_url: {
+            "active": provider,
+            "providers": {
+                "fastflowlm": {"available": False},
+                "ollama": {"available": True},
+            },
+            "available": ["ollama"],
+        },
+    )
+    monkeypatch.setattr(
+        grammar_fix.ffp_provider_runtime,
+        "list_models",
+        lambda provider, filter_kind, model, no_window, base_url: {
+            "models": ["llama3.1:latest"],
+            "active": "llama3.1:latest",
+            "provider": provider,
+        },
+    )
+
+    grammar_fix.refresh_runtime_config()
+
+    assert grammar_fix.CONFIGURED_LLM_PROVIDER == "fastflowlm"
+    assert grammar_fix.LLM_PROVIDER == "ollama"
+    assert grammar_fix.LLM_BASE_URL == "http://127.0.0.1:11434"
+    assert grammar_fix.LLM_MODEL == "llama3.1:latest"
+
+
+def test_build_config_snapshot_reports_effective_provider_when_falling_back_to_ollama(fresh_modules, monkeypatch):
+    grammar_fix = fresh_modules("grammar_fix")
+    grammar_fix.CONFIG_PATH.write_text(
+        json.dumps(
+            {
+                "llm": {
+                    "provider": "fastflowlm",
+                    "base_url": "http://127.0.0.1:52625",
+                    "model": "qwen3.5:4b",
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        grammar_fix.ffp_provider_status,
+        "providers_status",
+        lambda provider, base_url: {
+            "active": provider,
+            "providers": {
+                "fastflowlm": {
+                    "label": "FastFlowLM",
+                    "base_url": "http://127.0.0.1:52625",
+                    "installed": False,
+                    "reachable": False,
+                    "available": False,
+                    "capabilities": {"benchmark": False, "model_management": False, "server_control": False, "update_check": False},
+                },
+                "ollama": {
+                    "label": "Ollama",
+                    "base_url": "http://127.0.0.1:11434",
+                    "installed": True,
+                    "reachable": True,
+                    "available": True,
+                    "capabilities": {"benchmark": False, "model_management": True, "server_control": False, "update_check": False},
+                },
+            },
+            "available": ["ollama"],
+        },
+    )
+    monkeypatch.setattr(
+        grammar_fix.ffp_provider_runtime,
+        "list_models",
+        lambda provider, filter_kind, model, no_window, base_url: {
+            "models": ["llama3.1:latest"],
+            "active": "llama3.1:latest",
+            "provider": provider,
+        },
+    )
+
+    snap = grammar_fix.build_config_snapshot()
+
+    assert snap["llm"]["provider"] == "ollama"
+    assert snap["llm"]["configured_provider"] == "fastflowlm"
+    assert snap["llm"]["base_url"] == "http://127.0.0.1:11434"
+    assert snap["llm"]["model"] == "llama3.1:latest"
+    assert snap["provider_status"]["active"] == "ollama"
+    assert snap["provider_status"]["configured"] == "fastflowlm"
+    assert snap["flm_model"] == "llama3.1:latest"
 
 
 def test_save_config_writes_utf8_json_with_newline(fresh_modules):

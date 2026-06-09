@@ -61,7 +61,7 @@ def save_config(cfg: dict) -> None:
 
 
 def refresh_runtime_config() -> None:
-    global CONFIG, ENABLED, LLM_CFG, LLM_PROVIDER, LLM_BASE_URL, LLM_MODEL
+    global CONFIG, ENABLED, LLM_CFG, CONFIGURED_LLM_PROVIDER, LLM_PROVIDER, LLM_BASE_URL, LLM_MODEL
     global LLM_AUTH_BEARER, LLM_TIMEOUT_SECONDS
     global FLM_BASE_URL, FLM_MODEL, FLM_TIMEOUT_SECONDS
     global HISTORY_PATH, HISTORY_STORE_TEXT, SERVER_CFG, SERVER_AUTO_START
@@ -72,17 +72,31 @@ def refresh_runtime_config() -> None:
     CONFIG = load_config()
     ENABLED = bool(CONFIG.get("enabled", True))
     LLM_CFG = CONFIG.get("llm") or {}
-    LLM_PROVIDER = str(LLM_CFG.get("provider") or "fastflowlm").strip().lower()
+    CONFIGURED_LLM_PROVIDER = str(LLM_CFG.get("provider") or "fastflowlm").strip().lower()
+    if CONFIGURED_LLM_PROVIDER not in ffp_provider_status.PROVIDERS:
+        CONFIGURED_LLM_PROVIDER = "fastflowlm"
     try:
-        LLM_BASE_URL = ffp_config.validate_llm_base_url(
+        configured_base_url = ffp_config.validate_llm_base_url(
             str(LLM_CFG.get("base_url") or CONFIG.get("flm_base_url") or "http://127.0.0.1:52625")
         )
     except ValueError as exc:
         log.warning("invalid llm base_url in config, using default: %s", exc)
-        LLM_BASE_URL = "http://127.0.0.1:52625"
-    LLM_MODEL = str(LLM_CFG.get("model") or CONFIG.get("flm_model") or "qwen3.5:4b").strip()
-    LLM_AUTH_BEARER = str(LLM_CFG.get("auth_bearer") or "flm").strip()
-    LLM_TIMEOUT_SECONDS = int(LLM_CFG.get("timeout_seconds") or CONFIG.get("flm_timeout_seconds") or 30)
+        configured_base_url = "http://127.0.0.1:52625"
+    configured_model = str(LLM_CFG.get("model") or CONFIG.get("flm_model") or "qwen3.5:4b").strip()
+    configured_timeout = int(LLM_CFG.get("timeout_seconds") or CONFIG.get("flm_timeout_seconds") or 30)
+    configured_auth = str(LLM_CFG.get("auth_bearer") or "flm").strip()
+    effective = resolve_effective_llm(
+        provider=CONFIGURED_LLM_PROVIDER,
+        base_url=configured_base_url,
+        model=configured_model,
+        timeout_seconds=configured_timeout,
+        auth_bearer=configured_auth,
+    )
+    LLM_PROVIDER = effective["provider"]
+    LLM_BASE_URL = effective["base_url"]
+    LLM_MODEL = effective["model"]
+    LLM_AUTH_BEARER = effective["auth_bearer"]
+    LLM_TIMEOUT_SECONDS = int(effective["timeout_seconds"])
     FLM_BASE_URL = LLM_BASE_URL
     FLM_MODEL = LLM_MODEL
     FLM_TIMEOUT_SECONDS = LLM_TIMEOUT_SECONDS
@@ -100,8 +114,6 @@ def refresh_runtime_config() -> None:
     PROTECTED_WORDS = [str(w) for w in (DICT_CFG.get("protected_words") or []) if str(w).strip()]
 
 
-refresh_runtime_config()
-
 PERF_TO_PMODE = ffp_flm_server.PERF_TO_PMODE
 
 # Token usage accumulator across all sub-calls made during one call_flm() run.
@@ -114,6 +126,59 @@ def _reset_usage_acc() -> None:
 
 def _snapshot_usage_acc() -> dict:
     return ffp_llm_client.snapshot_usage_acc(_USAGE_ACC)
+
+
+def _configured_provider_status(provider: str, base_url: str) -> dict:
+    active = provider if provider in ffp_provider_status.PROVIDERS else "fastflowlm"
+    return ffp_provider_status.providers_status(active, base_url)
+
+
+def resolve_effective_llm(
+    *,
+    provider: str,
+    base_url: str,
+    model: str,
+    timeout_seconds: int,
+    auth_bearer: str,
+) -> dict:
+    provider = provider if provider in ffp_provider_status.PROVIDERS else "fastflowlm"
+    status = _configured_provider_status(provider, base_url)
+    available = status.get("available") or []
+    effective_provider = provider if provider in available else (available[0] if available else provider)
+    spec = ffp_provider_status.PROVIDERS[effective_provider]
+    effective_base_url = base_url if effective_provider == provider else spec.base_url
+    effective_auth = auth_bearer if effective_provider == provider and auth_bearer else spec.auth_bearer
+    effective_model = str(model or "").strip()
+    if effective_provider != provider or not effective_model:
+        effective_model = spec.default_model
+    try:
+        models_info = ffp_provider_runtime.list_models(
+            effective_provider,
+            "installed",
+            effective_model,
+            _NO_WINDOW,
+            effective_base_url,
+        )
+    except Exception:
+        models_info = {}
+    installed = models_info.get("models") or []
+    active_model = str(models_info.get("active") or "").strip()
+    if installed and effective_model not in installed:
+        effective_model = active_model if active_model in installed else str(installed[0]).strip()
+    if not effective_model:
+        effective_model = spec.default_model
+    return {
+        "provider": effective_provider,
+        "configured_provider": provider,
+        "base_url": effective_base_url.rstrip("/"),
+        "model": effective_model,
+        "auth_bearer": effective_auth,
+        "timeout_seconds": int(timeout_seconds or 30),
+        "provider_status": status,
+    }
+
+
+refresh_runtime_config()
 
 
 def shortcut_to_ahk(shortcut: str) -> str:
@@ -309,20 +374,28 @@ def cycle_tone_preset() -> str:
 
 def server_status() -> str:
     """Return a single-line key=value summary used by the AHK Dashboard."""
-    reachable = is_flm_server_reachable()
+    reachable = is_llm_server_reachable()
+    provider = LLM_PROVIDER
     pid = _read_pid()
     alive = _is_pid_alive(pid)
     _host, port = _flm_host_port()
     bound_pid_list = _find_pids_on_port(port)
-    if pid > 0 and alive and pid not in bound_pid_list:
+    if provider == "fastflowlm" and pid > 0 and alive and pid not in bound_pid_list:
         _remove_pid()
         pid = 0
         alive = False
-    bound_pids = ",".join(str(p) for p in bound_pid_list) or "none"
+    if provider != "fastflowlm":
+        pid = 0
+        alive = False
+        bound_pids = "n/a"
+        mode = "n/a"
+    else:
+        bound_pids = ",".join(str(p) for p in bound_pid_list) or "none"
+        mode = SERVER_PERFORMANCE_MODE
     return (
-        f"reachable={str(reachable).lower()} pid={pid if pid else 'none'} "
+        f"provider={provider} reachable={str(reachable).lower()} pid={pid if pid else 'none'} "
         f"pid_alive={str(alive).lower()} port_pids={bound_pids} "
-        f"mode={SERVER_PERFORMANCE_MODE} model={FLM_MODEL}"
+        f"mode={mode} model={FLM_MODEL}"
     )
 
 
@@ -663,24 +736,31 @@ def build_config_snapshot() -> dict:
     hotkeys_cfg = cfg.get("hotkeys") or {}
     tone_cfg = ((cfg.get("modes") or {}).get("tone") or {})
     server_cfg = cfg.get("server") or {}
-    provider_info = ffp_provider_status.providers_status(
-        str(llm_cfg.get("provider") or "fastflowlm"),
-        str(llm_cfg.get("base_url") or cfg.get("flm_base_url") or "http://127.0.0.1:52625"),
+    effective = resolve_effective_llm(
+        provider=str(llm_cfg.get("provider") or "fastflowlm").strip().lower(),
+        base_url=str(llm_cfg.get("base_url") or cfg.get("flm_base_url") or "http://127.0.0.1:52625"),
+        model=str(llm_cfg.get("model") or cfg.get("flm_model") or FLM_MODEL),
+        timeout_seconds=int(llm_cfg.get("timeout_seconds") or cfg.get("flm_timeout_seconds") or 30),
+        auth_bearer=str(llm_cfg.get("auth_bearer") or ""),
     )
+    provider_info = effective["provider_status"]
+    provider_info["configured"] = effective["configured_provider"]
+    provider_info["active"] = effective["provider"]
     return {
         "version": APP_VERSION,
         "llm": {
-            "provider": str(llm_cfg.get("provider") or "fastflowlm"),
-            "base_url": str(llm_cfg.get("base_url") or "http://127.0.0.1:52625"),
-            "model": str(llm_cfg.get("model") or FLM_MODEL),
-            "auth_bearer": str(llm_cfg.get("auth_bearer") or "flm"),
-            "timeout_seconds": int(llm_cfg.get("timeout_seconds") or 30),
+            "provider": effective["provider"],
+            "configured_provider": effective["configured_provider"],
+            "base_url": effective["base_url"],
+            "model": effective["model"],
+            "auth_bearer": effective["auth_bearer"],
+            "timeout_seconds": effective["timeout_seconds"],
             "auto_start": bool(llm_cfg.get("auto_start", True)),
         },
         "provider_status": provider_info,
-        "flm_base_url": str(cfg.get("flm_base_url") or "http://127.0.0.1:52625"),
-        "flm_model": str(cfg.get("flm_model") or FLM_MODEL),
-        "flm_timeout_seconds": int(cfg.get("flm_timeout_seconds") or 30),
+        "flm_base_url": effective["base_url"],
+        "flm_model": effective["model"],
+        "flm_timeout_seconds": effective["timeout_seconds"],
         "history_store_text": bool(cfg.get("history_store_text", False)),
         "server": {
             "auto_start": bool(server_cfg.get("auto_start", True)),

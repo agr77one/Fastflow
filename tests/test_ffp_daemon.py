@@ -9,6 +9,24 @@ import urllib.request
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def _default_fastflowlm_provider(monkeypatch):
+    import ffp_provider_status
+
+    monkeypatch.setattr(
+        ffp_provider_status,
+        "providers_status",
+        lambda provider, base_url: {
+            "active": provider,
+            "providers": {
+                "fastflowlm": {"available": True},
+                "ollama": {"available": False},
+            },
+            "available": ["fastflowlm"],
+        },
+    )
+
+
 def _read_json(url: str, method: str = "GET", body: bytes | None = None, headers: dict | None = None):
     # The daemon now requires the X-FFP-API header on POSTs (CSRF defense); send
     # it by default. Callers can override/clear via the headers arg.
@@ -175,6 +193,7 @@ def test_post_config_snapshot_returns_flat_dashboard_fields(daemon_server):
     assert status == 200
     assert set(payload["result"]) >= {
         "version",
+        "llm",
         "flm_base_url",
         "flm_model",
         "flm_timeout_seconds",
@@ -188,8 +207,9 @@ def test_post_config_snapshot_returns_flat_dashboard_fields(daemon_server):
     }
     notes = payload["result"]["notes"]
     assert isinstance(notes.get("categories"), list)
+    assert set(payload["result"]["llm"]) >= {"provider", "base_url", "model", "configured_provider"}
     provider_status = payload["result"]["provider_status"]
-    assert set(provider_status) >= {"active", "providers", "available"}
+    assert set(provider_status) >= {"active", "configured", "providers", "available"}
 
 
 def test_post_provider_status_returns_capabilities(daemon_server):

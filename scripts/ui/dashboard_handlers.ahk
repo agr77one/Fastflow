@@ -44,6 +44,35 @@ OverviewToneLabel(preset) {
     return "🎩 Formal"
 }
 
+ProviderLabel(provider) {
+    p := Trim(StrLower(provider), "`r`n`t ")
+    if (p = "ollama")
+        return "Ollama"
+    if (p = "fastflowlm")
+        return "FastFlowLM"
+    return provider
+}
+
+ActiveProviderStatus(raw := "") {
+    if (raw = "")
+        raw := RunAction("provider_status")
+    active := SnapshotString(raw, "active", "fastflowlm")
+    providersBlock := SnapshotBlock(raw, "providers")
+    activeBlock := SnapshotBlock(providersBlock, active)
+    capsBlock := SnapshotBlock(activeBlock, "capabilities")
+    info := Map()
+    info["key"] := active
+    info["label"] := SnapshotString(activeBlock, "label", ProviderLabel(active))
+    info["base_url"] := SnapshotString(activeBlock, "base_url", "")
+    info["installed"] := SnapshotBool(activeBlock, "installed", false)
+    info["reachable"] := SnapshotBool(activeBlock, "reachable", false)
+    info["model_management"] := SnapshotBool(capsBlock, "model_management", false)
+    info["server_control"] := SnapshotBool(capsBlock, "server_control", false)
+    info["benchmark"] := SnapshotBool(capsBlock, "benchmark", false)
+    info["update_check"] := SnapshotBool(capsBlock, "update_check", false)
+    return info
+}
+
 PopulateOverview(cfg, daemonState, total, grammar, prompt) {
     global dashGui, currentHotkeys
     if !IsObject(dashGui)
@@ -51,7 +80,8 @@ PopulateOverview(cfg, daemonState, total, grammar, prompt) {
 
     dashGui["OvDaemonVal"].Opt(InStr(daemonState, "healthy") ? "+cGreen" : "+cRed")
     dashGui["OvDaemonVal"].Text := daemonState
-    dashGui["OvModelVal"].Text := cfg.Has("model") ? cfg["model"] : "?"
+    providerLabel := cfg.Has("provider") ? ProviderLabel(cfg["provider"]) : "Local LLM"
+    dashGui["OvModelVal"].Text := cfg.Has("model") ? (providerLabel " / " cfg["model"]) : providerLabel
     dashGui["OvVersionVal"].Text := cfg.Has("version") ? cfg["version"] : "?"
     dashGui["OvUrlVal"].Text := cfg.Has("base_url") ? cfg["base_url"] : "?"
 
@@ -73,10 +103,19 @@ PopulateOverview(cfg, daemonState, total, grammar, prompt) {
 
 PopulateServerTab() {
     global dashGui
+    provider := ActiveProviderStatus()
     statusOut := RunAction("status")
-    dashGui["ServerStatusBody"].Text := FormatServerStatus(statusOut)
+    dashGui["ServerStatusBody"].Text := FormatServerStatus(statusOut, provider)
+    dashGui["ServerStatusGroup"].Text := provider["label"] " status & endpoint"
+    dashGui["ServerModelsGroup"].Text := provider["label"] " models"
+    dashGui["PerfHistoryGroup"].Text := (provider["key"] = "fastflowlm") ? "Performance && history" : "History"
+    dashGui["CfgPerfBalanced"].Enabled := (provider["key"] = "fastflowlm")
+    dashGui["CfgPerfMax"].Enabled := (provider["key"] = "fastflowlm")
+    dashGui["ServerSetActiveBtn"].Enabled := provider["model_management"]
+    dashGui["ServerRemoveBtn"].Enabled := provider["model_management"]
+    dashGui["ServerPullBtn"].Enabled := provider["model_management"]
 
-    ; Installed list (from `flm list --filter installed --quiet`).
+    ; Installed list for the active provider.
     listCtrl := dashGui["ServerModelList"]
     listCtrl.Delete()
     installedJson := RunAction("models_installed")
@@ -98,7 +137,7 @@ PopulateServerTab() {
     if (activeIdx > 0)
         listCtrl.Choose(activeIdx)
 
-    ; Pull dropdown (from `flm list --filter not-installed --quiet`).
+    ; Pull dropdown for the active provider.
     pullCtrl := dashGui["ServerPullName"]
     pullCtrl.Delete()
     notInstalledJson := RunAction("models_not_installed")
@@ -118,11 +157,13 @@ ParseModelsJson(raw) {
     return ExtractStringArray(raw, "models")
 }
 
-FormatServerStatus(raw) {
+FormatServerStatus(raw, provider := "") {
     if (raw = "")
         return "Status unavailable."
-    ; Input shape: reachable=true pid=27860 pid_alive=true port_pids=27860 mode=max model=qwen3.5:4b
+    if !IsObject(provider)
+        provider := ActiveProviderStatus()
     fields := Map(
+        "provider", provider["key"],
         "reachable", "-",
         "pid", "-",
         "pid_alive", "-",
@@ -138,12 +179,23 @@ FormatServerStatus(raw) {
     reachIcon := (fields["reachable"] = "true") ? "✅" : "❌"
     aliveIcon := (fields["pid_alive"] = "true") ? "✅" : "❌"
     modeIcon  := (fields["mode"] = "max") ? "🔴" : "🟡"
+    if (provider["key"] = "fastflowlm") {
+        return Format(
+            "Provider:     {1}`nReachable:    {2} {3}`nPID:          {4}{5}`nPort PIDs:    {6}`nPerformance:  {7} {8}`nModel:        {9}",
+            provider["label"],
+            reachIcon, fields["reachable"],
+            fields["pid"], (fields["pid"] != "-" && fields["pid"] != "none") ? "   " aliveIcon " alive=" fields["pid_alive"] : "",
+            fields["port_pids"],
+            modeIcon, fields["mode"],
+            fields["model"]
+        )
+    }
     return Format(
-        "Reachable:    {1} {2}`nPID:          {3}{4}`nPort PIDs:    {5}`nPerformance:  {6} {7}`nModel:        {8}",
+        "Provider:      {1}`nReachable:     {2} {3}`nManaged runtime: {4}`nBase URL:      {5}`nModel:         {6}",
+        provider["label"],
         reachIcon, fields["reachable"],
-        fields["pid"], (fields["pid"] != "-" && fields["pid"] != "none") ? "   " aliveIcon " alive=" fields["pid_alive"] : "",
-        fields["port_pids"],
-        modeIcon, fields["mode"],
+        provider["server_control"] ? "yes" : "external",
+        provider["base_url"] != "" ? provider["base_url"] : "-",
         fields["model"]
     )
 }
@@ -281,10 +333,10 @@ OnSaveConfig() {
     longThr := dashGui["CfgLongThr"].Value + 0
     chunkSize := dashGui["CfgChunkSize"].Value + 0
     minChunk := dashGui["CfgMinChunk"].Value + 0
+    provider := ActiveProviderStatus()
 
     ; flm_model intentionally omitted — that's owned by the model listbox above.
-    patch := '{"flm_base_url":"' baseUrl '"'
-        . ',"flm_timeout_seconds":' timeout
+    patch := '{"llm":{"provider":"' provider["key"] '","base_url":"' baseUrl '","timeout_seconds":' timeout '}'
         . ',"history_store_text":' storeText
         . ',"server":{"performance_mode":"' perf '"}'
         . ',"routing":{"enabled":' routingEnabled
@@ -330,7 +382,8 @@ OnServerSetActive() {
     name := RegExReplace(selected, "\s+★\s*active\s*$")
     if (name = "")
         return
-    patch := '{"flm_model":"' EscapeJson(Trim(name)) '"}'
+    provider := ActiveProviderStatus()
+    patch := '{"llm":{"provider":"' provider["key"] '","model":"' EscapeJson(Trim(name)) '"}}'
     patchPath := A_Temp "\\ffp_cfg_patch_" A_TickCount ".json"
     SafeDelete(patchPath)
     FileAppend(patch, patchPath, "UTF-8")
@@ -349,7 +402,7 @@ OnServerSetActive() {
         return
     }
     snap := RunAction("config_snapshot")
-    active := SnapshotString(snap, "flm_model", "")
+    active := SnapshotString(SnapshotBlock(snap, "llm"), "model", "")
     if (active != "" && active != name) {
         Notify("Flowkey", "⚠️  Config still shows model: " active)
         return
@@ -534,6 +587,16 @@ RefreshBenchmark() {
     global dashGui
     if !IsObject(dashGui)
         return
+    provider := ActiveProviderStatus()
+    dashGui["BenchRunBtn"].Enabled := provider["benchmark"]
+    dashGui["BenchModel"].Enabled := provider["benchmark"]
+    if (provider["benchmark"]) {
+        dashGui["BenchIntro"].Text := "Run a FastFlowLM local benchmark on the active installed model."
+        dashGui["BenchWarning"].Text := "⚠ FastFlowLM benchmarks take ~10–20 min, saturate the NPU, and stop the local server during the run."
+    } else {
+        dashGui["BenchIntro"].Text := provider["label"] " does not expose the built-in benchmark flow yet."
+        dashGui["BenchWarning"].Text := "Switch to FastFlowLM on hardware that supports it to enable this tab."
+    }
     benchCtrl := dashGui["BenchModel"]
     benchCtrl.Delete()
     installed := ParseModelsJson(RunAction("models_installed"))
@@ -553,6 +616,11 @@ OnRunBenchmark() {
     global dashGui
     if !IsObject(dashGui)
         return
+    provider := ActiveProviderStatus()
+    if !provider["benchmark"] {
+        dashGui["BenchStatus"].Text := provider["label"] " does not support the built-in benchmark flow."
+        return
+    }
     model := Trim(dashGui["BenchModel"].Text)
     if (model = "" || InStr(model, "(no models")) {
         dashGui["BenchStatus"].Text := "Select an installed model first."
@@ -787,6 +855,13 @@ RefreshFlmVersion() {
     global dashGui
     if !IsObject(dashGui)
         return
+    provider := ActiveProviderStatus()
+    dashGui["FlmRuntimeGroup"].Text := provider["key"] = "fastflowlm" ? "FastFlowLM runtime" : "FastFlowLM runtime (optional)"
+    if !provider["update_check"] {
+        dashGui["FlmVersionStatus"].Text := "FastFlowLM update checks are unavailable on this machine."
+        try dashGui["FlmDownloadBtn"].Enabled := false
+        return
+    }
     raw := RunAction("flm_update_check", '{"args":{"cache_only":true}}')
     UpdateFlmVersionUI(ParseFlmUpdate(raw))
 }
@@ -795,6 +870,12 @@ OnCheckFlmUpdate() {
     global dashGui
     if !IsObject(dashGui)
         return
+    provider := ActiveProviderStatus()
+    if !provider["update_check"] {
+        dashGui["FlmVersionStatus"].Text := "Install FastFlowLM to enable update checks."
+        try dashGui["FlmDownloadBtn"].Enabled := false
+        return
+    }
     dashGui["FlmVersionStatus"].Text := "FastFlowLM: checking for updates…"
     raw := RunAction("flm_update_check", '{"args":{"force":true}}')
     UpdateFlmVersionUI(ParseFlmUpdate(raw))
