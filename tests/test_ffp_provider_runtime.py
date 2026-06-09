@@ -21,6 +21,7 @@ class _Resp:
 
 
 def test_ollama_list_models_reads_api_tags(monkeypatch):
+    monkeypatch.setattr(ffp_provider_runtime.ffp_provider_status, "is_reachable", lambda _base_url: True)
     monkeypatch.setattr(
         ffp_provider_runtime.urllib.request,
         "urlopen",
@@ -43,6 +44,7 @@ def test_ollama_list_models_reads_api_tags(monkeypatch):
 
 
 def test_ollama_not_installed_returns_suggested_missing_models(monkeypatch):
+    monkeypatch.setattr(ffp_provider_runtime.ffp_provider_status, "is_reachable", lambda _base_url: True)
     monkeypatch.setattr(
         ffp_provider_runtime.urllib.request,
         "urlopen",
@@ -53,6 +55,24 @@ def test_ollama_not_installed_returns_suggested_missing_models(monkeypatch):
 
     assert "llama3.2:3b" not in out["models"]
     assert "qwen2.5:3b" in out["models"]
+
+
+def test_ollama_installed_list_fails_fast_when_api_unreachable(monkeypatch):
+    monkeypatch.setattr(ffp_provider_runtime.ffp_provider_status, "is_reachable", lambda _base_url: False)
+    monkeypatch.setattr(
+        ffp_provider_runtime.urllib.request,
+        "urlopen",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("should not hit Ollama API when unreachable")),
+    )
+
+    out = ffp_provider_runtime.list_models("ollama", "installed", "llama3.2:3b", 0, "http://127.0.0.1:11434")
+
+    assert out == {
+        "models": [],
+        "active": "llama3.2:3b",
+        "provider": "ollama",
+        "error": "Ollama API unreachable",
+    }
 
 
 def test_fastflowlm_list_models_delegates_to_existing_flm_parser(monkeypatch):

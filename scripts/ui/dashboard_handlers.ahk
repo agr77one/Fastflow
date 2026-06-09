@@ -101,9 +101,9 @@ PopulateOverview(cfg, daemonState, total, grammar, prompt) {
     dashGui["OvHkAsk"].Text := HumanHotkey(currentHotkeys["ask_chat"])
 }
 
-PopulateServerTab() {
+PopulateServerTab(providerRaw := "") {
     global dashGui
-    provider := ActiveProviderStatus()
+    provider := ActiveProviderStatus(providerRaw)
     statusOut := RunAction("status")
     dashGui["ServerStatusBody"].Text := FormatServerStatus(statusOut, provider)
     dashGui["ServerStatusGroup"].Text := provider["label"] " status & endpoint"
@@ -149,6 +149,7 @@ PopulateServerTab() {
         pullCtrl.Add(available)
         pullCtrl.Choose(1)
     }
+    return installedJson
 }
 
 ParseModelsJson(raw) {
@@ -583,11 +584,11 @@ RenderHours(dashJson) {
     return out
 }
 
-RefreshBenchmark() {
+RefreshBenchmark(providerRaw := "", installedJson := "") {
     global dashGui
     if !IsObject(dashGui)
         return
-    provider := ActiveProviderStatus()
+    provider := ActiveProviderStatus(providerRaw)
     dashGui["BenchRunBtn"].Enabled := provider["benchmark"]
     dashGui["BenchModel"].Enabled := provider["benchmark"]
     if (provider["benchmark"]) {
@@ -599,7 +600,7 @@ RefreshBenchmark() {
     }
     benchCtrl := dashGui["BenchModel"]
     benchCtrl.Delete()
-    installed := ParseModelsJson(RunAction("models_installed"))
+    installed := (installedJson != "") ? ParseModelsJson(installedJson) : ParseModelsJson(RunAction("models_installed"))
     if (installed.Length = 0)
         benchCtrl.Add(["(no models installed)"])
     else {
@@ -851,19 +852,46 @@ UpdateFlmVersionUI(info) {
     }
 }
 
-RefreshFlmVersion() {
+RefreshFlmVersion(providerRaw := "") {
     global dashGui
     if !IsObject(dashGui)
         return
-    provider := ActiveProviderStatus()
+    provider := ActiveProviderStatus(providerRaw)
     dashGui["FlmRuntimeGroup"].Text := provider["key"] = "fastflowlm" ? "FastFlowLM runtime" : "FastFlowLM runtime (optional)"
+    dashGui["FlmPrimaryBtn"].Text := provider["key"] = "ollama" ? "Start Ollama" : "Check for updates"
     if !provider["update_check"] {
-        dashGui["FlmVersionStatus"].Text := "FastFlowLM update checks are unavailable on this machine."
+        dashGui["FlmVersionStatus"].Text := (provider["key"] = "ollama")
+            ? "Use Start Ollama to bring up the local API for this machine."
+            : "FastFlowLM update checks are unavailable on this machine."
         try dashGui["FlmDownloadBtn"].Enabled := false
         return
     }
     raw := RunAction("flm_update_check", '{"args":{"cache_only":true}}')
     UpdateFlmVersionUI(ParseFlmUpdate(raw))
+}
+
+OnRuntimePrimaryAction() {
+    provider := ActiveProviderStatus()
+    if (provider["key"] = "ollama") {
+        OnStartProviderServer()
+        return
+    }
+    OnCheckFlmUpdate()
+}
+
+OnStartProviderServer() {
+    global dashGui
+    if !IsObject(dashGui)
+        return
+    provider := ActiveProviderStatus()
+    dashGui["ServerPullStatus"].Text := "Starting " provider["label"] "…"
+    out := RunAction("start")
+    if (out = "" || InStr(out, "not reachable") || InStr(out, "did not come up") || InStr(out, "daemon")) {
+        dashGui["ServerPullStatus"].Text := "⚠ Could not start " provider["label"] ": " out
+        return
+    }
+    dashGui["ServerPullStatus"].Text := provider["label"] " " out "."
+    RefreshDashboard()
 }
 
 OnCheckFlmUpdate() {

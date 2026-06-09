@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import subprocess
 import sys
 import time
@@ -151,16 +152,19 @@ def resolve_effective_llm(
     effective_model = str(model or "").strip()
     if effective_provider != provider or not effective_model:
         effective_model = spec.default_model
-    try:
-        models_info = ffp_provider_runtime.list_models(
-            effective_provider,
-            "installed",
-            effective_model,
-            _NO_WINDOW,
-            effective_base_url,
-        )
-    except Exception:
-        models_info = {}
+    models_info = {}
+    provider_block = (status.get("providers") or {}).get(effective_provider) or {}
+    if bool(provider_block.get("reachable")):
+        try:
+            models_info = ffp_provider_runtime.list_models(
+                effective_provider,
+                "installed",
+                effective_model,
+                _NO_WINDOW,
+                effective_base_url,
+            )
+        except Exception:
+            models_info = {}
     installed = models_info.get("models") or []
     active_model = str(models_info.get("active") or "").strip()
     if installed and effective_model not in installed:
@@ -292,7 +296,27 @@ def start_llm_server(force_restart: bool = False) -> str:
         return start_flm_server(force_restart=force_restart)
     if is_llm_server_reachable():
         return "already_running"
-    raise RuntimeError("Ollama is not reachable. Start Ollama, then retry.")
+    if LLM_PROVIDER == "ollama":
+        return start_ollama_server()
+    raise RuntimeError("Local LLM provider is not reachable.")
+
+
+def start_ollama_server() -> str:
+    creationflags = _NO_WINDOW
+    kwargs: dict = {
+        "stdin": subprocess.DEVNULL,
+        "stdout": subprocess.DEVNULL,
+        "stderr": subprocess.DEVNULL,
+    }
+    if os.name == "nt":
+        kwargs["creationflags"] = creationflags
+    subprocess.Popen(["ollama", "serve"], **kwargs)
+    deadline = time.time() + 8.0
+    while time.time() < deadline:
+        if is_llm_server_reachable():
+            return "started"
+        time.sleep(0.2)
+    raise RuntimeError("Ollama start requested, but the API did not come up within 8s.")
 
 
 def stop_flm_server(force: bool = False) -> bool:
@@ -805,18 +829,24 @@ def handle_server_cli() -> bool:
             print(server_status())
             return True
         if action == "start":
-            print(start_flm_server(force_restart=False))
+            print(start_llm_server(force_restart=False))
             return True
         if action == "warmup":
-            start_flm_server(force_restart=False)
-            _warmup_request(FLM_MODEL)
-            print("warmed_up")
+            result = start_llm_server(force_restart=False)
+            if LLM_PROVIDER == "fastflowlm":
+                _warmup_request(FLM_MODEL)
+                print("warmed_up")
+            else:
+                print(result)
             return True
         if action == "restart":
-            print(start_flm_server(force_restart=True))
+            print(start_llm_server(force_restart=True))
             return True
         if action == "stop":
-            print("stopped" if stop_flm_server(force=True) else "not_running")
+            if LLM_PROVIDER != "fastflowlm":
+                print("stop is only supported for FastFlowLM right now")
+            else:
+                print("stopped" if stop_flm_server(force=True) else "not_running")
             return True
         if action == "performance":
             print(get_current_performance_mode())
@@ -939,18 +969,24 @@ def handle_server_cli() -> bool:
     cmd = str(args[idx + 1]).strip().lower()
 
     if cmd == "start":
-        print(start_flm_server(force_restart=False))
+        print(start_llm_server(force_restart=False))
         return True
     if cmd == "warmup":
-        start_flm_server(force_restart=False)
-        _warmup_request(FLM_MODEL)
-        print("warmed_up")
+        result = start_llm_server(force_restart=False)
+        if LLM_PROVIDER == "fastflowlm":
+            _warmup_request(FLM_MODEL)
+            print("warmed_up")
+        else:
+            print(result)
         return True
     if cmd == "restart":
-        print(start_flm_server(force_restart=True))
+        print(start_llm_server(force_restart=True))
         return True
     if cmd == "stop":
-        print("stopped" if stop_flm_server(force=True) else "not_running")
+        if LLM_PROVIDER != "fastflowlm":
+            print("stop is only supported for FastFlowLM right now")
+        else:
+            print("stopped" if stop_flm_server(force=True) else "not_running")
         return True
     if cmd == "status":
         print(server_status())

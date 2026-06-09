@@ -112,8 +112,8 @@ def test_refresh_runtime_config_falls_back_to_ollama_when_fastflowlm_unavailable
         lambda provider, base_url: {
             "active": provider,
             "providers": {
-                "fastflowlm": {"available": False},
-                "ollama": {"available": True},
+                "fastflowlm": {"available": False, "reachable": False},
+                "ollama": {"available": True, "reachable": True},
             },
             "available": ["ollama"],
         },
@@ -195,6 +195,26 @@ def test_build_config_snapshot_reports_effective_provider_when_falling_back_to_o
     assert snap["provider_status"]["active"] == "ollama"
     assert snap["provider_status"]["configured"] == "fastflowlm"
     assert snap["flm_model"] == "llama3.1:latest"
+
+
+def test_start_llm_server_launches_ollama_when_selected_provider_is_ollama(fresh_modules, monkeypatch):
+    grammar_fix = fresh_modules("grammar_fix")
+    grammar_fix.LLM_PROVIDER = "ollama"
+    calls = []
+    states = iter([False, True])
+
+    class _Proc:
+        pid = 1234
+
+    monkeypatch.setattr(grammar_fix.subprocess, "Popen", lambda argv, **kwargs: calls.append((argv, kwargs)) or _Proc())
+    monkeypatch.setattr(grammar_fix, "is_llm_server_reachable", lambda: next(states))
+    monkeypatch.setattr(grammar_fix.time, "sleep", lambda _secs: None)
+
+    result = grammar_fix.start_llm_server(force_restart=False)
+
+    assert result == "started"
+    assert calls
+    assert calls[0][0] == ["ollama", "serve"]
 
 
 def test_save_config_writes_utf8_json_with_newline(fresh_modules):

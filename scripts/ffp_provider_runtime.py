@@ -55,6 +55,21 @@ def list_models(provider: str, filter_kind: str, model: str, no_window: int, bas
         out["provider"] = provider
         return out
 
+    if not ffp_provider_status.is_reachable(base_url):
+        suggested = list(OLLAMA_SUGGESTED_MODELS)
+        if filter_kind == "installed":
+            models = []
+        elif filter_kind == "not-installed":
+            models = suggested
+        else:
+            models = suggested
+        return {
+            "models": models,
+            "active": model,
+            "provider": provider,
+            "error": "Ollama API unreachable",
+        }
+
     installed, error = _ollama_tags(base_url)
     suggested = [name for name in OLLAMA_SUGGESTED_MODELS if name not in installed]
     if filter_kind == "installed":

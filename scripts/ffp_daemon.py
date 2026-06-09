@@ -218,20 +218,24 @@ def _act_set_autostart(args: dict) -> dict:
 
 
 def _act_start(_args: dict) -> str:
-    return grammar_fix.start_flm_server(force_restart=False)
+    return grammar_fix.start_llm_server(force_restart=False)
 
 
 def _act_warmup(_args: dict) -> str:
-    grammar_fix.start_flm_server(force_restart=False)
-    grammar_fix._warmup_request(grammar_fix.FLM_MODEL)
-    return "warmed_up"
+    result = grammar_fix.start_llm_server(force_restart=False)
+    if grammar_fix.LLM_PROVIDER == "fastflowlm":
+        grammar_fix._warmup_request(grammar_fix.FLM_MODEL)
+        return "warmed_up"
+    return result
 
 
 def _act_restart(_args: dict) -> str:
-    return grammar_fix.start_flm_server(force_restart=True)
+    return grammar_fix.start_llm_server(force_restart=True)
 
 
 def _act_stop(_args: dict) -> str:
+    if grammar_fix.LLM_PROVIDER != "fastflowlm":
+        return "stop is only supported for FastFlowLM right now"
     return "stopped" if grammar_fix.stop_flm_server(force=True) else "not_running"
 
 

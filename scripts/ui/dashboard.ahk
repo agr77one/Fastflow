@@ -204,7 +204,7 @@ OpenDashboard_Impl() {
     ; ---- FastFlowLM runtime (right) ----
     dashGui.AddGroupBox("x420 y150 w384 h96 vFlmRuntimeGroup", "FastFlowLM runtime")
     dashGui.AddText("x436 y176 w352 vFlmVersionStatus", "FastFlowLM: checking…")
-    dashGui.AddButton("x436 y204 w150", "Check for updates").OnEvent("Click", (*) => OnCheckFlmUpdate())
+    dashGui.AddButton("x436 y204 w150 vFlmPrimaryBtn", "Check for updates").OnEvent("Click", (*) => OnRuntimePrimaryAction())
     dashGui.AddButton("x594 y204 w150 Disabled vFlmDownloadBtn", "Download update…").OnEvent("Click", (*) => OnOpenFlmDownload())
 
     ; ---- Performance && history (right) ----
@@ -438,6 +438,7 @@ RefreshDashboard_Impl() {
     daemonState := IsDaemonHealthy() ? "✅ healthy" : "⚠️ not responding"
     rawCfg := RunAction("config_snapshot")
     cfg := ReadConfigSnapshotFromRaw(rawCfg)
+    providerRaw := SnapshotBlock(rawCfg, "provider_status")
     PopulateOverview(cfg, daemonState, total, grammar, prompt)
 
     if tokensFailed
@@ -445,7 +446,7 @@ RefreshDashboard_Impl() {
     else
         dashGui["TokensBody"].Value := FormatStatsJson(rawStats)
 
-    PopulateServerTab()
+    installedJson := PopulateServerTab(providerRaw)
     dashGui["HistoryBody"].Value := GetRecentHistory(50)
     dashJson := RunAction("dashboard_data")
     dashGui["HoursBody"].Value   := RenderHours(dashJson)
@@ -453,8 +454,8 @@ RefreshDashboard_Impl() {
     PopulateNotesForm(rawCfg)
     PopulateHotkeysForm()
     RefreshAutostartState()
-    RefreshFlmVersion()
-    RefreshBenchmark()
+    RefreshFlmVersion(providerRaw)
+    RefreshBenchmark(providerRaw, installedJson)
 }
 
 ReadConfigSnapshot_Impl() {
