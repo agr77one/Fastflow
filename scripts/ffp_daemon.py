@@ -299,6 +299,10 @@ def _act_config_snapshot(_args: dict) -> dict:
     return grammar_fix.build_config_snapshot()
 
 
+def _act_provider_status(_args: dict) -> dict:
+    return grammar_fix.build_config_snapshot()["provider_status"]
+
+
 def _act_models_list(_args: dict) -> dict:
     return grammar_fix.list_flm_models()
 
@@ -596,6 +600,7 @@ ACTIONS: dict[str, Callable[[dict], Any]] = {
     "stats": _act_stats,
     "dashboard_data": _act_dashboard_data,
     "config_snapshot": _act_config_snapshot,
+    "provider_status": _act_provider_status,
     "models_list": _act_models_list,
     "models_installed": _act_models_installed,
     "models_not_installed": _act_models_not_installed,

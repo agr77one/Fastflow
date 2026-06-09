@@ -46,7 +46,7 @@ def test_actions_count_and_expected_names(daemon_module):
     # v1.4.0 added get_autostart_state + set_autostart -> 38.
     # Late v1.4.0 added flm_update_check, bench_start/status/history,
     # note_search, pull_start/status -> 46; v1.5.4 removed model_stats -> 45.
-    assert len(daemon_module.ACTIONS) == 48
+    assert len(daemon_module.ACTIONS) == 49
     assert "version" in daemon_module.ACTIONS
     assert "apply_config_patch" in daemon_module.ACTIONS
     assert "chat_send_selection" in daemon_module.ACTIONS
@@ -54,6 +54,7 @@ def test_actions_count_and_expected_names(daemon_module):
     assert "chat_restart" in daemon_module.ACTIONS
     assert "open_dashboard" in daemon_module.ACTIONS
     assert "config_snapshot" in daemon_module.ACTIONS
+    assert "provider_status" in daemon_module.ACTIONS
     assert "get_autostart_state" in daemon_module.ACTIONS
     assert "set_autostart" in daemon_module.ACTIONS
     # late-v1.4.0 feature actions
@@ -177,6 +178,7 @@ def test_post_config_snapshot_returns_flat_dashboard_fields(daemon_server):
         "flm_base_url",
         "flm_model",
         "flm_timeout_seconds",
+        "provider_status",
         "history_store_text",
         "server",
         "routing",
@@ -186,6 +188,18 @@ def test_post_config_snapshot_returns_flat_dashboard_fields(daemon_server):
     }
     notes = payload["result"]["notes"]
     assert isinstance(notes.get("categories"), list)
+    provider_status = payload["result"]["provider_status"]
+    assert set(provider_status) >= {"active", "providers", "available"}
+
+
+def test_post_provider_status_returns_capabilities(daemon_server):
+    _, base_url = daemon_server
+
+    status, payload = _read_json(base_url + "/action/provider_status", method="POST", body=b"{}")
+
+    assert status == 200
+    assert set(payload["result"]) >= {"active", "providers", "available"}
+    assert set(payload["result"]["providers"]) >= {"fastflowlm", "ollama"}
 
 
 def test_apply_config_patch_persists_nested_value(daemon_server):

@@ -20,6 +20,7 @@ import ffp_actions
 import ffp_config
 import ffp_flm_server
 import ffp_llm_client
+import ffp_provider_status
 import ffp_telemetry
 import ffp_updater
 import paths as _paths
@@ -485,6 +486,12 @@ def run_doctor() -> str:
     """Self-diagnose. Returns a multi-line key=value report."""
     checks: list[tuple[str, str]] = []
     checks.append(("python", sys.version.split()[0]))
+    provider_info = ffp_provider_status.providers_status(LLM_PROVIDER, LLM_BASE_URL)
+    checks.append(("llm_provider", LLM_PROVIDER))
+    checks.append(("llm_available_providers", ",".join(provider_info.get("available") or []) or "none"))
+    for key, status in (provider_info.get("providers") or {}).items():
+        checks.append((f"{key}_cli", status.get("cli_path") or "not found"))
+        checks.append((f"{key}_reachable", str(bool(status.get("reachable"))).lower()))
     checks.append(("flm_base_url", FLM_BASE_URL))
     checks.append(("flm_reachable", str(is_flm_server_reachable()).lower()))
     models_info = list_flm_models()
@@ -616,21 +623,27 @@ def build_config_snapshot() -> dict:
     identical so the dashboard renders the same values either way.
     """
     cfg = load_config()
+    llm_cfg = cfg.get("llm") or {}
     notes_cfg = cfg.get("notes") or {}
     routing_cfg = cfg.get("routing") or {}
     hotkeys_cfg = cfg.get("hotkeys") or {}
     tone_cfg = ((cfg.get("modes") or {}).get("tone") or {})
     server_cfg = cfg.get("server") or {}
+    provider_info = ffp_provider_status.providers_status(
+        str(llm_cfg.get("provider") or "fastflowlm"),
+        str(llm_cfg.get("base_url") or cfg.get("flm_base_url") or "http://127.0.0.1:52625"),
+    )
     return {
         "version": APP_VERSION,
         "llm": {
-            "provider": str((cfg.get("llm") or {}).get("provider") or "fastflowlm"),
-            "base_url": str((cfg.get("llm") or {}).get("base_url") or "http://127.0.0.1:52625"),
-            "model": str((cfg.get("llm") or {}).get("model") or FLM_MODEL),
-            "auth_bearer": str((cfg.get("llm") or {}).get("auth_bearer") or "flm"),
-            "timeout_seconds": int((cfg.get("llm") or {}).get("timeout_seconds") or 30),
-            "auto_start": bool((cfg.get("llm") or {}).get("auto_start", True)),
+            "provider": str(llm_cfg.get("provider") or "fastflowlm"),
+            "base_url": str(llm_cfg.get("base_url") or "http://127.0.0.1:52625"),
+            "model": str(llm_cfg.get("model") or FLM_MODEL),
+            "auth_bearer": str(llm_cfg.get("auth_bearer") or "flm"),
+            "timeout_seconds": int(llm_cfg.get("timeout_seconds") or 30),
+            "auto_start": bool(llm_cfg.get("auto_start", True)),
         },
+        "provider_status": provider_info,
         "flm_base_url": str(cfg.get("flm_base_url") or "http://127.0.0.1:52625"),
         "flm_model": str(cfg.get("flm_model") or FLM_MODEL),
         "flm_timeout_seconds": int(cfg.get("flm_timeout_seconds") or 30),
@@ -713,6 +726,9 @@ def handle_server_cli() -> bool:
             # Subprocess fallback for the dashboard when the daemon is down.
             # Same dict the daemon's _act_config_snapshot returns.
             print(json.dumps(build_config_snapshot(), ensure_ascii=False))
+            return True
+        if action == "provider_status":
+            print(json.dumps(build_config_snapshot()["provider_status"], ensure_ascii=False))
             return True
         if action == "models_list":
             print(json.dumps(list_flm_models(), ensure_ascii=False))

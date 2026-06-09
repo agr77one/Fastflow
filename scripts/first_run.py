@@ -2,9 +2,9 @@
 
 Six pages walk a new user from a fresh install to a working setup:
 
-  1. Welcome + AMD Ryzen AI NPU detection
+  1. Welcome + local provider detection
   2. License accept
-  3. Pick a FastFlowLM model and pull it (HuggingFace download)
+  3. Pick a local provider/model and pull it if supported
   4. Preview / rebind the four hotkeys
   5. Warmup test action (smoke-test the LLM pipeline)
   6. Done — open the dashboard
@@ -32,6 +32,7 @@ import urllib.error
 from tkinter import messagebox, scrolledtext, ttk
 
 import ffp_config
+import ffp_provider_status
 import paths as _paths
 from loopback_http import daemon_headers, json_get, json_post
 
@@ -49,13 +50,13 @@ EXAMPLE_PATH = _paths.CONFIG_EXAMPLE_FILE
 DONE_MARKER = _paths.MARKER_FIRST_RUN_DONE
 DAEMON_URL = "http://127.0.0.1:52650"
 DEFAULT_FLM_URL = "http://127.0.0.1:52625"
+DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434"
 
-# Default models surface up-front; user can refresh to see what FLM has locally.
-DEFAULT_MODEL_CHOICES = [
-    "qwen3.5:4b",
-    "nanbeige4.1:3b",
-    "phi4:14b",
-]
+# Default models surface up-front; user can refresh to see what the provider has locally.
+DEFAULT_MODEL_CHOICES = {
+    "fastflowlm": ["qwen3.5:4b", "nanbeige4.1:3b", "phi4:14b"],
+    "ollama": ["llama3.2:3b", "qwen2.5:3b", "gemma3:4b"],
+}
 
 HOTKEY_FIELDS = [
     ("grammar_fix",   "Grammar fix",            "^+g"),
@@ -75,6 +76,40 @@ def ensure_config() -> dict:
 
 def save_config(cfg: dict) -> None:
     ffp_config.save_config(CONFIG_PATH, cfg)
+
+
+def _llm_cfg(cfg: dict) -> dict:
+    llm = cfg.get("llm")
+    if not isinstance(llm, dict):
+        llm = {}
+        cfg["llm"] = llm
+    return llm
+
+
+def _provider_defaults(provider: str) -> tuple[str, str, str]:
+    status = ffp_provider_status.provider_status(provider)
+    choices = DEFAULT_MODEL_CHOICES.get(provider, DEFAULT_MODEL_CHOICES["fastflowlm"])
+    return (
+        str(status.get("base_url") or DEFAULT_FLM_URL),
+        str(status.get("default_model") or choices[0]),
+        str(status.get("auth_bearer") or "flm"),
+    )
+
+
+def choose_starting_provider(cfg: dict) -> str:
+    llm = _llm_cfg(cfg)
+    configured = str(llm.get("provider") or "fastflowlm").strip().lower()
+    status = ffp_provider_status.providers_status(
+        configured,
+        str(llm.get("base_url") or cfg.get("flm_base_url") or DEFAULT_FLM_URL),
+    )
+    providers = status.get("providers") or {}
+    active = providers.get(configured) or {}
+    if active.get("available"):
+        return configured
+    if (providers.get("ollama") or {}).get("available"):
+        return "ollama"
+    return configured if configured in ffp_provider_status.PROVIDERS else "fastflowlm"
 
 
 def detect_amd_npu() -> tuple[bool, str]:
@@ -111,8 +146,32 @@ def detect_amd_npu() -> tuple[bool, str]:
     return True, names
 
 
-def fetch_models(base_url: str) -> list[str]:
-    """Ask the local FLM server for the installed model list. Returns [] on failure."""
+def detect_local_providers(active_provider: str, base_url: str) -> tuple[bool, str]:
+    status = ffp_provider_status.providers_status(active_provider, base_url)
+    providers = status.get("providers") or {}
+    lines: list[str] = []
+    for key in ("ollama", "fastflowlm"):
+        item = providers.get(key) or {}
+        installed = "installed" if item.get("installed") else "not on PATH"
+        reachable = "API reachable" if item.get("reachable") else "API not reachable"
+        lines.append(f"{item.get('label') or key}: {installed}, {reachable}")
+    available = status.get("available") or []
+    if available:
+        return True, "Available providers: " + ", ".join(available) + "\n" + "\n".join(lines)
+    return False, "No local LLM provider was detected.\n" + "\n".join(lines)
+
+
+def fetch_models(provider: str, base_url: str) -> list[str]:
+    """Ask the local provider for the installed model list. Returns [] on failure."""
+    provider = str(provider or "fastflowlm").strip().lower()
+    if provider == "ollama":
+        try:
+            payload = json_get(base_url.rstrip("/") + "/api/tags", timeout=3.0)
+        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError):
+            return []
+        models = payload.get("models") or []
+        return [str((m or {}).get("name") or "") for m in models if (m or {}).get("name")]
+
     try:
         payload = json_get(
             base_url.rstrip("/") + "/v1/models",
@@ -198,6 +257,23 @@ class WizardApp:
 
     def __init__(self) -> None:
         self.cfg = ensure_config()
+        starting_provider = choose_starting_provider(self.cfg)
+        base_url, default_model, auth_bearer = _provider_defaults(starting_provider)
+        llm = _llm_cfg(self.cfg)
+        if starting_provider == "ollama":
+            llm["provider"] = "ollama"
+            llm["base_url"] = str(llm.get("base_url") or DEFAULT_OLLAMA_URL)
+            llm["model"] = str(llm.get("model") or default_model)
+            llm["auth_bearer"] = str(llm.get("auth_bearer") or "ollama")
+            llm["timeout_seconds"] = int(llm.get("timeout_seconds") or 120)
+            llm["auto_start"] = False
+        else:
+            llm.setdefault("provider", "fastflowlm")
+            llm.setdefault("base_url", base_url)
+            llm.setdefault("model", default_model)
+            llm.setdefault("auth_bearer", auth_bearer)
+            llm.setdefault("timeout_seconds", 60)
+            llm.setdefault("auto_start", True)
         self.root = tk.Tk()
         self.root.title("Flowkey — First-Run Setup")
         self.root.geometry("640x520")
@@ -209,8 +285,9 @@ class WizardApp:
 
         # State vars
         self.step = 0
-        self.var_base_url = tk.StringVar(value=str(self.cfg.get("flm_base_url") or DEFAULT_FLM_URL))
-        self.var_model = tk.StringVar(value=str(self.cfg.get("flm_model") or DEFAULT_MODEL_CHOICES[0]))
+        self.var_provider = tk.StringVar(value=str(llm.get("provider") or starting_provider))
+        self.var_base_url = tk.StringVar(value=str(llm.get("base_url") or self.cfg.get("flm_base_url") or base_url))
+        self.var_model = tk.StringVar(value=str(llm.get("model") or self.cfg.get("flm_model") or default_model))
         self.var_license_accept = tk.BooleanVar(value=False)
         self.var_autostart_hint = tk.BooleanVar(value=True)  # display-only — installer owns Run key
 
@@ -220,7 +297,7 @@ class WizardApp:
             for k, _label, default in HOTKEY_FIELDS
         }
 
-        self.npu_found: bool = False
+        self.provider_found: bool = False
         self.warmup_ok: bool = False
         self._pull_proc: subprocess.Popen[str] | None = None
 
@@ -257,15 +334,15 @@ class WizardApp:
         self.btn_next = ttk.Button(bar, text="Next", command=self.on_next)
         self.btn_next.pack(side="right")
 
-    # ---- page 1: welcome + NPU check --------------------------------------
+    # ---- page 1: welcome + provider check ---------------------------------
 
     def _page_welcome(self, parent: ttk.Frame) -> ttk.Frame:
         f = ttk.Frame(parent)
         ttk.Label(
             f, wraplength=560, justify="left", foreground="#444",
             text=(
-                "Flowkey routes your selected text through a local LLM running on\n"
-                "AMD's Ryzen AI NPU. No cloud, no telemetry, no API key.\n\n"
+                "Flowkey routes selected text through a local LLM provider such as\n"
+                "Ollama or FastFlowLM. No cloud, no telemetry, no API key.\n\n"
                 "This wizard walks you through:\n"
                 "  • Verifying your hardware\n"
                 "  • Accepting the license\n"
@@ -278,28 +355,49 @@ class WizardApp:
         sep = ttk.Separator(f, orient="horizontal")
         sep.pack(fill="x", pady=(16, 12))
 
-        ttk.Label(f, text="Hardware check", font=("Segoe UI", 11, "bold")).pack(anchor="w")
-        self.lbl_npu = ttk.Label(f, text="Probing for AMD Ryzen AI NPU...", foreground="#666",
-                                 wraplength=560, justify="left")
+        ttk.Label(f, text="Provider check", font=("Segoe UI", 11, "bold")).pack(anchor="w")
+        self.lbl_provider = ttk.Label(f, text="Probing for Ollama and FastFlowLM...", foreground="#666",
+                                      wraplength=560, justify="left")
+        self.lbl_provider.pack(anchor="w", pady=(4, 0))
+        self.lbl_npu = ttk.Label(f, text="", foreground="#666", wraplength=560, justify="left")
         self.lbl_npu.pack(anchor="w", pady=(4, 0))
-        ttk.Button(f, text="Recheck", command=self._run_npu_check).pack(anchor="w", pady=(10, 0))
+        ttk.Button(f, text="Recheck", command=self._run_provider_check).pack(anchor="w", pady=(10, 0))
 
         # Kick off the check async so the UI paints first.
-        self.root.after(150, self._run_npu_check)
+        self.root.after(150, self._run_provider_check)
         return f
 
     def _run_npu_check(self) -> None:
-        self.lbl_npu.configure(text="Probing for AMD Ryzen AI NPU...", foreground="#666")
+        self._run_provider_check()
+
+    def _run_provider_check(self) -> None:
+        self.lbl_provider.configure(text="Probing for Ollama and FastFlowLM...", foreground="#666")
+        self.lbl_npu.configure(text="", foreground="#666")
         self.root.update_idletasks()
 
         def worker() -> None:
-            ok, msg = detect_amd_npu()
-            self.root.after(0, lambda: self._npu_result(ok, msg))
+            provider_ok, provider_msg = detect_local_providers(self.var_provider.get(), self.var_base_url.get())
+            npu_ok, npu_msg = detect_amd_npu()
+            self.root.after(0, lambda: self._provider_result(provider_ok, provider_msg, npu_ok, npu_msg))
 
         threading.Thread(target=worker, daemon=True).start()
 
+    def _provider_result(self, provider_ok: bool, provider_msg: str, npu_ok: bool, npu_msg: str) -> None:
+        self.provider_found = provider_ok
+        if provider_ok:
+            self.lbl_provider.configure(text=f"Found local provider support.\n{provider_msg}", foreground="#0a6b3a")
+        else:
+            self.lbl_provider.configure(text=f"{provider_msg}\n\nYou can continue and install one later.",
+                                        foreground="#a8201a")
+        self._npu_result(npu_ok, npu_msg)
+
     def _npu_result(self, ok: bool, msg: str) -> None:
         self.npu_found = ok
+        if ok:
+            self.lbl_npu.configure(text=f"Optional FastFlowLM NPU check: found {msg}", foreground="#0a6b3a")
+        else:
+            self.lbl_npu.configure(text=f"Optional FastFlowLM NPU check: {msg}", foreground="#666")
+        return
         if ok:
             self.lbl_npu.configure(text=f"✓ Found: {msg}", foreground="#0a6b3a")
         else:
@@ -330,20 +428,35 @@ class WizardApp:
     def _page_model(self, parent: ttk.Frame) -> ttk.Frame:
         f = ttk.Frame(parent)
         ttk.Label(f, wraplength=560, justify="left", foreground="#444",
-                  text=("Pick a model. If FastFlowLM is already running, click Refresh to see what's "
-                        "installed locally. To download a new one, type the name (e.g. qwen3.5:4b) "
-                        "and click Pull.")
+                  text=("Pick a local provider and model. If the provider is running, click Refresh "
+                        "to see installed models. To download a new one, type the model name and click Pull.")
                   ).pack(anchor="w", pady=(0, 12))
+
+        provider_row = ttk.Frame(f)
+        provider_row.pack(fill="x", pady=4)
+        ttk.Label(provider_row, text="Provider", width=14).pack(side="left")
+        provider_combo = ttk.Combobox(
+            provider_row,
+            textvariable=self.var_provider,
+            values=["ollama", "fastflowlm"],
+            state="readonly",
+        )
+        provider_combo.pack(side="left", fill="x", expand=True)
+        provider_combo.bind("<<ComboboxSelected>>", lambda _event: self.on_provider_changed())
 
         row1 = ttk.Frame(f)
         row1.pack(fill="x", pady=4)
-        ttk.Label(row1, text="FLM base URL", width=14).pack(side="left")
+        ttk.Label(row1, text="Base URL", width=14).pack(side="left")
         ttk.Entry(row1, textvariable=self.var_base_url).pack(side="left", fill="x", expand=True)
 
         row2 = ttk.Frame(f)
         row2.pack(fill="x", pady=4)
         ttk.Label(row2, text="Model", width=14).pack(side="left")
-        self.model_combo = ttk.Combobox(row2, textvariable=self.var_model, values=DEFAULT_MODEL_CHOICES)
+        self.model_combo = ttk.Combobox(
+            row2,
+            textvariable=self.var_model,
+            values=DEFAULT_MODEL_CHOICES.get(self.var_provider.get(), DEFAULT_MODEL_CHOICES["fastflowlm"]),
+        )
         self.model_combo.pack(side="left", fill="x", expand=True)
         ttk.Button(row2, text="↻ Refresh", command=self.on_refresh_models).pack(side="left", padx=(4, 0))
         ttk.Button(row2, text="↓ Pull",    command=self.on_pull_model).pack(side="left", padx=(4, 0))
@@ -356,11 +469,21 @@ class WizardApp:
         self.pull_log.pack(fill="both", expand=True, pady=(8, 0))
         return f
 
+    def on_provider_changed(self) -> None:
+        provider = self.var_provider.get().strip().lower()
+        base_url, default_model, _auth = _provider_defaults(provider)
+        choices = DEFAULT_MODEL_CHOICES.get(provider, DEFAULT_MODEL_CHOICES["fastflowlm"])
+        self.var_base_url.set(base_url)
+        self.model_combo["values"] = choices
+        self.var_model.set(default_model if default_model else choices[0])
+        self.model_status.configure(text=f"Provider set to {provider}. Click Refresh to check local models.",
+                                    foreground="#666")
+
     def on_refresh_models(self) -> None:
-        models = fetch_models(self.var_base_url.get())
+        models = fetch_models(self.var_provider.get(), self.var_base_url.get())
         if not models:
             self.model_status.configure(
-                text="No models returned. Is FLM running at this URL? Try pulling one below.",
+                text="No models returned. Is the provider running at this URL? Try pulling one below.",
                 foreground="#a8201a",
             )
             return
@@ -374,20 +497,22 @@ class WizardApp:
         if not model:
             self.model_status.configure(text="Enter a model name first.", foreground="#a8201a")
             return
-        self._append_log(f"$ flm pull {model}\n")
+        provider = self.var_provider.get().strip().lower()
+        cli = "ollama" if provider == "ollama" else "flm"
+        self._append_log(f"$ {cli} pull {model}\n")
         self.model_status.configure(text=f"Pulling {model} — this can take a few minutes...",
                                     foreground="#666")
 
         def worker() -> None:
             try:
                 proc = subprocess.Popen(
-                    ["flm", "pull", model],
+                    [cli, "pull", model],
                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
                     creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
                 )
                 self._pull_proc = proc
             except FileNotFoundError:
-                self.root.after(0, lambda: self._append_log("ERROR: flm.exe not on PATH.\n"))
+                self.root.after(0, lambda: self._append_log(f"ERROR: {cli}.exe not on PATH.\n"))
                 return
             assert proc.stdout is not None
             pull_timeout_s = 3600
@@ -450,7 +575,7 @@ class WizardApp:
         f = ttk.Frame(parent)
         ttk.Label(f, wraplength=560, justify="left", foreground="#444",
                   text=("Let's warm up the model. This sends a small test request through the "
-                        "daemon → FastFlowLM → NPU pipeline and times the round trip. "
+                        "daemon -> local LLM provider pipeline and times the round trip. "
                         "First runs are slower because the model loads into memory.")
                   ).pack(anchor="w", pady=(0, 12))
 
@@ -552,13 +677,24 @@ class WizardApp:
 
     def _persist_partial(self) -> None:
         """Save what we have so far. Safe to call from any page."""
-        raw_url = self.var_base_url.get().strip() or DEFAULT_FLM_URL
+        provider = self.var_provider.get().strip().lower()
+        fallback_url, default_model, auth_bearer = _provider_defaults(provider)
+        raw_url = self.var_base_url.get().strip() or fallback_url
         try:
             self.cfg["flm_base_url"] = ffp_config.validate_flm_base_url(raw_url)
         except ValueError as exc:
             log.warning("wizard ignored non-loopback flm_base_url %r: %s", raw_url, exc)
-            self.cfg["flm_base_url"] = DEFAULT_FLM_URL
-        self.cfg["flm_model"] = self.var_model.get().strip() or DEFAULT_MODEL_CHOICES[0]
+            self.cfg["flm_base_url"] = fallback_url
+        model = self.var_model.get().strip() or default_model
+        llm = _llm_cfg(self.cfg)
+        llm["provider"] = provider
+        llm["base_url"] = self.cfg["flm_base_url"]
+        llm["model"] = model
+        llm["auth_bearer"] = auth_bearer
+        llm["timeout_seconds"] = 120 if provider == "ollama" else int(llm.get("timeout_seconds") or 60)
+        llm["auto_start"] = provider == "fastflowlm"
+        self.cfg["flm_model"] = model
+        self.cfg["flm_timeout_seconds"] = int(llm["timeout_seconds"])
         hk = self.cfg.get("hotkeys") or {}
         for key, _label, _default in HOTKEY_FIELDS:
             hk[key] = self.var_hotkeys[key].get().strip()
@@ -582,7 +718,7 @@ class WizardApp:
             try:
                 self._pull_proc.kill()
             except OSError as exc:
-                log.warning("failed to kill in-flight flm pull: %s", exc)
+                log.warning("failed to kill in-flight model pull: %s", exc)
             self._pull_proc = None
         self._mark_done()
         self.root.destroy()
