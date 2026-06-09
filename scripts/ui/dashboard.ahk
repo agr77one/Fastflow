@@ -182,11 +182,13 @@ OpenDashboard_Impl() {
     dashGui.AddText("x40 y342 w356 cGray vAutostartStatus", "")
 
     ; ---- Server status & endpoint (left) ----
-    dashGui.AddGroupBox("x24 y382 w384 h150 vServerStatusGroup", "Local LLM status & endpoint")
+    dashGui.AddGroupBox("x24 y382 w384 h150 vServerStatusGroup", "Active provider status & endpoint")
+    dashGui.AddText("x40 y436 w90", "Provider")
+    dashGui.AddDropDownList("x134 y433 w160 vCfgProvider", ["ollama", "fastflowlm"])
     dashGui.AddText("x40 y406 w356 h46 vServerStatusBody", "Status loading…")
-    dashGui.AddText("x40 y464 w90", "Base URL")
+    dashGui.AddText("x40 y464 w90 vCfgBaseUrlLbl", "Base URL")
     dashGui.AddEdit("x134 y461 w250 vCfgBaseUrl")
-    dashGui.AddText("x40 y492 w90", "Timeout (s)")
+    dashGui.AddText("x40 y492 w90 vCfgTimeoutLbl", "Timeout (s)")
     dashGui.AddEdit("x134 y489 w80 Number vCfgTimeout")
 
     ; ---- Installed models (left) ----
@@ -196,7 +198,7 @@ OpenDashboard_Impl() {
     dashGui.AddButton("x206 y626 w190 vServerRemoveBtn", "Remove").OnEvent("Click", (*) => OnServerRemoveModel())
 
     ; ---- Pull a new model (right) ----
-    dashGui.AddGroupBox("x420 y44 w384 h96", "Pull a new model")
+    dashGui.AddGroupBox("x420 y44 w384 h96 vServerPullGroup", "Active provider model pull")
     dashGui.AddDropDownList("x436 y70 w250 vServerPullName")
     dashGui.AddButton("x694 y69 w94 vServerPullBtn", "Download").OnEvent("Click", (*) => OnServerPullModel())
     dashGui.AddText("x436 y102 w352 cGray vServerPullStatus", "")
@@ -239,6 +241,7 @@ OpenDashboard_Impl() {
     dashGui["CfgLongThr"].OnEvent("Change", (*) => (dashGui["CfgLongThrLabel"].Text := dashGui["CfgLongThr"].Value))
     dashGui["CfgChunkSize"].OnEvent("Change", (*) => (dashGui["CfgChunkSizeLabel"].Text := dashGui["CfgChunkSize"].Value))
     dashGui["CfgMinChunk"].OnEvent("Change", (*) => (dashGui["CfgMinChunkLabel"].Text := dashGui["CfgMinChunk"].Value))
+    dashGui["CfgProvider"].OnEvent("Change", (*) => OnCfgProviderChanged())
 
     tabs.UseTab(6)
     dashGui.AddGroupBox("x24 y44 w796 h138", "Run a benchmark")
@@ -488,8 +491,8 @@ PopulateConfigForm_Impl(raw := "") {
     if (raw = "" || InStr(raw, "python launcher not found") || InStr(raw, "daemon unavailable"))
         return
     llmBlock := SnapshotBlock(raw, "llm")
-    dashGui["CfgBaseUrl"].Value := SnapshotString(llmBlock, "base_url", "http://127.0.0.1:52625")
-    dashGui["CfgTimeout"].Value := SnapshotNumber(llmBlock, "timeout_seconds", 30)
+    provider := SnapshotString(llmBlock, "provider", "fastflowlm")
+    ApplyProviderConfigToForm(provider, raw)
     serverBlock := SnapshotBlock(raw, "server")
     routingBlock := SnapshotBlock(raw, "routing")
     toneBlock := SnapshotBlock(raw, "tone")

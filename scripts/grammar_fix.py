@@ -760,6 +760,7 @@ def build_config_snapshot() -> dict:
     hotkeys_cfg = cfg.get("hotkeys") or {}
     tone_cfg = ((cfg.get("modes") or {}).get("tone") or {})
     server_cfg = cfg.get("server") or {}
+    provider_cfgs = cfg.get("providers") or {}
     effective = resolve_effective_llm(
         provider=str(llm_cfg.get("provider") or "fastflowlm").strip().lower(),
         base_url=str(llm_cfg.get("base_url") or cfg.get("flm_base_url") or "http://127.0.0.1:52625"),
@@ -782,6 +783,20 @@ def build_config_snapshot() -> dict:
             "auto_start": bool(llm_cfg.get("auto_start", True)),
         },
         "provider_status": provider_info,
+        "provider_configs": {
+            "fastflowlm": {
+                "base_url": str((provider_cfgs.get("fastflowlm") or {}).get("base_url") or "http://127.0.0.1:52625"),
+                "model": str((provider_cfgs.get("fastflowlm") or {}).get("model") or "qwen3.5:4b"),
+                "timeout_seconds": int((provider_cfgs.get("fastflowlm") or {}).get("timeout_seconds") or 60),
+                "auto_start": bool((provider_cfgs.get("fastflowlm") or {}).get("auto_start", True)),
+            },
+            "ollama": {
+                "base_url": str((provider_cfgs.get("ollama") or {}).get("base_url") or "http://127.0.0.1:11434"),
+                "model": str((provider_cfgs.get("ollama") or {}).get("model") or "llama3.2:3b"),
+                "timeout_seconds": int((provider_cfgs.get("ollama") or {}).get("timeout_seconds") or 120),
+                "auto_start": bool((provider_cfgs.get("ollama") or {}).get("auto_start", False)),
+            },
+        },
         "flm_base_url": effective["base_url"],
         "flm_model": effective["model"],
         "flm_timeout_seconds": effective["timeout_seconds"],

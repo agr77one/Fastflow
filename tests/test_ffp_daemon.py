@@ -194,6 +194,7 @@ def test_post_config_snapshot_returns_flat_dashboard_fields(daemon_server):
     assert set(payload["result"]) >= {
         "version",
         "llm",
+        "provider_configs",
         "flm_base_url",
         "flm_model",
         "flm_timeout_seconds",
@@ -208,6 +209,7 @@ def test_post_config_snapshot_returns_flat_dashboard_fields(daemon_server):
     notes = payload["result"]["notes"]
     assert isinstance(notes.get("categories"), list)
     assert set(payload["result"]["llm"]) >= {"provider", "base_url", "model", "configured_provider"}
+    assert set(payload["result"]["provider_configs"]) >= {"fastflowlm", "ollama"}
     provider_status = payload["result"]["provider_status"]
     assert set(provider_status) >= {"active", "configured", "providers", "available"}
 

@@ -73,6 +73,21 @@ ActiveProviderStatus(raw := "") {
     return info
 }
 
+ProviderProfileBlock(raw, provider) {
+    profilesBlock := SnapshotBlock(raw, "provider_configs")
+    return SnapshotBlock(profilesBlock, provider)
+}
+
+ApplyProviderConfigToForm(provider, raw) {
+    global dashGui
+    profileBlock := ProviderProfileBlock(raw, provider)
+    dashGui["CfgProvider"].Text := provider
+    dashGui["CfgBaseUrl"].Value := SnapshotString(profileBlock, "base_url", provider = "ollama" ? "http://127.0.0.1:11434" : "http://127.0.0.1:52625")
+    dashGui["CfgTimeout"].Value := SnapshotNumber(profileBlock, "timeout_seconds", provider = "ollama" ? 120 : 30)
+    dashGui["CfgBaseUrlLbl"].Text := ProviderLabel(provider) " URL"
+    dashGui["CfgTimeoutLbl"].Text := ProviderLabel(provider) " timeout"
+}
+
 PopulateOverview(cfg, daemonState, total, grammar, prompt) {
     global dashGui, currentHotkeys
     if !IsObject(dashGui)
@@ -106,8 +121,9 @@ PopulateServerTab(providerRaw := "") {
     provider := ActiveProviderStatus(providerRaw)
     statusOut := RunAction("status")
     dashGui["ServerStatusBody"].Text := FormatServerStatus(statusOut, provider)
-    dashGui["ServerStatusGroup"].Text := provider["label"] " status & endpoint"
+    dashGui["ServerStatusGroup"].Text := "Active provider: " provider["label"]
     dashGui["ServerModelsGroup"].Text := provider["label"] " models"
+    dashGui["ServerPullGroup"].Text := provider["label"] " model pull"
     dashGui["PerfHistoryGroup"].Text := (provider["key"] = "fastflowlm") ? "Performance && history" : "History"
     dashGui["CfgPerfBalanced"].Enabled := (provider["key"] = "fastflowlm")
     dashGui["CfgPerfMax"].Enabled := (provider["key"] = "fastflowlm")
@@ -203,6 +219,14 @@ FormatServerStatus(raw, provider := "") {
 
 PopulateConfigForm(raw := "") {
     return PopulateConfigForm_Impl(raw)
+}
+
+OnCfgProviderChanged() {
+    global dashGui
+    provider := Trim(StrLower(dashGui["CfgProvider"].Text), "`r`n`t ")
+    if (provider = "")
+        return
+    ApplyProviderConfigToForm(provider, RunAction("config_snapshot"))
 }
 
 ; Build a small Map of live-status fields for the Overview tab.
@@ -334,10 +358,13 @@ OnSaveConfig() {
     longThr := dashGui["CfgLongThr"].Value + 0
     chunkSize := dashGui["CfgChunkSize"].Value + 0
     minChunk := dashGui["CfgMinChunk"].Value + 0
-    provider := ActiveProviderStatus()
+    provider := Trim(StrLower(dashGui["CfgProvider"].Text), "`r`n`t ")
+    if (provider != "ollama" && provider != "fastflowlm")
+        provider := ActiveProviderStatus()["key"]
 
     ; flm_model intentionally omitted — that's owned by the model listbox above.
-    patch := '{"llm":{"provider":"' provider["key"] '","base_url":"' baseUrl '","timeout_seconds":' timeout '}'
+    patch := '{"llm":{"provider":"' provider '"}'
+        . ',"providers":{"' provider '":{"base_url":"' baseUrl '","timeout_seconds":' timeout '}}'
         . ',"history_store_text":' storeText
         . ',"server":{"performance_mode":"' perf '"}'
         . ',"routing":{"enabled":' routingEnabled
@@ -383,8 +410,11 @@ OnServerSetActive() {
     name := RegExReplace(selected, "\s+★\s*active\s*$")
     if (name = "")
         return
-    provider := ActiveProviderStatus()
-    patch := '{"llm":{"provider":"' provider["key"] '","model":"' EscapeJson(Trim(name)) '"}}'
+    provider := Trim(StrLower(dashGui["CfgProvider"].Text), "`r`n`t ")
+    if (provider != "ollama" && provider != "fastflowlm")
+        provider := ActiveProviderStatus()["key"]
+    patch := '{"llm":{"provider":"' provider '","model":"' EscapeJson(Trim(name)) '"}'
+        . ',"providers":{"' provider '":{"model":"' EscapeJson(Trim(name)) '"}}}'
     patchPath := A_Temp "\\ffp_cfg_patch_" A_TickCount ".json"
     SafeDelete(patchPath)
     FileAppend(patch, patchPath, "UTF-8")
