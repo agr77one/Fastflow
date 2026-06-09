@@ -13,6 +13,8 @@ def test_load_config_returns_defaults_when_file_missing(fresh_modules):
     cfg = grammar_fix.load_config()
 
     assert cfg["enabled"] is True
+    assert cfg["llm"]["provider"] == "fastflowlm"
+    assert cfg["llm"]["model"] == "qwen3.5:4b"
     assert cfg["flm_model"] == "qwen3.5:4b"
     assert cfg["server"]["performance_mode"] == "balanced"
     assert cfg["history_store_text"] is False
@@ -36,12 +38,40 @@ def test_load_config_merges_nested_sections(fresh_modules):
     cfg = grammar_fix.load_config()
 
     assert cfg["flm_model"] == "custom:model"
+    assert cfg["llm"]["model"] == "custom:model"
+    assert cfg["llm"]["timeout_seconds"] == 60
     assert cfg["server"]["auto_start"] is False
     assert cfg["server"]["performance_mode"] == "balanced"
     assert cfg["routing"]["chunk_size_chars"] == 900
     assert cfg["dictionary"]["protected_words"] == ["Flowkey"]
     assert cfg["modes"]["grammar"]["shortcut"] == "Ctrl+Alt+G"
     assert "prompt" in cfg["modes"]
+
+
+def test_load_config_accepts_new_llm_block(fresh_modules):
+    grammar_fix = fresh_modules("grammar_fix")
+    grammar_fix.CONFIG_PATH.write_text(
+        json.dumps(
+            {
+                "llm": {
+                    "provider": "ollama",
+                    "base_url": "http://127.0.0.1:11434",
+                    "model": "llama3.2:3b",
+                    "auth_bearer": "ollama",
+                    "timeout_seconds": 120,
+                    "auto_start": False,
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    cfg = grammar_fix.load_config()
+
+    assert cfg["llm"]["provider"] == "ollama"
+    assert cfg["flm_base_url"] == "http://127.0.0.1:11434"
+    assert cfg["flm_model"] == "llama3.2:3b"
+    assert cfg["flm_timeout_seconds"] == 120
 
 
 def test_save_config_writes_utf8_json_with_newline(fresh_modules):
@@ -387,7 +417,29 @@ def test_apply_config_patch_syncs_chat_llm_model(fresh_modules, monkeypatch):
 
     saved = json.loads(grammar_fix.CONFIG_PATH.read_text(encoding="utf-8"))
     assert saved["flm_model"] == "other:1b"
+    assert saved["llm"]["model"] == "other:1b"
     assert "llm_model" not in (saved.get("chat") or {})
+
+
+def test_apply_config_patch_accepts_llm_model_and_mirrors_legacy_keys(fresh_modules, monkeypatch):
+    grammar_fix = fresh_modules("grammar_fix")
+    monkeypatch.setattr(
+        grammar_fix,
+        "list_flm_models",
+        lambda: {"models": ["qwen3.5:4b", "other:1b"], "active": "qwen3.5:4b"},
+    )
+    monkeypatch.setattr(grammar_fix, "_warmup_request", lambda model: None)
+
+    result = grammar_fix.apply_config_patch({"llm": {"model": "other:1b", "timeout_seconds": 90}})
+
+    assert result == "model=other:1b"
+    assert grammar_fix.FLM_MODEL == "other:1b"
+    assert grammar_fix.LLM_MODEL == "other:1b"
+    assert grammar_fix.FLM_TIMEOUT_SECONDS == 90
+    saved = json.loads(grammar_fix.CONFIG_PATH.read_text(encoding="utf-8"))
+    assert saved["llm"]["model"] == "other:1b"
+    assert saved["flm_model"] == "other:1b"
+    assert saved["flm_timeout_seconds"] == 90
 
 
 def test_read_and_write_output_file_modes(fresh_modules, monkeypatch, tmp_path: Path):

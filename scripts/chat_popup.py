@@ -91,11 +91,15 @@ def load_config() -> dict:
         else:
             cfg[k] = v
 
+    llm_block = shared.get("llm") if isinstance(shared.get("llm"), dict) else {}
     cfg["llm_model"] = str(
-        shared.get("flm_model") or cfg.get("llm_model") or DEFAULTS["llm_model"]
+        llm_block.get("model") or shared.get("flm_model") or cfg.get("llm_model") or DEFAULTS["llm_model"]
     ).strip()
     raw_url = str(
-        shared.get("flm_base_url") or cfg.get("llm_base_url") or DEFAULTS["llm_base_url"]
+        llm_block.get("base_url") or shared.get("flm_base_url") or cfg.get("llm_base_url") or DEFAULTS["llm_base_url"]
+    ).strip()
+    cfg["llm_auth_bearer"] = str(
+        llm_block.get("auth_bearer") or cfg.get("llm_auth_bearer") or DEFAULTS["llm_auth_bearer"]
     ).strip()
     try:
         cfg["llm_base_url"] = ffp_config.validate_flm_base_url(raw_url)
@@ -118,10 +122,16 @@ def _overlay_live_flm_settings(cfg: dict) -> dict:
             live = payload["result"]
             model = str(live.get("flm_model") or "").strip()
             url = str(live.get("flm_base_url") or "").strip()
+            llm_block = live.get("llm") if isinstance(live.get("llm"), dict) else {}
+            model = str(llm_block.get("model") or model).strip()
+            url = str(llm_block.get("base_url") or url).strip()
+            bearer = str(llm_block.get("auth_bearer") or "").strip()
             if model:
                 cfg["llm_model"] = model
             if url:
                 cfg["llm_base_url"] = ffp_config.validate_flm_base_url(url)
+            if bearer:
+                cfg["llm_auth_bearer"] = bearer
     except Exception as exc:
         log.debug("daemon config_snapshot unavailable, using file config: %s", exc)
     return cfg

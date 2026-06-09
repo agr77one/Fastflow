@@ -59,7 +59,9 @@ def save_config(cfg: dict) -> None:
 
 
 def refresh_runtime_config() -> None:
-    global CONFIG, ENABLED, FLM_BASE_URL, FLM_MODEL, FLM_TIMEOUT_SECONDS
+    global CONFIG, ENABLED, LLM_CFG, LLM_PROVIDER, LLM_BASE_URL, LLM_MODEL
+    global LLM_AUTH_BEARER, LLM_TIMEOUT_SECONDS
+    global FLM_BASE_URL, FLM_MODEL, FLM_TIMEOUT_SECONDS
     global HISTORY_PATH, HISTORY_STORE_TEXT, SERVER_CFG, SERVER_AUTO_START
     global SERVER_PERFORMANCE_MODE, SERVER_STARTUP_TIMEOUT_SECONDS
     global SERVER_EXTRA_ARGS, SERVER_LOG_TO_FILE, SERVER_LOG_FILE
@@ -67,15 +69,21 @@ def refresh_runtime_config() -> None:
 
     CONFIG = load_config()
     ENABLED = bool(CONFIG.get("enabled", True))
+    LLM_CFG = CONFIG.get("llm") or {}
+    LLM_PROVIDER = str(LLM_CFG.get("provider") or "fastflowlm").strip().lower()
     try:
-        FLM_BASE_URL = ffp_config.validate_flm_base_url(
-            str(CONFIG.get("flm_base_url") or "http://127.0.0.1:52625")
+        LLM_BASE_URL = ffp_config.validate_llm_base_url(
+            str(LLM_CFG.get("base_url") or CONFIG.get("flm_base_url") or "http://127.0.0.1:52625")
         )
     except ValueError as exc:
-        log.warning("invalid flm_base_url in config, using default: %s", exc)
-        FLM_BASE_URL = "http://127.0.0.1:52625"
-    FLM_MODEL = str(CONFIG.get("flm_model") or "qwen3.5:4b").strip()
-    FLM_TIMEOUT_SECONDS = int(CONFIG.get("flm_timeout_seconds") or 30)
+        log.warning("invalid llm base_url in config, using default: %s", exc)
+        LLM_BASE_URL = "http://127.0.0.1:52625"
+    LLM_MODEL = str(LLM_CFG.get("model") or CONFIG.get("flm_model") or "qwen3.5:4b").strip()
+    LLM_AUTH_BEARER = str(LLM_CFG.get("auth_bearer") or "flm").strip()
+    LLM_TIMEOUT_SECONDS = int(LLM_CFG.get("timeout_seconds") or CONFIG.get("flm_timeout_seconds") or 30)
+    FLM_BASE_URL = LLM_BASE_URL
+    FLM_MODEL = LLM_MODEL
+    FLM_TIMEOUT_SECONDS = LLM_TIMEOUT_SECONDS
     HISTORY_PATH = _paths.DATA_DIR / str(CONFIG.get("history_filename") or "grammar_fix_history.jsonl")
     HISTORY_STORE_TEXT = bool(CONFIG.get("history_store_text", False))
     SERVER_CFG = CONFIG.get("server") or {}
@@ -357,7 +365,7 @@ def _call_flm_api(
     req = urllib.request.Request(
         FLM_BASE_URL + "/v1/chat/completions",
         data=body,
-        headers={"Content-Type": "application/json", "Authorization": "Bearer flm"},
+        headers={"Content-Type": "application/json", "Authorization": f"Bearer {LLM_AUTH_BEARER}"},
         method="POST",
     )
     with urllib.request.urlopen(req, timeout=max(2, timeout_seconds)) as resp:
@@ -557,18 +565,26 @@ def apply_config_patch(patch: dict) -> str:
     old_model = FLM_MODEL
     cfg = load_config()
     _deep_merge(cfg, filtered)
+    server_patch = filtered.get("server") if isinstance(filtered.get("server"), dict) else {}
+    if "auto_start" in server_patch and "auto_start" not in (filtered.get("llm") or {}):
+        cfg.setdefault("llm", {})["auto_start"] = bool(server_patch["auto_start"])
+    legacy_llm_patch = any(key in filtered for key in ("flm_base_url", "flm_model", "flm_timeout_seconds"))
+    ffp_config.normalize_llm_config(cfg, prefer_legacy=legacy_llm_patch)
 
-    if "flm_model" in filtered:
-        new_model = str(filtered["flm_model"]).strip()
+    model_changed = "flm_model" in filtered or "model" in (filtered.get("llm") or {})
+    if model_changed:
+        new_model = str((cfg.get("llm") or {}).get("model") or cfg.get("flm_model") or "").strip()
         if not new_model:
             raise RuntimeError("flm_model cannot be empty.")
-        models_info = list_flm_models()
-        if "error" not in models_info:
-            installed = models_info.get("models") or []
-            if new_model not in installed:
-                raise RuntimeError(
-                    f"Model '{new_model}' is not installed. Pull it first or pick another."
-                )
+        provider = str((cfg.get("llm") or {}).get("provider") or "fastflowlm").strip().lower()
+        if provider == "fastflowlm":
+            models_info = list_flm_models()
+            if "error" not in models_info:
+                installed = models_info.get("models") or []
+                if new_model not in installed:
+                    raise RuntimeError(
+                        f"Model '{new_model}' is not installed. Pull it first or pick another."
+                    )
         chat = cfg.get("chat")
         if isinstance(chat, dict):
             chat.pop("llm_model", None)
@@ -576,10 +592,10 @@ def apply_config_patch(patch: dict) -> str:
 
     save_config(cfg)
 
-    if "flm_model" in filtered:
-        if FLM_MODEL != str(filtered["flm_model"]).strip():
+    if model_changed:
+        if FLM_MODEL != str((cfg.get("llm") or {}).get("model") or cfg.get("flm_model") or "").strip():
             raise RuntimeError(
-                f"Config model mismatch after save: wanted {filtered['flm_model']!r}, "
+                f"Config model mismatch after save: wanted {new_model!r}, "
                 f"got {FLM_MODEL!r}"
             )
         if FLM_MODEL != old_model:
@@ -607,6 +623,14 @@ def build_config_snapshot() -> dict:
     server_cfg = cfg.get("server") or {}
     return {
         "version": APP_VERSION,
+        "llm": {
+            "provider": str((cfg.get("llm") or {}).get("provider") or "fastflowlm"),
+            "base_url": str((cfg.get("llm") or {}).get("base_url") or "http://127.0.0.1:52625"),
+            "model": str((cfg.get("llm") or {}).get("model") or FLM_MODEL),
+            "auth_bearer": str((cfg.get("llm") or {}).get("auth_bearer") or "flm"),
+            "timeout_seconds": int((cfg.get("llm") or {}).get("timeout_seconds") or 30),
+            "auto_start": bool((cfg.get("llm") or {}).get("auto_start", True)),
+        },
         "flm_base_url": str(cfg.get("flm_base_url") or "http://127.0.0.1:52625"),
         "flm_model": str(cfg.get("flm_model") or FLM_MODEL),
         "flm_timeout_seconds": int(cfg.get("flm_timeout_seconds") or 30),

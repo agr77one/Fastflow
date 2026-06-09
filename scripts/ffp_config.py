@@ -29,6 +29,14 @@ CLAUDE_PROMPT_SYSTEM_PROMPT = (
 
 DEFAULT_CONFIG = {
     "enabled": True,
+    "llm": {
+        "provider": "fastflowlm",
+        "base_url": "http://127.0.0.1:52625",
+        "model": "qwen3.5:4b",
+        "auth_bearer": "flm",
+        "timeout_seconds": 60,
+        "auto_start": True,
+    },
     "flm_base_url": "http://127.0.0.1:52625",
     "flm_model": "qwen3.5:4b",
     "flm_timeout_seconds": 60,
@@ -100,8 +108,10 @@ def load_config(config_path: Path) -> dict:
     if not isinstance(loaded, dict):
         log.warning("config file root is not an object (%s), using defaults", config_path)
         return copy.deepcopy(DEFAULT_CONFIG)
+    has_llm_block = isinstance(loaded.get("llm"), dict)
     merged = copy.deepcopy(DEFAULT_CONFIG)
     deep_merge(merged, loaded)
+    normalize_llm_config(merged, prefer_legacy=not has_llm_block)
     return merged
 
 
@@ -126,6 +136,55 @@ def deep_merge(dst: dict, src: dict) -> None:
             deep_merge(dst[key], value)
         else:
             dst[key] = value
+
+
+def normalize_llm_config(cfg: dict, *, prefer_legacy: bool = False) -> dict:
+    """Keep the new llm block and legacy flm_* keys in sync.
+
+    Phase 1 introduces provider-neutral config without forcing the rest of the
+    app to move at once. Existing configs using flm_* remain valid; new configs
+    can set llm.* and the legacy keys are derived for old call sites.
+    """
+    llm = cfg.get("llm")
+    if not isinstance(llm, dict):
+        llm = {}
+        cfg["llm"] = llm
+
+    provider = str(llm.get("provider") or "fastflowlm").strip().lower()
+    if provider not in {"fastflowlm", "ollama"}:
+        provider = "fastflowlm"
+    llm["provider"] = provider
+
+    if prefer_legacy or llm.get("base_url") in (None, ""):
+        llm["base_url"] = cfg.get("flm_base_url") or DEFAULT_CONFIG["llm"]["base_url"]
+    if prefer_legacy or llm.get("model") in (None, ""):
+        llm["model"] = cfg.get("flm_model") or DEFAULT_CONFIG["llm"]["model"]
+    if prefer_legacy or llm.get("timeout_seconds") in (None, ""):
+        llm["timeout_seconds"] = cfg.get("flm_timeout_seconds") or DEFAULT_CONFIG["llm"]["timeout_seconds"]
+    if prefer_legacy or llm.get("auth_bearer") in (None, ""):
+        llm["auth_bearer"] = "flm" if provider == "fastflowlm" else "ollama"
+    if prefer_legacy or "auto_start" not in llm:
+        server = cfg.get("server") if isinstance(cfg.get("server"), dict) else {}
+        llm["auto_start"] = bool(server.get("auto_start", DEFAULT_CONFIG["llm"]["auto_start"]))
+
+    llm["base_url"] = str(llm["base_url"]).strip().rstrip("/")
+    llm["model"] = str(llm["model"]).strip()
+    try:
+        llm["timeout_seconds"] = int(llm["timeout_seconds"])
+    except (TypeError, ValueError):
+        llm["timeout_seconds"] = int(DEFAULT_CONFIG["llm"]["timeout_seconds"])
+    llm["auth_bearer"] = str(llm.get("auth_bearer") or "").strip()
+    llm["auto_start"] = bool(llm.get("auto_start"))
+
+    # Backward-compatible mirrors for the current FastFlowLM-oriented runtime
+    # and AHK dashboard. Later phases can remove direct flm_* reads.
+    cfg["flm_base_url"] = llm["base_url"]
+    cfg["flm_model"] = llm["model"]
+    cfg["flm_timeout_seconds"] = llm["timeout_seconds"]
+    server = cfg.get("server")
+    if isinstance(server, dict):
+        server["auto_start"] = llm["auto_start"]
+    return cfg
 
 
 _LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
@@ -190,13 +249,27 @@ def validate_flm_base_url(url: str) -> str:
     return cleaned
 
 
+def validate_llm_base_url(url: str) -> str:
+    """Provider-neutral alias kept loopback-only for Phase 1."""
+    return validate_flm_base_url(url)
+
+
 def filter_config_patch(patch: dict) -> dict:
     """Whitelist keys accepted by apply_config_patch (blocks serve_extra_args, etc.)."""
     if not isinstance(patch, dict):
         raise ValueError("patch must be a JSON object")
     out: dict = {}
     for key, value in patch.items():
-        if key == "flm_base_url":
+        if key == "llm" and isinstance(value, dict):
+            filtered_llm = {}
+            for llm_key, llm_value in value.items():
+                if llm_key == "base_url":
+                    filtered_llm[llm_key] = validate_llm_base_url(str(llm_value))
+                elif llm_key in {"provider", "model", "auth_bearer", "timeout_seconds", "auto_start"}:
+                    filtered_llm[llm_key] = llm_value
+            if filtered_llm:
+                out[key] = filtered_llm
+        elif key == "flm_base_url":
             out[key] = validate_flm_base_url(str(value))
         elif key in ("flm_model", "flm_timeout_seconds", "history_filename", "history_store_text"):
             out[key] = value
