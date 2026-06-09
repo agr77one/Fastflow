@@ -80,8 +80,8 @@ PopulateOverview(cfg, daemonState, total, grammar, prompt) {
 
     dashGui["OvDaemonVal"].Opt(InStr(daemonState, "healthy") ? "+cGreen" : "+cRed")
     dashGui["OvDaemonVal"].Text := daemonState
-    providerLabel := cfg.Has("provider") ? ProviderLabel(cfg["provider"]) : "Local LLM"
-    dashGui["OvModelVal"].Text := cfg.Has("model") ? (providerLabel " / " cfg["model"]) : providerLabel
+    activeProviderLabel := cfg.Has("provider") ? ProviderLabel(cfg["provider"]) : "Local LLM"
+    dashGui["OvModelVal"].Text := cfg.Has("model") ? (activeProviderLabel " / " cfg["model"]) : activeProviderLabel
     dashGui["OvVersionVal"].Text := cfg.Has("version") ? cfg["version"] : "?"
     dashGui["OvUrlVal"].Text := cfg.Has("base_url") ? cfg["base_url"] : "?"
 
