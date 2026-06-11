@@ -46,6 +46,7 @@ forces single-tree layout (mode = "dev") rooted at the given path.
 from __future__ import annotations
 
 import os
+import shutil
 from pathlib import Path
 
 # ---------- Mode detection ---------------------------------------------------
@@ -240,7 +241,9 @@ def migrate_legacy_layout() -> list[str]:
             continue
         try:
             dst.parent.mkdir(parents=True, exist_ok=True)
-            src.replace(dst)
+            # shutil.move, not Path.replace: os.rename can't cross drives on
+            # Windows (e.g. scripts/ on D:, %LOCALAPPDATA% on C:).
+            shutil.move(os.fspath(src), os.fspath(dst))
             moved.append(f"{src.name} -> {dst.parent.name}/{dst.name}")
         except OSError as e:
             moved.append(f"FAILED to move {src.name}: {e}")
