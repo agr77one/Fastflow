@@ -45,8 +45,12 @@ def daemon_server(daemon_module):
 def test_actions_count_and_expected_names(daemon_module):
     # v1.4.0 added get_autostart_state + set_autostart -> 38.
     # Late v1.4.0 added flm_update_check, bench_start/status/history,
-    # note_search, pull_start/status -> 46; v1.5.4 removed model_stats -> 45.
-    assert len(daemon_module.ACTIONS) == 48
+    # note_search, pull_start/status; v1.5.0 removed model_stats;
+    # v1.6 web dashboard added recent_history + notes_list + mode_ids -> 51.
+    assert len(daemon_module.ACTIONS) == 51
+    assert "recent_history" in daemon_module.ACTIONS
+    assert "notes_list" in daemon_module.ACTIONS
+    assert "mode_ids" in daemon_module.ACTIONS
     assert "version" in daemon_module.ACTIONS
     assert "apply_config_patch" in daemon_module.ACTIONS
     assert "chat_send_selection" in daemon_module.ACTIONS
@@ -64,7 +68,7 @@ def test_actions_count_and_expected_names(daemon_module):
     assert "note_search" in daemon_module.ACTIONS
     assert "pull_start" in daemon_module.ACTIONS
     assert "pull_status" in daemon_module.ACTIONS
-    # removed in v1.5.4
+    # removed in v1.5.0
     assert "model_stats" not in daemon_module.ACTIONS
 
 
@@ -115,6 +119,63 @@ def test_unknown_get_path_returns_404(daemon_server):
         _read_json(base_url + "/nope")
 
     assert exc.value.code == 404
+
+
+def test_get_index_serves_html_with_csp(daemon_server):
+    # Web dashboard skeleton: GET / serves ui/web/index.html with a CSP header.
+    _, base_url = daemon_server
+    req = urllib.request.Request(base_url + "/")
+
+    with urllib.request.urlopen(req, timeout=5) as resp:
+        body = resp.read().decode("utf-8")
+        assert resp.status == 200
+        assert resp.headers["Content-Type"].startswith("text/html")
+        assert "default-src 'self'" in (resp.headers.get("Content-Security-Policy") or "")
+        assert resp.headers.get("X-Content-Type-Options") == "nosniff"
+        assert "Flowkey" in body
+
+
+def test_get_static_assets_have_correct_types(daemon_server):
+    _, base_url = daemon_server
+
+    for path, expected_type in (("/ui/styles.css", "text/css"), ("/ui/app.js", "text/javascript")):
+        with urllib.request.urlopen(base_url + path, timeout=5) as resp:
+            assert resp.status == 200
+            assert resp.headers["Content-Type"].startswith(expected_type)
+            assert resp.headers.get("X-Content-Type-Options") == "nosniff"
+
+
+def test_get_path_traversal_is_404(daemon_server):
+    # Static serving is an explicit allowlist map — anything else (including
+    # traversal attempts) must 404, never read outside ui/web/.
+    _, base_url = daemon_server
+
+    for path in ("/ui/secrets.txt", "/ui/..%2fffp_daemon.py", "/ui/app.js/../../ffp_daemon.py"):
+        with pytest.raises(urllib.error.HTTPError) as exc:
+            urllib.request.urlopen(base_url + path, timeout=5)
+        assert exc.value.code == 404
+
+
+def test_foreign_host_header_is_rejected(daemon_server):
+    # DNS-rebinding defense: a rebound origin is same-origin to the daemon and
+    # CAN set X-FFP-API, but it still sends its own Host — reject it on both
+    # methods (V41).
+    _, base_url = daemon_server
+
+    get_req = urllib.request.Request(base_url + "/healthz", headers={"Host": "evil.example:52650"})
+    with pytest.raises(urllib.error.HTTPError) as exc:
+        urllib.request.urlopen(get_req, timeout=5)
+    assert exc.value.code == 403
+
+    post_req = urllib.request.Request(
+        base_url + "/action/version",
+        data=b"{}",
+        method="POST",
+        headers={"X-FFP-API": "1", "Host": "evil.example"},
+    )
+    with pytest.raises(urllib.error.HTTPError) as exc:
+        urllib.request.urlopen(post_req, timeout=5)
+    assert exc.value.code == 403
 
 
 def test_post_without_api_header_is_rejected(daemon_server):
@@ -186,6 +247,77 @@ def test_post_config_snapshot_returns_flat_dashboard_fields(daemon_server):
     }
     notes = payload["result"]["notes"]
     assert isinstance(notes.get("categories"), list)
+
+
+def test_recent_history_returns_summary_without_text(daemon_server):
+    daemon_module, base_url = daemon_server
+    history_path = daemon_module.grammar_fix.HISTORY_PATH
+    history_path.parent.mkdir(parents=True, exist_ok=True)
+    rows = [
+        {"timestamp": "2026-06-10T09:00:00", "mode": "grammar", "input_chars": 10,
+         "elapsed_seconds": 1.2, "input_text": "SECRET-IN", "output_text": "SECRET-OUT"},
+        {"timestamp": "2026-06-10T10:00:00", "mode": "prompt", "input_chars": 20,
+         "elapsed_seconds": 3.4},
+    ]
+    history_path.write_text("\n".join(json.dumps(r) for r in rows) + "\n", encoding="utf-8")
+    body = json.dumps({"args": {"limit": 50}}).encode("utf-8")
+
+    status, payload = _read_json(base_url + "/action/recent_history", method="POST", body=body)
+
+    assert status == 200
+    entries = payload["result"]
+    assert [e["mode"] for e in entries] == ["prompt", "grammar"]  # newest first
+    assert all("input_text" not in e and "output_text" not in e for e in entries)
+    assert entries[1]["input_chars"] == 10
+
+
+def test_apply_config_patch_with_hotkeys_writes_reload_marker(daemon_server):
+    daemon_module, base_url = daemon_server
+    marker = daemon_module._paths.MARKER_RELOAD_HOTKEYS
+    if marker.exists():
+        marker.unlink()
+    body = json.dumps({"args": {"patch": {"hotkeys": {"grammar_fix": "^+g"}}}}).encode("utf-8")
+
+    status, payload = _read_json(base_url + "/action/apply_config_patch", method="POST", body=body)
+
+    assert status == 200
+    assert payload["ok"] is True
+    assert marker.exists()  # AHK 500ms poll picks this up -> RegisterHotkeys()
+
+    # Patches that touch neither hotkeys nor modes must not trigger a reload.
+    marker.unlink()
+    body = json.dumps({"args": {"patch": {"server": {"auto_start": True}}}}).encode("utf-8")
+    _read_json(base_url + "/action/apply_config_patch", method="POST", body=body)
+    assert not marker.exists()
+
+
+def test_custom_mode_lifecycle_create_list_delete(daemon_server):
+    daemon_module, base_url = daemon_server
+
+    create = json.dumps({"args": {"patch": {"modes": {"translate": {
+        "label": "Translate", "system_prompt": "Translate to English. Return only the translation."
+    }}}}}).encode("utf-8")
+    status, payload = _read_json(base_url + "/action/apply_config_patch", method="POST", body=create)
+    assert status == 200 and payload["ok"] is True
+
+    _, ids = _read_json(base_url + "/action/mode_ids", method="POST", body=b"{}")
+    assert "translate" in ids["result"].split(",")
+    assert "grammar" not in ids["result"].split(",")  # no-prefix default excluded
+
+    _, snap = _read_json(base_url + "/action/config_snapshot", method="POST", body=b"{}")
+    modes = snap["result"]["modes"]
+    assert modes["translate"]["builtin"] is False
+    assert modes["translate"]["label"] == "Translate"
+    assert modes["prompt"]["builtin"] is True
+
+    delete = json.dumps({"args": {"patch": {"modes": {"translate": None}}}}).encode("utf-8")
+    status, _ = _read_json(base_url + "/action/apply_config_patch", method="POST", body=delete)
+    assert status == 200
+
+    _, ids = _read_json(base_url + "/action/mode_ids", method="POST", body=b"{}")
+    assert "translate" not in ids["result"].split(",")
+    saved = json.loads(daemon_module.grammar_fix.CONFIG_PATH.read_text(encoding="utf-8"))
+    assert "translate" not in (saved.get("modes") or {})
 
 
 def test_apply_config_patch_persists_nested_value(daemon_server):

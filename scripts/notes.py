@@ -26,13 +26,16 @@ strip pass.
 
 from __future__ import annotations
 
+import ipaddress
 import json
 import logging
 import os
 import re
+import socket
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 import uuid
 from html.parser import HTMLParser
@@ -204,10 +207,44 @@ def _extract_html(html: str) -> tuple[str, str]:
     return title, body
 
 
+def _url_is_fetchable(url: str) -> tuple[bool, str]:
+    """Only public http(s) URLs are fetched. Blocks loopback/private/link-local
+    hosts so a captured URL can't probe the local daemon, the FLM server, or
+    LAN devices through the note-categorization fetch (SSRF). Resolution here
+    and in urlopen are separate lookups (TOCTOU), which is acceptable for this
+    local-tool threat model — the goal is stopping casual/accidental probes,
+    not a hostile resolver."""
+    try:
+        parsed = urllib.parse.urlsplit(url)
+    except ValueError:
+        return False, "unparseable URL"
+    if parsed.scheme not in ("http", "https"):
+        return False, f"scheme '{parsed.scheme}' is not fetched"
+    host = (parsed.hostname or "").lower()
+    if not host:
+        return False, "no host in URL"
+    if host == "localhost" or host.endswith((".localhost", ".local")):
+        return False, "local hostname is not fetched"
+    try:
+        infos = socket.getaddrinfo(host, None)
+    except OSError:
+        return True, ""  # unresolvable here — urlopen will surface its own error
+    for info in infos:
+        ip = ipaddress.ip_address(info[4][0])
+        if (ip.is_loopback or ip.is_private or ip.is_link_local
+                or ip.is_reserved or ip.is_multicast or ip.is_unspecified):
+            return False, f"non-public address {ip} is not fetched"
+    return True, ""
+
+
 def _fetch_url(url: str) -> dict:
     """Fetch a URL, return {ok, title, body, error?, http_status?}. Best-effort,
     never raises."""
     out: dict = {"ok": False, "title": "", "body": "", "url": url}
+    fetchable, reason = _url_is_fetchable(url)
+    if not fetchable:
+        out["error"] = reason
+        return out
     try:
         req = urllib.request.Request(url, headers={
             "User-Agent": f"Flowkey/{grammar_fix.APP_VERSION}",
@@ -443,6 +480,38 @@ def search_notes(query: str, limit: int = 5) -> dict:
     return {"query": query, "results": capped, "count": len(matches)}
 
 
+def list_recent_notes(limit: int = 20) -> dict:
+    """Newest notes in the vault — {results: [{title, category, modified}], count}.
+
+    Read-only browse feed for the web dashboard's Notes tab; note bodies are
+    not returned (use note_search for content snippets).
+    """
+    vault = _vault_dir()
+    if not vault.exists():
+        return {"results": [], "count": 0}
+    files = sorted(vault.rglob("*.md"), key=lambda p: p.stat().st_mtime, reverse=True)
+    results: list[dict] = []
+    for path in files[: max(1, min(int(limit or 20), 100))]:
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except Exception:
+            continue
+        title, _body = _split_frontmatter_title(text)
+        try:
+            rel = path.relative_to(vault)
+            category = str(rel.parent).replace("\\", "/")
+            if category in (".", ""):
+                category = "inbox"
+        except ValueError:
+            category = path.parent.name
+        results.append({
+            "title": title or path.stem,
+            "category": category,
+            "modified": time.strftime("%Y-%m-%d %H:%M", time.localtime(path.stat().st_mtime)),
+        })
+    return {"results": results, "count": len(files)}
+
+
 # ---------- File writing -----------------------------------------------------
 
 def _yaml_frontmatter(d: dict) -> str:
@@ -504,19 +573,6 @@ def _write_note(category: str, ts_prefix: str, slug: str,
     if target.exists():
         target = _vault_subpath(safe_cat, f"{ts_prefix}-{slug}-{uuid.uuid4().hex[:6]}.md")
     target.write_text(_yaml_frontmatter(frontmatter) + "\n\n" + body, encoding="utf-8")
-    return target
-
-
-def _move_note(src: Path, new_category: str, new_slug: str | None = None) -> Path:
-    """Move a note file to a new category folder, optionally renaming."""
-    safe_cat = _safe_category(new_category)
-    new_dir = _vault_subpath(safe_cat)
-    _ensure_dir(new_dir)
-    target_name = (new_slug + ".md") if new_slug else src.name
-    target = _vault_subpath(safe_cat, target_name)
-    if target.exists() and target != src:
-        target = _vault_subpath(safe_cat, f"{target.stem}-{uuid.uuid4().hex[:6]}.md")
-    src.replace(target)
     return target
 
 

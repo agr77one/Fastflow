@@ -78,19 +78,6 @@ RegisterHotkeys() {
     }
 }
 
-; True if AutoHotkey can register `key` as a hotkey. Probes with a disabled
-; no-op binding inside try/catch; an invalid string (e.g. "^+a+1") throws, so
-; OnSaveConfig never persists an unbindable shortcut. SPEC V30.
-IsValidHotkey(key) {
-    if (Trim(key) = "")
-        return false
-    try {
-        Hotkey(key, HotkeyProbeNoop, "Off")
-        return true
-    } catch {
-        return false
-    }
-}
-
-HotkeyProbeNoop(*) {
-}
+; V30 note: validate-before-persist now happens in the web dashboard's JS
+; (regex check before apply_config_patch); RegisterHotkeys() above remains the
+; authoritative gate — an unbindable key is rejected by Hotkey() with a toast.

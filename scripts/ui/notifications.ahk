@@ -57,7 +57,11 @@ $app = '{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\WindowsPowerShell\v1.0\powershell
     SafeDelete(psPath)
     FileAppend(ps, psPath, "UTF-8")
     Run(Format('powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "{}"', psPath), , "Hide")
-    try FileDelete(psPath)
+    ; Delete AFTER powershell has had time to read the script. Deleting
+    ; immediately raced the async launch: the file could vanish before -File
+    ; loaded it (silent toast failure) or the delete failed while in use
+    ; (temp-file leak). One-shot timer; SafeDelete tolerates both outcomes.
+    SetTimer(SafeDelete.Bind(psPath), -15000)
 }
 
 ; Mirror of _xml_escape in ffp_daemon.py — keep the two in sync. Neutralizes XML

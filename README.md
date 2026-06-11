@@ -4,9 +4,11 @@ Flowkey is a Windows desktop assistant that adds local-LLM hotkeys for grammar f
 
 Everything runs locally through [FastFlowLM](https://fastflowlm.com). No cloud service, analytics, or telemetry is used by the app.
 
-Current version: `1.5.4`
+Current version: `1.6.0`
 
 ## Screenshots
+
+> Screenshots below show the v1.5 native dashboard. v1.6 replaced it with a browser-based dashboard served by the local daemon (same tabs and features) — refreshed screenshots are coming.
 
 | Dashboard config | Benchmark runs |
 |---|---|
@@ -75,9 +77,21 @@ Launch the app with AutoHotkey v2:
 | `summarize:` + `Ctrl+Shift+G` | Create a 3-bullet summary |
 | `explain:` + `Ctrl+Shift+G` | Explain code, regex, SQL, or technical text |
 | `tone:` + `Ctrl+Shift+G` | Rewrite in the selected tone preset |
-| `Ctrl+Shift+T` | Open chat |
+| `<custom>:` + `Ctrl+Shift+G` | Any mode you define in Dashboard → Config → Custom modes (e.g. `translate:`) |
+| `Ctrl+Shift+T` | Open chat (each tab has a "My notes" toggle that grounds replies in your notes vault) |
 | `Ctrl+Shift+A` | Ask in chat with selected text |
 | `Ctrl+Alt+N` | Capture a note |
+
+Prefix tip: put the keyword on the first line of your selection — `prompt: rough idea here` (or `prompt` on its own line, then the text). Without a prefix, `Ctrl+Shift+G` always runs a grammar fix.
+
+## Dashboard
+
+The dashboard is a web page served by the local daemon — open it from the tray menu ("Dashboard") or browse to `http://127.0.0.1:52650/`. It is loopback-only and works in any browser.
+
+- **Tabs:** Overview, History, Telemetry, Notes, Benchmark, Config.
+- **Theme:** auto-follows your OS day/night setting; the topbar button cycles auto → light → dark.
+- **Custom modes:** Config → Custom modes lets you add your own `prefix:` commands (id + system prompt). Changes apply to the running app within a second.
+- **Notes:** browse or search your vault; History shows recent runs (text is stored only if history storage is enabled).
 
 ## Project Layout
 

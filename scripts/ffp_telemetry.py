@@ -18,6 +18,41 @@ def append_history(history_path: Path, entry: dict) -> None:
         log.warning("append_history failed (%s): %s", history_path, exc)
 
 
+# Summary fields exposed to dashboard clients. input_text / output_text are
+# deliberately excluded so stored selection text can never leak into a client
+# that only needs telemetry (e.g. the web dashboard's History tab).
+_HISTORY_SUMMARY_KEYS = (
+    "timestamp", "ts", "status", "mode", "source", "model", "strategy",
+    "input_chars", "output_chars", "elapsed_seconds", "api_time",
+    "prompt_tokens", "completion_tokens", "tok_per_sec",
+)
+
+
+def recent_history(history_path: Path, limit: int = 50) -> list[dict]:
+    """Last `limit` history entries, newest first, summary fields only."""
+    entries: list[dict] = []
+    if not history_path.exists():
+        return entries
+    try:
+        with history_path.open("r", encoding="utf-8", errors="replace") as handle:
+            lines = handle.readlines()
+    except Exception as exc:
+        log.warning("recent_history read failed (%s): %s", history_path, exc)
+        return entries
+    for raw in reversed(lines):
+        raw = raw.strip()
+        if not raw:
+            continue
+        try:
+            row = json.loads(raw)
+        except Exception:
+            continue
+        entries.append({key: row[key] for key in _HISTORY_SUMMARY_KEYS if key in row})
+        if len(entries) >= limit:
+            break
+    return entries
+
+
 def _percentile(values: list[float], pct: float) -> float:
     if not values:
         return 0.0

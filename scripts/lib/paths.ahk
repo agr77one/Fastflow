@@ -60,6 +60,7 @@ BuildRuntimePaths() {
         "historyPath", userRoot "\\data\\grammar_fix_history.jsonl",
         "counterPath", userRoot "\\data\\prompt_counters.ini",
         "clipboardWatcherMarker", userRoot "\\data\\.clipboard_watcher_on",
-        "openDashboardMarker", userRoot "\\data\\.open_dashboard"
+        "openDashboardMarker", userRoot "\\data\\.open_dashboard",
+        "reloadHotkeysMarker", userRoot "\\data\\.reload_hotkeys"
     )
 }

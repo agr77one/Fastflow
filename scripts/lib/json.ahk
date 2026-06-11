@@ -3,47 +3,12 @@
 ; Split out of grammarFix.ahk for navigability. AHK #Include is
 ; textual: these functions share grammarFix.ahk's global namespace exactly as
 ; before. Function definitions only - no top-level/auto-execute code.
+;
+; v1.6: the regex JSON *readers* (JsonStringField, Snapshot*, etc.) died with
+; the native AHK dashboard — the web dashboard parses daemon JSON in the
+; browser with JSON.parse. Only the writer-side escape helper and the hotkey
+; config reader remain.
 ; ===========================================================================
-
-; Minimal JSON field extractors (sufficient for our flat-ish config).
-JsonStringField(raw, key, default := "") {
-    if RegExMatch(raw, '"' key '"\s*:\s*"([^"]*)"', &m)
-        return m[1]
-    return default
-}
-
-JsonNumberField(raw, key, default := 0) {
-    if RegExMatch(raw, '"' key '"\s*:\s*([0-9]+(?:\.[0-9]+)?)', &m)
-        return m[1] + 0
-    return default
-}
-
-JsonBoolField(raw, key, default := false, parent := "") {
-    if (parent != "") {
-        ; Constrain match to the parent object's first 400 chars (sloppy but works for our shape).
-        if RegExMatch(raw, '"' parent '"\s*:\s*\{([^}]{0,800})\}', &block) {
-            if RegExMatch(block[1], '"' key '"\s*:\s*(true|false)', &m)
-                return m[1] = "true"
-        }
-        return default
-    }
-    if RegExMatch(raw, '"' key '"\s*:\s*(true|false)', &m)
-        return m[1] = "true"
-    return default
-}
-
-ExtractStringArray(jsonStr, key) {
-    arr := []
-    if !RegExMatch(jsonStr, '"' key '"\s*:\s*\[([^\]]*)\]', &m)
-        return arr
-    raw := m[1]
-    pos := 1
-    while RegExMatch(raw, '"((?:[^"\\]|\\.)*)"', &n, pos) {
-        arr.Push(n[1])
-        pos := n.Pos + n.Len
-    }
-    return arr
-}
 
 EscapeJson(s) {
     s := StrReplace(s, "\", "\\")
@@ -65,51 +30,6 @@ EscapeJson(s) {
         else
             out .= A_LoopField
     }
-    return out
-}
-
-ExtractJsonNumber(raw, key) {
-    if RegExMatch(raw, '"' . key . '":\s*([0-9.]+)', &m)
-        return m[1]
-    return ""
-}
-
-; Helper: pull a quoted string field from a JSON sub-object. Cheap regex,
-; not a full parser — fine for our flat hotkeys block.
-JsonEnabledField(raw, key := "enabled") {
-    return InStr(raw, '"' key '": true') || InStr(raw, '"' key '":true')
-}
-
-SnapshotString(raw, key, default := "") {
-    return JsonStringField(raw, key, default)
-}
-
-SnapshotNumber(raw, key, default := 0) {
-    return JsonNumberField(raw, key, default)
-}
-
-SnapshotBool(raw, key, default := false) {
-    return JsonBoolField(raw, key, default)
-}
-
-SnapshotBlock(raw, key) {
-    pos := InStr(raw, '"' key '"')
-    if !pos
-        return ""
-    sub := SubStr(raw, pos)
-    if RegExMatch(sub, ':\s*(\{)', &m)
-        return ExtractBalancedJson_Impl(sub, m.Pos)
-    return ""
-}
-
-SnapshotStringArray(raw, key) {
-    return ExtractStringArray(raw, key)
-}
-
-JoinArray(items, delimiter := "`n") {
-    out := ""
-    for index, value in items
-        out .= (index = 1 ? "" : delimiter) value
     return out
 }
 

@@ -52,7 +52,7 @@
 .EXAMPLE
     # Sign the installer
     $env:FFP_SIGN_PFX_PASSWORD = "ChangeMe!"
-    .\sign.ps1 -FilePath ..\out\Flowkey-Setup-1.5.4.exe
+    .\sign.ps1 -FilePath ..\out\Flowkey-Setup-1.6.0.exe
 #>
 
 [CmdletBinding(DefaultParameterSetName = "Sign")]

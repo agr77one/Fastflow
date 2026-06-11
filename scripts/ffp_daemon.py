@@ -10,7 +10,7 @@ Lifecycle:
   prior daemon is already healthy.
 - `--parent-pid N` makes the daemon exit when its parent (the AHK process)
   exits. Without it, the daemon runs until killed.
-- Logs to the runtime logs directory resolved by `paths.LOGS_DIR`.
+- Logs to `release/scripts/logs/daemon-YYYY-MM-DD.log` (rotated daily).
 
 Stdlib only. No external dependencies.
 """
@@ -95,6 +95,7 @@ def _chat_launch_argv() -> list[str]:
             return [str(chat_exe), *parent_arg]
     return [sys.executable, str(HERE / "chat_popup.py"), *parent_arg]
 
+
 HOST = "127.0.0.1"
 DEFAULT_PORT = 52650
 # API_VERSION doubles as the required POST header value (X-FFP-API). The AHK
@@ -102,6 +103,23 @@ DEFAULT_PORT = 52650
 # together — a daemon/client version mismatch is rejected with 403 by design.
 API_VERSION = "1"
 _MAX_BODY_BYTES = 8 * 1024 * 1024  # reject oversized POST bodies (local DoS guard)
+
+# Host allowlist (DNS-rebinding defense): a malicious page on evil.com can
+# rebind its DNS to 127.0.0.1 and become same-origin with this daemon, at
+# which point its JS CAN set X-FFP-API (the value is public in this source).
+# Such requests still carry "Host: evil.com", so rejecting foreign Host
+# values closes the hole. We bind 127.0.0.1 only, so legitimate values are
+# 127.0.0.1[:port] / localhost[:port].
+_ALLOWED_HOSTNAMES = {"127.0.0.1", "localhost"}
+
+# Web dashboard static assets (v1.6 prototype). Served from an explicit
+# allowlist map — no directory walking, so no path-traversal surface.
+_WEB_DIR = HERE / "ui" / "web"
+_WEB_ROUTES = {
+    "/": ("index.html", "text/html; charset=utf-8"),
+    "/ui/styles.css": ("styles.css", "text/css; charset=utf-8"),
+    "/ui/app.js": ("app.js", "text/javascript; charset=utf-8"),
+}
 
 _paths.ensure_dirs()
 LOG_DIR = _paths.LOGS_DIR  # centralized via paths.py
@@ -355,7 +373,33 @@ def _act_apply_config_patch(args: dict) -> str:
         )
     if not isinstance(patch, dict):
         raise ValueError("patch must be a JSON object")
-    return grammar_fix.apply_config_patch(patch)
+    result = grammar_fix.apply_config_patch(patch)
+    if "hotkeys" in patch or "modes" in patch:
+        # Web-dashboard saves can't reach into the running AHK process. Drop a
+        # marker that the AHK 500ms poll picks up to re-register hotkeys and
+        # refresh the mode-prefix keyword list (custom modes).
+        try:
+            _paths.MARKER_RELOAD_HOTKEYS.write_text("1\n", encoding="utf-8")
+        except OSError as exc:
+            log.warning("could not write reload-hotkeys marker: %s", exc)
+    return result
+
+
+def _act_mode_ids(_args: dict) -> str:
+    """Prefix-keyword mode ids for the AHK client, comma-joined as a plain
+    string (no JSON parsing client-side). 'grammar' is the no-prefix default
+    and is excluded."""
+    cfg = grammar_fix.load_config()
+    return ",".join(m for m in (cfg.get("modes") or {}) if m != "grammar")
+
+
+def _act_recent_history(args: dict) -> list[dict]:
+    """Last N history entries (summary fields only — never stored text)."""
+    try:
+        limit = int(args.get("limit") or 50)
+    except (TypeError, ValueError):
+        limit = 50
+    return grammar_fix.recent_history(max(1, min(limit, 200)))
 
 
 def _act_doctor(_args: dict) -> str:
@@ -418,6 +462,16 @@ def _act_pull_start(args: dict) -> dict:
 def _act_pull_status(_args: dict) -> dict:
     import ffp_pull
     return ffp_pull.status()
+
+
+def _act_notes_list(args: dict) -> dict:
+    """Newest notes in the vault (read-only browse). args.limit (int, default 20)."""
+    import notes
+    try:
+        limit = int(args.get("limit") or 20)
+    except (TypeError, ValueError):
+        limit = 20
+    return notes.list_recent_notes(limit)
 
 
 def _act_note_search(args: dict) -> dict:
@@ -595,6 +649,7 @@ ACTIONS: dict[str, Callable[[dict], Any]] = {
     "set_tone_friendly": lambda a: _act_set_tone({"preset": "friendly"}),
     "stats": _act_stats,
     "dashboard_data": _act_dashboard_data,
+    "recent_history": _act_recent_history,
     "config_snapshot": _act_config_snapshot,
     "models_list": _act_models_list,
     "models_installed": _act_models_installed,
@@ -611,6 +666,8 @@ ACTIONS: dict[str, Callable[[dict], Any]] = {
     "bench_status": _act_bench_status,
     "bench_history": _act_bench_history,
     "note_search": _act_note_search,
+    "notes_list": _act_notes_list,
+    "mode_ids": _act_mode_ids,
     "pull_start": _act_pull_start,
     "pull_status": _act_pull_status,
     "notify": _act_notify,
@@ -657,7 +714,31 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
+    def _host_allowed(self) -> bool:
+        host = (self.headers.get("Host") or "").split(":", 1)[0].strip().lower()
+        return host in _ALLOWED_HOSTNAMES
+
+    def _send_static(self, filename: str, content_type: str) -> None:
+        try:
+            data = (_WEB_DIR / filename).read_bytes()
+        except OSError:
+            self._send_json(404, {"ok": False, "error": f"asset missing: {filename}"})
+            return
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("X-Content-Type-Options", "nosniff")
+        if content_type.startswith("text/html"):
+            # No inline scripts/styles in the page, so 'self' is sufficient and
+            # blocks anything injected from rendering or phoning out.
+            self.send_header("Content-Security-Policy", "default-src 'self'")
+        self.end_headers()
+        self.wfile.write(data)
+
     def do_GET(self) -> None:  # noqa: N802
+        if not self._host_allowed():
+            self._send_json(403, {"ok": False, "error": "forbidden Host header"})
+            return
         if self.path == "/healthz":
             uptime = round(time.time() - _started_at, 1)
             self._send_json(200, {
@@ -668,14 +749,22 @@ class Handler(BaseHTTPRequestHandler):
                 "actions": sorted(ACTIONS.keys()),
             })
             return
+        route = _WEB_ROUTES.get(self.path.split("?", 1)[0])
+        if route is not None:
+            self._send_static(route[0], route[1])
+            return
         self._send_json(404, {"ok": False, "error": f"GET {self.path} not found"})
 
     def do_POST(self) -> None:  # noqa: N802
-        # CSRF / cross-origin defense: require our custom header. A browser cannot
-        # set a custom header on a cross-origin request without a CORS preflight,
-        # which this daemon never answers permissively — so a malicious web page
-        # the user visits cannot trigger state-changing actions on localhost. The
-        # AHK client always sends it. Localhost-only bind already blocks the LAN.
+        # DNS-rebinding defense first (see _ALLOWED_HOSTNAMES), then the CSRF
+        # header gate: a browser cannot set a custom header on a cross-origin
+        # request without a CORS preflight, which this daemon never answers
+        # permissively — so a malicious web page the user visits cannot trigger
+        # state-changing actions on localhost. The AHK client and the web
+        # dashboard (same-origin) always send it. Localhost bind blocks the LAN.
+        if not self._host_allowed():
+            self._send_json(403, _err("forbidden Host header", 0.0))
+            return
         if self.headers.get("X-FFP-API") != API_VERSION:
             self._send_json(403, _err("missing or invalid X-FFP-API header", 0.0))
             return
@@ -715,13 +804,7 @@ class Handler(BaseHTTPRequestHandler):
             log.warning("action=%s json_parse_failed body=%r", action_name, raw_body[:200])
             self._send_json(400, _err(f"invalid JSON body: {e}", 0.0))
             return
-        if not isinstance(payload, dict):
-            self._send_json(400, _err("JSON body must be an object", 0.0))
-            return
         args = payload.get("args") or {}
-        if not isinstance(args, dict):
-            self._send_json(400, _err("JSON args must be an object", 0.0))
-            return
 
         start = time.time()
         try:

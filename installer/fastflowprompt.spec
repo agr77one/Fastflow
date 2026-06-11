@@ -66,6 +66,11 @@ HIDDEN_IMPORTS = [
 
 DATAS = [
     (os.path.join(_RELEASE_ROOT, "setup", "defaults"), "setup/defaults"),
+    # Web dashboard static files: ffp_daemon serves HERE/ui/web at runtime,
+    # which resolves inside the bundle dir for frozen builds.
+    (os.path.join(SCRIPTS_DIR, "ui", "web"), "ui/web"),
+    # App icon used by the tray/dashboard surfaces (HERE/assets).
+    (os.path.join(SCRIPTS_DIR, "assets"), "assets"),
 ]
 
 EXCLUDES = [
