@@ -8,15 +8,11 @@ Current version: `1.6.0`
 
 ## Screenshots
 
-> Screenshots below show the v1.5 native dashboard. v1.6 replaced it with a browser-based dashboard served by the local daemon (same tabs and features) — refreshed screenshots are coming.
+The dashboard is a web page served by the local daemon — these are the Overview and Config tabs (day theme):
 
-| Dashboard config | Benchmark runs |
-|---|---|
-| ![Flowkey dashboard Config tab](assets/screenshots/dashboard-config.png) | ![Flowkey dashboard Benchmark tab](assets/screenshots/dashboard-benchmark.png) |
+![Flowkey web dashboard Overview tab](assets/screenshots/dashboard-overview.png)
 
-| Notes setup |
-|---|
-| ![Flowkey dashboard Notes tab](assets/screenshots/dashboard-notes.png) |
+![Flowkey web dashboard Config tab — hotkeys, server, models, custom modes](assets/screenshots/dashboard-config.png)
 
 ## Requirements
 
