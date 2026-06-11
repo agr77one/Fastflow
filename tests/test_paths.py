@@ -56,5 +56,6 @@ def test_migrate_legacy_layout_moves_known_runtime_files(monkeypatch, tmp_path: 
     legacy.write_text("{}", encoding="utf-8")
     moved = paths.migrate_legacy_layout()
 
-    assert any("prompt_history.jsonl" in line for line in moved)
+    # Require the success arrow — a "FAILED to move ..." line must not pass.
+    assert any("prompt_history.jsonl ->" in line for line in moved), moved
     assert paths.PROMPT_HISTORY_FILE.exists()
