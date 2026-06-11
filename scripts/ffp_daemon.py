@@ -43,6 +43,7 @@ if str(HERE) not in sys.path:
 
 import ffp_config  # noqa: E402
 import ffp_notify  # noqa: E402
+import ffp_provider_runtime  # noqa: E402
 import grammar_fix  # noqa: E402
 
 # Subprocess creation flag: hides console window of console-mode children
@@ -235,20 +236,24 @@ def _act_set_autostart(args: dict) -> dict:
 
 
 def _act_start(_args: dict) -> str:
-    return grammar_fix.start_flm_server(force_restart=False)
+    return grammar_fix.start_llm_server(force_restart=False)
 
 
 def _act_warmup(_args: dict) -> str:
-    grammar_fix.start_flm_server(force_restart=False)
-    grammar_fix._warmup_request(grammar_fix.FLM_MODEL)
-    return "warmed_up"
+    result = grammar_fix.start_llm_server(force_restart=False)
+    if grammar_fix.LLM_PROVIDER == "fastflowlm":
+        grammar_fix._warmup_request(grammar_fix.FLM_MODEL)
+        return "warmed_up"
+    return result
 
 
 def _act_restart(_args: dict) -> str:
-    return grammar_fix.start_flm_server(force_restart=True)
+    return grammar_fix.start_llm_server(force_restart=True)
 
 
 def _act_stop(_args: dict) -> str:
+    if grammar_fix.LLM_PROVIDER != "fastflowlm":
+        return "stop is only supported for FastFlowLM right now"
     return "stopped" if grammar_fix.stop_flm_server(force=True) else "not_running"
 
 
@@ -317,16 +322,20 @@ def _act_config_snapshot(_args: dict) -> dict:
     return grammar_fix.build_config_snapshot()
 
 
+def _act_provider_status(_args: dict) -> dict:
+    return grammar_fix.build_config_snapshot()["provider_status"]
+
+
 def _act_models_list(_args: dict) -> dict:
-    return grammar_fix.list_flm_models()
+    return grammar_fix.list_llm_models()
 
 
 def _act_models_installed(_args: dict) -> dict:
-    return grammar_fix._flm_list("installed")
+    return grammar_fix._provider_list("installed")
 
 
 def _act_models_not_installed(_args: dict) -> dict:
-    return grammar_fix._flm_list("not-installed")
+    return grammar_fix._provider_list("not-installed")
 
 
 def _act_pull_model(args: dict) -> str:
@@ -335,16 +344,14 @@ def _act_pull_model(args: dict) -> str:
         raise ValueError("pull_model requires args.value")
     try:
         import ffp_actions
-        result = _spawn_logged(
-            "flm.pull", ["flm", "pull", name],
+        return ffp_provider_runtime.pull_model(
+            grammar_fix.LLM_PROVIDER,
+            name,
+            _NO_WINDOW,
             timeout=ffp_actions.PULL_MODEL_TIMEOUT_SECONDS,
         )
     except FileNotFoundError:
-        raise RuntimeError("flm CLI not found in PATH")
-    output = (result.stdout or "") + (result.stderr or "")
-    if result.returncode != 0:
-        raise RuntimeError(f"flm pull failed (exit {result.returncode}):\n{output.strip()}")
-    return output.strip() or f"pulled {name}"
+        raise RuntimeError(f"{grammar_fix.LLM_PROVIDER} CLI not found in PATH")
 
 
 def _act_remove_model(args: dict) -> str:
@@ -352,13 +359,9 @@ def _act_remove_model(args: dict) -> str:
     if not name:
         raise ValueError("remove_model requires args.value")
     try:
-        result = _spawn_logged("flm.remove", ["flm", "remove", name], timeout=60)
+        return ffp_provider_runtime.remove_model(grammar_fix.LLM_PROVIDER, name, _NO_WINDOW, timeout=60)
     except FileNotFoundError:
-        raise RuntimeError("flm CLI not found in PATH")
-    output = (result.stdout or "") + (result.stderr or "")
-    if result.returncode != 0:
-        raise RuntimeError(f"flm remove failed (exit {result.returncode}):\n{output.strip()}")
-    return output.strip() or f"removed {name}"
+        raise RuntimeError(f"{grammar_fix.LLM_PROVIDER} CLI not found in PATH")
 
 
 def _act_apply_config_patch(args: dict) -> str:
@@ -456,7 +459,7 @@ def _act_pull_start(args: dict) -> dict:
     model = str(args.get("model") or args.get("value") or "").strip()
     if not model:
         return {"ok": False, "error": "pull_start requires args.model"}
-    return ffp_pull.start_pull(model, _NO_WINDOW)
+    return ffp_pull.start_pull(model, _NO_WINDOW, provider=grammar_fix.LLM_PROVIDER)
 
 
 def _act_pull_status(_args: dict) -> dict:
@@ -651,6 +654,7 @@ ACTIONS: dict[str, Callable[[dict], Any]] = {
     "dashboard_data": _act_dashboard_data,
     "recent_history": _act_recent_history,
     "config_snapshot": _act_config_snapshot,
+    "provider_status": _act_provider_status,
     "models_list": _act_models_list,
     "models_installed": _act_models_installed,
     "models_not_installed": _act_models_not_installed,

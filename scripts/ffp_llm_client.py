@@ -275,7 +275,7 @@ def call_flm(
 
     if not is_server_reachable():
         if not runtime.server_auto_start:
-            raise RuntimeError("FastFlowLM server is unreachable and auto_start=false.")
+            raise RuntimeError("Local LLM server is unreachable and auto_start=false.")
         start_server(False)
 
     reset_usage_acc(usage_acc)
@@ -362,7 +362,7 @@ def call_flm(
         text, model_used = call_api(model, system_prompt, masked_input, max_tokens, remaining_timeout())
 
     if not text:
-        raise RuntimeError("FastFlowLM returned no usable text.")
+        raise RuntimeError("Local LLM returned no usable text.")
 
     if is_prompt_mode(mode):
         stripped = strip_prompt_scaffold_labels(text)
@@ -431,6 +431,6 @@ def call_flm(
         text = force_prompt_shape(masked_input)
 
     if not text.strip():
-        raise RuntimeError("FastFlowLM returned no usable text.")
+        raise RuntimeError("Local LLM returned no usable text.")
     text = dict_restore(text, dict_mapping)
     return text, round(time.time() - started, 2), model_used, strategy

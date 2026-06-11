@@ -9,6 +9,24 @@ import urllib.request
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def _default_fastflowlm_provider(monkeypatch):
+    import ffp_provider_status
+
+    monkeypatch.setattr(
+        ffp_provider_status,
+        "providers_status",
+        lambda provider, base_url: {
+            "active": provider,
+            "providers": {
+                "fastflowlm": {"available": True},
+                "ollama": {"available": False},
+            },
+            "available": ["fastflowlm"],
+        },
+    )
+
+
 def _read_json(url: str, method: str = "GET", body: bytes | None = None, headers: dict | None = None):
     # The daemon now requires the X-FFP-API header on POSTs (CSRF defense); send
     # it by default. Callers can override/clear via the headers arg.
@@ -46,8 +64,9 @@ def test_actions_count_and_expected_names(daemon_module):
     # v1.4.0 added get_autostart_state + set_autostart -> 38.
     # Late v1.4.0 added flm_update_check, bench_start/status/history,
     # note_search, pull_start/status; v1.5.0 removed model_stats;
-    # v1.6 web dashboard added recent_history + notes_list + mode_ids -> 51.
-    assert len(daemon_module.ACTIONS) == 51
+    # v1.6 web dashboard added recent_history + notes_list + mode_ids -> 51;
+    # provider work added provider_status -> 52.
+    assert len(daemon_module.ACTIONS) == 52
     assert "recent_history" in daemon_module.ACTIONS
     assert "notes_list" in daemon_module.ACTIONS
     assert "mode_ids" in daemon_module.ACTIONS
@@ -58,6 +77,7 @@ def test_actions_count_and_expected_names(daemon_module):
     assert "chat_restart" in daemon_module.ACTIONS
     assert "open_dashboard" in daemon_module.ACTIONS
     assert "config_snapshot" in daemon_module.ACTIONS
+    assert "provider_status" in daemon_module.ACTIONS
     assert "get_autostart_state" in daemon_module.ACTIONS
     assert "set_autostart" in daemon_module.ACTIONS
     # late-v1.4.0 feature actions
@@ -235,9 +255,12 @@ def test_post_config_snapshot_returns_flat_dashboard_fields(daemon_server):
     assert status == 200
     assert set(payload["result"]) >= {
         "version",
+        "llm",
+        "provider_configs",
         "flm_base_url",
         "flm_model",
         "flm_timeout_seconds",
+        "provider_status",
         "history_store_text",
         "server",
         "routing",
@@ -247,6 +270,20 @@ def test_post_config_snapshot_returns_flat_dashboard_fields(daemon_server):
     }
     notes = payload["result"]["notes"]
     assert isinstance(notes.get("categories"), list)
+    assert set(payload["result"]["llm"]) >= {"provider", "base_url", "model", "configured_provider"}
+    assert set(payload["result"]["provider_configs"]) >= {"fastflowlm", "ollama"}
+    provider_status = payload["result"]["provider_status"]
+    assert set(provider_status) >= {"active", "configured", "providers", "available"}
+
+
+def test_post_provider_status_returns_capabilities(daemon_server):
+    _, base_url = daemon_server
+
+    status, payload = _read_json(base_url + "/action/provider_status", method="POST", body=b"{}")
+
+    assert status == 200
+    assert set(payload["result"]) >= {"active", "providers", "available"}
+    assert set(payload["result"]["providers"]) >= {"fastflowlm", "ollama"}
 
 
 def test_recent_history_returns_summary_without_text(daemon_server):

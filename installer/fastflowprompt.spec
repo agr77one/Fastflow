@@ -49,6 +49,8 @@ HIDDEN_IMPORTS = [
     "ffp_flm_server",
     "ffp_llm_client",
     "ffp_notify",
+    "ffp_provider_runtime",
+    "ffp_provider_status",
     "ffp_pull",
     "ffp_telemetry",
     "ffp_tools",

@@ -1,8 +1,21 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **Ollama as a secondary LLM provider.** Machines without an AMD Ryzen AI NPU can now run Flowkey on [Ollama](https://ollama.com): a provider-neutral `llm` config block (with per-provider profiles under `providers.*`) routes chat, grammar modes, model list/pull/remove, and server startup to FastFlowLM or Ollama. If the configured provider is unavailable the daemon falls back to the other one automatically.
+- The web dashboard is provider-aware: a Provider selector in Config shows installed/running status for both backends, a "Start server" button starts the active provider (including `ollama serve`), model cards relabel per provider, and FastFlowLM-only controls (runtime update check, performance modes, benchmark) hide or disable when Ollama is selected. The Overview tab shows the active provider, including fallback ("FastFlowLM (fallback from Ollama)").
+- First-run wizard detects both providers, recommends an available one, and offers per-provider model defaults.
+- New daemon action `provider_status`; `status` output now includes the provider.
+
+### Internal
+
+- New modules `ffp_provider_status` (detection/capabilities) and `ffp_provider_runtime` (model list/pull/remove routing); registered in the wheel and PyInstaller spec. Provider roadmap notes live in `docs/provider-and-sync-roadmap.md`.
+
 ## 1.6.0
 
-Current public release.
+Previous public release.
 
 ### Added
 
