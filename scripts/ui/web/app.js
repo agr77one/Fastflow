@@ -52,6 +52,85 @@ function isValidHotkey(hk) {
 const PERF_LABELS = { balanced: "🟡 Balanced", max: "🔴 Max throughput" };
 const TONE_LABELS = { formal: "🎩 Formal", casual: "👕 Casual", friendly: "🤝 Friendly" };
 
+// ---- LLM providers -----------------------------------------------------------
+// The daemon resolves the *effective* provider (configured one, with fallback
+// when it's unavailable). The dropdown edits the *configured* provider; the
+// status table shows both. Capability gating hides FLM-only controls (runtime
+// update check, performance modes, benchmark) when Ollama is selected.
+
+const PROVIDER_LABELS = { fastflowlm: "FastFlowLM", ollama: "Ollama" };
+const PROVIDER_DEFAULTS = {
+  fastflowlm: { base_url: "http://127.0.0.1:52625", timeout_seconds: 60 },
+  ollama: { base_url: "http://127.0.0.1:11434", timeout_seconds: 120 },
+};
+
+// Filled by loadConfig() from the config snapshot.
+let providerState = { configured: "fastflowlm", active: "fastflowlm", configs: {}, status: null };
+
+function providerProfile(key) {
+  const saved = providerState.configs[key] || {};
+  const dflt = PROVIDER_DEFAULTS[key] || PROVIDER_DEFAULTS.fastflowlm;
+  return {
+    base_url: saved.base_url || dflt.base_url,
+    timeout_seconds: saved.timeout_seconds || dflt.timeout_seconds,
+  };
+}
+
+function renderProviderStatus(status) {
+  const rows = [];
+  for (const key of ["fastflowlm", "ollama"]) {
+    const st = ((status || {}).providers || {})[key] || {};
+    const marks = [];
+    marks.push(st.installed ? "installed ✓" : "not installed");
+    marks.push(st.reachable ? "running ✓" : "not running");
+    let tag = "";
+    if (key === providerState.active) tag = " — active";
+    else if (key === providerState.configured) tag = " — configured";
+    rows.push([PROVIDER_LABELS[key], `${marks.join(" · ")}${tag}`]);
+  }
+  fillTable("provider-status-body", rows);
+}
+
+function applyProviderCaps() {
+  const sel = $("cfg-provider").value || "fastflowlm";
+  const isFlm = sel === "fastflowlm";
+  $("flm-runtime-block").hidden = !isFlm;
+  document.querySelectorAll('input[name="perf"]').forEach((r) => (r.disabled = !isFlm));
+  $("perf-note").hidden = isFlm;
+  $("models-title").textContent = `Installed models — ${PROVIDER_LABELS[sel]}`;
+  const note = $("provider-note");
+  if (sel !== providerState.configured) {
+    note.textContent = `Switching to ${PROVIDER_LABELS[sel]} — click "Save all settings" to apply.`;
+    note.hidden = false;
+  } else if (providerState.active !== providerState.configured) {
+    note.textContent = `${PROVIDER_LABELS[providerState.configured]} is unavailable — currently running on ${PROVIDER_LABELS[providerState.active]}.`;
+    note.hidden = false;
+  } else {
+    note.hidden = true;
+  }
+}
+
+function onProviderChanged() {
+  const sel = $("cfg-provider").value;
+  const profile = providerProfile(sel);
+  $("cfg-base-url").value = profile.base_url;
+  $("cfg-timeout").value = profile.timeout_seconds;
+  applyProviderCaps();
+}
+
+async function startProviderServer() {
+  const label = PROVIDER_LABELS[providerState.configured] || "server";
+  setStatus("provider-start-status", `Starting ${label}…`);
+  try {
+    const out = await action("start");
+    setStatus("provider-start-status", `✅ ${out || "started"}`);
+  } catch (e) {
+    setStatus("provider-start-status", `⚠ ${e.message}`, false);
+  }
+  loadServerStatus();
+  loadConfig();
+}
+
 // ---- Day/night theme ---------------------------------------------------------
 // Three modes cycled by the topbar button: auto (follow system) -> light -> dark.
 // Manual choice is set as data-theme on <html> (styles.css overrides) and
@@ -116,8 +195,12 @@ async function refreshHealth() {
 async function loadOverview() {
   try {
     const cfg = await action("config_snapshot");
-    setText("ov-model", cfg.flm_model);
-    setText("ov-url", cfg.flm_base_url);
+    const llm = cfg.llm || {};
+    const prov = PROVIDER_LABELS[llm.provider] || llm.provider || "?";
+    const fellBack = llm.configured_provider && llm.provider !== llm.configured_provider;
+    setText("ov-provider", fellBack ? `${prov} (fallback from ${PROVIDER_LABELS[llm.configured_provider]})` : prov);
+    setText("ov-model", llm.model || cfg.flm_model);
+    setText("ov-url", llm.base_url || cfg.flm_base_url);
     setText("ov-perf", PERF_LABELS[(cfg.server || {}).performance_mode] || (cfg.server || {}).performance_mode);
     setText("ov-tone", TONE_LABELS[(cfg.tone || {}).preset] || (cfg.tone || {}).preset);
     setText("ov-history", cfg.history_store_text ? "Visible (text stored)" : "Redacted (text not stored)");
@@ -365,8 +448,19 @@ async function loadConfig() {
     $("hk-in-chat").value = hk.open_chat || "^+t";
     $("hk-in-note").value = hk.capture_note || "^!n";
     $("hk-in-ask").value = hk.ask_chat || "^+a";
-    $("cfg-base-url").value = cfg.flm_base_url || "";
-    $("cfg-timeout").value = cfg.flm_timeout_seconds ?? 60;
+    const llm = cfg.llm || {};
+    providerState = {
+      configured: llm.configured_provider || llm.provider || "fastflowlm",
+      active: llm.provider || "fastflowlm",
+      configs: cfg.provider_configs || {},
+      status: cfg.provider_status || null,
+    };
+    $("cfg-provider").value = providerState.configured;
+    const profile = providerProfile(providerState.configured);
+    $("cfg-base-url").value = profile.base_url;
+    $("cfg-timeout").value = profile.timeout_seconds;
+    renderProviderStatus(providerState.status);
+    applyProviderCaps();
     const perf = (cfg.server || {}).performance_mode || "balanced";
     document.querySelectorAll('input[name="perf"]').forEach((r) => (r.checked = r.value === perf));
     $("cfg-store-text").checked = !!cfg.history_store_text;
@@ -384,7 +478,7 @@ async function loadConfig() {
   loadServerStatus();
   loadModels();
   loadAutostart();
-  loadFlmVersion(false);
+  if (($("cfg-provider").value || "fastflowlm") === "fastflowlm") loadFlmVersion(false);
 }
 
 async function loadServerStatus() {
@@ -392,12 +486,14 @@ async function loadServerStatus() {
     const raw = await action("status");
     const fields = {};
     for (const m of String(raw).matchAll(/([a-z_]+)=(\S+)/g)) fields[m[1]] = m[2];
-    fillTable("server-status-body", [
+    const rows = [
+      ["Provider", PROVIDER_LABELS[fields.provider] || fields.provider || "-"],
       ["Reachable", `${fields.reachable === "true" ? "✅" : "❌"} ${fields.reachable ?? "-"}`],
-      ["PID", `${fields.pid ?? "-"}${fields.pid_alive ? ` (alive=${fields.pid_alive})` : ""}`],
-      ["Performance", `${fields.mode === "max" ? "🔴" : "🟡"} ${fields.mode ?? "-"}`],
-      ["Model", fields.model ?? "-"],
-    ]);
+    ];
+    if (fields.pid) rows.push(["PID", `${fields.pid}${fields.pid_alive ? ` (alive=${fields.pid_alive})` : ""}`]);
+    if (fields.mode) rows.push(["Performance", `${fields.mode === "max" ? "🔴" : "🟡"} ${fields.mode}`]);
+    rows.push(["Model", fields.model ?? "-"]);
+    fillTable("server-status-body", rows);
   } catch (e) {
     fillTable("server-status-body", [["Status", `unavailable: ${e.message}`]]);
   }
@@ -494,9 +590,16 @@ async function saveConfig() {
   }
   const perf = document.querySelector('input[name="perf"]:checked');
   const tone = document.querySelector('input[name="tone"]:checked');
+  const provider = $("cfg-provider").value || "fastflowlm";
+  const timeout = Number($("cfg-timeout").value) || PROVIDER_DEFAULTS[provider].timeout_seconds;
   const patch = {
-    flm_base_url: $("cfg-base-url").value.trim(),
-    flm_timeout_seconds: Number($("cfg-timeout").value) || 60,
+    llm: { provider, timeout_seconds: timeout },
+    providers: {
+      [provider]: {
+        base_url: $("cfg-base-url").value.trim(),
+        timeout_seconds: timeout,
+      },
+    },
     history_store_text: $("cfg-store-text").checked,
     server: { performance_mode: perf ? perf.value : "balanced" },
     routing: {
@@ -511,6 +614,7 @@ async function saveConfig() {
   try {
     await action("apply_config_patch", { patch });
     await action("set_autostart", { enabled: $("cfg-autostart").checked });
+    await loadConfig(); // provider switch changes model lists + status
     setStatus("config-status", "✅ Saved — hotkeys reload in the running app within a second.");
   } catch (e) {
     setStatus("config-status", `⚠ Save failed: ${e.message}`, false);
@@ -521,7 +625,7 @@ async function setActiveModel() {
   const name = $("models-list").value;
   if (!name) return;
   try {
-    await action("apply_config_patch", { patch: { flm_model: name } });
+    await action("apply_config_patch", { patch: { llm: { model: name } } });
     await action("chat_restart");
     setStatus("config-status", `✅ Active model: ${name}`);
     loadModels();
@@ -587,6 +691,16 @@ async function pollPull() {
 let benchTimer = null;
 
 async function loadBenchmark() {
+  // flm bench is FastFlowLM-only; gate on the *effective* provider.
+  try {
+    const cfg = await action("config_snapshot");
+    const active = ((cfg.llm || {}).provider) || "fastflowlm";
+    const isFlm = active === "fastflowlm";
+    $("bench-run").disabled = !isFlm;
+    if (!isFlm) setText("bench-status", `Benchmarking uses flm bench and is FastFlowLM-only — active provider is ${PROVIDER_LABELS[active] || active}.`);
+  } catch {
+    /* leave the button enabled when the snapshot is unavailable */
+  }
   const select = $("bench-model");
   select.replaceChildren();
   try {
@@ -707,6 +821,8 @@ document.addEventListener("DOMContentLoaded", () => {
   $("model-set-active").addEventListener("click", setActiveModel);
   $("model-remove").addEventListener("click", removeModel);
   $("pull-btn").addEventListener("click", pullModel);
+  $("cfg-provider").addEventListener("change", onProviderChanged);
+  $("provider-start").addEventListener("click", startProviderServer);
   $("flm-check").addEventListener("click", () => loadFlmVersion(true));
   $("bench-run").addEventListener("click", runBenchmark);
   refreshHealth();

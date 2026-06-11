@@ -30,6 +30,30 @@ CLAUDE_PROMPT_SYSTEM_PROMPT = (
 
 DEFAULT_CONFIG = {
     "enabled": True,
+    "llm": {
+        "provider": "fastflowlm",
+        "base_url": "http://127.0.0.1:52625",
+        "model": "qwen3.5:4b",
+        "auth_bearer": "flm",
+        "timeout_seconds": 60,
+        "auto_start": True,
+    },
+    "providers": {
+        "fastflowlm": {
+            "base_url": "http://127.0.0.1:52625",
+            "model": "qwen3.5:4b",
+            "auth_bearer": "flm",
+            "timeout_seconds": 60,
+            "auto_start": True,
+        },
+        "ollama": {
+            "base_url": "http://127.0.0.1:11434",
+            "model": "llama3.2:3b",
+            "auth_bearer": "ollama",
+            "timeout_seconds": 120,
+            "auto_start": False,
+        },
+    },
     "flm_base_url": "http://127.0.0.1:52625",
     "flm_model": "qwen3.5:4b",
     "flm_timeout_seconds": 60,
@@ -101,8 +125,10 @@ def load_config(config_path: Path) -> dict:
     if not isinstance(loaded, dict):
         log.warning("config file root is not an object (%s), using defaults", config_path)
         return copy.deepcopy(DEFAULT_CONFIG)
+    has_llm_block = isinstance(loaded.get("llm"), dict)
     merged = copy.deepcopy(DEFAULT_CONFIG)
     deep_merge(merged, loaded)
+    normalize_llm_config(merged, prefer_legacy=not has_llm_block)
     return merged
 
 
@@ -127,6 +153,104 @@ def deep_merge(dst: dict, src: dict) -> None:
             deep_merge(dst[key], value)
         else:
             dst[key] = value
+
+
+def normalize_llm_config(cfg: dict, *, prefer_legacy: bool = False) -> dict:
+    """Keep the new llm block and legacy flm_* keys in sync.
+
+    Phase 1 introduces provider-neutral config without forcing the rest of the
+    app to move at once. Existing configs using flm_* remain valid; new configs
+    can set llm.* and the legacy keys are derived for old call sites.
+    """
+    llm = cfg.get("llm")
+    if not isinstance(llm, dict):
+        llm = {}
+        cfg["llm"] = llm
+
+    provider = str(llm.get("provider") or "fastflowlm").strip().lower()
+    if provider not in {"fastflowlm", "ollama"}:
+        provider = "fastflowlm"
+    llm["provider"] = provider
+
+    had_profiles = isinstance(cfg.get("providers"), dict)
+    profiles = cfg.get("providers")
+    if not isinstance(profiles, dict):
+        profiles = {}
+        cfg["providers"] = profiles
+    for key, defaults in (DEFAULT_CONFIG.get("providers") or {}).items():
+        prof = profiles.get(key)
+        if not isinstance(prof, dict):
+            prof = {}
+            profiles[key] = prof
+        deep_merge(prof, copy.deepcopy(defaults))
+        other_key = "ollama" if key == "fastflowlm" else "fastflowlm"
+        other_defaults = copy.deepcopy((DEFAULT_CONFIG.get("providers") or {}).get(other_key) or {})
+        if (
+            str(prof.get("auth_bearer") or "").strip() == str(other_defaults.get("auth_bearer") or "").strip()
+            and str(prof.get("base_url") or "").strip().rstrip("/") == str(other_defaults.get("base_url") or "").strip().rstrip("/")
+            and str(prof.get("model") or "").strip() == str(other_defaults.get("model") or "").strip()
+        ):
+            profiles[key] = copy.deepcopy(defaults)
+            prof = profiles[key]
+
+    active_profile = profiles[provider]
+    opposite_defaults = copy.deepcopy((DEFAULT_CONFIG.get("providers") or {}).get("ollama" if provider == "fastflowlm" else "fastflowlm") or {})
+    legacy_crossed_profile = (
+        not had_profiles
+        and str(llm.get("provider") or "").strip().lower() in {"fastflowlm", "ollama"}
+        and str(llm.get("auth_bearer") or "").strip().lower()
+        not in {"", "flm" if provider == "fastflowlm" else "ollama"}
+    )
+    crossed_llm_payload = (
+        str(llm.get("auth_bearer") or "").strip() == str(opposite_defaults.get("auth_bearer") or "").strip()
+        and str(llm.get("base_url") or "").strip().rstrip("/") == str(opposite_defaults.get("base_url") or "").strip().rstrip("/")
+        and str(llm.get("model") or "").strip() == str(opposite_defaults.get("model") or "").strip()
+    )
+    if prefer_legacy:
+        active_profile["base_url"] = cfg.get("flm_base_url") or active_profile["base_url"]
+        active_profile["model"] = cfg.get("flm_model") or active_profile["model"]
+        active_profile["timeout_seconds"] = cfg.get("flm_timeout_seconds") or active_profile["timeout_seconds"]
+        server = cfg.get("server") if isinstance(cfg.get("server"), dict) else {}
+        active_profile["auto_start"] = bool(server.get("auto_start", active_profile.get("auto_start", True)))
+        active_profile["auth_bearer"] = "flm" if provider == "fastflowlm" else "ollama"
+    elif legacy_crossed_profile:
+        active_profile["auth_bearer"] = "flm" if provider == "fastflowlm" else "ollama"
+    elif not crossed_llm_payload:
+        if llm.get("base_url") not in (None, ""):
+            active_profile["base_url"] = llm.get("base_url")
+        if llm.get("model") not in (None, ""):
+            active_profile["model"] = llm.get("model")
+        if llm.get("timeout_seconds") not in (None, ""):
+            active_profile["timeout_seconds"] = llm.get("timeout_seconds")
+        if llm.get("auth_bearer") not in (None, ""):
+            active_profile["auth_bearer"] = llm.get("auth_bearer")
+        if "auto_start" in llm:
+            active_profile["auto_start"] = bool(llm.get("auto_start"))
+
+    active_profile["base_url"] = str(active_profile["base_url"]).strip().rstrip("/")
+    active_profile["model"] = str(active_profile["model"]).strip()
+    try:
+        active_profile["timeout_seconds"] = int(active_profile["timeout_seconds"])
+    except (TypeError, ValueError):
+        active_profile["timeout_seconds"] = int((DEFAULT_CONFIG.get("providers") or {}).get(provider, {}).get("timeout_seconds") or DEFAULT_CONFIG["llm"]["timeout_seconds"])
+    active_profile["auth_bearer"] = str(active_profile.get("auth_bearer") or ("flm" if provider == "fastflowlm" else "ollama")).strip()
+    active_profile["auto_start"] = bool(active_profile.get("auto_start"))
+
+    llm["base_url"] = active_profile["base_url"]
+    llm["model"] = active_profile["model"]
+    llm["timeout_seconds"] = active_profile["timeout_seconds"]
+    llm["auth_bearer"] = active_profile["auth_bearer"]
+    llm["auto_start"] = active_profile["auto_start"]
+
+    # Backward-compatible mirrors for the current FastFlowLM-oriented runtime
+    # and AHK dashboard. Later phases can remove direct flm_* reads.
+    cfg["flm_base_url"] = llm["base_url"]
+    cfg["flm_model"] = llm["model"]
+    cfg["flm_timeout_seconds"] = llm["timeout_seconds"]
+    server = cfg.get("server")
+    if isinstance(server, dict):
+        server["auto_start"] = llm["auto_start"]
+    return cfg
 
 
 _LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
@@ -155,6 +279,7 @@ _PATCH_NOTES_KEYS = frozenset({
 })
 _PATCH_HOTKEYS_KEYS = frozenset({"ask_chat", "capture_note", "grammar_fix", "open_chat"})
 _PATCH_TONE_KEYS = frozenset({"preset"})
+_PATCH_PROVIDER_PROFILE_KEYS = frozenset({"base_url", "model", "auth_bearer", "timeout_seconds", "auto_start"})
 
 # Built-in mode prompts stay locked against patching (system-prompt injection
 # guard); only tone.preset is patchable among them. User-defined modes accept
@@ -198,13 +323,27 @@ def validate_flm_base_url(url: str) -> str:
     return cleaned
 
 
+def validate_llm_base_url(url: str) -> str:
+    """Provider-neutral alias kept loopback-only for Phase 1."""
+    return validate_flm_base_url(url)
+
+
 def filter_config_patch(patch: dict) -> dict:
     """Whitelist keys accepted by apply_config_patch (blocks serve_extra_args, etc.)."""
     if not isinstance(patch, dict):
         raise ValueError("patch must be a JSON object")
     out: dict = {}
     for key, value in patch.items():
-        if key == "flm_base_url":
+        if key == "llm" and isinstance(value, dict):
+            filtered_llm = {}
+            for llm_key, llm_value in value.items():
+                if llm_key == "base_url":
+                    filtered_llm[llm_key] = validate_llm_base_url(str(llm_value))
+                elif llm_key in {"provider", "model", "auth_bearer", "timeout_seconds", "auto_start"}:
+                    filtered_llm[llm_key] = llm_value
+            if filtered_llm:
+                out[key] = filtered_llm
+        elif key == "flm_base_url":
             out[key] = validate_flm_base_url(str(value))
         elif key in ("flm_model", "flm_timeout_seconds", "history_filename", "history_store_text"):
             out[key] = value
@@ -224,6 +363,21 @@ def filter_config_patch(patch: dict) -> dict:
             filtered = {k: v for k, v in value.items() if k in _PATCH_HOTKEYS_KEYS}
             if filtered:
                 out[key] = filtered
+        elif key == "providers" and isinstance(value, dict):
+            filtered_profiles = {}
+            for provider_key, provider_value in value.items():
+                if provider_key not in {"fastflowlm", "ollama"} or not isinstance(provider_value, dict):
+                    continue
+                filtered_provider = {}
+                for provider_field, provider_field_value in provider_value.items():
+                    if provider_field == "base_url":
+                        filtered_provider[provider_field] = validate_llm_base_url(str(provider_field_value))
+                    elif provider_field in _PATCH_PROVIDER_PROFILE_KEYS:
+                        filtered_provider[provider_field] = provider_field_value
+                if filtered_provider:
+                    filtered_profiles[provider_key] = filtered_provider
+            if filtered_profiles:
+                out[key] = filtered_profiles
         elif key == "modes" and isinstance(value, dict):
             modes_out: dict = {}
             for mode_id, mode_val in value.items():

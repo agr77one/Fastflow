@@ -2,7 +2,7 @@
 
 Flowkey is a Windows desktop assistant that adds local-LLM hotkeys for grammar fixes, prompt rewrites, summaries, explanations, tone changes, chat, ask-in-chat, note capture, and FastFlowLM benchmarks.
 
-Everything runs locally through [FastFlowLM](https://fastflowlm.com). No cloud service, analytics, or telemetry is used by the app.
+Everything runs locally through [FastFlowLM](https://fastflowlm.com) (AMD Ryzen AI NPU) or, on machines without the NPU, through [Ollama](https://ollama.com) (CPU/GPU) as a secondary provider. No cloud service, analytics, or telemetry is used by the app.
 
 Current version: `1.6.0`
 
@@ -17,10 +17,13 @@ The dashboard is a web page served by the local daemon — these are the Overvie
 ## Requirements
 
 - Windows 10/11 x64
-- AMD Ryzen AI NPU hardware supported by FastFlowLM
+- One local LLM backend:
+  - **FastFlowLM** (`flm`) with a model such as `qwen3.5:4b` — needs an AMD Ryzen AI NPU, **or**
+  - **Ollama** (`ollama`) with a model such as `llama3.2:3b` — any CPU/GPU
 - Python 3.11+ for source/developer installs
 - AutoHotkey v2+ for source installs
-- FastFlowLM (`flm`) with a local model such as `qwen3.5:4b`
+
+Pick the provider in Dashboard → Config → "LLM provider & server" (or let the first-run wizard detect what's installed). If the configured provider isn't available at runtime, Flowkey falls back to the other one automatically.
 
 ## AMD NPU And FastFlowLM Setup
 
@@ -43,6 +46,17 @@ flm --version
 flm pull qwen3.5:4b
 flm run qwen3.5:4b
 ```
+
+## Ollama Setup (no NPU required)
+
+On machines without an AMD Ryzen AI NPU, install [Ollama](https://ollama.com/download/windows) instead:
+
+```powershell
+winget install Ollama.Ollama
+ollama pull llama3.2:3b
+```
+
+Then pick **Ollama** in Dashboard → Config → "LLM provider & server" and click "Start server" (or run `ollama serve` yourself). Suggested starter models: `llama3.2:3b`, `qwen2.5:3b`, `gemma3:4b`.
 
 ## Install Flowkey
 

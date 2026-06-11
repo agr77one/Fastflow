@@ -38,6 +38,7 @@
         <h2>System</h2>
         <dl>
           <dt>Daemon</dt><dd id="ov-daemon">…</dd>
+          <dt>Provider</dt><dd id="ov-provider">…</dd>
           <dt>Model</dt><dd id="ov-model">…</dd>
           <dt>Version</dt><dd id="ov-version">…</dd>
           <dt>Endpoint</dt><dd id="ov-url" class="muted">…</dd>
@@ -156,14 +157,27 @@
         <p class="muted small">Saving applies to the running app within a second (no restart).</p>
       </div>
       <div class="card">
-        <h2>Server</h2>
+        <h2>LLM provider &amp; server</h2>
+        <div class="form-row">
+          <label for="cfg-provider">Provider</label>
+          <select id="cfg-provider">
+            <option value="fastflowlm">FastFlowLM (AMD NPU)</option>
+            <option value="ollama">Ollama (CPU/GPU)</option>
+          </select>
+        </div>
+        <p class="muted small" id="provider-note" hidden></p>
+        <table class="stats-table"><tbody id="provider-status-body"></tbody></table>
         <table class="stats-table"><tbody id="server-status-body"></tbody></table>
         <div class="form-row"><label for="cfg-base-url">Base URL</label><input type="text" id="cfg-base-url"></div>
         <div class="form-row"><label for="cfg-timeout">Timeout (s)</label><input type="number" id="cfg-timeout" min="5" max="600"></div>
+        <div class="card-actions">
+          <button class="btn" id="provider-start">Start server</button>
+          <span class="muted small" id="provider-start-status"></span>
+        </div>
         <label class="check-row"><input type="checkbox" id="cfg-autostart"> Launch Flowkey when I sign in (per-user)</label>
       </div>
       <div class="card">
-        <h2>Installed models</h2>
+        <h2 id="models-title">Installed models</h2>
         <select id="models-list" size="4"></select>
         <div class="card-actions">
           <button class="btn" id="model-set-active">Set as active</button>
@@ -177,19 +191,22 @@
           <button class="btn" id="pull-btn">Download</button>
         </div>
         <p class="muted" id="pull-status"></p>
-        <h2>FastFlowLM runtime</h2>
-        <p id="flm-version">FastFlowLM: checking…</p>
-        <div class="card-actions">
-          <button class="btn" id="flm-check">Check for updates</button>
-          <a class="btn" id="flm-download" href="https://github.com/FastFlowLM/FastFlowLM/releases/" target="_blank" rel="noopener" hidden>Download update…</a>
+        <div id="flm-runtime-block">
+          <h2>FastFlowLM runtime</h2>
+          <p id="flm-version">FastFlowLM: checking…</p>
+          <div class="card-actions">
+            <button class="btn" id="flm-check">Check for updates</button>
+            <a class="btn" id="flm-download" href="https://github.com/FastFlowLM/FastFlowLM/releases/" target="_blank" rel="noopener" hidden>Download update…</a>
+          </div>
         </div>
       </div>
       <div class="card">
         <h2>Performance &amp; history</h2>
-        <div class="radio-row">
+        <div class="radio-row" id="perf-block">
           <label><input type="radio" name="perf" value="balanced"> 🟡 Balanced</label>
           <label><input type="radio" name="perf" value="max"> 🔴 Max</label>
         </div>
+        <p class="muted small" id="perf-note" hidden>Performance modes are FastFlowLM-only.</p>
         <label class="check-row"><input type="checkbox" id="cfg-store-text"> Store selected text (off = redacted)</label>
         <h2>Tone preset <span class="muted small">(tone: prefix)</span></h2>
         <div class="radio-row">

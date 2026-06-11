@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import subprocess
 import sys
 import time
@@ -20,6 +21,8 @@ import ffp_actions
 import ffp_config
 import ffp_flm_server
 import ffp_llm_client
+import ffp_provider_runtime
+import ffp_provider_status
 import ffp_telemetry
 import ffp_updater
 import paths as _paths
@@ -59,7 +62,9 @@ def save_config(cfg: dict) -> None:
 
 
 def refresh_runtime_config() -> None:
-    global CONFIG, ENABLED, FLM_BASE_URL, FLM_MODEL, FLM_TIMEOUT_SECONDS
+    global CONFIG, ENABLED, LLM_CFG, CONFIGURED_LLM_PROVIDER, LLM_PROVIDER, LLM_BASE_URL, LLM_MODEL
+    global LLM_AUTH_BEARER, LLM_TIMEOUT_SECONDS
+    global FLM_BASE_URL, FLM_MODEL, FLM_TIMEOUT_SECONDS
     global HISTORY_PATH, HISTORY_STORE_TEXT, SERVER_CFG, SERVER_AUTO_START
     global SERVER_PERFORMANCE_MODE, SERVER_STARTUP_TIMEOUT_SECONDS
     global SERVER_EXTRA_ARGS, SERVER_LOG_TO_FILE, SERVER_LOG_FILE
@@ -67,15 +72,35 @@ def refresh_runtime_config() -> None:
 
     CONFIG = load_config()
     ENABLED = bool(CONFIG.get("enabled", True))
+    LLM_CFG = CONFIG.get("llm") or {}
+    CONFIGURED_LLM_PROVIDER = str(LLM_CFG.get("provider") or "fastflowlm").strip().lower()
+    if CONFIGURED_LLM_PROVIDER not in ffp_provider_status.PROVIDERS:
+        CONFIGURED_LLM_PROVIDER = "fastflowlm"
     try:
-        FLM_BASE_URL = ffp_config.validate_flm_base_url(
-            str(CONFIG.get("flm_base_url") or "http://127.0.0.1:52625")
+        configured_base_url = ffp_config.validate_llm_base_url(
+            str(LLM_CFG.get("base_url") or CONFIG.get("flm_base_url") or "http://127.0.0.1:52625")
         )
     except ValueError as exc:
-        log.warning("invalid flm_base_url in config, using default: %s", exc)
-        FLM_BASE_URL = "http://127.0.0.1:52625"
-    FLM_MODEL = str(CONFIG.get("flm_model") or "qwen3.5:4b").strip()
-    FLM_TIMEOUT_SECONDS = int(CONFIG.get("flm_timeout_seconds") or 30)
+        log.warning("invalid llm base_url in config, using default: %s", exc)
+        configured_base_url = "http://127.0.0.1:52625"
+    configured_model = str(LLM_CFG.get("model") or CONFIG.get("flm_model") or "qwen3.5:4b").strip()
+    configured_timeout = int(LLM_CFG.get("timeout_seconds") or CONFIG.get("flm_timeout_seconds") or 30)
+    configured_auth = str(LLM_CFG.get("auth_bearer") or "flm").strip()
+    effective = resolve_effective_llm(
+        provider=CONFIGURED_LLM_PROVIDER,
+        base_url=configured_base_url,
+        model=configured_model,
+        timeout_seconds=configured_timeout,
+        auth_bearer=configured_auth,
+    )
+    LLM_PROVIDER = effective["provider"]
+    LLM_BASE_URL = effective["base_url"]
+    LLM_MODEL = effective["model"]
+    LLM_AUTH_BEARER = effective["auth_bearer"]
+    LLM_TIMEOUT_SECONDS = int(effective["timeout_seconds"])
+    FLM_BASE_URL = LLM_BASE_URL
+    FLM_MODEL = LLM_MODEL
+    FLM_TIMEOUT_SECONDS = LLM_TIMEOUT_SECONDS
     HISTORY_PATH = _paths.DATA_DIR / str(CONFIG.get("history_filename") or "grammar_fix_history.jsonl")
     HISTORY_STORE_TEXT = bool(CONFIG.get("history_store_text", False))
     SERVER_CFG = CONFIG.get("server") or {}
@@ -90,8 +115,6 @@ def refresh_runtime_config() -> None:
     PROTECTED_WORDS = [str(w) for w in (DICT_CFG.get("protected_words") or []) if str(w).strip()]
 
 
-refresh_runtime_config()
-
 PERF_TO_PMODE = ffp_flm_server.PERF_TO_PMODE
 
 # Token usage accumulator across all sub-calls made during one call_flm() run.
@@ -100,6 +123,62 @@ _USAGE_ACC = {"prompt_tokens": 0, "completion_tokens": 0}
 
 def _snapshot_usage_acc() -> dict:
     return ffp_llm_client.snapshot_usage_acc(_USAGE_ACC)
+
+
+def _configured_provider_status(provider: str, base_url: str) -> dict:
+    active = provider if provider in ffp_provider_status.PROVIDERS else "fastflowlm"
+    return ffp_provider_status.providers_status(active, base_url)
+
+
+def resolve_effective_llm(
+    *,
+    provider: str,
+    base_url: str,
+    model: str,
+    timeout_seconds: int,
+    auth_bearer: str,
+) -> dict:
+    provider = provider if provider in ffp_provider_status.PROVIDERS else "fastflowlm"
+    status = _configured_provider_status(provider, base_url)
+    available = status.get("available") or []
+    effective_provider = provider if provider in available else (available[0] if available else provider)
+    spec = ffp_provider_status.PROVIDERS[effective_provider]
+    effective_base_url = base_url if effective_provider == provider else spec.base_url
+    effective_auth = auth_bearer if effective_provider == provider and auth_bearer else spec.auth_bearer
+    effective_model = str(model or "").strip()
+    if effective_provider != provider or not effective_model:
+        effective_model = spec.default_model
+    models_info = {}
+    provider_block = (status.get("providers") or {}).get(effective_provider) or {}
+    if bool(provider_block.get("reachable")):
+        try:
+            models_info = ffp_provider_runtime.list_models(
+                effective_provider,
+                "installed",
+                effective_model,
+                _NO_WINDOW,
+                effective_base_url,
+            )
+        except Exception:
+            models_info = {}
+    installed = models_info.get("models") or []
+    active_model = str(models_info.get("active") or "").strip()
+    if installed and effective_model not in installed:
+        effective_model = active_model if active_model in installed else str(installed[0]).strip()
+    if not effective_model:
+        effective_model = spec.default_model
+    return {
+        "provider": effective_provider,
+        "configured_provider": provider,
+        "base_url": effective_base_url.rstrip("/"),
+        "model": effective_model,
+        "auth_bearer": effective_auth,
+        "timeout_seconds": int(timeout_seconds or 30),
+        "provider_status": status,
+    }
+
+
+refresh_runtime_config()
 
 
 def shortcut_to_ahk(shortcut: str) -> str:
@@ -152,6 +231,12 @@ def is_flm_server_reachable() -> bool:
     return ffp_flm_server.is_flm_server_reachable(FLM_BASE_URL)
 
 
+def is_llm_server_reachable() -> bool:
+    if LLM_PROVIDER == "fastflowlm":
+        return is_flm_server_reachable()
+    return ffp_provider_runtime.is_provider_reachable(LLM_PROVIDER, LLM_BASE_URL)
+
+
 def _read_pid() -> int:
     return ffp_flm_server.read_pid(PID_PATH)
 
@@ -192,6 +277,34 @@ def start_flm_server(force_restart: bool = False) -> str:
         force_restart=force_restart,
         stop_callback=stop_flm_server,
     )
+
+
+def start_llm_server(force_restart: bool = False) -> str:
+    if LLM_PROVIDER == "fastflowlm":
+        return start_flm_server(force_restart=force_restart)
+    if is_llm_server_reachable():
+        return "already_running"
+    if LLM_PROVIDER == "ollama":
+        return start_ollama_server()
+    raise RuntimeError("Local LLM provider is not reachable.")
+
+
+def start_ollama_server() -> str:
+    creationflags = _NO_WINDOW
+    kwargs: dict = {
+        "stdin": subprocess.DEVNULL,
+        "stdout": subprocess.DEVNULL,
+        "stderr": subprocess.DEVNULL,
+    }
+    if os.name == "nt":
+        kwargs["creationflags"] = creationflags
+    subprocess.Popen(["ollama", "serve"], **kwargs)
+    deadline = time.time() + 8.0
+    while time.time() < deadline:
+        if is_llm_server_reachable():
+            return "started"
+        time.sleep(0.2)
+    raise RuntimeError("Ollama start requested, but the API did not come up within 8s.")
 
 
 def stop_flm_server(force: bool = False) -> bool:
@@ -273,20 +386,28 @@ def cycle_tone_preset() -> str:
 
 def server_status() -> str:
     """Return a single-line key=value summary used by the AHK Dashboard."""
-    reachable = is_flm_server_reachable()
+    reachable = is_llm_server_reachable()
+    provider = LLM_PROVIDER
     pid = _read_pid()
     alive = _is_pid_alive(pid)
     _host, port = _flm_host_port()
     bound_pid_list = _find_pids_on_port(port)
-    if pid > 0 and alive and pid not in bound_pid_list:
+    if provider == "fastflowlm" and pid > 0 and alive and pid not in bound_pid_list:
         _remove_pid()
         pid = 0
         alive = False
-    bound_pids = ",".join(str(p) for p in bound_pid_list) or "none"
+    if provider != "fastflowlm":
+        pid = 0
+        alive = False
+        bound_pids = "n/a"
+        mode = "n/a"
+    else:
+        bound_pids = ",".join(str(p) for p in bound_pid_list) or "none"
+        mode = SERVER_PERFORMANCE_MODE
     return (
-        f"reachable={str(reachable).lower()} pid={pid if pid else 'none'} "
+        f"provider={provider} reachable={str(reachable).lower()} pid={pid if pid else 'none'} "
         f"pid_alive={str(alive).lower()} port_pids={bound_pids} "
-        f"mode={SERVER_PERFORMANCE_MODE} model={FLM_MODEL}"
+        f"mode={mode} model={FLM_MODEL}"
     )
 
 
@@ -345,7 +466,7 @@ def _call_flm_api(
     req = urllib.request.Request(
         FLM_BASE_URL + "/v1/chat/completions",
         data=body,
-        headers={"Content-Type": "application/json", "Authorization": "Bearer flm"},
+        headers={"Content-Type": "application/json", "Authorization": f"Bearer {LLM_AUTH_BEARER}"},
         method="POST",
     )
     with urllib.request.urlopen(req, timeout=max(2, timeout_seconds)) as resp:
@@ -391,8 +512,8 @@ def call_flm(mode: str, input_text: str) -> tuple[str, float, str, str]:
         mode,
         input_text,
         _call_flm_api,
-        is_flm_server_reachable,
-        start_flm_server,
+        is_llm_server_reachable,
+        start_llm_server,
         _USAGE_ACC,
     )
 
@@ -443,10 +564,27 @@ def list_flm_models() -> dict:
     return _flm_list("installed")
 
 
+def _provider_list(filter_kind: str) -> dict:
+    return ffp_provider_runtime.list_models(LLM_PROVIDER, filter_kind, LLM_MODEL, _NO_WINDOW, LLM_BASE_URL)
+
+
+def list_llm_models() -> dict:
+    """Installed models for the active provider."""
+    if LLM_PROVIDER == "fastflowlm":
+        return list_flm_models()
+    return _provider_list("installed")
+
+
 def run_doctor() -> str:
     """Self-diagnose. Returns a multi-line key=value report."""
     checks: list[tuple[str, str]] = []
     checks.append(("python", sys.version.split()[0]))
+    provider_info = ffp_provider_status.providers_status(LLM_PROVIDER, LLM_BASE_URL)
+    checks.append(("llm_provider", LLM_PROVIDER))
+    checks.append(("llm_available_providers", ",".join(provider_info.get("available") or []) or "none"))
+    for key, status in (provider_info.get("providers") or {}).items():
+        checks.append((f"{key}_cli", status.get("cli_path") or "not found"))
+        checks.append((f"{key}_reachable", str(bool(status.get("reachable"))).lower()))
     checks.append(("flm_base_url", FLM_BASE_URL))
     checks.append(("flm_reachable", str(is_flm_server_reachable()).lower()))
     models_info = list_flm_models()
@@ -527,6 +665,11 @@ def apply_config_patch(patch: dict) -> str:
     old_model = FLM_MODEL
     cfg = load_config()
     _deep_merge(cfg, filtered)
+    server_patch = filtered.get("server") if isinstance(filtered.get("server"), dict) else {}
+    if "auto_start" in server_patch and "auto_start" not in (filtered.get("llm") or {}):
+        cfg.setdefault("llm", {})["auto_start"] = bool(server_patch["auto_start"])
+    legacy_llm_patch = any(key in filtered for key in ("flm_base_url", "flm_model", "flm_timeout_seconds"))
+    ffp_config.normalize_llm_config(cfg, prefer_legacy=legacy_llm_patch)
 
     # Custom-mode deletion: the filter passes a None marker through for
     # user-defined modes; remove them post-merge (deep_merge just sets None).
@@ -535,16 +678,27 @@ def apply_config_patch(patch: dict) -> str:
         if mode_val is None:
             (cfg.get("modes") or {}).pop(mode_id, None)
 
-    if "flm_model" in filtered:
-        new_model = str(filtered["flm_model"]).strip()
+    model_changed = "flm_model" in filtered or "model" in (filtered.get("llm") or {})
+    if model_changed:
+        new_model = str((cfg.get("llm") or {}).get("model") or cfg.get("flm_model") or "").strip()
         if not new_model:
             raise RuntimeError("flm_model cannot be empty.")
-        models_info = list_flm_models()
+        provider = str((cfg.get("llm") or {}).get("provider") or "fastflowlm").strip().lower()
+        if provider == "fastflowlm":
+            models_info = list_flm_models()
+        else:
+            models_info = ffp_provider_runtime.list_models(
+                provider,
+                "installed",
+                new_model,
+                _NO_WINDOW,
+                str((cfg.get("llm") or {}).get("base_url") or cfg.get("flm_base_url") or FLM_BASE_URL),
+            )
         if "error" not in models_info:
             installed = models_info.get("models") or []
             if new_model not in installed:
                 raise RuntimeError(
-                    f"Model '{new_model}' is not installed. Pull it first or pick another."
+                    f"Model '{new_model}' is not installed for {provider}. Pull it first or pick another."
                 )
         chat = cfg.get("chat")
         if isinstance(chat, dict):
@@ -553,10 +707,10 @@ def apply_config_patch(patch: dict) -> str:
 
     save_config(cfg)
 
-    if "flm_model" in filtered:
-        if FLM_MODEL != str(filtered["flm_model"]).strip():
+    if model_changed:
+        if FLM_MODEL != str((cfg.get("llm") or {}).get("model") or cfg.get("flm_model") or "").strip():
             raise RuntimeError(
-                f"Config model mismatch after save: wanted {filtered['flm_model']!r}, "
+                f"Config model mismatch after save: wanted {new_model!r}, "
                 f"got {FLM_MODEL!r}"
             )
         if FLM_MODEL != old_model:
@@ -577,6 +731,7 @@ def build_config_snapshot() -> dict:
     identical so the dashboard renders the same values either way.
     """
     cfg = load_config()
+    llm_cfg = cfg.get("llm") or {}
     notes_cfg = cfg.get("notes") or {}
     routing_cfg = cfg.get("routing") or {}
     hotkeys_cfg = cfg.get("hotkeys") or {}
@@ -590,12 +745,47 @@ def build_config_snapshot() -> dict:
         }
         for mode_id, mode_cfg in (cfg.get("modes") or {}).items()
     }
+    provider_cfgs = cfg.get("providers") or {}
+    effective = resolve_effective_llm(
+        provider=str(llm_cfg.get("provider") or "fastflowlm").strip().lower(),
+        base_url=str(llm_cfg.get("base_url") or cfg.get("flm_base_url") or "http://127.0.0.1:52625"),
+        model=str(llm_cfg.get("model") or cfg.get("flm_model") or FLM_MODEL),
+        timeout_seconds=int(llm_cfg.get("timeout_seconds") or cfg.get("flm_timeout_seconds") or 30),
+        auth_bearer=str(llm_cfg.get("auth_bearer") or ""),
+    )
+    provider_info = effective["provider_status"]
+    provider_info["configured"] = effective["configured_provider"]
+    provider_info["active"] = effective["provider"]
     return {
         "version": APP_VERSION,
         "modes": modes_summary,
-        "flm_base_url": str(cfg.get("flm_base_url") or "http://127.0.0.1:52625"),
-        "flm_model": str(cfg.get("flm_model") or FLM_MODEL),
-        "flm_timeout_seconds": int(cfg.get("flm_timeout_seconds") or 30),
+        "llm": {
+            "provider": effective["provider"],
+            "configured_provider": effective["configured_provider"],
+            "base_url": effective["base_url"],
+            "model": effective["model"],
+            "auth_bearer": effective["auth_bearer"],
+            "timeout_seconds": effective["timeout_seconds"],
+            "auto_start": bool(llm_cfg.get("auto_start", True)),
+        },
+        "provider_status": provider_info,
+        "provider_configs": {
+            "fastflowlm": {
+                "base_url": str((provider_cfgs.get("fastflowlm") or {}).get("base_url") or "http://127.0.0.1:52625"),
+                "model": str((provider_cfgs.get("fastflowlm") or {}).get("model") or "qwen3.5:4b"),
+                "timeout_seconds": int((provider_cfgs.get("fastflowlm") or {}).get("timeout_seconds") or 60),
+                "auto_start": bool((provider_cfgs.get("fastflowlm") or {}).get("auto_start", True)),
+            },
+            "ollama": {
+                "base_url": str((provider_cfgs.get("ollama") or {}).get("base_url") or "http://127.0.0.1:11434"),
+                "model": str((provider_cfgs.get("ollama") or {}).get("model") or "llama3.2:3b"),
+                "timeout_seconds": int((provider_cfgs.get("ollama") or {}).get("timeout_seconds") or 120),
+                "auto_start": bool((provider_cfgs.get("ollama") or {}).get("auto_start", False)),
+            },
+        },
+        "flm_base_url": effective["base_url"],
+        "flm_model": effective["model"],
+        "flm_timeout_seconds": effective["timeout_seconds"],
         "history_store_text": bool(cfg.get("history_store_text", False)),
         "server": {
             "auto_start": bool(server_cfg.get("auto_start", True)),
@@ -640,18 +830,24 @@ def handle_server_cli() -> bool:
             print(server_status())
             return True
         if action == "start":
-            print(start_flm_server(force_restart=False))
+            print(start_llm_server(force_restart=False))
             return True
         if action == "warmup":
-            start_flm_server(force_restart=False)
-            _warmup_request(FLM_MODEL)
-            print("warmed_up")
+            result = start_llm_server(force_restart=False)
+            if LLM_PROVIDER == "fastflowlm":
+                _warmup_request(FLM_MODEL)
+                print("warmed_up")
+            else:
+                print(result)
             return True
         if action == "restart":
-            print(start_flm_server(force_restart=True))
+            print(start_llm_server(force_restart=True))
             return True
         if action == "stop":
-            print("stopped" if stop_flm_server(force=True) else "not_running")
+            if LLM_PROVIDER != "fastflowlm":
+                print("stop is only supported for FastFlowLM right now")
+            else:
+                print("stopped" if stop_flm_server(force=True) else "not_running")
             return True
         if action == "performance":
             print(get_current_performance_mode())
@@ -676,8 +872,11 @@ def handle_server_cli() -> bool:
             # Same dict the daemon's _act_config_snapshot returns.
             print(json.dumps(build_config_snapshot(), ensure_ascii=False))
             return True
+        if action == "provider_status":
+            print(json.dumps(build_config_snapshot()["provider_status"], ensure_ascii=False))
+            return True
         if action == "models_list":
-            print(json.dumps(list_flm_models(), ensure_ascii=False))
+            print(json.dumps(list_llm_models(), ensure_ascii=False))
             return True
         if action == "tone_preset":
             print(get_tone_preset())
@@ -720,10 +919,10 @@ def handle_server_cli() -> bool:
             print(apply_config_patch(patch))
             return True
         if action == "models_installed":
-            print(json.dumps(_flm_list("installed"), ensure_ascii=False))
+            print(json.dumps(_provider_list("installed"), ensure_ascii=False))
             return True
         if action == "models_not_installed":
-            print(json.dumps(_flm_list("not-installed"), ensure_ascii=False))
+            print(json.dumps(_provider_list("not-installed"), ensure_ascii=False))
             return True
         if action == "remove_model":
             if "--value" not in args:
@@ -734,15 +933,7 @@ def handle_server_cli() -> bool:
             model_name = str(args[vidx + 1]).strip()
             if not model_name:
                 raise RuntimeError("Model name is empty.")
-            try:
-                result = subprocess.run(["flm", "remove", model_name],
-                                        capture_output=True, text=True, timeout=60, check=False, creationflags=_NO_WINDOW)
-            except FileNotFoundError:
-                raise RuntimeError("flm CLI not found in PATH.")
-            output = (result.stdout or "") + (result.stderr or "")
-            if result.returncode != 0:
-                raise RuntimeError(f"flm remove failed (exit {result.returncode}):\n{output.strip()}")
-            print(output.strip() or f"removed {model_name}")
+            print(ffp_provider_runtime.remove_model(LLM_PROVIDER, model_name, _NO_WINDOW))
             return True
         if action == "version":
             print(APP_VERSION)
@@ -762,21 +953,12 @@ def handle_server_cli() -> bool:
             model_name = str(args[vidx + 1]).strip()
             if not model_name:
                 raise RuntimeError("Model name is empty.")
-            try:
-                result = subprocess.run(
-                    ["flm", "pull", model_name],
-                    capture_output=True,
-                    text=True,
-                    timeout=ffp_actions.PULL_MODEL_TIMEOUT_SECONDS,
-                    check=False,
-                    creationflags=_NO_WINDOW,
-                )
-            except FileNotFoundError:
-                raise RuntimeError("flm CLI not found in PATH.")
-            output = (result.stdout or "") + (result.stderr or "")
-            if result.returncode != 0:
-                raise RuntimeError(f"flm pull failed (exit {result.returncode}):\n{output.strip()}")
-            print(output.strip() or f"pulled {model_name}")
+            print(ffp_provider_runtime.pull_model(
+                LLM_PROVIDER,
+                model_name,
+                _NO_WINDOW,
+                timeout=ffp_actions.PULL_MODEL_TIMEOUT_SECONDS,
+            ))
             return True
         raise RuntimeError("Unknown --app-action.")
 
@@ -788,18 +970,24 @@ def handle_server_cli() -> bool:
     cmd = str(args[idx + 1]).strip().lower()
 
     if cmd == "start":
-        print(start_flm_server(force_restart=False))
+        print(start_llm_server(force_restart=False))
         return True
     if cmd == "warmup":
-        start_flm_server(force_restart=False)
-        _warmup_request(FLM_MODEL)
-        print("warmed_up")
+        result = start_llm_server(force_restart=False)
+        if LLM_PROVIDER == "fastflowlm":
+            _warmup_request(FLM_MODEL)
+            print("warmed_up")
+        else:
+            print(result)
         return True
     if cmd == "restart":
-        print(start_flm_server(force_restart=True))
+        print(start_llm_server(force_restart=True))
         return True
     if cmd == "stop":
-        print("stopped" if stop_flm_server(force=True) else "not_running")
+        if LLM_PROVIDER != "fastflowlm":
+            print("stop is only supported for FastFlowLM right now")
+        else:
+            print("stopped" if stop_flm_server(force=True) else "not_running")
         return True
     if cmd == "status":
         print(server_status())
