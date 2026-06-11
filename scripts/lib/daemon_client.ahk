@@ -13,7 +13,7 @@ global DAEMON_ONLY_ACTIONS := Map(
 ; Read-only actions safe to subprocess-fallback without a request body.
 global SUBPROCESS_READ_ACTIONS := Map(
     "config_snapshot", 1, "dashboard_data", 1, "stats", 1,
-    "version", 1, "update_check", 1, "doctor", 1, "models_list", 1,
+    "version", 1, "doctor", 1, "models_list", 1,
     "models_installed", 1, "models_not_installed", 1,
     "status", 1, "performance", 1, "history_text_status", 1,
     "tone_preset", 1,
@@ -271,7 +271,6 @@ ShutdownFlowkeyChildren_Impl(ExitReason := "", ExitCode := "") {
         return
     flowkeyShutdownDone := true
 
-    try CloseDashboard_Impl()
     try RunAction("chat_restart")
     try RunAction("shutdown")
     Sleep 400

@@ -32,6 +32,39 @@ def test_filter_config_patch_modes_whitelist():
     assert filtered == {"modes": {"tone": {"preset": "casual"}}}
 
 
+def test_filter_config_patch_accepts_custom_mode():
+    patch = {"modes": {"translate": {
+        "label": "Translate to English",
+        "system_prompt": "Translate the user text to English. Return only the translation.",
+        "shortcut": "^+9",          # not whitelisted — dropped
+        "max_tokens": 9999,          # not whitelisted — dropped
+    }}}
+
+    filtered = ffp_config.filter_config_patch(patch)
+
+    assert filtered == {"modes": {"translate": {
+        "system_prompt": "Translate the user text to English. Return only the translation.",
+        "label": "Translate to English",
+    }}}
+
+
+def test_filter_config_patch_custom_mode_rules():
+    # Built-in prompts stay locked; bad ids and prompt-less modes are dropped;
+    # null is the deletion marker and passes through for custom ids only.
+    patch = {"modes": {
+        "prompt": {"system_prompt": "evil override"},     # builtin — dropped
+        "Bad-Id!": {"system_prompt": "x"},                # invalid id — dropped
+        "x": {"system_prompt": "too-short id"},           # 1-char id — dropped
+        "nolabel": {"label": "no prompt given"},          # missing prompt — dropped
+        "translate": None,                                  # deletion marker — kept
+        "grammar": None,                                    # builtin deletion — dropped
+    }}
+
+    filtered = ffp_config.filter_config_patch(patch)
+
+    assert filtered == {"modes": {"translate": None}}
+
+
 def test_save_config_atomic(tmp_path):
     cfg_path = tmp_path / "grammar_hotkey.config.json"
     ffp_config.save_config(cfg_path, {"flm_model": "a"})

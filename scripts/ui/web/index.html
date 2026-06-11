@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flowkey Dashboard</title>
+<link rel="stylesheet" href="/ui/styles.css">
+<script src="/ui/app.js" defer></script>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="logo" aria-hidden="true">⌘</span>
+    <h1>Flowkey</h1>
+    <span class="muted" id="app-version"></span>
+  </div>
+  <div class="top-actions">
+    <span id="daemon-pill" class="pill pill-wait">checking…</span>
+    <button id="theme-btn" class="btn" title="Cycle theme: follow system → day → night">🌓 Auto</button>
+    <button id="refresh-btn" class="btn">Refresh</button>
+  </div>
+</header>
+
+<nav class="tabs" id="tabs" role="tablist">
+  <button class="tab active" data-tab="overview">Overview</button>
+  <button class="tab" data-tab="telemetry">Telemetry</button>
+  <button class="tab" data-tab="history">History</button>
+  <button class="tab" data-tab="notes">Notes</button>
+  <button class="tab" data-tab="config">Config</button>
+  <button class="tab" data-tab="benchmark">Benchmark</button>
+</nav>
+
+<main>
+  <section class="panel active" id="tab-overview">
+    <div class="grid">
+      <div class="card">
+        <h2>System</h2>
+        <dl>
+          <dt>Daemon</dt><dd id="ov-daemon">…</dd>
+          <dt>Model</dt><dd id="ov-model">…</dd>
+          <dt>Version</dt><dd id="ov-version">…</dd>
+          <dt>Endpoint</dt><dd id="ov-url" class="muted">…</dd>
+        </dl>
+      </div>
+      <div class="card">
+        <h2>Activity <span class="muted small">(from history)</span></h2>
+        <div class="stats-row">
+          <div class="stat"><span class="stat-num" id="ov-total">0</span><span class="stat-lbl">Total</span></div>
+          <div class="stat"><span class="stat-num" id="ov-grammar">0</span><span class="stat-lbl">Grammar</span></div>
+          <div class="stat"><span class="stat-num" id="ov-prompt">0</span><span class="stat-lbl">Prompt</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Preferences</h2>
+        <dl>
+          <dt>Performance</dt><dd id="ov-perf">…</dd>
+          <dt>Tone</dt><dd id="ov-tone">…</dd>
+          <dt>History</dt><dd id="ov-history">…</dd>
+          <dt>Vault</dt><dd id="ov-vault" class="muted">…</dd>
+        </dl>
+      </div>
+      <div class="card">
+        <h2>Hotkeys</h2>
+        <dl>
+          <dt>Grammar</dt><dd><kbd id="hk-grammar">…</kbd></dd>
+          <dt>Chat</dt><dd><kbd id="hk-chat">…</kbd></dd>
+          <dt>Note</dt><dd><kbd id="hk-note">…</kbd></dd>
+          <dt>Ask</dt><dd><kbd id="hk-ask">…</kbd></dd>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="tab-telemetry">
+    <div class="grid">
+      <div class="card card-wide">
+        <h2>Time-of-day usage <span class="muted small">(all-time)</span></h2>
+        <div id="hours-chart" class="bars" aria-label="Usage by hour of day"></div>
+        <div class="bars-axis" id="hours-axis"></div>
+      </div>
+      <div class="card card-wide">
+        <h2>Token &amp; latency stats</h2>
+        <table class="stats-table"><tbody id="stats-body"></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="tab-history">
+    <div class="card card-wide">
+      <h2>Recent activity <span class="muted small">(last 50, newest first — summary fields only)</span></h2>
+      <table class="data-table">
+        <thead><tr><th>When</th><th>Mode</th><th>In</th><th>Out</th><th>Latency</th><th>tok/s</th><th>Tokens</th></tr></thead>
+        <tbody id="history-body"></tbody>
+      </table>
+      <p class="muted small" id="history-empty" hidden>No history yet.</p>
+    </div>
+  </section>
+
+  <section class="panel" id="tab-notes">
+    <div class="grid">
+      <div class="card card-wide">
+        <h2>Your notes <span class="muted small" id="notes-count"></span></h2>
+        <div class="form-row">
+          <input type="text" id="note-query" placeholder="Search notes… (leave empty to show newest)">
+          <button class="btn" id="note-search-btn">Search</button>
+        </div>
+        <table class="data-table">
+          <thead><tr><th>Title</th><th>Category</th><th id="notes-col3">Modified</th></tr></thead>
+          <tbody id="notes-body"></tbody>
+        </table>
+        <p class="muted small" id="notes-empty" hidden>No notes found.</p>
+      </div>
+      <div class="card card-wide">
+        <h2>Vault</h2>
+        <div class="form-row">
+          <label for="notes-vault">Vault directory</label>
+          <input type="text" id="notes-vault">
+        </div>
+      </div>
+      <div class="card card-wide">
+        <h2>Categories <span class="muted small">(one per line — the LLM picks from this list)</span></h2>
+        <textarea id="notes-categories" rows="7" spellcheck="false"></textarea>
+      </div>
+      <div class="card card-wide">
+        <h2>LLM behavior</h2>
+        <div class="form-row">
+          <label for="notes-fetch-timeout">Fetch timeout (s)</label>
+          <input type="number" id="notes-fetch-timeout" min="1" max="120">
+        </div>
+        <div class="form-row">
+          <label for="notes-max-chars">Max extracted chars</label>
+          <input type="number" id="notes-max-chars" min="100" max="100000">
+        </div>
+        <label class="check-row"><input type="checkbox" id="notes-low-conf"> Low-confidence categorizations stay in inbox/ instead of being auto-filed</label>
+        <label class="check-row"><input type="checkbox" id="notes-gen-title"> Generate title via LLM</label>
+        <label class="check-row"><input type="checkbox" id="notes-gen-summary"> Generate summary via LLM</label>
+      </div>
+      <div class="card-actions card-wide">
+        <button class="btn btn-primary" id="notes-save">Save notes settings</button>
+        <button class="btn" id="notes-revert">Revert</button>
+        <span class="muted" id="notes-status"></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="tab-config">
+    <div class="grid">
+      <div class="card">
+        <h2>Hotkeys</h2>
+        <p class="muted small">Modifiers then ONE key: <kbd>^</kbd> Ctrl <kbd>+</kbd> Shift <kbd>!</kbd> Alt <kbd>#</kbd> Win. Good: ^+g · ^!n · ^+1</p>
+        <div class="form-row"><label for="hk-in-grammar">Grammar / Prompt</label><input type="text" id="hk-in-grammar" class="mono"></div>
+        <div class="form-row"><label for="hk-in-chat">Open Chat</label><input type="text" id="hk-in-chat" class="mono"></div>
+        <div class="form-row"><label for="hk-in-note">Capture Note</label><input type="text" id="hk-in-note" class="mono"></div>
+        <div class="form-row"><label for="hk-in-ask">Ask in Chat</label><input type="text" id="hk-in-ask" class="mono"></div>
+        <p class="muted small">Saving applies to the running app within a second (no restart).</p>
+      </div>
+      <div class="card">
+        <h2>Server</h2>
+        <table class="stats-table"><tbody id="server-status-body"></tbody></table>
+        <div class="form-row"><label for="cfg-base-url">Base URL</label><input type="text" id="cfg-base-url"></div>
+        <div class="form-row"><label for="cfg-timeout">Timeout (s)</label><input type="number" id="cfg-timeout" min="5" max="600"></div>
+        <label class="check-row"><input type="checkbox" id="cfg-autostart"> Launch Flowkey when I sign in (per-user)</label>
+      </div>
+      <div class="card">
+        <h2>Installed models</h2>
+        <select id="models-list" size="4"></select>
+        <div class="card-actions">
+          <button class="btn" id="model-set-active">Set as active</button>
+          <button class="btn" id="model-remove">Remove…</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Pull a new model</h2>
+        <div class="form-row">
+          <select id="pull-name"></select>
+          <button class="btn" id="pull-btn">Download</button>
+        </div>
+        <p class="muted" id="pull-status"></p>
+        <h2>FastFlowLM runtime</h2>
+        <p id="flm-version">FastFlowLM: checking…</p>
+        <div class="card-actions">
+          <button class="btn" id="flm-check">Check for updates</button>
+          <a class="btn" id="flm-download" href="https://github.com/FastFlowLM/FastFlowLM/releases/" target="_blank" rel="noopener" hidden>Download update…</a>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Performance &amp; history</h2>
+        <div class="radio-row">
+          <label><input type="radio" name="perf" value="balanced"> 🟡 Balanced</label>
+          <label><input type="radio" name="perf" value="max"> 🔴 Max</label>
+        </div>
+        <label class="check-row"><input type="checkbox" id="cfg-store-text"> Store selected text (off = redacted)</label>
+        <h2>Tone preset <span class="muted small">(tone: prefix)</span></h2>
+        <div class="radio-row">
+          <label><input type="radio" name="tone" value="formal"> 🎩 Formal</label>
+          <label><input type="radio" name="tone" value="casual"> 👕 Casual</label>
+          <label><input type="radio" name="tone" value="friendly"> 🤝 Friendly</label>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Custom modes</h2>
+        <p class="muted small">Your own <code>prefix:</code> commands for the grammar hotkey — the mode id is the prefix (e.g. id <code>translate</code> → select text, prefix with <code>translate:</code>). Built-in modes aren't editable here.</p>
+        <div class="form-row"><label for="cm-select">Mode</label><select id="cm-select"></select></div>
+        <div class="form-row"><label for="cm-id">Prefix / id</label><input type="text" id="cm-id" class="mono" placeholder="translate"></div>
+        <div class="form-row"><label for="cm-label">Label</label><input type="text" id="cm-label" placeholder="Translate to English"></div>
+        <textarea id="cm-prompt" rows="4" spellcheck="false" placeholder="System prompt, e.g.: Translate the user text to English. Preserve tone and formatting. Return only the translation."></textarea>
+        <div class="card-actions">
+          <button class="btn btn-primary" id="cm-save">Save mode</button>
+          <button class="btn" id="cm-delete">Delete…</button>
+          <span class="muted" id="cm-status"></span>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Routing</h2>
+        <label class="check-row"><input type="checkbox" id="cfg-routing"> Enable chunking for long inputs</label>
+        <div class="form-row"><label for="cfg-long-thr">Long threshold</label><input type="number" id="cfg-long-thr" min="200" max="5000"></div>
+        <div class="form-row"><label for="cfg-chunk-size">Chunk size</label><input type="number" id="cfg-chunk-size" min="200" max="4000"></div>
+        <div class="form-row"><label for="cfg-min-chunk">Min chunk</label><input type="number" id="cfg-min-chunk" min="100" max="2000"></div>
+      </div>
+      <div class="card-actions card-wide">
+        <button class="btn btn-primary" id="config-save">Save all settings</button>
+        <button class="btn" id="config-revert">Revert</button>
+        <span class="muted" id="config-status"></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="tab-benchmark">
+    <div class="grid">
+      <div class="card card-wide">
+        <h2>Run a benchmark</h2>
+        <p>Benchmark a model with FastFlowLM's <code>flm bench</code> — sweeps 1k–32k context × 8 iterations and records time-to-first-token, prefill speed, and decode speed.</p>
+        <p class="warn">⚠ Takes ~10–20 min and fully saturates the NPU. The server is stopped for the run, so hotkeys will be unresponsive. Best run when idle.</p>
+        <div class="form-row">
+          <label for="bench-model">Model</label>
+          <select id="bench-model"></select>
+          <button class="btn btn-primary" id="bench-run">Run benchmark</button>
+        </div>
+        <p id="bench-status">Idle.</p>
+      </div>
+      <div class="card card-wide">
+        <h2>Benchmark history <span class="muted small">(newest first — peak prefill / decode tok/s per run)</span></h2>
+        <table class="data-table">
+          <thead><tr><th>When</th><th>Model</th><th>Prefill pk</th><th>Decode pk</th><th>Points</th></tr></thead>
+          <tbody id="bench-history-body"></tbody>
+        </table>
+        <p class="muted small" id="bench-empty" hidden>No benchmarks yet. Pick a model and click Run benchmark.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="muted small">
+  Flowkey web dashboard (preview) — served by the local daemon at 127.0.0.1. Dark mode follows your system theme.
+</footer>
+
+</body>
+</html>

@@ -65,6 +65,50 @@ DEFAULTS = {
 }
 
 
+def build_notes_context_message(query: str, search_fn, max_notes: int = 4) -> tuple[str | None, list[str]]:
+    """Build the retrieval-injection system message for notes mode.
+
+    Runs the ranked vault search and formats the top hits as grounding context
+    (the model is told to cite note titles in [brackets]). Returns
+    (message, titles); (None, []) when nothing matched so the caller can fall
+    back to a plain turn. Pure given search_fn — unit-testable without a vault.
+    """
+    try:
+        found = search_fn(query, max_notes)
+    except Exception:
+        return None, []
+    results = (found or {}).get("results") or []
+    if not results:
+        return None, []
+    titles: list[str] = []
+    blocks: list[str] = []
+    for r in results:
+        title = str(r.get("title") or "untitled")
+        titles.append(title)
+        category = str(r.get("category") or "")
+        snippet = str(r.get("snippet") or "").strip()
+        blocks.append(f"[{title}] ({category})\n{snippet}")
+    message = (
+        "The user has a personal notes vault. The saved notes below are "
+        "relevant to their next message. Ground your answer in these notes and "
+        "cite note titles in [brackets] when you use them. If the notes do not "
+        "answer the question, say so briefly instead of guessing.\n\n"
+        + "\n\n".join(blocks)
+    )
+    return message, titles
+
+
+def retrieve_notes_context(query: str, max_notes: int = 4) -> tuple[str | None, list[str]]:
+    """Vault-backed wrapper around build_notes_context_message. The notes
+    module (which pulls in grammar_fix/config) is imported lazily so chat
+    startup doesn't pay for it when notes mode is never used."""
+    try:
+        import notes
+    except Exception:
+        return None, []
+    return build_notes_context_message(query, notes.search_notes, max_notes)
+
+
 def load_config() -> dict:
     """Merge the shared config's `chat` block over DEFAULTS.
 
@@ -303,6 +347,11 @@ class ConversationTab:
 
         bar = ttk.Frame(outer)
         bar.pack(fill="x")
+        # Notes mode: ground the next replies in vault notes retrieved for each
+        # message (per-call context injection — the retrieved text is never
+        # written into the thread history). See SPEC V37 / T31.
+        self.notes_mode = tk.BooleanVar(value=False)
+        ttk.Checkbutton(bar, text="📚 My notes", variable=self.notes_mode).pack(side="left")
         ttk.Button(bar, text="Clear thread", command=self.on_clear).pack(side="right", padx=(4, 0))
         self.send_btn = ttk.Button(bar, text="Send  (Enter)", command=self.on_send)
         self.send_btn.pack(side="right")
@@ -402,6 +451,16 @@ class ConversationTab:
         messages: list[dict] = []
         if self.app.system_prompt:
             messages.append({"role": "system", "content": self.app.system_prompt})
+        if self.notes_mode.get() and history_snapshot:
+            query = str(history_snapshot[-1].get("content") or "")
+            context, titles = retrieve_notes_context(query)
+            if context:
+                messages.append({"role": "system", "content": context})
+                self.app.root.after(0, self._append, "meta",
+                                    "📚 grounded on: " + ", ".join(titles) + "\n")
+            else:
+                self.app.root.after(0, self._append, "meta",
+                                    "📚 no matching notes — answering without vault context\n")
         # Sliding window: keep last N turn-pairs (one turn = user + assistant).
         # Prevents prompt growth that makes later turns increasingly slow.
         n_turns = self.app.context_window_turns

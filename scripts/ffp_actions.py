@@ -12,7 +12,6 @@ READ_ONLY_SUBPROCESS_ACTIONS = frozenset({
     "dashboard_data",
     "stats",
     "version",
-    "update_check",
     "doctor",
     "models_list",
     "models_installed",

@@ -46,7 +46,6 @@ forces single-tree layout (mode = "dev") rooted at the given path.
 from __future__ import annotations
 
 import os
-import shutil
 from pathlib import Path
 
 # ---------- Mode detection ---------------------------------------------------
@@ -166,6 +165,7 @@ FLM_PID_FILE:        Path = DATA_DIR / "flm_server.pid"
 MARKER_CLIPBOARD_WATCHER: Path = DATA_DIR / ".clipboard_watcher_on"
 MARKER_FIRST_RUN_DONE:    Path = DATA_DIR / ".first_run_done"
 MARKER_OPEN_DASHBOARD:    Path = DATA_DIR / ".open_dashboard"
+MARKER_RELOAD_HOTKEYS:    Path = DATA_DIR / ".reload_hotkeys"
 
 # Logs
 DAEMON_LOG_FILE:     Path = LOGS_DIR / "daemon.log"
@@ -198,7 +198,7 @@ def seed_config_if_missing() -> bool:
 # ---------- Migration shim ---------------------------------------------------
 
 def legacy_scripts_path(name: str) -> Path:
-    """Return the OLD path (scripts/<name>) for a runtime file.
+    """Return the OLD path (release/scripts/<name>) for a runtime file.
 
     Used by one-shot migration code at startup to detect pre-v1.2.0 layouts
     and move the file into the new folder. Once everyone has reloaded, this
@@ -240,11 +240,8 @@ def migrate_legacy_layout() -> list[str]:
             continue
         try:
             dst.parent.mkdir(parents=True, exist_ok=True)
-            try:
-                src.replace(dst)
-            except OSError:
-                shutil.move(str(src), str(dst))
+            src.replace(dst)
             moved.append(f"{src.name} -> {dst.parent.name}/{dst.name}")
-        except (OSError, shutil.Error) as e:
+        except OSError as e:
             moved.append(f"FAILED to move {src.name}: {e}")
     return moved

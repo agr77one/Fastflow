@@ -63,6 +63,7 @@ lastTokPerSec := 0.0         ; last toasted tok/s value for delta-gate
 flmReleaseUrl := ""          ; latest FastFlowLM release URL (filled by RefreshFlmVersion)
 clipboardWatcherMarker := runtimePaths["clipboardWatcherMarker"]
 openDashboardMarker  := runtimePaths["openDashboardMarker"]
+reloadHotkeysMarker  := runtimePaths["reloadHotkeysMarker"]
 
 ; Ensure the runtime folders exist before any code touches them. AHK's
 ; DirCreate is idempotent; the Python side does the same on its first import
@@ -82,13 +83,11 @@ if FileExist(flowkeyIconPath)
 #Include "lib\daemon_client.ahk"
 #Include "ui\notifications.ahk"
 #Include "ui\tray.ahk"
-#Include "ui\dashboard.ahk"
 #Include "lib\json.ahk"
 #Include "lib\mode_prefix.ahk"
 #Include "lib\hotkeys.ahk"
 #Include "lib\classify.ahk"
 #Include "lib\clipboard.ahk"
-#Include "ui\dashboard_handlers.ahk"
 
 EnsureConfig()
 MaybeRunFirstRunWizard()
@@ -103,6 +102,8 @@ if (daemonOk)
 ; at startup unnecessarily would turn the defaults off and re-bind them,
 ; and any silent failure during that round-trip would leave a key dead.
 ApplyHotkeyConfigOverrides()
+if (daemonOk)
+    RefreshModePrefixIds()
 SetupTrayMenu()
 if (clipboardWatcherEnabled)
     OnClipboardChange(ClipboardWatcher)
@@ -118,8 +119,46 @@ if (daemonOk) {
 } else {
     Notify("Flowkey", "⚠️ Daemon failed health check. Hotkeys will try to recover on next press. See daemon.log.")
 }
-SetTimer(PollOpenDashboardRequest, 500)
+SetTimer(PollDaemonMarkers, 500)
 OnExit(ShutdownFlowkeyChildren)
+
+; Daemon → AHK signal channel (tiny marker files in data\). open_dashboard is
+; written by the daemon action of the same name (e.g. the first-run wizard's
+; "open dashboard" nudge); reload_hotkeys after a config patch touches the
+; hotkeys block (web-dashboard saves). The native AHK dashboard is retired —
+; both dashboard entry points now open the web dashboard.
+PollDaemonMarkers() {
+    global openDashboardMarker, reloadHotkeysMarker
+    if FileExist(reloadHotkeysMarker) {
+        try FileDelete(reloadHotkeysMarker)
+        RegisterHotkeys()
+        RefreshModePrefixIds()
+        SetupTrayMenu()
+        Notify("Flowkey", "Hotkeys & modes reloaded from config.")
+    }
+    if FileExist(openDashboardMarker) {
+        try FileDelete(openDashboardMarker)
+        OpenWebDashboard_Impl()
+    }
+}
+
+; Replace the default prefix keywords with the configured mode ids (custom
+; modes). Plain comma-joined string from the daemon — no JSON parsing. Keeps
+; the built-in defaults when the daemon is unreachable or returns nothing.
+RefreshModePrefixIds() {
+    global modePrefixIds
+    raw := Trim(RunAction("mode_ids"), "`r`n`t ")
+    if (raw = "" || InStr(raw, "daemon") || InStr(raw, "not found"))
+        return
+    ids := []
+    for id in StrSplit(raw, ",") {
+        clean := Trim(id, "`r`n`t ")
+        if (clean != "" && clean != "grammar" && RegExMatch(clean, "^[a-z][a-z0-9_]*$"))
+            ids.Push(clean)
+    }
+    if (ids.Length > 0)
+        modePrefixIds := ids
+}
 
 ProcessSelection() {
     clipSaved := ""
@@ -154,12 +193,20 @@ ProcessSelection() {
         Notify("Flowkey", "No text left after prompt prefix.")
         return
     }
+    ; Confirm which action fired BEFORE the (slow) model call. Prompt/summarize/
+    ; explain/tone take ~10-30s; without this users can't tell whether the prefix
+    ; was detected and re-press the hotkey. Grammar stays quiet (fast, frequent).
+    if (mode != "grammar")
+        Notify("Flowkey", "✨ " mode " mode — processing selection…")
 
     inFile := A_Temp "\\ffp_in_" A_TickCount ".txt"
     outFile := A_Temp "\\ffp_out_" A_TickCount ".txt"
     SafeDelete(inFile)
     SafeDelete(outFile)
-    FileAppend(selectedForModel, inFile, "UTF-8")
+    ; UTF-8-RAW: plain "UTF-8" writes a BOM on file creation, which Python
+    ; reads as a leading U+FEFF into every model request (and the model can
+    ; echo it back into the pasted result).
+    FileAppend(selectedForModel, inFile, "UTF-8-RAW")
 
     fixed := ""
     apiTime := ""
@@ -184,7 +231,7 @@ ProcessSelection() {
     if (exec.Status = 0) {
         try exec.Terminate()
         if (errText = "")
-            errText := "Timed out waiting for the model (35s)."
+            errText := Format("Timed out waiting for the model ({}s).", GetFlmTimeoutMs() // 1000)
     }
 
     if FileExist(outFile)
@@ -221,7 +268,7 @@ ProcessSelection() {
         statLine .= " | " apiTokPerSec " tok/s"
     if (apiCompletionTokens != "" && apiCompletionTokens != "0")
         statLine .= " (" apiCompletionTokens " tok)"
-    Notify("Flowkey", (mode = "prompt" ? "Prompt refined." : "Grammar fixed.") . statLine)
+    Notify("Flowkey", (mode = "prompt" ? "Prompt refined." : mode = "grammar" ? "Grammar fixed." : "✅ " mode " done.") . statLine)
 }
 
 ; Only show tok/s when it changes meaningfully (≥ 20% delta) to keep toasts quiet.
@@ -247,36 +294,8 @@ SetupTrayMenu() {
     return SetupTrayMenu_Impl()
 }
 
-BuildTogglesMenu() {
-    return BuildTogglesMenu_Impl()
-}
-
-BuildClipboardWatcherMenu() {
-    return BuildClipboardWatcherMenu_Impl()
-}
-
 SetClipboardWatcher(enable) {
     return SetClipboardWatcher_Impl(enable)
-}
-
-BuildPerformanceMenu() {
-    return BuildPerformanceMenu_Impl()
-}
-
-BuildToneMenu() {
-    return BuildToneMenu_Impl()
-}
-
-BuildHistoryMenu() {
-    return BuildHistoryMenu_Impl()
-}
-
-BuildStartupMenu() {
-    return BuildStartupMenu_Impl()
-}
-
-BuildServerMenu() {
-    return BuildServerMenu_Impl()
 }
 
 CheckForUpdates() {
@@ -311,10 +330,6 @@ RunDiagnostics() {
     return RunDiagnostics_Impl()
 }
 
-ShowDiagnosticsWindow(body) {
-    return ShowDiagnosticsWindow_Impl(body)
-}
-
 MaybeRunFirstRunWizard() {
     return MaybeRunFirstRunWizard_Impl()
 }
@@ -340,66 +355,6 @@ IsStartupEnabled() {
     return IsStartupEnabled_Impl()
 }
 
-; ============================================================================
-; Dashboard (tray entry "Dashboard"). See ui/dashboard.ahk for tab layout.
-; File-backed tabs work offline; server-backed panels degrade gracefully.
-; ============================================================================
-
-
-RunActionFile(action, filePath) {
-    ; Try daemon first: read the file and embed as a "patch" object in the JSON body.
-    body := BuildPatchBody(filePath)
-    if (body != "") {
-        daemonResult := RunActionViaDaemon(action, body)
-        if (daemonResult != "")
-            return daemonResult
-    }
-    try exec := RunPython(Format('"{}" --app-action {} --file "{}"', scriptPath, action, filePath))
-    catch
-        return "python launcher not found"
-    result := ""
-    errText := ""
-    DrainPythonProcessOutput_Impl(exec, &result, &errText)
-    return result != "" ? result : errText
-}
-
-BuildPatchBody(filePath) {
-    if !FileExist(filePath)
-        return ""
-    try
-        raw := FileRead(filePath, "UTF-8")
-    catch
-        return ""
-    raw := Trim(raw, "`r`n`t ")
-    if (raw = "")
-        return ""
-    ; Wrap as {"args": {"patch": <raw>}} — daemon unwraps and merges.
-    return '{"args":{"patch":' raw '}}'
-}
-
-RunActionValue(action, value) {
-    ; Daemon path: pass value through args.value.
-    escaped := EscapeJson(value)
-    daemonResult := RunActionViaDaemon(action, '{"args":{"value":"' escaped '"}}')
-    if (daemonResult != "")
-        return daemonResult
-    try exec := RunPython(Format('"{}" --app-action {} --value "{}"', scriptPath, action, value))
-    catch
-        return "python launcher not found"
-    result := ""
-    errText := ""
-    DrainPythonProcessOutput_Impl(exec, &result, &errText)
-    return result != "" ? result : errText
-}
-
-
-; ----------------------------------------------------------------------------
-; Benchmark tab. flm bench <model> runs ~10-20 min on a daemon background
-; thread (server stopped meanwhile). We poll bench_status while a run is active
-; and render persisted history. See SPEC V36.
-; ----------------------------------------------------------------------------
-
-
 ; --- Daemon-first dispatch (fast path) ----------------------------------------------
 ; Tries the long-running Python daemon at 127.0.0.1:52650 first. Falls back to
 ; the legacy subprocess path on any failure so the app keeps working when the
@@ -413,30 +368,10 @@ RunActionViaDaemon(action, body := "{}") {
     return RunActionViaDaemon_Impl(action, body)
 }
 
-_DaemonPostOnce(action, body) {
-    return _DaemonPostOnce_Impl(action, body)
-}
-
-ParseDaemonResponse(raw) {
-    return ParseDaemonResponse_Impl(raw)
-}
-
-UnescapeJsonString(s) {
-    return UnescapeJsonString_Impl(s)
-}
-
-RunActionViaSubprocess(action) {
-    return RunActionViaSubprocess_Impl(action)
-}
-
 ; --- Daemon lifecycle ---------------------------------------------------------------
 
 EnsureDaemonRunning() {
     return EnsureDaemonRunning_Impl()
-}
-
-IsDaemonHealthy() {
-    return IsDaemonHealthy_Impl()
 }
 
 ResolvePythonwPath() {
@@ -723,22 +658,6 @@ GetHistoryTextMode() {
     if InStr(mode, "visible")
         return "visible"
     return "redacted"
-}
-
-ShowWindowsToast(title, message) {
-    return ShowWindowsToast_Impl(title, message)
-}
-
-ShowToastViaDaemon(title, message) {
-    return ShowToastViaDaemon_Impl(title, message)
-}
-
-ShowToastViaInlinePowerShell(title, message) {
-    return ShowToastViaInlinePowerShell_Impl(title, message)
-}
-
-XmlEscape(s) {
-    return XmlEscape_Impl(s)
 }
 
 SaveHistory(mode, inputText, outputText, apiTime, promptTokens := "", completionTokens := "", tokPerSec := "") {

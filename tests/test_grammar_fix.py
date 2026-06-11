@@ -342,6 +342,53 @@ def test_call_flm_prompt_falls_back_to_force_shape_when_rescue_fails(fresh_modul
     assert text.startswith("<task>")
 
 
+def test_call_flm_prompt_rescues_multiline_echo_with_marker_words(fresh_modules, monkeypatch):
+    # Regression: a multi-line request whose OWN words include prompt markers
+    # ("output", "fix") used to defeat echo protection. looks_like_prompt_text()
+    # matched the echoed input, and is_weak_prompt_echo() ignored multi-line
+    # text (len(lines) <= 2 gate), so the user got their request back merely
+    # reformatted with extra spacing instead of a converted Claude prompt.
+    grammar_fix = fresh_modules("grammar_fix")
+    monkeypatch.setattr(grammar_fix, "is_flm_server_reachable", lambda: True)
+    user_text = (
+        "We have a request to update the troubleshooting section.\n"
+        "Analyze all other cycle repo output files in this folder.\n"
+        "Read only HTML, CSV, and log files.\n"
+        "Find the best examples where the fix is clearly seen.\n"
+    )
+
+    def fake_call(model, system_prompt, user_content, max_tokens, timeout_seconds):
+        # Model echoes the request back with extra spacing no matter which
+        # (system / anti-echo / rescue) prompt it is handed.
+        echo = "\n\n".join(line for line in user_content.splitlines() if line.strip())
+        return (echo, grammar_fix.FLM_MODEL)
+
+    monkeypatch.setattr(grammar_fix, "_call_flm_api", fake_call)
+
+    text, _, _, _ = grammar_fix.call_flm("prompt", user_text)
+
+    # Deterministic fallback must guarantee a real structured prompt.
+    assert grammar_fix.ffp_llm_client.has_prompt_structure(text)
+    assert "<task>" in text
+
+
+def test_is_weak_prompt_echo_flags_multiline_reformat(fresh_modules):
+    grammar_fix = fresh_modules("grammar_fix")
+    llm = grammar_fix.ffp_llm_client
+    src = (
+        "Update the troubleshooting section.\n"
+        "Analyze the output files.\n"
+        "Find the best fix examples.\n"
+    )
+    reformatted = src.replace("\n", "\n\n")
+    # No XML structure + heavy reuse → weak echo, even across many lines.
+    assert llm.is_weak_prompt_echo(src, reformatted) is True
+    # A real converted prompt carries XML scaffold → never weak.
+    structured = "<task>Document the fix for the output failures</task>\n<constraints>One page</constraints>"
+    assert llm.is_weak_prompt_echo(src, structured) is False
+    assert llm.has_prompt_structure(structured) is True
+
+
 def test_apply_config_patch_updates_flm_model_and_runtime(fresh_modules, monkeypatch):
     grammar_fix = fresh_modules("grammar_fix")
     monkeypatch.setattr(

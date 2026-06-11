@@ -1,0 +1,304 @@
+/* Flowkey web dashboard — theme via CSS variables. Three modes, driven by the
+   topbar toggle (app.js sets data-theme on <html>, persisted in localStorage):
+   - no data-theme  -> follow the system via prefers-color-scheme (default)
+   - data-theme="light" / "dark" -> manual override.
+   The dark variable block appears twice on purpose: once for system-dark
+   (guarded so a manual "light" wins) and once for manual dark. */
+
+:root {
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --border: #dfe2e8;
+  --text: #1c1e21;
+  --text-muted: #6b7280;
+  --accent: #4f6df5;
+  --accent-soft: #e8ecfe;
+  --ok: #1a8a44;
+  --warn: #b54708;
+  --bar: #7c93f7;
+  --kbd-bg: #eef0f4;
+  --shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121417;
+    --surface: #1c1f24;
+    --border: #2c313a;
+    --text: #e6e8eb;
+    --text-muted: #9aa1ab;
+    --accent: #7c93f7;
+    --accent-soft: #232a45;
+    --ok: #4ade80;
+    --warn: #fbbf24;
+    --bar: #5b74e0;
+    --kbd-bg: #272c33;
+    --shadow: none;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #121417;
+  --surface: #1c1f24;
+  --border: #2c313a;
+  --text: #e6e8eb;
+  --text-muted: #9aa1ab;
+  --accent: #7c93f7;
+  --accent-soft: #232a45;
+  --ok: #4ade80;
+  --warn: #fbbf24;
+  --bar: #5b74e0;
+  --kbd-bg: #272c33;
+  --shadow: none;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.45 "Segoe UI", system-ui, sans-serif;
+}
+
+/* ---- Top bar ---- */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+}
+.brand { display: flex; align-items: baseline; gap: 10px; }
+.brand h1 { font-size: 20px; margin: 0; }
+.logo { color: var(--accent); font-size: 18px; }
+.top-actions { display: flex; align-items: center; gap: 12px; }
+
+.pill {
+  padding: 3px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.pill-ok   { background: color-mix(in srgb, var(--ok) 15%, transparent); color: var(--ok); }
+.pill-bad  { background: color-mix(in srgb, var(--warn) 15%, transparent); color: var(--warn); }
+.pill-wait { background: var(--kbd-bg); color: var(--text-muted); }
+
+.btn {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 14px;
+  font: inherit;
+  cursor: pointer;
+}
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ---- Tabs ---- */
+.tabs {
+  display: flex;
+  gap: 4px;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--border);
+}
+.tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 8px 14px;
+  font: inherit;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.tab:hover { color: var(--text); }
+.tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+
+/* ---- Panels & cards ---- */
+main { padding: 20px 24px; }
+.panel { display: none; }
+.panel.active { display: block; }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+  gap: 16px;
+}
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 18px;
+  box-shadow: var(--shadow);
+}
+.card-wide { grid-column: 1 / -1; }
+.card h2 { font-size: 14px; margin: 0 0 12px; }
+
+dl {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 6px 8px;
+  margin: 0;
+}
+dt { font-weight: 600; }
+dd { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.muted { color: var(--text-muted); }
+.small { font-size: 12px; font-weight: 400; }
+.ok    { color: var(--ok); }
+.bad   { color: var(--warn); }
+
+/* ---- Activity stat tiles ---- */
+.stats-row { display: flex; gap: 12px; }
+.stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--accent-soft);
+  border-radius: 10px;
+  padding: 12px 0 8px;
+}
+.stat-num { font-size: 26px; font-weight: 700; color: var(--accent); }
+.stat-lbl { font-size: 12px; color: var(--text-muted); }
+
+kbd {
+  background: var(--kbd-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1px 8px;
+  font: 12px Consolas, monospace;
+}
+
+/* ---- Hour-bucket bar chart (real divs, not █ characters) ---- */
+.bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 140px;
+  padding-top: 6px;
+}
+.bars .bar {
+  flex: 1;
+  background: var(--bar);
+  border-radius: 3px 3px 0 0;
+  min-height: 2px;
+}
+.bars .bar.empty { background: var(--kbd-bg); }
+.bars-axis {
+  display: flex;
+  gap: 3px;
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+.bars-axis span { flex: 1; text-align: center; }
+
+/* ---- Stats table ---- */
+.stats-table { width: 100%; border-collapse: collapse; }
+.stats-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.stats-table tr:last-child td { border-bottom: none; }
+.stats-table td:last-child {
+  text-align: right;
+  font-family: Consolas, monospace;
+}
+
+.placeholder {
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  padding: 28px;
+  text-align: center;
+}
+
+/* ---- Data tables (History, Benchmark) ---- */
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 2px solid var(--border);
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.data-table td {
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--border);
+  font-family: Consolas, monospace;
+  font-size: 12px;
+  white-space: nowrap;
+  max-width: 420px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.data-table tr:last-child td { border-bottom: none; }
+
+/* ---- Forms (Notes, Config) ---- */
+input[type="text"], input[type="number"], textarea, select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font: inherit;
+  width: 100%;
+}
+textarea { resize: vertical; font-family: Consolas, monospace; }
+select[size] { padding: 4px; }
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+input.mono { font-family: Consolas, monospace; max-width: 140px; }
+input[type="number"] { max-width: 120px; }
+
+.form-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0;
+}
+.form-row label { min-width: 140px; font-weight: 600; }
+.form-row .btn { flex-shrink: 0; }
+
+.check-row {
+  display: block;
+  margin: 8px 0;
+  cursor: pointer;
+}
+.check-row input { width: auto; margin-right: 8px; }
+
+.radio-row { display: flex; gap: 18px; margin: 8px 0 14px; }
+.radio-row label { cursor: pointer; }
+.radio-row input { width: auto; margin-right: 6px; }
+
+.card-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.btn-primary:hover { color: #fff; opacity: 0.9; }
+a.btn { text-decoration: none; display: inline-block; }
+
+.warn { color: var(--warn); }
+code {
+  background: var(--kbd-bg);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-family: Consolas, monospace;
+  font-size: 12px;
+}
+
+footer { padding: 12px 24px 20px; }

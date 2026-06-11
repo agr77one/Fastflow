@@ -6,6 +6,7 @@ import copy
 import json
 import logging
 import os
+import re
 import tempfile
 import threading
 from pathlib import Path
@@ -155,6 +156,13 @@ _PATCH_NOTES_KEYS = frozenset({
 _PATCH_HOTKEYS_KEYS = frozenset({"ask_chat", "capture_note", "grammar_fix", "open_chat"})
 _PATCH_TONE_KEYS = frozenset({"preset"})
 
+# Built-in mode prompts stay locked against patching (system-prompt injection
+# guard); only tone.preset is patchable among them. User-defined modes accept
+# label + system_prompt under ids matching _MODE_ID_RE, and a JSON null value
+# is a deletion marker (applied by grammar_fix.apply_config_patch post-merge).
+BUILTIN_MODE_IDS = frozenset({"grammar", "prompt", "summarize", "explain", "tone"})
+_MODE_ID_RE = re.compile(r"[a-z][a-z0-9_]{1,24}$")
+
 
 def validate_patch_file(path: Path) -> Path:
     """Reject patch file paths outside temp/data/config dirs."""
@@ -217,9 +225,28 @@ def filter_config_patch(patch: dict) -> dict:
             if filtered:
                 out[key] = filtered
         elif key == "modes" and isinstance(value, dict):
-            tone = value.get("tone")
-            if isinstance(tone, dict):
-                filtered_tone = {k: v for k, v in tone.items() if k in _PATCH_TONE_KEYS}
-                if filtered_tone:
-                    out.setdefault("modes", {})["tone"] = filtered_tone
+            modes_out: dict = {}
+            for mode_id, mode_val in value.items():
+                if mode_id == "tone" and isinstance(mode_val, dict):
+                    filtered_tone = {k: v for k, v in mode_val.items() if k in _PATCH_TONE_KEYS}
+                    if filtered_tone:
+                        modes_out["tone"] = filtered_tone
+                elif mode_id in BUILTIN_MODE_IDS:
+                    continue  # built-in prompts are not patchable
+                elif not isinstance(mode_id, str) or not _MODE_ID_RE.match(mode_id):
+                    continue
+                elif mode_val is None:
+                    modes_out[mode_id] = None  # deletion marker
+                elif isinstance(mode_val, dict):
+                    fields: dict = {}
+                    label = mode_val.get("label")
+                    prompt = mode_val.get("system_prompt")
+                    if isinstance(prompt, str) and prompt.strip():
+                        fields["system_prompt"] = prompt.strip()[:4000]
+                    if isinstance(label, str) and label.strip():
+                        fields["label"] = label.strip()[:60]
+                    if "system_prompt" in fields:  # a mode without a prompt can't run
+                        modes_out[mode_id] = fields
+            if modes_out:
+                out["modes"] = modes_out
     return out

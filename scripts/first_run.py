@@ -392,20 +392,29 @@ class WizardApp:
             assert proc.stdout is not None
             pull_timeout_s = 3600
             deadline = time.monotonic() + pull_timeout_s
-            for line in proc.stdout:
-                self.root.after(0, lambda ln=line: self._append_log(ln))
-                if time.monotonic() >= deadline:
+            # Watchdog: the per-line deadline check below never fires if flm
+            # hangs WITHOUT producing output (readline blocks forever). This
+            # guarantees the kill regardless of output.
+            watchdog = threading.Timer(pull_timeout_s, proc.kill)
+            watchdog.daemon = True
+            watchdog.start()
+            try:
+                for line in proc.stdout:
+                    self.root.after(0, lambda ln=line: self._append_log(ln))
+                    if time.monotonic() >= deadline:
+                        proc.kill()
+                        self.root.after(0, lambda: self._append_log(
+                            f"\nFAILED: pull timed out after {pull_timeout_s // 60} minutes.\n"))
+                        return
+                try:
+                    proc.wait(timeout=max(0, deadline - time.monotonic()))
+                except subprocess.TimeoutExpired:
                     proc.kill()
                     self.root.after(0, lambda: self._append_log(
                         f"\nFAILED: pull timed out after {pull_timeout_s // 60} minutes.\n"))
                     return
-            try:
-                proc.wait(timeout=max(0, deadline - time.monotonic()))
-            except subprocess.TimeoutExpired:
-                proc.kill()
-                self.root.after(0, lambda: self._append_log(
-                    f"\nFAILED: pull timed out after {pull_timeout_s // 60} minutes.\n"))
-                return
+            finally:
+                watchdog.cancel()
             done = "DONE." if proc.returncode == 0 else f"FAILED (exit {proc.returncode})."
             self.root.after(0, lambda: self._append_log(f"\n{done}\n"))
             if proc.returncode == 0:

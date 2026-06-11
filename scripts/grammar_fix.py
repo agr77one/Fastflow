@@ -98,10 +98,6 @@ PERF_TO_PMODE = ffp_flm_server.PERF_TO_PMODE
 _USAGE_ACC = {"prompt_tokens": 0, "completion_tokens": 0}
 
 
-def _reset_usage_acc() -> None:
-    ffp_llm_client.reset_usage_acc(_USAGE_ACC)
-
-
 def _snapshot_usage_acc() -> dict:
     return ffp_llm_client.snapshot_usage_acc(_USAGE_ACC)
 
@@ -160,20 +156,12 @@ def _read_pid() -> int:
     return ffp_flm_server.read_pid(PID_PATH)
 
 
-def _write_pid(pid: int) -> None:
-    ffp_flm_server.write_pid(PID_PATH, pid)
-
-
 def _remove_pid() -> None:
     ffp_flm_server.remove_pid(PID_PATH)
 
 
 def _is_pid_alive(pid: int) -> bool:
     return ffp_flm_server.is_pid_alive(pid, _NO_WINDOW)
-
-
-def _kill_pid(pid: int) -> bool:
-    return ffp_flm_server.kill_pid(pid, _NO_WINDOW)
 
 
 def _find_pids_on_port(port: int) -> list[int]:
@@ -380,30 +368,6 @@ def _call_flm_api(
     return text, str(payload.get("model") or model)
 
 
-def _line_reuse_ratio(input_text: str, output_text: str) -> float:
-    return ffp_llm_client.line_reuse_ratio(input_text, output_text)
-
-
-def _word_set(text: str) -> set[str]:
-    return ffp_llm_client.word_set(text)
-
-
-def _word_overlap_ratio(a: str, b: str) -> float:
-    return ffp_llm_client.word_overlap_ratio(a, b)
-
-
-def _looks_like_prompt_text(text: str) -> bool:
-    return ffp_llm_client.looks_like_prompt_text(text)
-
-
-def _force_prompt_shape(input_text: str) -> str:
-    return ffp_llm_client.force_prompt_shape(input_text)
-
-
-def _strip_prompt_scaffold_labels(text: str) -> str:
-    return ffp_llm_client.strip_prompt_scaffold_labels(text)
-
-
 def _dict_protect(text: str) -> tuple[str, dict[str, str]]:
     return ffp_llm_client.dict_protect(text, PROTECTED_WORDS)
 
@@ -440,7 +404,9 @@ def _read_input_text() -> str:
         if idx + 1 >= len(args):
             raise RuntimeError("Missing value for --input-file.")
         path = Path(args[idx + 1])
-        return path.read_text(encoding="utf-8")
+        # utf-8-sig: tolerate a BOM from any writer (older AHK builds used the
+        # BOM-emitting "UTF-8" FileAppend encoding); identical to utf-8 otherwise.
+        return path.read_text(encoding="utf-8-sig")
     return sys.stdin.read()
 
 
@@ -462,6 +428,10 @@ def compute_usage_stats() -> dict:
 
 def compute_dashboard_data() -> dict:
     return ffp_telemetry.compute_dashboard_data(HISTORY_PATH)
+
+
+def recent_history(limit: int = 50) -> list[dict]:
+    return ffp_telemetry.recent_history(HISTORY_PATH, limit)
 
 
 def _flm_list(filter_kind: str) -> dict:
@@ -558,6 +528,13 @@ def apply_config_patch(patch: dict) -> str:
     cfg = load_config()
     _deep_merge(cfg, filtered)
 
+    # Custom-mode deletion: the filter passes a None marker through for
+    # user-defined modes; remove them post-merge (deep_merge just sets None).
+    modes_patch = filtered.get("modes") or {}
+    for mode_id, mode_val in modes_patch.items():
+        if mode_val is None:
+            (cfg.get("modes") or {}).pop(mode_id, None)
+
     if "flm_model" in filtered:
         new_model = str(filtered["flm_model"]).strip()
         if not new_model:
@@ -605,8 +582,17 @@ def build_config_snapshot() -> dict:
     hotkeys_cfg = cfg.get("hotkeys") or {}
     tone_cfg = ((cfg.get("modes") or {}).get("tone") or {})
     server_cfg = cfg.get("server") or {}
+    modes_summary = {
+        mode_id: {
+            "label": str((mode_cfg or {}).get("label") or mode_id),
+            "system_prompt": str((mode_cfg or {}).get("system_prompt") or ""),
+            "builtin": mode_id in ffp_config.BUILTIN_MODE_IDS,
+        }
+        for mode_id, mode_cfg in (cfg.get("modes") or {}).items()
+    }
     return {
         "version": APP_VERSION,
+        "modes": modes_summary,
         "flm_base_url": str(cfg.get("flm_base_url") or "http://127.0.0.1:52625"),
         "flm_model": str(cfg.get("flm_model") or FLM_MODEL),
         "flm_timeout_seconds": int(cfg.get("flm_timeout_seconds") or 30),

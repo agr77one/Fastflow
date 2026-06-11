@@ -100,15 +100,6 @@ def _open_download_pages(missing: list[str]) -> None:
 
 # ---------- State persistence ------------------------------------------------
 
-def _load_state() -> dict:
-    if not STATE_FILE.exists():
-        return {}
-    try:
-        return json.loads(STATE_FILE.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
-
-
 def _save_state(state: dict) -> None:
     state["updated"] = time.strftime("%Y-%m-%dT%H:%M:%S")
     STATE_FILE.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

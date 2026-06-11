@@ -144,21 +144,42 @@ def word_overlap_ratio(a: str, b: str) -> float:
     return len(words_a & words_b) / max(1, len(words_a))
 
 
+def has_prompt_structure(text: str) -> bool:
+    """True only when the output carries the XML scaffold of a real Claude prompt.
+
+    Unlike looks_like_prompt_text() (a loose vocabulary match), this is the
+    reliable signal that the model actually CONVERTED the input into a
+    structured prompt rather than echoing text that merely happens to contain
+    prompt-ish words like 'output', 'task', or 'format'. Echo detection and the
+    rescue gates key off this, not vocabulary, so a raw request whose own words
+    overlap the marker list can no longer slip past unconverted.
+    """
+    lowered = str(text or "").lower()
+    return any(tag in lowered for tag in ("<task>", "<context>", "<constraints>", "<output_format>"))
+
+
 def is_weak_prompt_echo(input_text: str, output_text: str) -> bool:
-    """True when the model only grammar-fixed or prefixed with 'Prompt:' instead of expanding."""
+    """True when the model only grammar-fixed/reformatted or prefixed with 'Prompt:' instead of expanding."""
     out = str(output_text or "").strip()
     inp = str(input_text or "").strip()
     if not out or not inp:
         return False
-    lowered = out.lower()
-    if any(tag in lowered for tag in ("<task>", "<context>", "<constraints>", "<output_format>")):
+    # A real converted prompt carries XML scaffold tags — never weak.
+    if has_prompt_structure(out):
         return False
-    if re.match(r"^prompt:\s*.+", lowered):
+    # Bare "Prompt: ..." prefix is the classic echo.
+    if re.match(r"^prompt:\s*.+", out.lower()):
+        return True
+    # No XML structure + heavy reuse of the user's own text = the model just
+    # reformatted/echoed (e.g. re-spaced the request) instead of converting it.
+    # This MUST fire on multi-line echoes too; the old len(lines)<=2 gate let a
+    # reformatted multi-paragraph request through whenever it contained a marker
+    # word, which is exactly how "same text, more spacing" reached the user.
+    if word_overlap_ratio(inp, out) >= 0.7 or line_reuse_ratio(inp, out) >= 0.7:
         return True
     lines = [line.strip() for line in out.splitlines() if line.strip()]
-    if len(lines) <= 2 and not looks_like_prompt_text(out):
-        if word_overlap_ratio(inp, out) >= 0.55:
-            return True
+    if len(lines) <= 2 and word_overlap_ratio(inp, out) >= 0.55:
+        return True
     return False
 
 
@@ -381,7 +402,7 @@ def call_flm(
         reuse_ratio = line_reuse_ratio(masked_input, text)
         near_copy = overlap_ratio >= 0.9 or reuse_ratio >= 0.9
         weak_echo = is_weak_prompt_echo(masked_input, text)
-        if (near_copy and not looks_like_prompt_text(text)) or weak_echo:
+        if (near_copy and not has_prompt_structure(text)) or weak_echo:
             rescue_prompt = (
                 "Rewrite into a stronger Claude-ready prompt for Anthropic models. "
                 "Use XML sections, testable constraints, and Markdown output format. "
