@@ -159,7 +159,11 @@ def test_get_index_serves_html_with_csp(daemon_server):
 def test_get_static_assets_have_correct_types(daemon_server):
     _, base_url = daemon_server
 
-    for path, expected_type in (("/ui/styles.css", "text/css"), ("/ui/app.js", "text/javascript")):
+    for path, expected_type in (
+        ("/ui/styles.css", "text/css"),
+        ("/ui/app.js", "text/javascript"),
+        ("/ui/favicon.svg", "image/svg+xml"),
+    ):
         with urllib.request.urlopen(base_url + path, timeout=5) as resp:
             assert resp.status == 200
             assert resp.headers["Content-Type"].startswith(expected_type)

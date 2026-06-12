@@ -120,6 +120,7 @@ _WEB_ROUTES = {
     "/": ("index.html", "text/html; charset=utf-8"),
     "/ui/styles.css": ("styles.css", "text/css; charset=utf-8"),
     "/ui/app.js": ("app.js", "text/javascript; charset=utf-8"),
+    "/ui/favicon.svg": ("favicon.svg", "image/svg+xml"),
 }
 
 _paths.ensure_dirs()
