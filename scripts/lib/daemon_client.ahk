@@ -15,6 +15,7 @@ global SUBPROCESS_READ_ACTIONS := Map(
     "config_snapshot", 1, "provider_status", 1, "dashboard_data", 1, "stats", 1,
     "version", 1, "doctor", 1, "models_list", 1,
     "models_installed", 1, "models_not_installed", 1,
+    "model_recommendations", 1,
     "status", 1, "performance", 1, "history_text_status", 1,
     "tone_preset", 1,
 )

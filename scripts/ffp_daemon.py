@@ -338,6 +338,20 @@ def _act_models_not_installed(_args: dict) -> dict:
     return grammar_fix._provider_list("not-installed")
 
 
+def _act_model_recommendations(_args: dict) -> dict:
+    """Hardware-aware model suggestions for the active provider: detected
+    RAM/VRAM, a size budget, and candidate models tagged fits yes/tight/no."""
+    import ffp_hardware
+    provider = grammar_fix.LLM_PROVIDER
+    if provider == "ollama":
+        candidates = list(ffp_hardware.OLLAMA_CATALOG)
+    else:
+        listing = grammar_fix._provider_list("all")
+        names = listing.get("models") or []
+        candidates = [(n, ffp_hardware.parse_params_b(n)) for n in names]
+    return ffp_hardware.recommend_models(provider, candidates)
+
+
 def _act_pull_model(args: dict) -> str:
     name = str(args.get("value", "")).strip()
     if not name:
@@ -667,6 +681,7 @@ ACTIONS: dict[str, Callable[[dict], Any]] = {
     "models_list": _act_models_list,
     "models_installed": _act_models_installed,
     "models_not_installed": _act_models_not_installed,
+    "model_recommendations": _act_model_recommendations,
     "pull_model": _act_pull_model,
     "remove_model": _act_remove_model,
     "apply_config_patch": _act_apply_config_patch,

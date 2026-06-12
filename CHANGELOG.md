@@ -10,6 +10,7 @@
 - New daemon action `provider_status`; `status` output now includes the provider.
 - **Pull any Ollama model from the dashboard.** "Pull a new model" is now a free-text field with per-provider suggestions — type any name from the [Ollama library](https://ollama.com/library) (e.g. `mistral:7b`) and download with live progress. FastFlowLM keeps its catalog suggestions.
 - **Benchmarks work on Ollama too.** The Benchmark tab runs timed generations against the running Ollama server (three prompt sizes × two passes, ~1–3 min on CPU) using Ollama's native prefill/decode counters, and records the same TTFT / prefill / decode metrics as `flm bench`. The server keeps serving during the run, and history rows now show which provider produced them.
+- **Hardware-aware model suggestions.** The dashboard detects system RAM (GlobalMemoryStatusEx) and GPU VRAM (nvidia-smi, or the display-class registry's qwMemorySize — which also finds Ryzen AI iGPU carve-outs) and computes a per-provider size budget: FastFlowLM scales with installed RAM (32 GB ≈ 4B-class on the NPU, 64 GB ≈ 9B), Ollama with VRAM (e.g. 8 GB ≈ 9B) or conservatively with RAM on CPU-only boxes. The pull card shows the detected budget, suggestions hide models that don't fit (near-misses are marked "tight fit"), and free-typing an oversized model asks for confirmation. New daemon action `model_recommendations`; new module `ffp_hardware`.
 
 ### Internal
 

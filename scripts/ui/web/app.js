@@ -501,14 +501,25 @@ async function loadServerStatus() {
   }
 }
 
+// Set by loadModels() from model_recommendations: {max_params_b, summary}.
+let modelBudget = null;
+
+// Mirrors ffp_hardware.parse_params_b: 'qwen3.5:4b' -> 4, 'mistral:7b' -> 7.
+function parseParamsB(name) {
+  const m = /(\d+(?:\.\d+)?)\s*b\b/i.exec(name || "");
+  return m ? parseFloat(m[1]) : null;
+}
+
 async function loadModels() {
   const list = $("models-list");
   const suggestions = $("pull-suggestions");
   list.replaceChildren();
   suggestions.replaceChildren();
+  const installedNames = new Set();
   try {
     const installed = await action("models_installed");
     for (const name of installed.models || []) {
+      installedNames.add(name);
       const opt = document.createElement("option");
       opt.value = name;
       opt.textContent = name + (name === installed.active ? "   ★ active" : "");
@@ -520,17 +531,39 @@ async function loadModels() {
     opt.textContent = `(error: ${e.message})`;
     list.append(opt);
   }
+  // Hardware-aware suggestions: detected RAM/VRAM caps the model size, so
+  // the datalist only offers models this machine can actually run. The input
+  // still accepts any free-typed name (oversized ones get a confirm).
+  let rec = null;
   try {
-    // Datalist of suggestions — the input also accepts any free-typed name
-    // (Ollama can pull anything from its library; flm validates its own).
-    const avail = await action("models_not_installed");
-    for (const name of avail.models || []) {
+    rec = await action("model_recommendations");
+    modelBudget = rec.budget || null;
+    $("hw-summary").textContent = modelBudget
+      ? `This machine: ${modelBudget.summary}. Larger models are hidden from suggestions.`
+      : "";
+  } catch {
+    modelBudget = null;
+    $("hw-summary").textContent = "";
+  }
+  if (rec && (rec.models || []).length) {
+    for (const m of rec.models) {
+      if (m.fits === "no" || installedNames.has(m.name)) continue;
       const opt = document.createElement("option");
-      opt.value = name;
+      opt.value = m.name;
+      if (m.fits === "tight") opt.label = `${m.name} — tight fit`;
       suggestions.append(opt);
     }
-  } catch {
-    /* suggestions stay empty when the provider is unreachable */
+  } else {
+    try {
+      const avail = await action("models_not_installed");
+      for (const name of avail.models || []) {
+        const opt = document.createElement("option");
+        opt.value = name;
+        suggestions.append(opt);
+      }
+    } catch {
+      /* suggestions stay empty when the provider is unreachable */
+    }
   }
 }
 
@@ -654,6 +687,11 @@ async function pullModel() {
   if (!name) {
     setText("pull-status", "Type or pick a model name first.");
     return;
+  }
+  const params = parseParamsB(name);
+  if (modelBudget && params && params > modelBudget.max_params_b * 1.5) {
+    const msg = `'${name}' looks like a ${params}B model — likely too big for this machine (${modelBudget.summary}). Pull anyway?`;
+    if (!window.confirm(msg)) return;
   }
   try {
     const state = await action("pull_start", { model: name });
