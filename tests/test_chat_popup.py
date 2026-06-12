@@ -101,3 +101,32 @@ def test_chat_load_config_prefers_shared_llm_block(isolated_release_root):
     assert cfg["llm_model"] == "llama3.2:3b"
     assert cfg["llm_base_url"] == "http://127.0.0.1:11434"
     assert cfg["llm_auth_bearer"] == "ollama"
+
+
+def test_watch_parent_pid_quits_app_when_parent_dies(isolated_release_root):
+    # The watch must use the kernel wait (no tasklist polling) and fire the
+    # app quit shortly after the parent process exits.
+    import subprocess
+    import time
+    import types
+
+    chat = _import_chat(isolated_release_root)
+    parent = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])
+    quit_calls: list = []
+    fake_app = types.SimpleNamespace(
+        on_quit=lambda: None,
+        root=types.SimpleNamespace(after=lambda _delay, fn: quit_calls.append(fn)),
+    )
+    try:
+        chat._watch_parent_pid(parent.pid, fake_app)
+        time.sleep(0.4)
+        assert not quit_calls  # parent still alive -> no quit yet
+        parent.kill()
+        parent.wait(timeout=5)
+        deadline = time.time() + 5
+        while time.time() < deadline and not quit_calls:
+            time.sleep(0.1)
+        assert quit_calls, "parent exit was not detected within 5s"
+    finally:
+        if parent.poll() is None:
+            parent.kill()

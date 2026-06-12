@@ -14,6 +14,9 @@
 
 ### Fixed
 
+- **Hotkey actions no longer trample each other.** Grammar fix, note capture, and ask-in-chat share the clipboard; firing one while another's model call was in flight (10–30 s) could corrupt the clipboard save/restore dance, and a re-press of the same hotkey re-ran on stale state. A busy guard now makes them mutually exclusive — a second press gets a "still busy" toast instead.
+- **Your clipboard comes back immediately.** The grammar hotkey used to hold the captured selection in the clipboard for the whole model call; it is now restored within milliseconds (the result still lands in the clipboard for the paste), restores happen on *every* path including mid-capture errors, and a busy clipboard at restore time is retried instead of silently losing your copy.
+- The chat window now watches its parent via a kernel wait instead of spawning `tasklist` every 5 seconds forever; a hung toast PowerShell is killed instead of orphaned; the update-available dialog auto-dismisses after a minute.
 - **Outputs no longer mention emoji out of nowhere.** Every built-in mode prompt told the model to "preserve emoji", and small models parroted that into results — grammar fixes ended with emoji remarks and `prompt:` mode invented constraints like "Include the emoji 🌟 at the very end". The prompts no longer name emoji (preservation falls out of "leave everything else exactly as written" — verified on qwen3.5:4b: emoji kept in place, no commentary), and built-in prompts are now always sourced from code at load time, so stale copies in existing config files can't resurrect old wording. Only your tone-preset choice and custom modes are kept from config.
 - The bare-CLI output path crashed with `UnicodeEncodeError` when the model output contained emoji (Windows pipes default to the charmap codec); stdout/stderr are now forced to UTF-8.
 

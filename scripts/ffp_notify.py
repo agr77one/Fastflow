@@ -46,6 +46,13 @@ def show_toast_async(title: str, message: str) -> None:
         try:
             proc.wait(timeout=3)
         except subprocess.TimeoutExpired:
-            log.debug("toast powershell still running after 3s (pid=%s)", proc.pid)
+            # A hung PowerShell would otherwise linger forever; the toast is
+            # best-effort, so kill it and reap the process.
+            log.debug("toast powershell still running after 3s (pid=%s) — killing", proc.pid)
+            proc.kill()
+            try:
+                proc.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                log.warning("toast powershell did not exit after kill (pid=%s)", proc.pid)
     except Exception as exc:
         log.warning("toast spawn failed: %s", exc)

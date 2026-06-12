@@ -881,18 +881,54 @@ def _is_pid_alive(pid: int) -> bool:
 
 
 def _watch_parent_pid(parent_pid: int, app: ChatApp) -> None:
-    """Exit chat when the launching grammarFix.ahk process goes away."""
+    """Exit chat when the launching grammarFix.ahk process goes away.
+
+    Preferred path mirrors ffp_daemon._watch_parent: open a SYNCHRONIZE handle
+    and block on WaitForSingleObject — the kernel signals the instant the
+    parent exits, with zero polling cost. Falls back to the old 5-second
+    tasklist poll only when the WinAPI path is unavailable (spawning tasklist
+    every 5s forever was measurable noise in Process Monitor)."""
     if parent_pid <= 0:
         return
 
+    def quit_app() -> None:
+        try:
+            app.root.after(0, app.on_quit)
+        except Exception:
+            pass
+
     def loop() -> None:
+        try:
+            import ctypes
+            from ctypes import wintypes
+            PROCESS_SYNCHRONIZE = 0x00100000
+            kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+            kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+            kernel32.OpenProcess.restype = wintypes.HANDLE
+            kernel32.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
+            kernel32.WaitForSingleObject.restype = wintypes.DWORD
+            kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+
+            handle = kernel32.OpenProcess(PROCESS_SYNCHRONIZE, False, parent_pid)
+            if handle:
+                try:
+                    while True:
+                        # Finite timeout so a daemon thread never sits in an
+                        # uninterruptible FFI call across interpreter exit.
+                        rc = kernel32.WaitForSingleObject(handle, 10000)
+                        if rc == 0:  # WAIT_OBJECT_0 -> parent exited
+                            quit_app()
+                            return
+                        # rc == 258 (WAIT_TIMEOUT) -> keep waiting
+                finally:
+                    kernel32.CloseHandle(handle)
+        except Exception:
+            pass  # fall through to polling
+
         while True:
             time.sleep(5)
             if not _is_pid_alive(parent_pid):
-                try:
-                    app.root.after(0, app.on_quit)
-                except Exception:
-                    pass
+                quit_app()
                 return
 
     threading.Thread(target=loop, daemon=True, name="chat-parent-watch").start()
