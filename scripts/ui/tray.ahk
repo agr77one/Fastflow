@@ -134,7 +134,9 @@ CheckForUpdates_Impl() {
         Notify("Flowkey", "You're up to date (" current ").")
         return
     }
-    if (MsgBox("Update available: " current " → " latest "`n`nDownload and install now?", "Flowkey", "YesNo Icon!") = "Yes") {
+    ; T60: auto-dismiss after a minute (returns "Timeout" ≠ "Yes") so a
+    ; forgotten dialog never sits on screen indefinitely.
+    if (MsgBox("Update available: " current " → " latest "`n`nDownload and install now?", "Flowkey", "YesNo Icon! T60") = "Yes") {
         Notify("Flowkey", "Downloading update…")
         out := RunAction("update_apply")
         Notify("Flowkey", out != "" ? out : "Update applied. Please restart grammarFix.ahk.")

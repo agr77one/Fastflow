@@ -160,7 +160,38 @@ RefreshModePrefixIds() {
         modePrefixIds := ids
 }
 
+; One clipboard-touching hotkey action runs at a time. Without this, a second
+; press during the 10-30s model call is buffered by AHK and re-fires on stale
+; state, and a DIFFERENT clipboard hotkey (note capture, ask-in-chat) can
+; interleave mid-call and corrupt the clipboard save/restore dance.
+ffpBusyAction := ""
+
+FfpActionBusy(name) {
+    global ffpBusyAction
+    if (ffpBusyAction != "") {
+        Notify("Flowkey", "⏳ Still busy with " ffpBusyAction " — try again in a moment.")
+        return true
+    }
+    ffpBusyAction := name
+    return false
+}
+
+FfpActionDone() {
+    global ffpBusyAction
+    ffpBusyAction := ""
+}
+
 ProcessSelection() {
+    if FfpActionBusy("the current request")
+        return
+    try {
+        ProcessSelectionImpl()
+    } finally {
+        FfpActionDone()
+    }
+}
+
+ProcessSelectionImpl() {
     clipSaved := ""
     try {
         clipSaved := ClipboardAll()
@@ -170,18 +201,25 @@ ProcessSelection() {
         return
     }
 
-    Send("^c")
     ; Read once, guarded: A_Clipboard can throw if the clipboard is locked by
-    ; another process at this instant. See SPEC B13 / V32.
+    ; another process at this instant. See SPEC B13 / V32. The finally gives
+    ; the user their clipboard back NOW — on every path including a Send
+    ; throw — because the model call can take 10-30s and holding the
+    ; selection hostage that long breaks copy/paste mid-wait. (On success the
+    ; result still lands in the clipboard for the paste.)
     selected := ""
-    if (ClipWait(1)) {
-        try
-            selected := A_Clipboard
-        catch
-            selected := ""
+    try {
+        Send("^c")
+        if (ClipWait(1)) {
+            try
+                selected := A_Clipboard
+            catch
+                selected := ""
+        }
+    } finally {
+        RestoreClipboard(clipSaved)
     }
     if (selected = "") {
-        try A_Clipboard := clipSaved
         Notify("Flowkey", "No selected text to process.")
         return
     }
@@ -189,7 +227,6 @@ ProcessSelection() {
     mode := parsed.mode
     selectedForModel := parsed.text
     if (selectedForModel = "") {
-        try A_Clipboard := clipSaved
         Notify("Flowkey", "No text left after prompt prefix.")
         return
     }
@@ -217,7 +254,6 @@ ProcessSelection() {
 
     try exec := RunPython(Format('"{}" --mode {} --input-file "{}" --output-file "{}"', scriptPath, mode, inFile, outFile))
     catch {
-        try A_Clipboard := clipSaved
         Notify("Flowkey", "Python launcher not found. Set GRAMMARFIX_PYTHONW or add pyw.exe to PATH.")
         return
     }
@@ -241,7 +277,6 @@ ProcessSelection() {
     SafeDelete(outFile)
 
     if (fixed = "") {
-        try A_Clipboard := clipSaved
         Notify("Flowkey", errText != "" ? errText : "No text returned.")
         return
     }
@@ -251,12 +286,12 @@ ProcessSelection() {
         Sleep(40)
         A_Clipboard := fixed
     } catch {
-        try A_Clipboard := clipSaved
+        RestoreClipboard(clipSaved)
         Notify("Flowkey", "Clipboard write failed.")
         return
     }
     if !ClipWait(1) {
-        try A_Clipboard := clipSaved
+        RestoreClipboard(clipSaved)
         Notify("Flowkey", "Clipboard write failed.")
         return
     }
@@ -409,6 +444,16 @@ ShutdownFlowkeyChildren(ExitReason := "", ExitCode := "") {
 ; ----------------------------------------------------------------------------
 
 CaptureNote() {
+    if FfpActionBusy("the current request")
+        return
+    try {
+        CaptureNoteImpl()
+    } finally {
+        FfpActionDone()
+    }
+}
+
+CaptureNoteImpl() {
     captured := ""
     source := ""
     if !CaptureTextFromSelectionOrClipboard(&captured, &source) {
@@ -449,6 +494,16 @@ CaptureNote() {
 ; ----------------------------------------------------------------------------
 
 AskWithSelection() {
+    if FfpActionBusy("the current request")
+        return
+    try {
+        AskWithSelectionImpl()
+    } finally {
+        FfpActionDone()
+    }
+}
+
+AskWithSelectionImpl() {
     captured := ""
     source := ""
     if !CaptureTextFromSelectionOrClipboard(&captured, &source) {
