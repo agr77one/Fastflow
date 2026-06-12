@@ -187,9 +187,11 @@
       <div class="card">
         <h2>Pull a new model</h2>
         <div class="form-row">
-          <select id="pull-name"></select>
+          <input type="text" id="pull-name" class="mono" list="pull-suggestions" placeholder="model name…">
+          <datalist id="pull-suggestions"></datalist>
           <button class="btn" id="pull-btn">Download</button>
         </div>
+        <p class="muted small" id="pull-hint" hidden>Any name from the <a href="https://ollama.com/library" target="_blank" rel="noopener">Ollama library</a> works — e.g. <code>mistral:7b</code>, <code>qwen2.5:0.5b</code>.</p>
         <p class="muted" id="pull-status"></p>
         <div id="flm-runtime-block">
           <h2>FastFlowLM runtime</h2>
@@ -247,8 +249,8 @@
     <div class="grid">
       <div class="card card-wide">
         <h2>Run a benchmark</h2>
-        <p>Benchmark a model with FastFlowLM's <code>flm bench</code> — sweeps 1k–32k context × 8 iterations and records time-to-first-token, prefill speed, and decode speed.</p>
-        <p class="warn">⚠ Takes ~10–20 min and fully saturates the NPU. The server is stopped for the run, so hotkeys will be unresponsive. Best run when idle.</p>
+        <p id="bench-desc">Benchmark a model with FastFlowLM's <code>flm bench</code> — sweeps 1k–32k context × 8 iterations and records time-to-first-token, prefill speed, and decode speed.</p>
+        <p class="warn" id="bench-warn">⚠ Takes ~10–20 min and fully saturates the NPU. The server is stopped for the run, so hotkeys will be unresponsive. Best run when idle.</p>
         <div class="form-row">
           <label for="bench-model">Model</label>
           <select id="bench-model"></select>
@@ -259,7 +261,7 @@
       <div class="card card-wide">
         <h2>Benchmark history <span class="muted small">(newest first — peak prefill / decode tok/s per run)</span></h2>
         <table class="data-table">
-          <thead><tr><th>When</th><th>Model</th><th>Prefill pk</th><th>Decode pk</th><th>Points</th></tr></thead>
+          <thead><tr><th>When</th><th>Model</th><th>Provider</th><th>Prefill pk</th><th>Decode pk</th><th>Points</th></tr></thead>
           <tbody id="bench-history-body"></tbody>
         </table>
         <p class="muted small" id="bench-empty" hidden>No benchmarks yet. Pick a model and click Run benchmark.</p>

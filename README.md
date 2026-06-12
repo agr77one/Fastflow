@@ -101,6 +101,8 @@ The dashboard is a web page served by the local daemon — open it from the tray
 - **Tabs:** Overview, History, Telemetry, Notes, Benchmark, Config.
 - **Theme:** auto-follows your OS day/night setting; the topbar button cycles auto → light → dark.
 - **Custom modes:** Config → Custom modes lets you add your own `prefix:` commands (id + system prompt). Changes apply to the running app within a second.
+- **Models:** pull models with live progress — pick a suggestion or type any name (on Ollama, anything from the [library](https://ollama.com/library) works); set active, remove.
+- **Benchmark:** works on both providers — `flm bench` on FastFlowLM (~10–20 min, NPU), timed generations with native metrics on Ollama (~1–3 min, server keeps running).
 - **Notes:** browse or search your vault; History shows recent runs (text is stored only if history storage is enabled).
 
 ## Project Layout

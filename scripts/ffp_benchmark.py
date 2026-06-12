@@ -120,6 +120,117 @@ def _default_runner(model: str, work: Path, no_window: int) -> str:
     return result.stdout or ""
 
 
+# ---------- Ollama benchmark --------------------------------------------------
+#
+# Ollama has no `bench` CLI, but every /api/generate response carries native
+# timing metrics (prompt_eval_count/_duration = prefill, eval_count/_duration =
+# decode, durations in ns). A few timed generations over increasing prompt
+# sizes give the same row shape flm bench produces, so history() and the
+# dashboard table work unchanged. Much shorter than flm bench (~1-3 min on
+# CPU) and the server keeps serving — no stop/start needed.
+
+_OLLAMA_BENCH_SIZES = (256, 1024, 2048)  # target prompt sizes (~tokens)
+_OLLAMA_BENCH_ITERATIONS = 2
+_OLLAMA_NUM_PREDICT = 96
+_OLLAMA_FILLER = "The quick brown fox jumps over the lazy dog near the riverbank at dawn. "
+
+
+def _default_ollama_generate(base_url: str, payload: dict, timeout: int = 900) -> dict:
+    import urllib.request
+
+    url = str(base_url or "http://127.0.0.1:11434").rstrip("/") + "/api/generate"
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return json.loads(resp.read().decode("utf-8", errors="replace"))
+
+
+def run_ollama_bench(
+    model: str,
+    base_url: str,
+    *,
+    sizes: tuple = _OLLAMA_BENCH_SIZES,
+    iterations: int = _OLLAMA_BENCH_ITERATIONS,
+    num_predict: int = _OLLAMA_NUM_PREDICT,
+    generate: Callable[[str, dict], dict] | None = None,
+    on_progress: Callable[[int, int], None] | None = None,
+) -> list[dict]:
+    """Timed-generation sweep. Returns rows shaped like parse_bench_csv():
+    context / ttft_s / prefill_tps / decode_tps (+ raw). ttft_s approximates
+    time-to-first-token as the prompt-eval (prefill) duration."""
+    gen = generate or _default_ollama_generate
+    # Untimed warmup so model load time doesn't pollute the first data point.
+    gen(base_url, {"model": model, "prompt": "Reply with OK.", "stream": False,
+                   "options": {"num_predict": 8}})
+    rows: list[dict] = []
+    for size in sizes:
+        prompt = (_OLLAMA_FILLER * (size // 8 + 1))[: size * 4]  # ~4 chars/token
+        prompt += "\nSummarize the text above in one sentence."
+        ttfts: list[float] = []
+        prefills: list[float] = []
+        decodes: list[float] = []
+        ctxs: list[float] = []
+        for i in range(iterations):
+            if on_progress is not None:
+                on_progress(size, i)
+            # Unique prefix per pass defeats Ollama's KV-prefix cache — a
+            # repeated identical prompt skips prefill and inflates tok/s.
+            data = gen(base_url, {"model": model, "prompt": f"Variant {i}: {prompt}",
+                                  "stream": False,
+                                  "options": {"num_predict": num_predict}})
+            p_n = float(data.get("prompt_eval_count") or 0)
+            p_ns = float(data.get("prompt_eval_duration") or 0)
+            e_n = float(data.get("eval_count") or 0)
+            e_ns = float(data.get("eval_duration") or 0)
+            if p_ns > 0:
+                ttfts.append(p_ns / 1e9)
+                if p_n > 0:
+                    prefills.append(p_n / (p_ns / 1e9))
+            if e_ns > 0 and e_n > 0:
+                decodes.append(e_n / (e_ns / 1e9))
+            if p_n > 0:
+                ctxs.append(p_n)
+
+        def avg(vals: list[float]):
+            return round(sum(vals) / len(vals), 3) if vals else None
+
+        rows.append({
+            "context": avg(ctxs),
+            "ttft_s": avg(ttfts),
+            "prefill_tps": avg(prefills),
+            "decode_tps": avg(decodes),
+            "raw": [f"target_tokens={size}", f"iterations={iterations}", f"num_predict={num_predict}"],
+        })
+    return rows
+
+
+def _run_ollama(model: str, bench_root: Path, base_url: str,
+                generate: Callable[[str, dict], dict] | None) -> None:
+    _update(state="running", message=f"Benchmarking {model} via Ollama (timed generation)…")
+
+    def on_progress(size: int, i: int) -> None:
+        _update(message=f"Benchmarking {model} via Ollama — ~{size}-token prompt, pass {i + 1}…")
+
+    rows = run_ollama_bench(model, base_url, generate=generate, on_progress=on_progress)
+    out = {
+        "model": model,
+        "provider": "ollama",
+        "flm_version": "",
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        "rows": rows,
+        "stdout_tail": "",
+    }
+    result_file = bench_root / f"{_slug(model)}_{int(time.time())}.json"
+    bench_root.mkdir(parents=True, exist_ok=True)
+    result_file.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
+    _update(state="done", message=f"Benchmark complete: {model}",
+            finished_at=time.time(), result_file=str(result_file))
+
+
 def _run(model: str, no_window: int, bench_root: Path, flm_version: str,
          runner: Callable[[str, Path, int], str]) -> None:
     work = bench_root / f"run_{_slug(model)}_{int(time.time())}"
@@ -150,16 +261,21 @@ def start_benchmark(
     no_window: int,
     bench_root,
     *,
+    provider: str = "fastflowlm",
+    base_url: str = "",
     flm_version: str = "",
     stop_serve: Callable[[], object] | None = None,
     start_serve: Callable[[], object] | None = None,
     runner: Callable[[str, Path, int], str] | None = None,
+    generate: Callable[[str, dict], dict] | None = None,
 ) -> dict:
-    """Launch a benchmark on a background thread. The serve server is stopped
-    for the duration (NPU contention) and restarted afterward. Returns
-    immediately; poll status()."""
+    """Launch a benchmark on a background thread. For FastFlowLM the serve
+    server is stopped for the duration (NPU contention) and restarted after;
+    for Ollama the server keeps running (it must — the bench talks to it).
+    Returns immediately; poll status()."""
     global _thread
     model = str(model or "").strip()
+    provider = str(provider or "fastflowlm").strip().lower()
     if not model:
         return {"ok": False, "error": "no model specified"}
     with _lock:
@@ -174,6 +290,9 @@ def start_benchmark(
 
     def worker() -> None:
         try:
+            if provider == "ollama":
+                _run_ollama(model, root, base_url, generate)
+                return
             if stop_serve is not None:
                 try:
                     stop_serve()
@@ -185,7 +304,7 @@ def start_benchmark(
             _update(state="error", error=str(exc), message="Benchmark failed.",
                     finished_at=time.time())
         finally:
-            if start_serve is not None:
+            if provider != "ollama" and start_serve is not None:
                 try:
                     start_serve()
                 except Exception as exc:
@@ -193,7 +312,7 @@ def start_benchmark(
 
     _thread = threading.Thread(target=worker, name="ffp-benchmark", daemon=True)
     _thread.start()
-    return {"ok": True, "state": "running", "model": model}
+    return {"ok": True, "state": "running", "model": model, "provider": provider}
 
 
 def history(bench_root) -> dict:
@@ -214,6 +333,7 @@ def history(bench_root) -> dict:
         prefill_vals = [r.get("prefill_tps") for r in rows if isinstance(r.get("prefill_tps"), (int, float))]
         runs.append({
             "model": data.get("model"),
+            "provider": data.get("provider") or "fastflowlm",
             "timestamp": data.get("timestamp"),
             "flm_version": data.get("flm_version"),
             "points": len(rows),
