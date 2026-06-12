@@ -98,6 +98,8 @@ function applyProviderCaps() {
   document.querySelectorAll('input[name="perf"]').forEach((r) => (r.disabled = !isFlm));
   $("perf-note").hidden = isFlm;
   $("models-title").textContent = `Installed models — ${PROVIDER_LABELS[sel]}`;
+  $("pull-hint").hidden = isFlm;
+  $("pull-name").placeholder = isFlm ? "model name, e.g. qwen3.5:4b" : "model name, e.g. llama3.2:3b";
   const note = $("provider-note");
   if (sel !== providerState.configured) {
     note.textContent = `Switching to ${PROVIDER_LABELS[sel]} — click "Save all settings" to apply.`;
@@ -501,9 +503,9 @@ async function loadServerStatus() {
 
 async function loadModels() {
   const list = $("models-list");
-  const pull = $("pull-name");
+  const suggestions = $("pull-suggestions");
   list.replaceChildren();
-  pull.replaceChildren();
+  suggestions.replaceChildren();
   try {
     const installed = await action("models_installed");
     for (const name of installed.models || []) {
@@ -519,20 +521,16 @@ async function loadModels() {
     list.append(opt);
   }
   try {
+    // Datalist of suggestions — the input also accepts any free-typed name
+    // (Ollama can pull anything from its library; flm validates its own).
     const avail = await action("models_not_installed");
     for (const name of avail.models || []) {
       const opt = document.createElement("option");
       opt.value = name;
-      opt.textContent = name;
-      pull.append(opt);
-    }
-    if (!pull.children.length) {
-      const opt = document.createElement("option");
-      opt.textContent = "(no more models available)";
-      pull.append(opt);
+      suggestions.append(opt);
     }
   } catch {
-    /* dropdown stays empty when flm is unreachable */
+    /* suggestions stay empty when the provider is unreachable */
   }
 }
 
@@ -652,9 +650,9 @@ async function removeModel() {
 let pullTimer = null;
 
 async function pullModel() {
-  const name = $("pull-name").value;
-  if (!name || name.startsWith("(")) {
-    setText("pull-status", "Pick a model from the dropdown first.");
+  const name = $("pull-name").value.trim();
+  if (!name) {
+    setText("pull-status", "Type or pick a model name first.");
     return;
   }
   try {
@@ -690,16 +688,22 @@ async function pollPull() {
 
 let benchTimer = null;
 
+let benchProvider = "fastflowlm"; // effective provider, set by loadBenchmark
+
 async function loadBenchmark() {
-  // flm bench is FastFlowLM-only; gate on the *effective* provider.
+  // Both providers can benchmark, with different mechanics — adjust the copy.
   try {
     const cfg = await action("config_snapshot");
-    const active = ((cfg.llm || {}).provider) || "fastflowlm";
-    const isFlm = active === "fastflowlm";
-    $("bench-run").disabled = !isFlm;
-    if (!isFlm) setText("bench-status", `Benchmarking uses flm bench and is FastFlowLM-only — active provider is ${PROVIDER_LABELS[active] || active}.`);
+    benchProvider = ((cfg.llm || {}).provider) || "fastflowlm";
   } catch {
-    /* leave the button enabled when the snapshot is unavailable */
+    /* keep the previous provider when the snapshot is unavailable */
+  }
+  if (benchProvider === "ollama") {
+    setText("bench-desc", "Benchmark a model with timed generations against the running Ollama server — three prompt sizes × two passes, using Ollama's native prefill/decode metrics.");
+    setText("bench-warn", "Takes ~1–3 minutes on CPU. The server keeps running, but responses will be slow during the run.");
+  } else {
+    setText("bench-desc", "Benchmark a model with FastFlowLM's flm bench — sweeps 1k–32k context × 8 iterations and records time-to-first-token, prefill speed, and decode speed.");
+    setText("bench-warn", "⚠ Takes ~10–20 min and fully saturates the NPU. The server is stopped for the run, so hotkeys will be unresponsive. Best run when idle.");
   }
   const select = $("bench-model");
   select.replaceChildren();
@@ -724,6 +728,7 @@ async function loadBenchHistory() {
     const rows = (hist.runs || []).map((r) => [
       String(r.timestamp || "-").slice(0, 19).replace("T", " "),
       r.model || "-",
+      PROVIDER_LABELS[r.provider] || r.provider || "FastFlowLM",
       r.peak_prefill_tps ?? "-",
       r.peak_decode_tps ?? "-",
       r.points ?? 0,
@@ -731,7 +736,7 @@ async function loadBenchHistory() {
     const n = fillTable("bench-history-body", rows);
     $("bench-empty").hidden = n > 0;
   } catch (e) {
-    fillTable("bench-history-body", [[`Benchmark history unavailable: ${e.message}`, "", "", "", ""]]);
+    fillTable("bench-history-body", [[`Benchmark history unavailable: ${e.message}`, "", "", "", "", ""]]);
   }
 }
 
@@ -741,11 +746,15 @@ async function runBenchmark() {
     setText("bench-status", "Select an installed model first.");
     return;
   }
-  const msg = `Benchmark '${model}'?\n\nThis runs flm bench for ~10–20 minutes, stops the server, and saturates the NPU. Hotkeys will be unresponsive until it finishes.`;
+  const msg = benchProvider === "ollama"
+    ? `Benchmark '${model}'?\n\nThis runs timed generations against Ollama for ~1–3 minutes. The server keeps serving, but responses will be slow during the run.`
+    : `Benchmark '${model}'?\n\nThis runs flm bench for ~10–20 minutes, stops the server, and saturates the NPU. Hotkeys will be unresponsive until it finishes.`;
   if (!window.confirm(msg)) return;
   try {
     await action("bench_start", { model });
-    setText("bench-status", `⏳ Benchmark started for ${model} — this takes 10–20 min…`);
+    setText("bench-status", benchProvider === "ollama"
+      ? `⏳ Benchmark started for ${model} — this takes a few minutes…`
+      : `⏳ Benchmark started for ${model} — this takes 10–20 min…`);
     clearInterval(benchTimer);
     benchTimer = setInterval(() => pollBench(false), 4000);
   } catch (e) {

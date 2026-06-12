@@ -8,6 +8,8 @@
 - The web dashboard is provider-aware: a Provider selector in Config shows installed/running status for both backends, a "Start server" button starts the active provider (including `ollama serve`), model cards relabel per provider, and FastFlowLM-only controls (runtime update check, performance modes, benchmark) hide or disable when Ollama is selected. The Overview tab shows the active provider, including fallback ("FastFlowLM (fallback from Ollama)").
 - First-run wizard detects both providers, recommends an available one, and offers per-provider model defaults.
 - New daemon action `provider_status`; `status` output now includes the provider.
+- **Pull any Ollama model from the dashboard.** "Pull a new model" is now a free-text field with per-provider suggestions — type any name from the [Ollama library](https://ollama.com/library) (e.g. `mistral:7b`) and download with live progress. FastFlowLM keeps its catalog suggestions.
+- **Benchmarks work on Ollama too.** The Benchmark tab runs timed generations against the running Ollama server (three prompt sizes × two passes, ~1–3 min on CPU) using Ollama's native prefill/decode counters, and records the same TTFT / prefill / decode metrics as `flm bench`. The server keeps serving during the run, and history rows now show which provider produced them.
 
 ### Internal
 

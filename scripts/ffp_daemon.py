@@ -435,13 +435,22 @@ def _act_flm_update_check(args: dict) -> dict:
 
 
 def _act_bench_start(args: dict) -> dict:
-    """Kick off `flm bench <model>` on a background thread (10-20 min). The
-    serve server is stopped for the run and restarted after. Returns at once."""
+    """Kick off a benchmark on a background thread. FastFlowLM: `flm bench`
+    (10-20 min; serve stopped for the run and restarted after). Ollama: timed
+    generations against the running server (~1-3 min). Returns at once."""
     import ffp_benchmark
     import ffp_flm_server
     model = str(args.get("model") or args.get("value") or "").strip()
     if not model:
         return {"ok": False, "error": "bench_start requires args.model"}
+    if grammar_fix.LLM_PROVIDER == "ollama":
+        return ffp_benchmark.start_benchmark(
+            model,
+            _NO_WINDOW,
+            _paths.DATA_DIR / "benchmarks",
+            provider="ollama",
+            base_url=grammar_fix.LLM_BASE_URL,
+        )
     return ffp_benchmark.start_benchmark(
         model,
         _NO_WINDOW,
