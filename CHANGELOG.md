@@ -12,6 +12,11 @@
 - **Benchmarks work on Ollama too.** The Benchmark tab runs timed generations against the running Ollama server (three prompt sizes × two passes, ~1–3 min on CPU) using Ollama's native prefill/decode counters, and records the same TTFT / prefill / decode metrics as `flm bench`. The server keeps serving during the run, and history rows now show which provider produced them.
 - **Hardware-aware model suggestions.** The dashboard detects system RAM (GlobalMemoryStatusEx) and GPU VRAM (nvidia-smi, or the display-class registry's qwMemorySize — which also finds Ryzen AI iGPU carve-outs) and computes a per-provider size budget: FastFlowLM scales with installed RAM (32 GB ≈ 4B-class on the NPU, 64 GB ≈ 9B), Ollama with VRAM (e.g. 8 GB ≈ 9B) or conservatively with RAM on CPU-only boxes. The pull card shows the detected budget, suggestions hide models that don't fit (near-misses are marked "tight fit"), and free-typing an oversized model asks for confirmation. New daemon action `model_recommendations`; new module `ffp_hardware`.
 
+### Fixed
+
+- **Outputs no longer mention emoji out of nowhere.** Every built-in mode prompt told the model to "preserve emoji", and small models parroted that into results — grammar fixes ended with emoji remarks and `prompt:` mode invented constraints like "Include the emoji 🌟 at the very end". The prompts no longer name emoji (preservation falls out of "leave everything else exactly as written" — verified on qwen3.5:4b: emoji kept in place, no commentary), and built-in prompts are now always sourced from code at load time, so stale copies in existing config files can't resurrect old wording. Only your tone-preset choice and custom modes are kept from config.
+- The bare-CLI output path crashed with `UnicodeEncodeError` when the model output contained emoji (Windows pipes default to the charmap codec); stdout/stderr are now forced to UTF-8.
+
 ### Internal
 
 - New modules `ffp_provider_status` (detection/capabilities) and `ffp_provider_runtime` (model list/pull/remove routing); registered in the wheel and PyInstaller spec. Provider roadmap notes live in `docs/provider-and-sync-roadmap.md`.

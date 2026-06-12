@@ -1014,6 +1014,15 @@ def handle_server_cli() -> bool:
 
 
 def main() -> None:
+    # Windows pipes default stdout/stderr to the legacy charmap codec, so
+    # model output containing emoji or non-Latin text crashed the bare-CLI
+    # print path with UnicodeEncodeError (the hotkey flow's --output-file is
+    # already UTF-8). Force UTF-8 and degrade unencodable chars, never crash.
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, OSError):
+            pass
     if "--list-hotkeys" in sys.argv:
         list_hotkeys()
         return
