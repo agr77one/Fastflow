@@ -664,10 +664,27 @@ def apply_config_patch(patch: dict) -> str:
 
     old_model = FLM_MODEL
     cfg = load_config()
+    old_provider = str((cfg.get("llm") or {}).get("provider") or "fastflowlm").strip().lower()
     _deep_merge(cfg, filtered)
     server_patch = filtered.get("server") if isinstance(filtered.get("server"), dict) else {}
     if "auto_start" in server_patch and "auto_start" not in (filtered.get("llm") or {}):
         cfg.setdefault("llm", {})["auto_start"] = bool(server_patch["auto_start"])
+
+    # Provider switch: the llm block's payload fields (base_url, auth_bearer, …)
+    # are residue of the PREVIOUS provider — rebuild them from the new provider's
+    # profile so e.g. Ollama doesn't inherit FastFlowLM's port/bearer. Fields the
+    # patch sets explicitly still win. (normalize_llm_config's crossed-payload
+    # heuristic only catches exact-default matches, not custom models/URLs.)
+    llm_patch = filtered.get("llm") if isinstance(filtered.get("llm"), dict) else {}
+    new_provider = str(llm_patch.get("provider") or "").strip().lower()
+    if new_provider and new_provider != old_provider:
+        profile = (cfg.get("providers") or {}).get(new_provider) or {}
+        llm_cfg = cfg.setdefault("llm", {})
+        for field in ("base_url", "model", "timeout_seconds", "auth_bearer", "auto_start"):
+            if field in llm_patch or field not in profile:
+                continue
+            llm_cfg[field] = profile[field]
+
     legacy_llm_patch = any(key in filtered for key in ("flm_base_url", "flm_model", "flm_timeout_seconds"))
     ffp_config.normalize_llm_config(cfg, prefer_legacy=legacy_llm_patch)
 

@@ -646,3 +646,30 @@ def test_read_and_write_output_file_modes(fresh_modules, monkeypatch, tmp_path: 
     assert grammar_fix._read_input_text() == "hello"
     grammar_fix._write_output_text("world")
     assert output_path.read_text(encoding="utf-8") == "world"
+
+
+def test_apply_config_patch_provider_switch_rebuilds_llm_payload(fresh_modules):
+    # Regression: switching llm.provider must NOT carry the previous provider's
+    # base_url/auth_bearer into the new provider (Ollama inheriting FLM's port
+    # silently routed "ollama" traffic to the FLM server, which also answers
+    # /api/tags). The llm payload must rebuild from the new provider's profile.
+    grammar_fix = fresh_modules("grammar_fix")
+
+    result = grammar_fix.apply_config_patch(
+        {
+            "llm": {"provider": "ollama", "timeout_seconds": 120},
+            "providers": {"ollama": {"base_url": "http://127.0.0.1:11434", "timeout_seconds": 120}},
+        }
+    )
+
+    assert result == "ok"
+    saved = json.loads(grammar_fix.CONFIG_PATH.read_text(encoding="utf-8"))
+    assert saved["llm"]["provider"] == "ollama"
+    assert saved["llm"]["base_url"] == "http://127.0.0.1:11434"
+    assert saved["llm"]["auth_bearer"] == "ollama"
+    assert saved["llm"]["model"] == saved["providers"]["ollama"]["model"]
+    # Switching back restores the FastFlowLM payload just as cleanly.
+    grammar_fix.apply_config_patch({"llm": {"provider": "fastflowlm"}})
+    saved = json.loads(grammar_fix.CONFIG_PATH.read_text(encoding="utf-8"))
+    assert saved["llm"]["base_url"] == "http://127.0.0.1:52625"
+    assert saved["llm"]["auth_bearer"] == "flm"
