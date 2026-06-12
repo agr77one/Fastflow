@@ -35,17 +35,17 @@
       "label": "Grammar fix",
       "shortcut": "Ctrl+Shift+G",
       "description": "Fix grammar and wording while preserving meaning.",
-      "system_prompt": "Fix grammar, spelling, punctuation, capitalization, and obvious wording mistakes. Preserve meaning. Keep emoji/smiley characters exactly as written when possible. Return only corrected text."
+      "system_prompt": "Fix grammar, spelling, punctuation, capitalization, and obvious wording mistakes. Preserve the meaning and leave everything else exactly as written. Return only the corrected text, with no preamble and no notes."
     },
     "prompt": {
       "label": "Prompt fix (Claude)",
       "description": "Rewrite rough text into a Claude-ready prompt (use prompt: prefix).",
-      "system_prompt": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact shape — Markdown headers, JSON keys, etc.). Keep each section short. No meta-framing, no preamble. Preserve intent and emoji. Return only the prompt."
+      "system_prompt": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact shape — Markdown headers, JSON keys, etc.). Keep each section short. No meta-framing, no preamble. Base every constraint on what the user actually asked for - never invent requirements they did not state. Return only the prompt."
     },
     "summarize": {
       "label": "Summarize",
       "description": "3-bullet summary of selected text (use summarize: prefix).",
-      "system_prompt": "Summarize the user text as exactly 3 bullet points. Each bullet is one sentence, factual, no preamble or sign-off. Preserve emoji/smiley characters when relevant. Return only the bullets."
+      "system_prompt": "Summarize the user text as exactly 3 bullet points. Each bullet is one sentence, factual, no preamble or sign-off. Return only the bullets."
     },
     "explain": {
       "label": "Explain code/regex/SQL",
@@ -58,16 +58,16 @@
       "preset": "formal",
       "presets": {
         "formal": {
-          "system_prompt": "Rewrite the user text in a formal, professional tone. Preserve meaning and emoji/smiley. Return only the rewritten text."
+          "system_prompt": "Rewrite the user text in a formal, professional tone. Preserve the meaning. Return only the rewritten text."
         },
         "casual": {
-          "system_prompt": "Rewrite the user text in a casual, conversational tone. Preserve meaning and emoji/smiley. Return only the rewritten text."
+          "system_prompt": "Rewrite the user text in a casual, conversational tone. Preserve the meaning. Return only the rewritten text."
         },
         "friendly": {
-          "system_prompt": "Rewrite the user text in a warm, friendly tone. Preserve meaning and emoji/smiley. Return only the rewritten text."
+          "system_prompt": "Rewrite the user text in a warm, friendly tone. Preserve the meaning. Return only the rewritten text."
         }
       },
-      "system_prompt": "Rewrite the user text in a formal, professional tone. Preserve meaning and emoji/smiley. Return only the rewritten text."
+      "system_prompt": "Rewrite the user text in a formal, professional tone. Preserve the meaning. Return only the rewritten text."
     }
   },
   "notes": {

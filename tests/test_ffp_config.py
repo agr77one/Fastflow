@@ -265,3 +265,44 @@ def test_filter_config_patch_accepts_provider_profiles():
             }
         }
     }
+
+
+def test_builtin_mode_prompts_never_mention_emoji():
+    # Regression: prompts that told the model to "preserve emoji" got parroted
+    # into outputs as invented emoji instructions (B: small models echo any
+    # named token). Built-in prompts must not name emoji at all.
+    def _all_prompts(modes):
+        for mode in modes.values():
+            yield mode.get("system_prompt") or ""
+            for preset in (mode.get("presets") or {}).values():
+                yield preset.get("system_prompt") or ""
+
+    for prompt in _all_prompts(ffp_config.DEFAULT_CONFIG["modes"]):
+        assert "emoji" not in prompt.lower()
+    assert "emoji" not in ffp_config.CLAUDE_PROMPT_SYSTEM_PROMPT.lower()
+
+
+def test_load_config_forces_builtin_prompts_from_code(tmp_path):
+    # A user config carrying a stale snapshot of an old built-in prompt must
+    # not override the code's prompt (built-ins are locked from patching, so
+    # config copies are never intentional). The tone preset CHOICE survives.
+    cfg_path = tmp_path / "grammar_hotkey.config.json"
+    cfg_path.write_text(json.dumps({
+        "modes": {
+            "grammar": {"system_prompt": "OLD: preserve emoji at all costs"},
+            "tone": {"preset": "casual",
+                     "system_prompt": "OLD casual: emoji emoji emoji"},
+            "translate": {"label": "Translate", "system_prompt": "Translate to English."},
+        },
+    }), encoding="utf-8")
+
+    loaded = ffp_config.load_config(cfg_path)
+
+    grammar = loaded["modes"]["grammar"]["system_prompt"]
+    assert grammar == ffp_config.DEFAULT_CONFIG["modes"]["grammar"]["system_prompt"]
+    assert "emoji" not in grammar.lower()
+    tone = loaded["modes"]["tone"]
+    assert tone["preset"] == "casual"  # user choice kept
+    assert tone["system_prompt"] == ffp_config.DEFAULT_CONFIG["modes"]["tone"]["presets"]["casual"]["system_prompt"]
+    # Custom modes pass through untouched.
+    assert loaded["modes"]["translate"]["system_prompt"] == "Translate to English."

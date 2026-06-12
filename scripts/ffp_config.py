@@ -25,7 +25,8 @@ CLAUDE_PROMPT_SYSTEM_PROMPT = (
     "<constraints> (concrete + testable: length, format, tone), "
     "<output_format> (exact shape — Markdown headers, JSON keys, etc.). "
     "Keep each section short. No meta-framing, no preamble. "
-    "Preserve intent and emoji. Return only the prompt."
+    "Base every constraint on what the user actually asked for — never invent "
+    "requirements they did not state. Return only the prompt."
 )
 
 DEFAULT_CONFIG = {
@@ -81,7 +82,7 @@ DEFAULT_CONFIG = {
             "label": "Grammar fix",
             "shortcut": "Ctrl+Shift+G",
             "description": "Fix grammar and wording while preserving meaning.",
-            "system_prompt": "Fix grammar, spelling, punctuation, capitalization, and obvious wording mistakes. Preserve meaning. Keep emoji/smiley characters exactly as written when possible. Return only corrected text.",
+            "system_prompt": "Fix grammar, spelling, punctuation, capitalization, and obvious wording mistakes. Preserve the meaning and leave everything else exactly as written. Return only the corrected text, with no preamble and no notes.",
         },
         "prompt": {
             "label": "Prompt fix (Claude)",
@@ -91,7 +92,7 @@ DEFAULT_CONFIG = {
         "summarize": {
             "label": "Summarize",
             "description": "3-bullet summary of selected text (use summarize: prefix).",
-            "system_prompt": "Summarize the user text as exactly 3 bullet points. Each bullet is one sentence, factual, no preamble or sign-off. Preserve emoji/smiley characters when relevant. Return only the bullets.",
+            "system_prompt": "Summarize the user text as exactly 3 bullet points. Each bullet is one sentence, factual, no preamble or sign-off. Return only the bullets.",
         },
         "explain": {
             "label": "Explain code/regex/SQL",
@@ -103,11 +104,11 @@ DEFAULT_CONFIG = {
             "description": "Rewrite in selected tone (use tone: prefix). Active preset cycles from the tray.",
             "preset": "formal",
             "presets": {
-                "formal": {"system_prompt": "Rewrite the user text in a formal, professional tone. Preserve meaning and emoji/smiley. Return only the rewritten text."},
-                "casual": {"system_prompt": "Rewrite the user text in a casual, conversational tone. Preserve meaning and emoji/smiley. Return only the rewritten text."},
-                "friendly": {"system_prompt": "Rewrite the user text in a warm, friendly tone. Preserve meaning and emoji/smiley. Return only the rewritten text."},
+                "formal": {"system_prompt": "Rewrite the user text in a formal, professional tone. Preserve the meaning. Return only the rewritten text."},
+                "casual": {"system_prompt": "Rewrite the user text in a casual, conversational tone. Preserve the meaning. Return only the rewritten text."},
+                "friendly": {"system_prompt": "Rewrite the user text in a warm, friendly tone. Preserve the meaning. Return only the rewritten text."},
             },
-            "system_prompt": "Rewrite the user text in a formal, professional tone. Preserve meaning and emoji/smiley. Return only the rewritten text.",
+            "system_prompt": "Rewrite the user text in a formal, professional tone. Preserve the meaning. Return only the rewritten text.",
         },
     },
 }
@@ -129,7 +130,39 @@ def load_config(config_path: Path) -> dict:
     merged = copy.deepcopy(DEFAULT_CONFIG)
     deep_merge(merged, loaded)
     normalize_llm_config(merged, prefer_legacy=not has_llm_block)
+    _enforce_builtin_mode_prompts(merged)
     return merged
+
+
+def _enforce_builtin_mode_prompts(cfg: dict) -> None:
+    """Built-in mode prompts always come from code, never from the config file.
+
+    They are locked against patching (BUILTIN_MODE_IDS), so any copy in the
+    user's config is just a stale snapshot of an old default — without this,
+    prompt improvements never reach existing installs (e.g. the old prompts
+    told the model to 'preserve emoji', which small models parroted into the
+    output as invented emoji instructions). Only the user's tone preset
+    CHOICE survives; custom modes are untouched."""
+    modes = cfg.get("modes")
+    if not isinstance(modes, dict):
+        cfg["modes"] = copy.deepcopy(DEFAULT_CONFIG["modes"])
+        return
+    for mode_id, default_mode in DEFAULT_CONFIG["modes"].items():
+        user_mode = modes.get(mode_id)
+        if not isinstance(user_mode, dict):
+            modes[mode_id] = copy.deepcopy(default_mode)
+            continue
+        # Force only the prompt fields — other user-set fields (shortcut
+        # label, description tweaks) stay merged as before.
+        if mode_id == "tone":
+            user_mode["presets"] = copy.deepcopy(default_mode["presets"])
+            preset = str(user_mode.get("preset") or "").strip().lower()
+            if preset not in user_mode["presets"]:
+                preset = default_mode["preset"]
+                user_mode["preset"] = preset
+            user_mode["system_prompt"] = user_mode["presets"][preset]["system_prompt"]
+        else:
+            user_mode["system_prompt"] = default_mode["system_prompt"]
 
 
 def save_config(config_path: Path, cfg: dict) -> None:
