@@ -47,6 +47,7 @@ HIDDEN_IMPORTS = [
     "ffp_benchmark",
     "ffp_config",
     "ffp_flm_server",
+    "ffp_hardware",
     "ffp_llm_client",
     "ffp_notify",
     "ffp_provider_runtime",
