@@ -283,8 +283,8 @@ end;
 { During uninstall: ask whether to wipe per-user config/data/logs, then act.
   Runs AFTER files in the install dir are removed but BEFORE the uninstaller
   exits, so the prompt isn't competing with file-in-use errors.
-  (Don't write a brace constant like the app-dir token here — Pascal { }
-  comments don't nest, so its closing brace would end this comment early.) }
+  NB: never put an Inno brace-constant in a Pascal comment — these comments
+  do not nest, so the constant's closing brace would end the comment early. }
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
   Wipe: Integer;
