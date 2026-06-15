@@ -68,7 +68,11 @@ UninstallDisplayIcon={app}\FastFlowPrompt\ffp-daemon.exe
 UninstallDisplayName={#AppName} {#AppVersion}
 CloseApplications=force
 RestartApplications=no
-MinVersion=10.0.17763  ; Windows 10 1809+ (NPU drivers need 22H2 anyway)
+; Windows 10 1809+ (build 17763) — NPU drivers need 22H2 anyway. Inno Setup
+; treats ';' as a comment ONLY at the start of a line, so this note must sit
+; on its own line; a trailing comment would be parsed as part of the value and
+; fail with "Value of [Setup] section directive MinVersion is invalid".
+MinVersion=10.0.17763
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
