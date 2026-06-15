@@ -281,8 +281,10 @@ begin
 end;
 
 { During uninstall: ask whether to wipe per-user config/data/logs, then act.
-  Runs AFTER files in {app} are removed but BEFORE the uninstaller exits, so
-  the prompt isn't competing with file-in-use errors. }
+  Runs AFTER files in the install dir are removed but BEFORE the uninstaller
+  exits, so the prompt isn't competing with file-in-use errors.
+  (Don't write a brace constant like the app-dir token here — Pascal { }
+  comments don't nest, so its closing brace would end this comment early.) }
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
   Wipe: Integer;
