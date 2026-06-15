@@ -19,6 +19,7 @@
 - The chat window now watches its parent via a kernel wait instead of spawning `tasklist` every 5 seconds forever; a hung toast PowerShell is killed instead of orphaned; the update-available dialog auto-dismisses after a minute.
 - **Outputs no longer mention emoji out of nowhere.** Every built-in mode prompt told the model to "preserve emoji", and small models parroted that into results — grammar fixes ended with emoji remarks and `prompt:` mode invented constraints like "Include the emoji 🌟 at the very end". The prompts no longer name emoji (preservation falls out of "leave everything else exactly as written" — verified on qwen3.5:4b: emoji kept in place, no commentary), and built-in prompts are now always sourced from code at load time, so stale copies in existing config files can't resurrect old wording. Only your tone-preset choice and custom modes are kept from config.
 - The bare-CLI output path crashed with `UnicodeEncodeError` when the model output contained emoji (Windows pipes default to the charmap codec); stdout/stderr are now forced to UTF-8.
+- **Installer builds no longer ship a broken chat window and first-run wizard.** The PyInstaller spec excluded `tkinter`, which `chat_popup.py` and `first_run.py` both import — so the frozen `ffp-chat.exe` / `ffp-first-run.exe` crashed at launch with `ModuleNotFoundError`. Tk is now bundled (verified: `_internal/tkinter` + `_tkinter.pyd` + tcl/tk present in the freeze).
 
 ### Internal
 
@@ -27,6 +28,7 @@
 - CI: the AutoHotkey syntax-check job no longer fails when the Chocolatey community feed has a transient outage — the install retries Chocolatey, then falls back to the official AutoHotkey v2 release zip, and fails fast if neither yields the interpreter (so the parse-check can never silently skip and pass green).
 - Tests: added coverage for the security-sensitive self-update path (`ffp_updater` — zip-slip extraction guard, update-feed parsing, sha256-verified package swap with rollback) and the notes capture pipeline (`capture_note` stub write + URL detection, the `_safe_category` traversal guard, LLM-JSON recovery, HTML extraction, and frontmatter serialization). Suite is now 180 tests.
 - CI: bumped `actions/checkout` v4→v5 and `actions/setup-python` v5→v6 onto the Node 24 runtime ahead of GitHub's Node 20 removal, and added a `node --check` syntax gate for the dashboard's `app.js`.
+- CI: added a `Build & release installer` workflow (manual dispatch or `v*` tag) that PyInstaller-freezes the four executables, compiles the Inno Setup installer, and uploads the artifact (attaching it to a GitHub Release on tag). Uses Node-24 actions (`checkout@v5`, `setup-python@v6`, `upload-artifact@v7`).
 
 ## 1.6.0
 
