@@ -60,6 +60,9 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
+          # Don't let choco's non-zero exit throw (pwsh 7.4+ default) — we want to
+          # inspect $LASTEXITCODE ourselves and retry / fall back, not abort here.
+          $PSNativeCommandUseErrorActionPreference = $false
           $installed = $false
           # Primary: Chocolatey, retried — the community feed has transient 503s
           # that would otherwise red-flag PRs that touch no AHK code at all.
@@ -85,6 +88,9 @@ jobs:
           $ahk = Get-ChildItem -Path "C:\Program Files\AutoHotkey" -Recurse -Filter AutoHotkey64.exe -File -ErrorAction SilentlyContinue | Select-Object -First 1
           if (-not $ahk) { Write-Error "AutoHotkey64.exe not found after install"; exit 1 }
           Write-Host "AutoHotkey64.exe at $($ahk.FullName)"
+          # A failed-then-recovered choco attempt leaves $LASTEXITCODE non-zero;
+          # exit explicitly so GitHub's wrapper doesn't fail this successful step.
+          exit 0
       - name: Validate AutoHotkey scripts (brace balance, all .ahk)
         shell: pwsh
         run: |
