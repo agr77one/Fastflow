@@ -76,8 +76,11 @@ DATAS = [
     (os.path.join(SCRIPTS_DIR, "assets"), "assets"),
 ]
 
+# NOTE: do NOT exclude tkinter — chat_popup.py and first_run.py import it, and
+# excluding it ships ffp-chat.exe / ffp-first-run.exe without _tkinter, so they
+# crash at launch. (Regression caught building the installer from this spec.)
 EXCLUDES = [
-    "tkinter", "test", "unittest", "pydoc", "doctest",
+    "test", "unittest", "pydoc", "doctest",
     "lib2to3", "pip", "setuptools", "wheel",
 ]
 

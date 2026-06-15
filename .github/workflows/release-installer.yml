@@ -1,0 +1,124 @@
+name: Build & release installer
+
+on:
+  push:
+    tags:
+      - 'v*'           # e.g. v1.6.0
+  workflow_dispatch:    # manual runs from the Actions tab (builds the artifact)
+    inputs:
+      tag:
+        description: 'Tag to attach the build to (defaults to current ref name)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows:
+    name: Build installer (windows-latest)
+    runs-on: windows-latest
+    permissions:
+      contents: write    # needed to upload to a GH Release
+    env:
+      # Self-signed cert material — see installer/README.md for secret setup.
+      # FFP_SIGN_PFX_B64      : base64-encoded .pfx contents
+      # FFP_SIGN_PFX_PASSWORD : the .pfx password
+      # Unset → an unsigned installer is built (SmartScreen warning on first run).
+      FFP_SIGN_PFX_B64:      ${{ secrets.FFP_SIGN_PFX_B64 }}
+      FFP_SIGN_PFX_PASSWORD: ${{ secrets.FFP_SIGN_PFX_PASSWORD }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Resolve version from _version.py
+        id: ver
+        shell: pwsh
+        run: |
+          # _version.py is the single source of truth; installer.iss AppVersion
+          # must track it (the smoke check below fails loudly if they drift).
+          $verLine = Select-String -Path scripts\_version.py -Pattern '__version__\s*=\s*"([0-9.]+)"' | Select-Object -First 1
+          if (-not $verLine) { throw "Could not parse version from scripts\_version.py" }
+          $v = $verLine.Matches[0].Groups[1].Value
+          "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "Detected version: $v"
+
+      - name: Setup Python 3.13
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+
+      - name: Install Python build deps
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller build
+
+      - name: Install Inno Setup 6
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress -y
+          # iscc lands under "C:\Program Files (x86)\Inno Setup 6\".
+          "${env:ProgramFiles(x86)}\Inno Setup 6" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+
+      - name: Decode signing cert
+        if: env.FFP_SIGN_PFX_B64 != ''
+        shell: pwsh
+        run: |
+          $certDir = "installer\certs"
+          if (-not (Test-Path $certDir)) { New-Item -ItemType Directory -Path $certDir -Force | Out-Null }
+          [IO.File]::WriteAllBytes(
+            "$certDir\fastflowprompt.pfx",
+            [Convert]::FromBase64String($env:FFP_SIGN_PFX_B64)
+          )
+          "Wrote $certDir\fastflowprompt.pfx"
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          if ($env:FFP_SIGN_PFX_B64) {
+            .\installer\build.ps1 -BundleAhk -BundleFlm -Sign
+          } else {
+            Write-Warning "FFP_SIGN_PFX_B64 secret not set — building unsigned."
+            .\installer\build.ps1 -BundleAhk -BundleFlm
+          }
+
+      - name: Smoke check output exists
+        shell: pwsh
+        run: |
+          $v = "${{ steps.ver.outputs.version }}"
+          $exe = "out\Flowkey-Setup-$v.exe"
+          if (-not (Test-Path $exe)) { throw "Missing $exe (installer.iss OutputBaseFilename / AppVersion may have drifted from _version.py)" }
+          $sizeMb = [math]::Round(((Get-Item $exe).Length/1MB),1)
+          "Built: $exe ($sizeMb MB)"
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: Flowkey-Setup-${{ steps.ver.outputs.version }}
+          path: out/Flowkey-Setup-${{ steps.ver.outputs.version }}.exe
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Create or update GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            out/Flowkey-Setup-${{ steps.ver.outputs.version }}.exe
+            installer/certs/fastflowprompt.cer
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          body: |
+            Flowkey ${{ steps.ver.outputs.version }} — see [CHANGELOG.md](CHANGELOG.md) for the full diff.
+
+            **Install:** download `Flowkey-Setup-${{ steps.ver.outputs.version }}.exe` and double-click.
+
+            **Hardware:** AMD Ryzen AI NPU recommended for FastFlowLM; Ollama works on any CPU/GPU.
+
+            **SmartScreen:** the installer is self-signed. First run shows _"Windows protected your PC"_ → _More info → Run anyway_. To silence permanently, import `fastflowprompt.cer` to Trusted Publishers (admin).
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
