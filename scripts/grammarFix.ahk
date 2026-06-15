@@ -1,6 +1,14 @@
 #Requires AutoHotkey v2.0
 #SingleInstance Force
 
+; Busy-guard state (which clipboard action is in flight). Declared as a
+; super-global and initialized HERE, at the top of the auto-execute section
+; BEFORE the Hotkey() registrations below — so the very first hotkey press
+; always sees an assigned value. A bare assignment further down never ran:
+; the auto-execute thread returns before reaching it, leaving the global unset
+; ("This global variable has not been assigned a value" on first press).
+global ffpBusyAction := ""
+
 ; Default hotkey bindings — registered directly at the top so they're always
 ; live even if RegisterHotkeys() (which applies config overrides) silently
 ; misbehaves. Hotkey()'s callback must accept one param (the hotkey name),
@@ -164,7 +172,9 @@ RefreshModePrefixIds() {
 ; press during the 10-30s model call is buffered by AHK and re-fires on stale
 ; state, and a DIFFERENT clipboard hotkey (note capture, ask-in-chat) can
 ; interleave mid-call and corrupt the clipboard save/restore dance.
-ffpBusyAction := ""
+; State lives in the super-global `ffpBusyAction` declared+initialized at the
+; top of the auto-execute section (a bare assignment here never ran — the
+; auto-execute thread returns before reaching this point).
 
 FfpActionBusy(name) {
     global ffpBusyAction
