@@ -55,6 +55,13 @@ AppUpdatesURL={#AppURL}/releases
 DefaultDirName={commonpf}\FastFlowPrompt
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
+; Every Source path below (dist\, vendor\, scripts\, SetupIconFile, LICENSE,
+; README.md) is written relative to the REPO ROOT, but Inno Setup resolves
+; relative paths against the directory containing this .iss by default — which
+; is installer\, not the root. Point SourceDir at the root (this script lives
+; in installer\, so "..") so every Source resolves. This also lands OutputDir
+; at <root>\out, where build.ps1 and release-installer.yml look for the exe.
+SourceDir=..
 OutputDir=out
 OutputBaseFilename=Flowkey-Setup-{#AppVersion}
 PrivilegesRequired=admin
@@ -96,6 +103,10 @@ Source: "vendor\ahk\LICENSE.txt";      DestDir: "{app}\ahk"; Flags: ignoreversio
 Source: "scripts\grammarFix.ahk"; DestDir: "{app}\scripts";        Flags: ignoreversion
 Source: "scripts\lib\*";          DestDir: "{app}\scripts\lib";    Flags: ignoreversion recursesubdirs
 Source: "scripts\ui\*";           DestDir: "{app}\scripts\ui";     Flags: ignoreversion recursesubdirs
+; Tray/window icon — grammarFix.ahk loads {app}\scripts\assets\flowkey.ico at
+; runtime (A_ScriptDir "\assets\flowkey.ico"); without this it silently has no
+; tray icon. Same .ico is the compile-time SetupIconFile above.
+Source: "scripts\assets\*";       DestDir: "{app}\scripts\assets"; Flags: ignoreversion recursesubdirs
 
 ; --- Docs ---------------------------------------------------------------------
 Source: "LICENSE";   DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist; DestName: "LICENSE.txt"
@@ -168,6 +179,7 @@ Type: filesandordirs; Name: "{app}\dist"
 Type: dirifempty;     Name: "{app}\ahk"
 Type: dirifempty;     Name: "{app}\scripts\lib"
 Type: dirifempty;     Name: "{app}\scripts\ui"
+Type: dirifempty;     Name: "{app}\scripts\assets"
 Type: dirifempty;     Name: "{app}\scripts"
 Type: dirifempty;     Name: "{app}"
 
