@@ -25,6 +25,8 @@
 - New modules `ffp_provider_status` (detection/capabilities) and `ffp_provider_runtime` (model list/pull/remove routing); registered in the wheel and PyInstaller spec. Provider roadmap notes live in `docs/provider-and-sync-roadmap.md`.
 - Dead-code cleanup: removed the redundant `_deep_merge` / `_version_tuple` wrappers in `grammar_fix.py` (callers now use `ffp_config.deep_merge` / `ffp_updater.version_tuple` directly, and their unit tests moved next to the real functions), deduplicated the update-feed-URL config lookup, and dropped the shadowed `chat.llm_auth_bearer` key from shipped configs — `llm.auth_bearer` is the live setting and always wins; old user configs that still carry the chat key keep working.
 - CI: the AutoHotkey syntax-check job no longer fails when the Chocolatey community feed has a transient outage — the install retries Chocolatey, then falls back to the official AutoHotkey v2 release zip, and fails fast if neither yields the interpreter (so the parse-check can never silently skip and pass green).
+- Tests: added coverage for the security-sensitive self-update path (`ffp_updater` — zip-slip extraction guard, update-feed parsing, sha256-verified package swap with rollback) and the notes capture pipeline (`capture_note` stub write + URL detection, the `_safe_category` traversal guard, LLM-JSON recovery, HTML extraction, and frontmatter serialization). Suite is now 180 tests.
+- CI: bumped `actions/checkout` v4→v5 and `actions/setup-python` v5→v6 onto the Node 24 runtime ahead of GitHub's Node 20 removal, and added a `node --check` syntax gate for the dashboard's `app.js`.
 
 ## 1.6.0
 
