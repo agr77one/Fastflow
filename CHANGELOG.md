@@ -29,6 +29,7 @@
 - Tests: added coverage for the security-sensitive self-update path (`ffp_updater` — zip-slip extraction guard, update-feed parsing, sha256-verified package swap with rollback) and the notes capture pipeline (`capture_note` stub write + URL detection, the `_safe_category` traversal guard, LLM-JSON recovery, HTML extraction, and frontmatter serialization). Suite is now 180 tests.
 - CI: bumped `actions/checkout` v4→v5 and `actions/setup-python` v5→v6 onto the Node 24 runtime ahead of GitHub's Node 20 removal, and added a `node --check` syntax gate for the dashboard's `app.js`.
 - CI: added a `Build & release installer` workflow (manual dispatch or `v*` tag) that PyInstaller-freezes the four executables, compiles the Inno Setup installer, and uploads the artifact (attaching it to a GitHub Release on tag). Uses Node-24 actions (`checkout@v5`, `setup-python@v6`, `upload-artifact@v7`).
+- Installer build: `build.ps1 -BundleAhk` now fetches AutoHotkey v2 from its GitHub release (pinned 2.0.26) instead of `autohotkey.com`, which began returning a Cloudflare bot-challenge page to non-browser clients (the download succeeded but `Expand-Archive` failed on the HTML). `autohotkey.com` is kept as a fallback.
 
 ## 1.6.0
 

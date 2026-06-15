@@ -103,15 +103,33 @@ if ($BundleAhk) {
     if (Test-Path $ahkDst) {
         "AHK already present: $ahkDst (v$((Get-Item $ahkDst).VersionInfo.FileVersion))"
     } else {
-        $zipUrl = "https://www.autohotkey.com/download/ahk-v2.zip"
+        # autohotkey.com now serves a Cloudflare bot-challenge HTML page to
+        # non-browser clients instead of the zip (Expand-Archive then fails), so
+        # pull the pinned v2 release straight from GitHub. autohotkey.com is kept
+        # as a last-ditch fallback.
+        $ahkVersion = "2.0.26"
+        $urls = @(
+            "https://github.com/AutoHotkey/AutoHotkey/releases/download/v$ahkVersion/AutoHotkey_$ahkVersion.zip",
+            "https://www.autohotkey.com/download/ahk-v2.zip"
+        )
         $zipDst = Join-Path $env:TEMP "ahk-v2-build.zip"
         $extract = Join-Path $env:TEMP "ahk-v2-build-extract"
-        "Downloading AHK v2 from $zipUrl ..."
-        Invoke-WebRequest -Uri $zipUrl -OutFile $zipDst -UseBasicParsing
-        if (Test-Path $extract) { Remove-Item $extract -Recurse -Force }
-        Expand-Archive -Path $zipDst -DestinationPath $extract -Force
+        $got = $false
+        foreach ($zipUrl in $urls) {
+            try {
+                "Downloading AHK v2 from $zipUrl ..."
+                if (Test-Path $extract) { Remove-Item $extract -Recurse -Force }
+                Invoke-WebRequest -Uri $zipUrl -OutFile $zipDst -UseBasicParsing
+                Expand-Archive -Path $zipDst -DestinationPath $extract -Force
+                $got = $true
+                break
+            } catch {
+                Write-Warning "AHK fetch from $zipUrl failed: $($_.Exception.Message)"
+            }
+        }
+        if (-not $got) { throw "Could not download AutoHotkey v2 from any source" }
         $ahkExe = Get-ChildItem $extract -Filter "AutoHotkey64.exe" -Recurse | Select-Object -First 1
-        if (-not $ahkExe) { throw "AutoHotkey64.exe not found in ahk-v2.zip" }
+        if (-not $ahkExe) { throw "AutoHotkey64.exe not found in downloaded zip" }
         Copy-Item $ahkExe.FullName -Destination $ahkDst -Force
         $lic = Get-ChildItem $extract -Filter "license*.txt" -Recurse | Select-Object -First 1
         if ($lic) { Copy-Item $lic.FullName -Destination (Join-Path $ahkDir "LICENSE.txt") -Force }
