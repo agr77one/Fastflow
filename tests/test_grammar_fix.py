@@ -341,29 +341,6 @@ def test_dict_protect_preserves_first_match_casing(fresh_modules):
     assert grammar_fix._dict_restore(masked, mapping).startswith("FASTFLOWPROMPT")
 
 
-@pytest.mark.parametrize(
-    ("value", "expected"),
-    [
-        ("1.2.3", (1, 2, 3)),
-        ("1.2", (1, 2, 0)),
-        ("v2.5.0-beta1", (2, 5, 1)),
-    ],
-)
-def test_version_tuple_parses_and_pads(fresh_modules, value, expected):
-    grammar_fix = fresh_modules("grammar_fix")
-
-    assert grammar_fix._version_tuple(value) == expected
-
-
-def test_deep_merge_updates_nested_dicts_in_place(fresh_modules):
-    grammar_fix = fresh_modules("grammar_fix")
-    dst = {"server": {"auto_start": True, "mode": "balanced"}, "enabled": True}
-
-    grammar_fix._deep_merge(dst, {"server": {"mode": "max"}, "enabled": False})
-
-    assert dst == {"server": {"auto_start": True, "mode": "max"}, "enabled": False}
-
-
 def test_compute_usage_stats_aggregates_history(fresh_modules, sample_history):
     grammar_fix = fresh_modules("grammar_fix")
     grammar_fix.HISTORY_PATH.write_text(

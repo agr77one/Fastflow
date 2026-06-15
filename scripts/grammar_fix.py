@@ -638,22 +638,16 @@ def run_doctor() -> str:
 UPDATE_FEED_URL_DEFAULT = ffp_updater.UPDATE_FEED_URL_DEFAULT
 
 
-def _version_tuple(v: str) -> tuple[int, ...]:
-    return ffp_updater.version_tuple(v)
+def _update_feed_url() -> str:
+    return str((CONFIG.get("update") or {}).get("feed_url") or UPDATE_FEED_URL_DEFAULT)
 
 
 def check_for_update() -> dict:
-    feed_url = str(((CONFIG.get("update") or {}).get("feed_url")) or UPDATE_FEED_URL_DEFAULT)
-    return ffp_updater.check_for_update(APP_VERSION, feed_url=feed_url)
+    return ffp_updater.check_for_update(APP_VERSION, feed_url=_update_feed_url())
 
 
 def apply_update() -> str:
-    feed_url = str(((CONFIG.get("update") or {}).get("feed_url")) or UPDATE_FEED_URL_DEFAULT)
-    return ffp_updater.apply_update(APP_VERSION, TOOL_DIR, feed_url=feed_url)
-
-
-def _deep_merge(dst: dict, src: dict) -> None:
-    ffp_config.deep_merge(dst, src)
+    return ffp_updater.apply_update(APP_VERSION, TOOL_DIR, feed_url=_update_feed_url())
 
 
 def apply_config_patch(patch: dict) -> str:
@@ -665,7 +659,7 @@ def apply_config_patch(patch: dict) -> str:
     old_model = FLM_MODEL
     cfg = load_config()
     old_provider = str((cfg.get("llm") or {}).get("provider") or "fastflowlm").strip().lower()
-    _deep_merge(cfg, filtered)
+    ffp_config.deep_merge(cfg, filtered)
     server_patch = filtered.get("server") if isinstance(filtered.get("server"), dict) else {}
     if "auto_start" in server_patch and "auto_start" not in (filtered.get("llm") or {}):
         cfg.setdefault("llm", {})["auto_start"] = bool(server_patch["auto_start"])

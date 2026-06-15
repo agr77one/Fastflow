@@ -23,6 +23,7 @@
 ### Internal
 
 - New modules `ffp_provider_status` (detection/capabilities) and `ffp_provider_runtime` (model list/pull/remove routing); registered in the wheel and PyInstaller spec. Provider roadmap notes live in `docs/provider-and-sync-roadmap.md`.
+- Dead-code cleanup: removed the redundant `_deep_merge` / `_version_tuple` wrappers in `grammar_fix.py` (callers now use `ffp_config.deep_merge` / `ffp_updater.version_tuple` directly, and their unit tests moved next to the real functions), deduplicated the update-feed-URL config lookup, and dropped the shadowed `chat.llm_auth_bearer` key from shipped configs — `llm.auth_bearer` is the live setting and always wins; old user configs that still carry the chat key keep working.
 
 ## 1.6.0
 
