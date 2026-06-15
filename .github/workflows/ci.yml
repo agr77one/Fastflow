@@ -18,8 +18,8 @@ jobs:
       matrix:
         python: ["3.11", "3.12", "3.13"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
 
@@ -55,7 +55,7 @@ jobs:
     name: AutoHotkey syntax check
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install AutoHotkey v2
         shell: pwsh
         run: |
@@ -132,3 +132,13 @@ jobs:
             if ($p.ExitCode -ne 0) { Write-Error "AHK unit test failed ($test, exit $($p.ExitCode)):`n$e"; exit 1 }
             Write-Host "AHK unit test passed: $test"
           }
+
+  web:
+    name: Web dashboard JS syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      # ubuntu-latest ships Node, so no setup-node step (and no extra Node-20
+      # action). --check validates syntax without executing browser globals.
+      - name: node --check app.js
+        run: node --check scripts/ui/web/app.js
