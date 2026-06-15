@@ -58,7 +58,39 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install AutoHotkey v2
         shell: pwsh
-        run: choco install autohotkey --version=2.0.26 -y --no-progress
+        run: |
+          $ErrorActionPreference = 'Stop'
+          # Don't let choco's non-zero exit throw (pwsh 7.4+ default) — we want to
+          # inspect $LASTEXITCODE ourselves and retry / fall back, not abort here.
+          $PSNativeCommandUseErrorActionPreference = $false
+          $installed = $false
+          # Primary: Chocolatey, retried — the community feed has transient 503s
+          # that would otherwise red-flag PRs that touch no AHK code at all.
+          for ($i = 1; $i -le 3; $i++) {
+            choco install autohotkey --version=2.0.26 -y --no-progress
+            if ($LASTEXITCODE -eq 0) { $installed = $true; break }
+            Write-Host "choco attempt $i failed (exit $LASTEXITCODE); retrying in 15s..."
+            Start-Sleep -Seconds 15
+          }
+          if (-not $installed) {
+            # Fallback: the official AutoHotkey v2 release zip (AutoHotkey64.exe at
+            # its root), so a full Chocolatey outage can't block the syntax check.
+            Write-Host "Chocolatey unavailable; falling back to the GitHub release zip."
+            $zip = Join-Path $env:RUNNER_TEMP "ahk2.zip"
+            $dest = "C:\Program Files\AutoHotkey"
+            Invoke-WebRequest -UseBasicParsing -OutFile $zip `
+              -Uri "https://github.com/AutoHotkey/AutoHotkey/releases/download/v2.0.26/AutoHotkey_2.0.26.zip"
+            New-Item -ItemType Directory -Force -Path $dest | Out-Null
+            Expand-Archive -Path $zip -DestinationPath $dest -Force
+          }
+          # Fail fast if neither path produced the interpreter — the parse-check
+          # steps below skip silently when it is missing, which must not pass green.
+          $ahk = Get-ChildItem -Path "C:\Program Files\AutoHotkey" -Recurse -Filter AutoHotkey64.exe -File -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $ahk) { Write-Error "AutoHotkey64.exe not found after install"; exit 1 }
+          Write-Host "AutoHotkey64.exe at $($ahk.FullName)"
+          # A failed-then-recovered choco attempt leaves $LASTEXITCODE non-zero;
+          # exit explicitly so GitHub's wrapper doesn't fail this successful step.
+          exit 0
       - name: Validate AutoHotkey scripts (brace balance, all .ahk)
         shell: pwsh
         run: |

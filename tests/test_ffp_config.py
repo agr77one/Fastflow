@@ -73,6 +73,14 @@ def test_save_config_atomic(tmp_path):
     assert loaded["flm_model"] == "b"
 
 
+def test_deep_merge_updates_nested_dicts_in_place():
+    dst = {"server": {"auto_start": True, "mode": "balanced"}, "enabled": True}
+
+    ffp_config.deep_merge(dst, {"server": {"mode": "max"}, "enabled": False})
+
+    assert dst == {"server": {"auto_start": True, "mode": "max"}, "enabled": False}
+
+
 def test_load_config_deep_merges_mode_defaults(tmp_path):
     cfg_path = tmp_path / "grammar_hotkey.config.json"
     cfg_path.write_text(json.dumps({"modes": {"tone": {"preset": "casual"}}}), encoding="utf-8")
