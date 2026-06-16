@@ -654,6 +654,41 @@ def _act_chat_send_selection(args: dict) -> dict:
     return {"ok": False, "error": "chat did not accept ingest after spawn"}
 
 
+# ---- Web-dashboard chat (daemon-backed; replaces the retired popup) ----------
+def _act_chat_threads_list(_args: dict) -> dict:
+    import ffp_chat
+    return ffp_chat.list_threads()
+
+
+def _act_chat_thread_get(args: dict) -> dict:
+    import ffp_chat
+    return ffp_chat.get_thread(str(args.get("thread_id") or ""))
+
+
+def _act_chat_send(args: dict) -> dict:
+    import ffp_chat
+    return ffp_chat.send(
+        thread_id=str(args.get("thread_id") or ""),
+        message=str(args.get("message") or ""),
+        use_notes=bool(args.get("use_notes")),
+    )
+
+
+def _act_chat_thread_delete(args: dict) -> dict:
+    import ffp_chat
+    return ffp_chat.delete_thread(str(args.get("thread_id") or ""))
+
+
+def _act_chat_stage_selection(args: dict) -> dict:
+    import ffp_chat
+    return ffp_chat.stage_selection(str(args.get("text") or ""), str(args.get("source_app") or ""))
+
+
+def _act_chat_take_staged(_args: dict) -> dict:
+    import ffp_chat
+    return ffp_chat.take_staged()
+
+
 ACTIONS: dict[str, Callable[[dict], Any]] = {
     "status": _act_status,
     "start": _act_start,
@@ -701,6 +736,12 @@ ACTIONS: dict[str, Callable[[dict], Any]] = {
     "pull_status": _act_pull_status,
     "notify": _act_notify,
     "save_note": _act_save_note,
+    "chat_threads_list": _act_chat_threads_list,
+    "chat_thread_get": _act_chat_thread_get,
+    "chat_send": _act_chat_send,
+    "chat_thread_delete": _act_chat_thread_delete,
+    "chat_stage_selection": _act_chat_stage_selection,
+    "chat_take_staged": _act_chat_take_staged,
     "chat_send_selection": _act_chat_send_selection,
     "chat_reload": _act_chat_reload,
     "chat_restart": _act_chat_restart,
@@ -719,6 +760,7 @@ _WRITE_ACTIONS = {
     "cycle_tone_preset", "set_tone", "set_tone_formal", "set_tone_casual", "set_tone_friendly",
     "pull_model", "remove_model", "apply_config_patch", "update_apply",
     "set_autostart", "bench_start", "pull_start",
+    "chat_send", "chat_thread_delete", "chat_stage_selection", "chat_take_staged",
 }
 
 _shutdown_event = threading.Event()
