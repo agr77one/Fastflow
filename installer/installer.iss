@@ -12,13 +12,11 @@
 ;
 ;  Layout written to disk:
 ;     {app}\                            Program Files\FastFlowPrompt (read-only)
-;       Flowkey\                 PyInstaller onedir bundle
-;         ffp-daemon.exe
-;         ffp-grammar-fix.exe
-;         ffp-chat.exe
-;         ffp-first-run.exe
-;         _internal\
-;         setup\defaults\
+;       ffp-daemon.exe                 PyInstaller bundle, flattened into {app}
+;       ffp-grammar-fix.exe
+;       ffp-chat.exe
+;       ffp-first-run.exe
+;       _internal\                     shared Python runtime + bundled datas
 ;       ahk\
 ;         AutoHotkey64.exe
 ;         LICENSE.txt
@@ -26,6 +24,8 @@
 ;         grammarFix.ahk
 ;         lib\*.ahk
 ;         ui\*.ahk
+;         assets\flowkey.ico
+;       setup\defaults\                 seed config (read by paths.py + paths.ahk)
 ;       LICENSE.txt
 ;       README.md
 ;
@@ -71,7 +71,7 @@ Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
 SetupIconFile=scripts\assets\flowkey.ico
-UninstallDisplayIcon={app}\FastFlowPrompt\ffp-daemon.exe
+UninstallDisplayIcon={app}\ffp-daemon.exe
 UninstallDisplayName={#AppName} {#AppVersion}
 CloseApplications=force
 RestartApplications=no
@@ -92,7 +92,14 @@ Name: "desktopicon";  Description: "Create a desktop shortcut"; \
 
 [Files]
 ; --- PyInstaller bundle ---------------------------------------------------------
-Source: "dist\FastFlowPrompt\*"; DestDir: "{app}\FastFlowPrompt"; \
+; Flatten the PyInstaller bundle straight into {app} (NOT {app}\FastFlowPrompt).
+; paths.py's production mode assumes APP_DIR = the dir holding scripts\/ahk\/setup\
+; (it computes APP_DIR = parent-of-the-frozen-modules-dir). Nesting the bundle one
+; level down made APP_DIR resolve to {app}\FastFlowPrompt, so the daemon looked for
+; ahk\/scripts\ and the config seed in the wrong place (empty autostart command,
+; unfound seed). Flattening puts ffp-*.exe + _internal\ directly in {app}, beside
+; ahk\ and scripts\ — exactly the layout paths.py documents.
+Source: "dist\FastFlowPrompt\*"; DestDir: "{app}"; \
   Flags: ignoreversion recursesubdirs createallsubdirs
 
 ; --- AHK runtime ---------------------------------------------------------------
@@ -112,6 +119,15 @@ Source: "scripts\assets\*";       DestDir: "{app}\scripts\assets"; Flags: ignore
 Source: "LICENSE";   DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist; DestName: "LICENSE.txt"
 Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
 
+; --- Seed config (read-only) ---------------------------------------------------
+;     Python seeds CONFIG_DIR from here on first run; AHK reads the .example from
+;     here. MUST live at {app}\setup\defaults so paths.py (APP_DIR\setup\defaults)
+;     and paths.ahk (appDir\setup\defaults) both find it. The PyInstaller `datas`
+;     copy lands in _internal\setup\defaults, which is NOT on that lookup path —
+;     so ship it loose here too.
+Source: "setup\defaults\*"; DestDir: "{app}\setup\defaults"; \
+  Flags: ignoreversion recursesubdirs skipifsourcedoesntexist
+
 ; --- FLM chained installer (extracted to tmp, run during install, then deleted)
 Source: "vendor\flm\flm-setup.exe"; DestDir: "{tmp}"; \
   Flags: deleteafterinstall ignoreversion skipifsourcedoesntexist; Check: NeedsFLM
@@ -129,21 +145,21 @@ Filename: "{tmp}\flm-setup.exe"; \
 ;     See [Code] section below.
 
 ; --- 3. Optional: launch first-run wizard right after install -----------------
-Filename: "{app}\FastFlowPrompt\ffp-first-run.exe"; \
+Filename: "{app}\ffp-first-run.exe"; \
   Description: "Run the {#AppName} setup wizard"; \
   Flags: postinstall nowait skipifsilent
 
 [Icons]
 Name: "{commonprograms}\{#AppName}";          Filename: "{app}\ahk\AutoHotkey64.exe"; \
   Parameters: """{app}\scripts\grammarFix.ahk"""; WorkingDir: "{app}"; \
-  IconFilename: "{app}\FastFlowPrompt\ffp-daemon.exe"
+  IconFilename: "{app}\ffp-daemon.exe"
 Name: "{commonprograms}\{#AppName} Dashboard"; Filename: "{app}\ahk\AutoHotkey64.exe"; \
   Parameters: """{app}\scripts\grammarFix.ahk"" /dashboard"; WorkingDir: "{app}"; \
-  IconFilename: "{app}\FastFlowPrompt\ffp-daemon.exe"
+  IconFilename: "{app}\ffp-daemon.exe"
 Name: "{commonprograms}\Uninstall {#AppName}"; Filename: "{uninstallexe}"
 Name: "{commondesktop}\{#AppName}";            Filename: "{app}\ahk\AutoHotkey64.exe"; \
   Parameters: """{app}\scripts\grammarFix.ahk"""; WorkingDir: "{app}"; \
-  IconFilename: "{app}\FastFlowPrompt\ffp-daemon.exe"; Tasks: desktopicon
+  IconFilename: "{app}\ffp-daemon.exe"; Tasks: desktopicon
 
 [Registry]
 ; --- Autostart (per-machine HKLM Run) — controlled by the autostart task -----
@@ -175,12 +191,15 @@ Filename: "{cmd}"; Parameters: "/c if exist ""{app}\.flm_installed_by_us"" call 
 ; %LOCALAPPDATA%\FastFlowPrompt) is handled by CurUninstallStepChanged below,
 ; behind an opt-in prompt — never wipe by default.
 Type: files;          Name: "{app}\.flm_installed_by_us"
-Type: filesandordirs; Name: "{app}\dist"
+; Bundle now flattens into {app}; _internal\ holds the PyInstaller runtime.
+Type: filesandordirs; Name: "{app}\_internal"
 Type: dirifempty;     Name: "{app}\ahk"
 Type: dirifempty;     Name: "{app}\scripts\lib"
 Type: dirifempty;     Name: "{app}\scripts\ui"
 Type: dirifempty;     Name: "{app}\scripts\assets"
 Type: dirifempty;     Name: "{app}\scripts"
+Type: dirifempty;     Name: "{app}\setup\defaults"
+Type: dirifempty;     Name: "{app}\setup"
 Type: dirifempty;     Name: "{app}"
 
 ; ============================================================================

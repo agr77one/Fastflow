@@ -37,8 +37,14 @@ block_cipher = None
 # level up) so the spec works regardless of pyinstaller's CWD.
 _RELEASE_ROOT = os.path.abspath(os.path.join(SPECPATH, ".."))
 SCRIPTS_DIR = os.path.join(_RELEASE_ROOT, "scripts")
-_icon_candidate = os.path.join(_RELEASE_ROOT, "setup", "logo.ico")
-ICON_PATH = _icon_candidate if os.path.exists(_icon_candidate) else None
+# The app icon ships at scripts/assets/flowkey.ico (same file installer.iss uses
+# as SetupIconFile). The old setup/logo.ico path does not exist in this repo, so
+# the guard silently left ICON_PATH=None and every exe/shortcut got a blank icon.
+_icon_candidates = [
+    os.path.join(SCRIPTS_DIR, "assets", "flowkey.ico"),
+    os.path.join(_RELEASE_ROOT, "setup", "logo.ico"),
+]
+ICON_PATH = next((p for p in _icon_candidates if os.path.exists(p)), None)
 VERSION_FILE = None                  # set to "file_version_info.txt" once generated
 
 HIDDEN_IMPORTS = [

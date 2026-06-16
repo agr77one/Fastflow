@@ -262,9 +262,9 @@ ProcessSelectionImpl() {
     apiTokPerSec := ""
     errText := ""
 
-    try exec := RunPython(Format('"{}" --mode {} --input-file "{}" --output-file "{}"', scriptPath, mode, inFile, outFile))
+    try exec := RunCmdExec(EntrypointCmd("ffp-grammar-fix.exe", scriptPath, Format('--mode {} --input-file "{}" --output-file "{}"', mode, inFile, outFile)))
     catch {
-        Notify("Flowkey", "Python launcher not found. Set GRAMMARFIX_PYTHONW or add pyw.exe to PATH.")
+        Notify("Flowkey", "Grammar engine not found (ffp-grammar-fix.exe / pyw.exe + grammar_fix.py).")
         return
     }
 
@@ -425,6 +425,18 @@ ResolvePythonwPath() {
 
 RunPython(args) {
     return RunPython_Impl(args)
+}
+
+FrozenEntrypointExe(exeName) {
+    return FrozenEntrypointExe_Impl(exeName)
+}
+
+EntrypointCmd(exeName, devScript, trailingArgs) {
+    return EntrypointCmd_Impl(exeName, devScript, trailingArgs)
+}
+
+RunCmdExec(cmd) {
+    return RunCmdExec_Impl(cmd)
 }
 
 LaunchChat() {

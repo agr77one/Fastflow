@@ -170,6 +170,27 @@ if (-not $SkipPyInstaller) {
     if (-not (Test-Path $distDir)) { throw "Expected dist dir not found: $distDir" }
     $sizeMb = [math]::Round(((Get-ChildItem $distDir -Recurse -File | Measure-Object Length -Sum).Sum/1MB),1)
     "Bundle size: $sizeMb MB"
+
+    # --- Frozen-layout diagnostic ----------------------------------------------
+    # The installed app's path resolution (paths.py APP_DIR, ffp_daemon web root,
+    # setup/defaults seed) depends on EXACTLY where PyInstaller lands the exes,
+    # _internal\, ui/web and setup/defaults. Print the ground truth so the AHK
+    # and Python launch/path code can be wired to it correctly.
+    "----- FROZEN TREE DIAGNOSTIC -----"
+    "top-level of dist\FastFlowPrompt:"
+    Get-ChildItem $distDir | ForEach-Object { "  [{0}] {1}" -f ($(if ($_.PSIsContainer) {'D'} else {'F'})), $_.Name }
+    $internal = Join-Path $distDir "_internal"
+    if (Test-Path $internal) {
+        "top-level of _internal:"
+        Get-ChildItem $internal | ForEach-Object { "  [{0}] {1}" -f ($(if ($_.PSIsContainer) {'D'} else {'F'})), $_.Name }
+    }
+    "key asset locations (relative to dist\FastFlowPrompt):"
+    foreach ($pat in @("ffp-daemon.exe","paths.py","app.js","grammar_hotkey.config.json","flowkey.ico")) {
+        $hits = Get-ChildItem $distDir -Recurse -Filter $pat -ErrorAction SilentlyContinue | Select-Object -First 3
+        if ($hits) { $hits | ForEach-Object { "  $pat -> " + $_.FullName.Substring($distDir.Length).TrimStart('\') } }
+        else { "  $pat -> (NOT FOUND)" }
+    }
+    "----- END DIAGNOSTIC -----"
 }
 
 # ---- 5. Inno Setup compile -----------------------------------------------------

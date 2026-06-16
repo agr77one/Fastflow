@@ -185,7 +185,8 @@ DrainPythonProcessOutput_Impl(exec, &stdout, &stderr) {
 }
 
 RunActionViaSubprocess_Impl(action) {
-    try exec := RunPython_Impl(Format('"{}" --app-action {}', scriptPath, action))
+    global scriptPath
+    try exec := RunCmdExec_Impl(EntrypointCmd_Impl("ffp-grammar-fix.exe", scriptPath, Format('--app-action {}', action)))
     catch {
         return "python launcher not found"
     }
@@ -199,12 +200,12 @@ EnsureDaemonRunning_Impl() {
     global daemonScriptPath
     if IsDaemonHealthy_Impl()
         return true
-    if !FileExist(daemonScriptPath)
+    ; Production: the frozen ffp-daemon.exe is the entrypoint; dev: pythonw + .py.
+    if (FrozenEntrypointExe_Impl("ffp-daemon.exe") = "" && !FileExist(daemonScriptPath))
         return false
-    pythonwPath := ResolvePythonwPath_Impl()
     parentArg := "--parent-pid " ProcessExist()
     try {
-        Run(Format('"{}" "{}" {}', pythonwPath, daemonScriptPath, parentArg), A_ScriptDir, "Hide")
+        Run(EntrypointCmd_Impl("ffp-daemon.exe", daemonScriptPath, parentArg), A_ScriptDir, "Hide")
     } catch {
         return false
     }
@@ -241,6 +242,33 @@ ResolvePythonwPath_Impl() {
     return pythonwPath
 }
 
+; --- Entrypoint launching (frozen exe vs dev .py) ---------------------------
+; The four Python entrypoints (grammar_fix, ffp_daemon, chat_popup, first_run)
+; ship as frozen exes in an installed build, flattened into the install root.
+; grammarFix.ahk runs from {app}\scripts, so A_ScriptDir\.. is the install root
+; and the exe is A_ScriptDir\..\<exeName>. A frozen exe IS its script's
+; entrypoint, so it accepts the SAME CLI args as `pythonw <script>.py`. In the
+; dev/source tree that exe doesn't exist, so fall back to pythonw + the .py.
+FrozenEntrypointExe_Impl(exeName) {
+    exe := A_ScriptDir "\\..\\" exeName
+    return FileExist(exe) ? exe : ""
+}
+
+; Full launch command for an entrypoint: the frozen exe if present, else
+; pythonw + the dev .py path the caller supplies. trailingArgs are the CLI args
+; that follow the script/exe (e.g. "--mode grammar --input-file ...").
+EntrypointCmd_Impl(exeName, devScript, trailingArgs) {
+    exe := FrozenEntrypointExe_Impl(exeName)
+    if (exe != "")
+        return Format('"{}" {}', exe, trailingArgs)
+    return Format('"{}" "{}" {}', ResolvePythonwPath_Impl(), devScript, trailingArgs)
+}
+
+; shell.Exec a fully-formed command (for callers that read stdout/stderr).
+RunCmdExec_Impl(cmd) {
+    return ComObject("WScript.Shell").Exec(cmd)
+}
+
 RunPython_Impl(args) {
     shell := ComObject("WScript.Shell")
     return shell.Exec(Format('"{}" {}', ResolvePythonwPath_Impl(), args))
@@ -248,16 +276,15 @@ RunPython_Impl(args) {
 
 LaunchChat_Impl() {
     global chatScriptPath
-    if !FileExist(chatScriptPath) {
-        Notify("Flowkey", "chat_popup.py not found next to grammarFix.ahk")
+    if (FrozenEntrypointExe_Impl("ffp-chat.exe") = "" && !FileExist(chatScriptPath)) {
+        Notify("Flowkey", "Chat entrypoint not found (ffp-chat.exe / chat_popup.py)")
         return
     }
     RunAction("chat_restart")
     Sleep 200
-    pythonwPath := ResolvePythonwPath_Impl()
     parentPid := ProcessExist()
     try {
-        Run(Format('"{}" "{}" --parent-pid {}', pythonwPath, chatScriptPath, parentPid), A_ScriptDir, "Hide")
+        Run(EntrypointCmd_Impl("ffp-chat.exe", chatScriptPath, Format('--parent-pid {}', parentPid)), A_ScriptDir, "Hide")
     } catch as e {
         Notify("Flowkey", "Chat launch failed: " e.Message)
     }
@@ -280,7 +307,9 @@ ShutdownFlowkeyChildren_Impl(ExitReason := "", ExitCode := "") {
 
 KillFlowkeyPythonProcesses_Impl() {
     scriptDir := A_ScriptDir
+    SplitPath(scriptDir, , &appDir)   ; appDir = parent of scripts\ = install root
     try {
+        ; Dev: pythonw.exe running our .py scripts from scripts\.
         for proc in ComObjGet("winmgmts:").ExecQuery("SELECT ProcessId, CommandLine FROM Win32_Process WHERE Name='pythonw.exe'") {
             cmd := proc.CommandLine
             if (cmd = "" || !InStr(cmd, scriptDir))
@@ -290,6 +319,16 @@ KillFlowkeyPythonProcesses_Impl() {
                 || InStr(cmd, "grammar_fix.py"))
                 continue
             try ProcessClose(proc.ProcessId)
+        }
+        ; Production: frozen exes launched from the install root (appDir). The
+        ; --parent-pid watchdog already exits them when we die; this is a backstop.
+        for exeName in ["ffp-daemon.exe", "ffp-chat.exe", "ffp-grammar-fix.exe"] {
+            for proc in ComObjGet("winmgmts:").ExecQuery("SELECT ProcessId, ExecutablePath FROM Win32_Process WHERE Name='" exeName "'") {
+                exePath := proc.ExecutablePath
+                if (exePath = "" || (appDir != "" && !InStr(exePath, appDir)))
+                    continue
+                try ProcessClose(proc.ProcessId)
+            }
         }
     } catch {
         ; Best-effort cleanup on exit — ignore WMI failures.
