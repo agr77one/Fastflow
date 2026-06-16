@@ -135,6 +135,22 @@
           <tbody id="notes-body"></tbody>
         </table>
         <p class="muted small" id="notes-empty" hidden>No notes found.</p>
+        <p class="muted small">Click a note to read it, move it to another bucket, or delete it.</p>
+      </div>
+      <div class="card card-wide note-reader" id="note-reader" hidden>
+        <div class="card-actions reader-head">
+          <h2 id="nr-title" class="nr-title">Note</h2>
+          <button class="btn" id="nr-close" title="Close">✕</button>
+        </div>
+        <p class="muted small"><a id="nr-source" href="#" target="_blank" rel="noopener" hidden></a></p>
+        <div class="form-row">
+          <label for="nr-bucket">Bucket</label>
+          <select id="nr-bucket"></select>
+          <button class="btn" id="nr-move">Move</button>
+          <button class="btn" id="nr-delete">Delete…</button>
+          <span class="muted small" id="nr-status"></span>
+        </div>
+        <pre class="note-body" id="nr-body"></pre>
       </div>
       <div class="card card-wide">
         <h2>Vault</h2>
