@@ -64,7 +64,6 @@ Issues = "https://github.com/agr77one/Fastflow/issues"
 [project.scripts]
 ffp-daemon = "ffp_daemon:main"
 ffp-grammar-fix = "grammar_fix:main"
-ffp-chat = "chat_popup:main"
 ffp-first-run = "first_run:main"
 ffp-install = "install:main"
 
@@ -93,7 +92,6 @@ py-modules = [
     "loopback_http",
     "paths",
     "grammar_fix",
-    "chat_popup",
     "ffp_daemon",
     "first_run",
     "install",

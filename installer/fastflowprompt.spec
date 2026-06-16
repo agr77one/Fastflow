@@ -8,12 +8,12 @@ Build:
 
 Output: dist/FastFlowPrompt/  (onedir, ~25 MB after merge dedupe)
 
-Produces four executables sharing one runtime tree:
+Produces three executables sharing one runtime tree (chat is now served by the
+daemon's web dashboard — the standalone chat popup was retired):
 
     dist/FastFlowPrompt/
-    ├── ffp-daemon.exe        windowed, long-running action server
+    ├── ffp-daemon.exe        windowed, long-running action server (+ web chat)
     ├── ffp-grammar-fix.exe   console, AHK subprocess fallback
-    ├── ffp-chat.exe          windowed, chat popup
     ├── ffp-first-run.exe     windowed, first-run wizard
     ├── _internal/            shared Python runtime + dlls + py-modules
     └── setup/defaults/       seed config (read-only)
@@ -66,7 +66,6 @@ HIDDEN_IMPORTS = [
     "loopback_http",
     "paths",
     "grammar_fix",
-    "chat_popup",
     "ffp_daemon",
     "first_run",
     "install",
@@ -83,9 +82,9 @@ DATAS = [
     (os.path.join(SCRIPTS_DIR, "assets"), "assets"),
 ]
 
-# NOTE: do NOT exclude tkinter — chat_popup.py and first_run.py import it, and
-# excluding it ships ffp-chat.exe / ffp-first-run.exe without _tkinter, so they
-# crash at launch. (Regression caught building the installer from this spec.)
+# NOTE: do NOT exclude tkinter — first_run.py (the wizard) imports it; excluding
+# it ships ffp-first-run.exe without _tkinter, so it crashes at launch.
+# (Regression caught building the installer from this spec.)
 EXCLUDES = [
     "test", "unittest", "pydoc", "doctest",
     "lib2to3", "pip", "setuptools", "wheel",
@@ -112,20 +111,17 @@ def _analysis(script_name: str) -> "Analysis":
 
 a_daemon  = _analysis("ffp_daemon.py")
 a_grammar = _analysis("grammar_fix.py")
-a_chat    = _analysis("chat_popup.py")
 a_wizard  = _analysis("first_run.py")
 
-# Dedupe shared deps across all four bundles.
+# Dedupe shared deps across all three bundles.
 MERGE(
     (a_daemon,  "ffp_daemon",  "ffp-daemon"),
     (a_grammar, "grammar_fix", "ffp-grammar-fix"),
-    (a_chat,    "chat_popup",  "ffp-chat"),
     (a_wizard,  "first_run",   "ffp-first-run"),
 )
 
 pyz_daemon  = PYZ(a_daemon.pure,  a_daemon.zipped_data,  cipher=block_cipher)
 pyz_grammar = PYZ(a_grammar.pure, a_grammar.zipped_data, cipher=block_cipher)
-pyz_chat    = PYZ(a_chat.pure,    a_chat.zipped_data,    cipher=block_cipher)
 pyz_wizard  = PYZ(a_wizard.pure,  a_wizard.zipped_data,  cipher=block_cipher)
 
 
@@ -153,13 +149,11 @@ def _exe(pyz, analysis, name, console):
 
 exe_daemon  = _exe(pyz_daemon,  a_daemon,  "ffp-daemon",      console=False)
 exe_grammar = _exe(pyz_grammar, a_grammar, "ffp-grammar-fix", console=True)
-exe_chat    = _exe(pyz_chat,    a_chat,    "ffp-chat",        console=False)
 exe_wizard  = _exe(pyz_wizard,  a_wizard,  "ffp-first-run",   console=False)
 
 COLLECT(
     exe_daemon,  a_daemon.binaries,  a_daemon.zipfiles,  a_daemon.datas,
     exe_grammar, a_grammar.binaries, a_grammar.zipfiles, a_grammar.datas,
-    exe_chat,    a_chat.binaries,    a_chat.zipfiles,    a_chat.datas,
     exe_wizard,  a_wizard.binaries,  a_wizard.zipfiles,  a_wizard.datas,
     strip=False,
     upx=False,

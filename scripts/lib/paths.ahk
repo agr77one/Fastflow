@@ -53,7 +53,6 @@ BuildRuntimePaths() {
         "dataDir", userRoot "\\data",
         "logsDir", userRoot "\\logs",
         "scriptPath", A_ScriptDir "\\grammar_fix.py",
-        "chatScriptPath", A_ScriptDir "\\chat_popup.py",
         "daemonScriptPath", A_ScriptDir "\\ffp_daemon.py",
         "configPath", userRoot "\\config\\grammar_hotkey.config.json",
         "configExamplePath", ResolveConfigExamplePath(appDir, userRoot),
