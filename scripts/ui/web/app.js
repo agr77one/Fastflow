@@ -821,10 +821,148 @@ async function pollBench(initial) {
   }
 }
 
+// ---- Chat ------------------------------------------------------------------
+// Daemon-backed chat (replaces the retired tkinter popup). Threads + send live
+// in ffp_chat behind the chat_* actions. All DOM via textContent/createElement.
+
+let chatThreadId = "";
+
+async function loadChat() {
+  // Pick up a selection staged by Ctrl+Shift+A (read-and-clear on the daemon).
+  try {
+    const staged = await action("chat_take_staged");
+    if (staged && staged.text) {
+      $("chat-input").value = staged.text;
+      chatThreadId = ""; // a staged selection starts a fresh conversation
+    }
+  } catch (e) { /* no staged selection */ }
+  await loadChatThreads();
+  if (chatThreadId) await openChatThread(chatThreadId);
+  else renderTranscript([]);
+  $("chat-input").focus();
+}
+
+async function loadChatThreads() {
+  let threads = [];
+  try {
+    const res = await action("chat_threads_list");
+    threads = (res && res.threads) || [];
+  } catch (e) {
+    setStatus("chat-status", `Conversations unavailable: ${e.message}`, false);
+  }
+  const list = $("chat-thread-list");
+  list.textContent = "";
+  for (const t of threads) {
+    const li = document.createElement("li");
+    li.className = "thread-item" + (t.thread_id === chatThreadId ? " active" : "");
+    const open = document.createElement("button");
+    open.className = "thread-open";
+    open.textContent = t.title || "New chat";
+    open.title = t.updated_at || "";
+    open.addEventListener("click", () => openChatThread(t.thread_id));
+    const del = document.createElement("button");
+    del.className = "thread-del";
+    del.textContent = "✕";
+    del.title = "Delete conversation";
+    del.addEventListener("click", (e) => { e.stopPropagation(); deleteChatThread(t.thread_id); });
+    li.append(open, del);
+    list.append(li);
+  }
+  $("chat-threads-empty").hidden = threads.length > 0;
+}
+
+async function openChatThread(id) {
+  try {
+    const t = await action("chat_thread_get", { thread_id: id });
+    chatThreadId = t.thread_id || id;
+    renderTranscript(t.history || []);
+    await loadChatThreads(); // reflect the active thread in the sidebar
+  } catch (e) {
+    setStatus("chat-status", `Open failed: ${e.message}`, false);
+  }
+  $("chat-input").focus();
+}
+
+function renderTranscript(history) {
+  const box = $("chat-transcript");
+  box.textContent = "";
+  let hasTurns = false;
+  for (const m of history) {
+    if (m.role !== "user" && m.role !== "assistant") continue; // hide system/grounding
+    hasTurns = true;
+    const div = document.createElement("div");
+    div.className = `chat-msg chat-msg-${m.role}`;
+    div.textContent = m.content || "";
+    box.append(div);
+  }
+  $("chat-placeholder").hidden = hasTurns;
+  box.scrollTop = box.scrollHeight;
+}
+
+function newChat() {
+  chatThreadId = "";
+  renderTranscript([]);
+  $("chat-input").value = "";
+  $("chat-input").focus();
+  setStatus("chat-status", "");
+  loadChatThreads();
+}
+
+async function deleteChatThread(id) {
+  if (!confirm("Delete this conversation?")) return;
+  try {
+    await action("chat_thread_delete", { thread_id: id });
+    if (id === chatThreadId) { chatThreadId = ""; renderTranscript([]); }
+    await loadChatThreads();
+  } catch (e) {
+    setStatus("chat-status", `Delete failed: ${e.message}`, false);
+  }
+}
+
+async function sendChat() {
+  const input = $("chat-input");
+  const message = input.value.trim();
+  if (!message) return;
+  const btn = $("chat-send");
+  btn.disabled = true;
+  setStatus("chat-status", "Thinking…");
+  // Optimistically show the user's message; the reply lands when the model returns.
+  const box = $("chat-transcript");
+  const userDiv = document.createElement("div");
+  userDiv.className = "chat-msg chat-msg-user";
+  userDiv.textContent = message;
+  box.append(userDiv);
+  $("chat-placeholder").hidden = true;
+  box.scrollTop = box.scrollHeight;
+  input.value = "";
+  try {
+    const res = await action("chat_send", {
+      thread_id: chatThreadId,
+      message,
+      use_notes: $("chat-use-notes").checked,
+    });
+    chatThreadId = res.thread_id || chatThreadId;
+    const reply = document.createElement("div");
+    reply.className = "chat-msg chat-msg-assistant";
+    reply.textContent = res.reply || "(no reply)";
+    box.append(reply);
+    box.scrollTop = box.scrollHeight;
+    setStatus("chat-status",
+      res.notes_used && res.notes_used.length ? `📚 Grounded in: ${res.notes_used.join(", ")}` : "");
+    loadChatThreads();
+  } catch (e) {
+    setStatus("chat-status", `Send failed: ${e.message}`, false);
+  } finally {
+    btn.disabled = false;
+    input.focus();
+  }
+}
+
 // ---- Tabs & refresh --------------------------------------------------------
 
 const TAB_LOADERS = {
   overview: loadOverview,
+  chat: loadChat,
   telemetry: loadTelemetry,
   history: loadHistory,
   notes: loadNotes,
@@ -846,10 +984,26 @@ function refreshAll() {
   (TAB_LOADERS[currentTab] || (() => {}))();
 }
 
+// Deep-link support: `/#chat` (or any tab id) selects that tab. Lets a hotkey or
+// the tray open the dashboard straight to Chat via daemonBaseUrl + "#chat".
+function tabFromHash() {
+  const h = (location.hash || "").replace(/^#/, "");
+  return TAB_LOADERS[h] ? h : "";
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   $("tabs").addEventListener("click", (e) => {
     const btn = e.target.closest(".tab");
-    if (btn) switchTab(btn.dataset.tab);
+    if (btn) { location.hash = btn.dataset.tab; switchTab(btn.dataset.tab); }
+  });
+  window.addEventListener("hashchange", () => {
+    const t = tabFromHash();
+    if (t && t !== currentTab) switchTab(t);
+  });
+  $("chat-send").addEventListener("click", sendChat);
+  $("chat-new").addEventListener("click", newChat);
+  $("chat-input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); sendChat(); }
   });
   $("refresh-btn").addEventListener("click", refreshAll);
   $("theme-btn").addEventListener("click", cycleTheme);
@@ -873,6 +1027,6 @@ document.addEventListener("DOMContentLoaded", () => {
   $("flm-check").addEventListener("click", () => loadFlmVersion(true));
   $("bench-run").addEventListener("click", runBenchmark);
   refreshHealth();
-  loadOverview();
+  switchTab(tabFromHash() || "overview");
   setInterval(refreshHealth, 10000);
 });

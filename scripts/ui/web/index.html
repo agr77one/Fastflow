@@ -25,6 +25,7 @@
 
 <nav class="tabs" id="tabs" role="tablist">
   <button class="tab active" data-tab="overview">Overview</button>
+  <button class="tab" data-tab="chat">Chat</button>
   <button class="tab" data-tab="telemetry">Telemetry</button>
   <button class="tab" data-tab="history">History</button>
   <button class="tab" data-tab="notes">Notes</button>
@@ -70,6 +71,28 @@
           <dt>Note</dt><dd><kbd id="hk-note">…</kbd></dd>
           <dt>Ask</dt><dd><kbd id="hk-ask">…</kbd></dd>
         </dl>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="tab-chat">
+    <div class="chat-layout">
+      <aside class="card chat-threads">
+        <div class="card-actions">
+          <button class="btn btn-primary" id="chat-new">+ New chat</button>
+        </div>
+        <ul class="thread-list" id="chat-thread-list"></ul>
+        <p class="muted small" id="chat-threads-empty" hidden>No conversations yet.</p>
+      </aside>
+      <div class="card chat-main">
+        <div class="chat-transcript" id="chat-transcript" aria-live="polite"></div>
+        <p class="muted small" id="chat-placeholder">Start a conversation below. Replies run on your local model — nothing leaves this machine.</p>
+        <label class="check-row"><input type="checkbox" id="chat-use-notes"> 📚 Ground answers in my notes</label>
+        <div class="form-row chat-input-row">
+          <textarea id="chat-input" rows="3" placeholder="Type a message… (Ctrl+Enter to send)"></textarea>
+          <button class="btn btn-primary" id="chat-send">Send</button>
+        </div>
+        <span class="muted small" id="chat-status"></span>
       </div>
     </div>
   </section>
