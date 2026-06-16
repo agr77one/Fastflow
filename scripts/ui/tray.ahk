@@ -227,10 +227,12 @@ MaybeRunFirstRunWizard_Impl() {
     ; Launch the wizard with --check and let first_run.py be the single
     ; authority: it exits instantly when the real marker exists. See SPEC B16/V38.
     wizardScript := A_ScriptDir "\\first_run.py"
-    if !FileExist(wizardScript)
+    ; Production ships the frozen ffp-first-run.exe; dev has first_run.py. Bail
+    ; only if NEITHER exists. The exe/script is the single authority on the
+    ; marker — it exits instantly when first-run is already done.
+    if (FrozenEntrypointExe("ffp-first-run.exe") = "" && !FileExist(wizardScript))
         return
-    pythonwPath := ResolvePythonwPath()
-    try Run(Format('"{}" "{}" --check', pythonwPath, wizardScript), A_ScriptDir, "Hide")
+    try Run(EntrypointCmd("ffp-first-run.exe", wizardScript, "--check"), A_ScriptDir, "Hide")
 }
 
 EnsureConfig_Impl() {
