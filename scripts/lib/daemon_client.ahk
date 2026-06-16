@@ -2,7 +2,7 @@
 global DAEMON_ONLY_ACTIONS := Map(
     "pull_start", 1, "pull_status", 1,
     "bench_start", 1, "bench_status", 1, "bench_history", 1,
-    "chat_send_selection", 1, "chat_reload", 1, "chat_restart", 1, "save_note", 1,
+    "chat_send", 1, "chat_thread_delete", 1, "chat_stage_selection", 1, "save_note", 1,
     "set_autostart", 1, "get_autostart_state", 1,
     "notify", 1, "open_dashboard", 1,
     "flm_update_check", 1, "note_search", 1,
@@ -243,7 +243,7 @@ ResolvePythonwPath_Impl() {
 }
 
 ; --- Entrypoint launching (frozen exe vs dev .py) ---------------------------
-; The four Python entrypoints (grammar_fix, ffp_daemon, chat_popup, first_run)
+; The Python entrypoints (grammar_fix, ffp_daemon, first_run)
 ; ship as frozen exes in an installed build, flattened into the install root.
 ; grammarFix.ahk runs from {app}\scripts, so A_ScriptDir\.. is the install root
 ; and the exe is A_ScriptDir\..\<exeName>. A frozen exe IS its script's
@@ -274,22 +274,6 @@ RunPython_Impl(args) {
     return shell.Exec(Format('"{}" {}', ResolvePythonwPath_Impl(), args))
 }
 
-LaunchChat_Impl() {
-    global chatScriptPath
-    if (FrozenEntrypointExe_Impl("ffp-chat.exe") = "" && !FileExist(chatScriptPath)) {
-        Notify("Flowkey", "Chat entrypoint not found (ffp-chat.exe / chat_popup.py)")
-        return
-    }
-    RunAction("chat_restart")
-    Sleep 200
-    parentPid := ProcessExist()
-    try {
-        Run(EntrypointCmd_Impl("ffp-chat.exe", chatScriptPath, Format('--parent-pid {}', parentPid)), A_ScriptDir, "Hide")
-    } catch as e {
-        Notify("Flowkey", "Chat launch failed: " e.Message)
-    }
-}
-
 ; Graceful + forced cleanup of Flowkey-owned pythonw children on script exit.
 global flowkeyShutdownDone := false
 
@@ -299,7 +283,6 @@ ShutdownFlowkeyChildren_Impl(ExitReason := "", ExitCode := "") {
         return
     flowkeyShutdownDone := true
 
-    try RunAction("chat_restart")
     try RunAction("shutdown")
     Sleep 400
     KillFlowkeyPythonProcesses_Impl()
@@ -315,14 +298,13 @@ KillFlowkeyPythonProcesses_Impl() {
             if (cmd = "" || !InStr(cmd, scriptDir))
                 continue
             if !(InStr(cmd, "ffp_daemon.py")
-                || InStr(cmd, "chat_popup")
                 || InStr(cmd, "grammar_fix.py"))
                 continue
             try ProcessClose(proc.ProcessId)
         }
         ; Production: frozen exes launched from the install root (appDir). The
         ; --parent-pid watchdog already exits them when we die; this is a backstop.
-        for exeName in ["ffp-daemon.exe", "ffp-chat.exe", "ffp-grammar-fix.exe"] {
+        for exeName in ["ffp-daemon.exe", "ffp-grammar-fix.exe"] {
             for proc in ComObjGet("winmgmts:").ExecQuery("SELECT ProcessId, ExecutablePath FROM Win32_Process WHERE Name='" exeName "'") {
                 exePath := proc.ExecutablePath
                 if (exePath = "" || (appDir != "" && !InStr(exePath, appDir)))

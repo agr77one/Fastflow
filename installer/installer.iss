@@ -14,7 +14,6 @@
 ;     {app}\                            Program Files\FastFlowPrompt (read-only)
 ;       ffp-daemon.exe                 PyInstaller bundle, flattened into {app}
 ;       ffp-grammar-fix.exe
-;       ffp-chat.exe
 ;       ffp-first-run.exe
 ;       _internal\                     shared Python runtime + bundled datas
 ;       ahk\
@@ -174,8 +173,6 @@ Root: HKLM; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; \
 ;     won't always trip the close-apps prompt. Kill explicitly.
 Filename: "{sys}\taskkill.exe"; Parameters: "/F /IM ffp-daemon.exe /T"; \
   RunOnceId: "KillDaemon"; Flags: runhidden waituntilterminated
-Filename: "{sys}\taskkill.exe"; Parameters: "/F /IM ffp-chat.exe /T"; \
-  RunOnceId: "KillChat"; Flags: runhidden waituntilterminated
 Filename: "{sys}\taskkill.exe"; \
   Parameters: "/F /IM AutoHotkey64.exe /FI ""WINDOWTITLE eq grammarFix*"""; \
   RunOnceId: "KillAhk"; Flags: runhidden waituntilterminated

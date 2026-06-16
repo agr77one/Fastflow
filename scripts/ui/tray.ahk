@@ -1,6 +1,6 @@
 SetupTrayMenu_Impl() {
     A_TrayMenu.Delete()
-    A_TrayMenu.Add("Open Chat`tCtrl+Shift+T", (*) => LaunchChat())
+    A_TrayMenu.Add("Open Chat`tCtrl+Shift+T", (*) => OpenWebDashboard_Impl("chat"))
     A_TrayMenu.Add("Dashboard", (*) => OpenWebDashboard_Impl())
     A_TrayMenu.Add()
     A_TrayMenu.Add("Quick toggles", BuildTogglesMenu_Impl())
@@ -98,13 +98,13 @@ BuildServerMenu_Impl() {
     return m
 }
 
-OpenWebDashboard_Impl() {
+OpenWebDashboard_Impl(tab := "") {
     global daemonBaseUrl
     if !EnsureDaemonRunning_Impl() {
         Notify("Flowkey", "Web dashboard: daemon could not be started.")
         return
     }
-    url := daemonBaseUrl "/"
+    url := daemonBaseUrl "/" (tab != "" ? "#" tab : "")
     ; Edge app mode = standalone chromeless window; fall back to the default
     ; browser when Edge is unavailable.
     try Run('msedge.exe --app=' url)

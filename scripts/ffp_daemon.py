@@ -21,7 +21,6 @@ import argparse
 import json
 import logging
 import logging.handlers
-import os
 import socket
 import subprocess
 import sys
@@ -86,15 +85,6 @@ def _popen_logged(name: str, argv: list[str], **kwargs) -> subprocess.Popen:
     log.info("spawn name=%s argv=%s pid=%s", name,
              argv[0:1] + ["..."] if len(argv) > 2 else argv, proc.pid)
     return proc
-
-
-def _chat_launch_argv() -> list[str]:
-    parent_arg = ["--parent-pid", str(os.getpid())]
-    if getattr(sys, "frozen", False):
-        chat_exe = Path(sys.executable).with_name("ffp-chat.exe")
-        if chat_exe.exists():
-            return [str(chat_exe), *parent_arg]
-    return [sys.executable, str(HERE / "chat_popup.py"), *parent_arg]
 
 
 HOST = "127.0.0.1"
@@ -567,93 +557,6 @@ def _act_shutdown(_args: dict) -> str:
     return "shutting_down"
 
 
-def _read_chat_ingest_nonce() -> str:
-    """Read the chat instance's ingest nonce (empty when chat is not running)."""
-    nonce_path = _paths.DATA_DIR / ".chat_ingest_nonce"
-    try:
-        if nonce_path.exists():
-            return nonce_path.read_text(encoding="utf-8").strip()
-    except OSError:
-        pass
-    return ""
-
-
-def _build_chat_ingest_payload(text: str, source_app: str) -> bytes:
-    """Build an ingest wire message; nonce is read fresh on every call."""
-    return json.dumps({
-        "type": "ingest",
-        "text": text,
-        "source_app": source_app,
-        "nonce": _read_chat_ingest_nonce(),
-    }, ensure_ascii=False).encode("utf-8")
-
-
-def _act_chat_reload(_args: dict) -> str:
-    """Tell a running chat popup to reload config (model/base_url). Best-effort."""
-    import socket as _sock
-
-    chat_port = 52640
-    try:
-        with _sock.create_connection(("127.0.0.1", chat_port), timeout=0.5) as c:
-            c.sendall(b"RELOAD\n")
-        return "ok"
-    except OSError:
-        return "chat not running"
-
-
-def _act_chat_restart(_args: dict) -> str:
-    """Quit a running chat popup so the next open loads fresh config/model."""
-    import socket as _sock
-
-    chat_port = 52640
-    try:
-        with _sock.create_connection(("127.0.0.1", chat_port), timeout=0.5) as c:
-            c.sendall(b"QUIT\n")
-        return "ok"
-    except OSError:
-        return "chat not running"
-
-
-def _act_chat_send_selection(args: dict) -> dict:
-    """Send a selection to the chat single-instance port (52640) as an
-    ingest payload. If chat isn't running, spawn it first and retry."""
-    import socket as _sock
-
-    text = str(args.get("text") or "")
-    source_app = str(args.get("source_app") or "")
-    if not text:
-        return {"ok": False, "error": "empty selection"}
-
-    chat_port = 52640  # single_instance_port; matches grammar_hotkey.config.example.json
-
-    def _try_send() -> bytes | None:
-        payload = _build_chat_ingest_payload(text, source_app)
-        try:
-            with _sock.create_connection(("127.0.0.1", chat_port), timeout=0.5) as c:
-                c.sendall(payload + b"\n")
-            return payload
-        except OSError:
-            return None
-
-    sent = _try_send()
-    if sent is not None:
-        return {"ok": True, "spawned": False, "bytes": len(sent)}
-
-    # Chat not running — spawn it and wait briefly for the listener to bind.
-    try:
-        _popen_logged("chat_popup_for_ingest", _chat_launch_argv(), cwd=str(HERE))
-    except Exception as e:
-        return {"ok": False, "error": f"chat spawn failed: {e}"}
-
-    for _ in range(20):  # up to ~2s
-        time.sleep(0.1)
-        sent = _try_send()
-        if sent is not None:
-            return {"ok": True, "spawned": True, "bytes": len(sent)}
-
-    return {"ok": False, "error": "chat did not accept ingest after spawn"}
-
-
 # ---- Web-dashboard chat (daemon-backed; replaces the retired popup) ----------
 def _act_chat_threads_list(_args: dict) -> dict:
     import ffp_chat
@@ -742,9 +645,6 @@ ACTIONS: dict[str, Callable[[dict], Any]] = {
     "chat_thread_delete": _act_chat_thread_delete,
     "chat_stage_selection": _act_chat_stage_selection,
     "chat_take_staged": _act_chat_take_staged,
-    "chat_send_selection": _act_chat_send_selection,
-    "chat_reload": _act_chat_reload,
-    "chat_restart": _act_chat_restart,
     "get_autostart_state": _act_get_autostart_state,
     "set_autostart": _act_set_autostart,
     "open_dashboard": _act_open_dashboard,

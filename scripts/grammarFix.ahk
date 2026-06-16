@@ -15,7 +15,7 @@ global ffpBusyAction := ""
 ; so we wrap each zero-arg handler in a variadic fat-arrow lambda — this is
 ; the pattern that worked in earlier versions before the Map refactor.
 gramHk := (*) => ProcessSelection()
-chatHk := (*) => LaunchChat()
+chatHk := (*) => OpenWebDashboard("chat")
 noteHk := (*) => CaptureNote()
 askHk  := (*) => AskWithSelection()
 Hotkey("^+g", gramHk)
@@ -56,7 +56,6 @@ dataDir     := runtimePaths["dataDir"]
 logsDir     := runtimePaths["logsDir"]
 
 scriptPath        := runtimePaths["scriptPath"]
-chatScriptPath    := runtimePaths["chatScriptPath"]
 daemonScriptPath  := runtimePaths["daemonScriptPath"]
 configPath        := runtimePaths["configPath"]
 configExamplePath := runtimePaths["configExamplePath"]
@@ -439,8 +438,8 @@ RunCmdExec(cmd) {
     return RunCmdExec_Impl(cmd)
 }
 
-LaunchChat() {
-    return LaunchChat_Impl()
+OpenWebDashboard(tab := "") {
+    return OpenWebDashboard_Impl(tab)
 }
 
 ShutdownFlowkeyChildren(ExitReason := "", ExitCode := "") {
@@ -543,11 +542,12 @@ AskWithSelectionImpl() {
 
     body := '{"args":{"text":"' EscapeJson(captured)
         . '","source_app":"' EscapeJson(sourceApp) '"}}'
-    result := RunActionViaDaemon("chat_send_selection", body)
+    result := RunActionViaDaemon("chat_stage_selection", body)
     if (result = "") {
         Notify("Flowkey", "Ask: daemon unavailable.")
         return
     }
+    OpenWebDashboard("chat")
     Notify("Flowkey", "💬 Sent to chat (" StrLen(captured) " chars).")
 }
 

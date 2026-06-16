@@ -657,7 +657,6 @@ async function setActiveModel() {
   if (!name) return;
   try {
     await action("apply_config_patch", { patch: { llm: { model: name } } });
-    await action("chat_restart");
     setStatus("config-status", `✅ Active model: ${name}`);
     loadModels();
     loadServerStatus();
