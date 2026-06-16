@@ -531,6 +531,24 @@ def _act_save_note(args: dict) -> dict:
     return notes.capture_note(text=text, source_app=source_app, url=url)
 
 
+def _act_note_get(args: dict) -> dict:
+    """Read one note's full content for the dashboard reader."""
+    import notes
+    return notes.get_note(str(args.get("relpath") or args.get("path") or ""))
+
+
+def _act_note_move(args: dict) -> dict:
+    """Re-file a note into a different bucket (updates frontmatter category)."""
+    import notes
+    return notes.move_note(str(args.get("relpath") or ""), str(args.get("category") or ""))
+
+
+def _act_note_delete(args: dict) -> dict:
+    """Delete a note from the vault."""
+    import notes
+    return notes.delete_note(str(args.get("relpath") or ""))
+
+
 def _act_notify(args: dict) -> str:
     title = str(args.get("title") or "").strip() or "Flowkey"
     message = str(args.get("message") or "").strip()
@@ -634,6 +652,9 @@ ACTIONS: dict[str, Callable[[dict], Any]] = {
     "bench_history": _act_bench_history,
     "note_search": _act_note_search,
     "notes_list": _act_notes_list,
+    "note_get": _act_note_get,
+    "note_move": _act_note_move,
+    "note_delete": _act_note_delete,
     "mode_ids": _act_mode_ids,
     "pull_start": _act_pull_start,
     "pull_status": _act_pull_status,
@@ -661,6 +682,7 @@ _WRITE_ACTIONS = {
     "pull_model", "remove_model", "apply_config_patch", "update_apply",
     "set_autostart", "bench_start", "pull_start",
     "chat_send", "chat_thread_delete", "chat_stage_selection", "chat_take_staged",
+    "note_move", "note_delete",
 }
 
 _shutdown_event = threading.Event()

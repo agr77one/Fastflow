@@ -466,12 +466,15 @@ def search_notes(query: str, limit: int = 5) -> dict:
             category = str(rel.parent).replace("\\", "/")
             if category in (".", ""):
                 category = "inbox"
+            relpath = str(rel).replace("\\", "/")
         except ValueError:
             category = path.parent.name
+            relpath = path.name
         matches.append({
             "title": title or path.stem,
             "category": category,
             "path": str(path),
+            "relpath": relpath,
             "score": score,
             "snippet": _snippet_around(body, terms),
         })
@@ -502,14 +505,116 @@ def list_recent_notes(limit: int = 20) -> dict:
             category = str(rel.parent).replace("\\", "/")
             if category in (".", ""):
                 category = "inbox"
+            relpath = str(rel).replace("\\", "/")
         except ValueError:
             category = path.parent.name
+            relpath = path.name
         results.append({
             "title": title or path.stem,
             "category": category,
+            "relpath": relpath,
             "modified": time.strftime("%Y-%m-%d %H:%M", time.localtime(path.stat().st_mtime)),
         })
     return {"results": results, "count": len(files)}
+
+
+# ---------- Note read / move / delete (web dashboard organizer) --------------
+
+def _safe_relpath(relpath: str) -> str:
+    """Normalize + validate a vault-relative note path (reject traversal)."""
+    clean = str(relpath or "").strip().replace("\\", "/").strip("/")
+    if not clean:
+        raise ValueError("empty note path")
+    for part in clean.split("/"):
+        if not part or part in (".", ".."):
+            raise ValueError(f"invalid note path: {relpath!r}")
+    return clean
+
+
+def _frontmatter_field(text: str, key: str) -> str:
+    """Best-effort read of a single YAML-frontmatter scalar (e.g. 'source')."""
+    if not text.startswith("---"):
+        return ""
+    end = text.find("\n---", 3)
+    fm = text[3:end] if end != -1 else ""
+    m = re.search(rf"(?mi)^{re.escape(key)}:\s*(.+)$", fm)
+    return m.group(1).strip().strip('"') if m else ""
+
+
+def _set_frontmatter_category(text: str, category: str) -> str:
+    """Rewrite (or append) the frontmatter `category:` line. Best-effort: leaves
+    the text untouched if there's no frontmatter block."""
+    if not text.startswith("---"):
+        return text
+    end = text.find("\n---", 3)
+    if end == -1:
+        return text
+    fm = text[3:end]
+    rest = text[end:]
+    new_line = f"category: {json.dumps(category, ensure_ascii=False)}"
+    if re.search(r"(?mi)^category:\s*.*$", fm):
+        fm = re.sub(r"(?mi)^category:\s*.*$", new_line, fm, count=1)
+    else:
+        fm = fm.rstrip("\n") + "\n" + new_line + "\n"
+    return "---" + fm + rest
+
+
+def get_note(relpath: str) -> dict:
+    """Return one note's full content for the dashboard reader:
+    {ok, title, category, body, source, relpath}. ok=False if not found."""
+    safe = _safe_relpath(relpath)
+    target = _vault_subpath(*safe.split("/"))
+    if not target.exists() or target.suffix.lower() != ".md":
+        return {"ok": False, "error": "note not found"}
+    text = target.read_text(encoding="utf-8", errors="replace")
+    title, body = _split_frontmatter_title(text)
+    category = str(Path(safe).parent).replace("\\", "/")
+    if category in (".", ""):
+        category = INBOX
+    return {
+        "ok": True,
+        "title": title or target.stem,
+        "category": category,
+        "body": body,
+        "source": _frontmatter_field(text, "source"),
+        "relpath": safe,
+    }
+
+
+def move_note(relpath: str, category: str) -> dict:
+    """Re-file a note into a different bucket folder, updating its frontmatter
+    `category`. Returns {ok, relpath, category}."""
+    safe = _safe_relpath(relpath)
+    src = _vault_subpath(*safe.split("/"))
+    if not src.exists():
+        return {"ok": False, "error": "note not found"}
+    dest_cat = _safe_category(category)
+    dest_dir = _vault_subpath(dest_cat)
+    dest = _vault_subpath(dest_cat, src.name)
+    if dest.resolve() == src.resolve():
+        return {"ok": True, "relpath": safe, "category": dest_cat}  # already there
+    _ensure_dir(dest_dir)
+    if dest.exists():
+        dest = _vault_subpath(dest_cat, f"{src.stem}-{uuid.uuid4().hex[:6]}{src.suffix}")
+    text = _set_frontmatter_category(src.read_text(encoding="utf-8", errors="replace"), dest_cat)
+    dest.write_text(text, encoding="utf-8")
+    src.unlink()
+    vault = _vault_dir().resolve()
+    try:
+        new_rel = str(dest.relative_to(vault)).replace("\\", "/")
+    except ValueError:
+        new_rel = dest.name
+    return {"ok": True, "relpath": new_rel, "category": dest_cat}
+
+
+def delete_note(relpath: str) -> dict:
+    """Delete a note from the vault. Returns {ok, deleted}."""
+    safe = _safe_relpath(relpath)
+    target = _vault_subpath(*safe.split("/"))
+    if not target.exists():
+        return {"ok": False, "error": "note not found"}
+    target.unlink()
+    return {"ok": True, "deleted": True}
 
 
 # ---------- File writing -----------------------------------------------------

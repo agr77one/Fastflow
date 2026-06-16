@@ -297,19 +297,46 @@ async function loadHistory() {
 
 // Browse the vault: empty query lists the newest notes (notes_list); a query
 // runs the ranked search (note_search) and shows snippets instead of dates.
+let notesCategories = [];     // buckets from config, for the reader's Move dropdown
+let currentNoteRelpath = "";  // note open in the reader pane
+
+// Render the notes table with clickable rows that open the reader. `col3` maps
+// a result row to its third-column text (snippet for search, modified for list).
+function renderNotesTable(results, col3) {
+  const body = $("notes-body");
+  body.replaceChildren();
+  for (const r of results) {
+    const tr = document.createElement("tr");
+    for (const cell of [r.title, r.category, col3(r)]) {
+      const td = document.createElement("td");
+      td.textContent = cell || "";
+      tr.append(td);
+    }
+    if (r.relpath) {
+      tr.classList.add("note-row");
+      tr.tabIndex = 0;
+      const open = () => openNoteReader(r.relpath);
+      tr.addEventListener("click", open);
+      tr.addEventListener("keydown", (e) => { if (e.key === "Enter") open(); });
+    }
+    body.append(tr);
+  }
+  return results.length;
+}
+
 async function browseNotes() {
   const query = $("note-query").value.trim();
   try {
     if (query) {
       const res = await action("note_search", { query, limit: 20 });
       $("notes-col3").textContent = "Snippet";
-      const n = fillTable("notes-body", (res.results || []).map((r) => [r.title, r.category, r.snippet || ""]));
+      const n = renderNotesTable(res.results || [], (r) => r.snippet || "");
       $("notes-count").textContent = `(${res.count} match${res.count === 1 ? "" : "es"})`;
       $("notes-empty").hidden = n > 0;
     } else {
       const res = await action("notes_list", { limit: 20 });
       $("notes-col3").textContent = "Modified";
-      const n = fillTable("notes-body", (res.results || []).map((r) => [r.title, r.category, r.modified]));
+      const n = renderNotesTable(res.results || [], (r) => r.modified);
       $("notes-count").textContent = `(${res.count} total — newest 20)`;
       $("notes-empty").hidden = n > 0;
     }
@@ -319,11 +346,71 @@ async function browseNotes() {
   }
 }
 
+async function openNoteReader(relpath) {
+  try {
+    const n = await action("note_get", { relpath });
+    if (!n.ok) { setStatus("nr-status", n.error || "note not found", false); return; }
+    currentNoteRelpath = n.relpath || relpath;
+    $("nr-title").textContent = n.title || "(untitled)";
+    $("nr-body").textContent = n.body || "";
+    const src = $("nr-source");
+    if (n.source) { src.textContent = n.source; src.href = n.source; src.hidden = false; }
+    else { src.hidden = true; src.removeAttribute("href"); }
+    // Bucket dropdown: configured categories + inbox, plus the note's current
+    // category if it isn't in the list.
+    const cats = [...notesCategories];
+    if (!cats.includes("inbox")) cats.push("inbox");
+    if (n.category && !cats.includes(n.category)) cats.unshift(n.category);
+    const sel = $("nr-bucket");
+    sel.replaceChildren();
+    for (const c of cats) {
+      const o = document.createElement("option");
+      o.value = c; o.textContent = c;
+      if (c === n.category) o.selected = true;
+      sel.append(o);
+    }
+    setStatus("nr-status", "");
+    $("note-reader").hidden = false;
+    $("note-reader").scrollIntoView({ behavior: "smooth", block: "nearest" });
+  } catch (e) {
+    setStatus("nr-status", `Open failed: ${e.message}`, false);
+  }
+}
+
+async function moveNoteToBucket() {
+  if (!currentNoteRelpath) return;
+  const category = $("nr-bucket").value;
+  try {
+    const res = await action("note_move", { relpath: currentNoteRelpath, category });
+    if (!res.ok) { setStatus("nr-status", res.error || "move failed", false); return; }
+    currentNoteRelpath = res.relpath || currentNoteRelpath;
+    setStatus("nr-status", `Moved to ${res.category}.`);
+    browseNotes();
+  } catch (e) {
+    setStatus("nr-status", `Move failed: ${e.message}`, false);
+  }
+}
+
+async function deleteCurrentNote() {
+  if (!currentNoteRelpath) return;
+  if (!confirm("Delete this note from the vault?")) return;
+  try {
+    const res = await action("note_delete", { relpath: currentNoteRelpath });
+    if (!res.ok) { setStatus("nr-status", res.error || "delete failed", false); return; }
+    $("note-reader").hidden = true;
+    currentNoteRelpath = "";
+    browseNotes();
+  } catch (e) {
+    setStatus("nr-status", `Delete failed: ${e.message}`, false);
+  }
+}
+
 async function loadNotes() {
   browseNotes();
   try {
     const cfg = await action("config_snapshot");
     const notes = cfg.notes || {};
+    notesCategories = notes.categories || [];
     $("notes-vault").value = notes.vault_dir || "";
     $("notes-categories").value = (notes.categories || []).join("\n");
     $("notes-fetch-timeout").value = notes.fetch_timeout_seconds ?? 8;
@@ -1013,6 +1100,9 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   $("notes-save").addEventListener("click", saveNotes);
   $("notes-revert").addEventListener("click", loadNotes);
+  $("nr-move").addEventListener("click", moveNoteToBucket);
+  $("nr-delete").addEventListener("click", deleteCurrentNote);
+  $("nr-close").addEventListener("click", () => { $("note-reader").hidden = true; });
   $("config-save").addEventListener("click", saveConfig);
   $("config-revert").addEventListener("click", loadConfig);
   $("cm-select").addEventListener("change", fillCustomModeForm);

@@ -544,3 +544,15 @@ footer { padding: 14px 24px 22px; }
 .chat-msg-assistant { align-self: flex-start; background: var(--surface); border: 1px solid var(--border); border-bottom-left-radius: 5px; }
 .chat-input-row { align-items: stretch; margin-top: 8px; }
 .chat-input-row textarea { flex: 1; resize: vertical; font: inherit; }
+
+/* ---- Notes reader ---- */
+.note-row { cursor: pointer; }
+.note-row:hover, .note-row:focus { background: var(--accent-soft); outline: none; }
+.reader-head { align-items: center; }
+.nr-title { margin: 0; flex: 1; }
+.note-body {
+  white-space: pre-wrap; word-wrap: break-word; font: inherit;
+  max-height: 52vh; overflow-y: auto; margin: 8px 0 0;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 12px;
+}
