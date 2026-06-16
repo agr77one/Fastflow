@@ -51,6 +51,7 @@ HIDDEN_IMPORTS = [
     "_version",
     "ffp_actions",
     "ffp_benchmark",
+    "ffp_chat",
     "ffp_config",
     "ffp_flm_server",
     "ffp_hardware",

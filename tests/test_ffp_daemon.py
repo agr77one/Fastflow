@@ -65,8 +65,13 @@ def test_actions_count_and_expected_names(daemon_module):
     # Late v1.4.0 added flm_update_check, bench_start/status/history,
     # note_search, pull_start/status; v1.5.0 removed model_stats;
     # v1.6 web dashboard added recent_history + notes_list + mode_ids -> 51;
-    # provider work added provider_status -> 52; model_recommendations -> 53.
-    assert len(daemon_module.ACTIONS) == 53
+    # provider work added provider_status -> 52; model_recommendations -> 53;
+    # web chat backend added chat_threads_list/chat_thread_get/chat_send/
+    # chat_thread_delete/chat_stage_selection/chat_take_staged -> 59.
+    assert len(daemon_module.ACTIONS) == 59
+    for a in ("chat_threads_list", "chat_thread_get", "chat_send",
+              "chat_thread_delete", "chat_stage_selection", "chat_take_staged"):
+        assert a in daemon_module.ACTIONS
     assert "model_recommendations" in daemon_module.ACTIONS
     assert "recent_history" in daemon_module.ACTIONS
     assert "notes_list" in daemon_module.ACTIONS
