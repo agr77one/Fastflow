@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 2.0.0
+
+**The dashboard release.** Two things change what Flowkey *is* in 2.0:
+
+1. **It no longer requires an AMD NPU.** Flowkey now runs on [Ollama](https://ollama.com) (any CPU/GPU) as a first-class secondary provider alongside [FastFlowLM](https://fastflowlm.com) (AMD Ryzen AI NPU). A provider-neutral `llm` config block routes chat, grammar modes, model management, and server startup to whichever backend you pick — and falls back to the other automatically if the configured one isn't available. The first-run wizard detects what's installed and recommends a provider, and model suggestions are now hardware-aware (they scale to your RAM/VRAM and hide models that won't fit).
+
+2. **The web dashboard is the home for everything.** The browser dashboard served by the local daemon at `127.0.0.1:52650` is now where you chat, browse and organize notes, manage models, run benchmarks, tune settings, and control notifications. The standalone tkinter **chat popup** and the old native **AHK dashboard** are both retired. Chat is a tab (with notes-grounded answers), Notes is a full organizer (read / re-file / delete), and a new **Notifications** panel plus a Telemetry feed give you per-event control over desktop toasts (with quiet hours, Do-Not-Disturb, dedupe, and a log of everything shown or muted).
+
+Everything still runs locally — no cloud, no analytics, no telemetry leaves the machine.
+
 ### Added
 
 - **Ollama as a secondary LLM provider.** Machines without an AMD Ryzen AI NPU can now run Flowkey on [Ollama](https://ollama.com): a provider-neutral `llm` config block (with per-provider profiles under `providers.*`) routes chat, grammar modes, model list/pull/remove, and server startup to FastFlowLM or Ollama. If the configured provider is unavailable the daemon falls back to the other one automatically.
