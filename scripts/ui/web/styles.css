@@ -556,3 +556,15 @@ footer { padding: 14px 24px 22px; }
   background: var(--surface); border: 1px solid var(--border);
   border-radius: 8px; padding: 12px;
 }
+
+/* ---- In-page confirm modal (replaces native confirm/alert) ---- */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.modal-box { max-width: 460px; width: 100%; box-shadow: var(--shadow-lift, 0 12px 32px rgba(0,0,0,0.35)); }
+.modal-msg { white-space: pre-wrap; word-wrap: break-word; margin: 0 0 14px; line-height: 1.5; }
+.modal-actions { justify-content: flex-end; }
+.btn-danger { background: var(--warn); color: #fff; border-color: var(--warn); }
+.btn-danger:hover { filter: brightness(1.08); }

@@ -30,6 +30,47 @@ function setStatus(id, message, ok = true) {
   el.className = ok ? "ok" : "bad";
 }
 
+// In-page confirmation modal. We never use native confirm()/alert()/prompt() —
+// they break the dashboard's look and feel. Returns a Promise<boolean>. All DOM
+// via createElement/textContent (no innerHTML; CSP-safe).
+function confirmDialog(message, okLabel = "Confirm") {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    const box = document.createElement("div");
+    box.className = "card modal-box";
+    const msg = document.createElement("div");
+    msg.className = "modal-msg";
+    msg.textContent = message;            // pre-wrap CSS preserves \n
+    const row = document.createElement("div");
+    row.className = "card-actions modal-actions";
+    const cancel = document.createElement("button");
+    cancel.className = "btn";
+    cancel.textContent = "Cancel";
+    const ok = document.createElement("button");
+    ok.className = "btn btn-danger";
+    ok.textContent = okLabel;
+    row.append(cancel, ok);
+    box.append(msg, row);
+    overlay.append(box);
+    document.body.append(overlay);
+    const close = (val) => {
+      overlay.remove();
+      document.removeEventListener("keydown", onKey);
+      resolve(val);
+    };
+    function onKey(e) {
+      if (e.key === "Escape") close(false);
+      else if (e.key === "Enter") close(true);
+    }
+    cancel.addEventListener("click", () => close(false));
+    ok.addEventListener("click", () => close(true));
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) close(false); });
+    document.addEventListener("keydown", onKey);
+    ok.focus();
+  });
+}
+
 // Mirrors AHK HumanHotkey(): "^+g" -> "Ctrl+Shift+G".
 function humanHotkey(hk) {
   if (!hk) return "?";
@@ -393,7 +434,7 @@ async function moveNoteToBucket() {
 
 async function deleteCurrentNote() {
   if (!currentNoteRelpath) return;
-  if (!confirm("Delete this note from the vault?")) return;
+  if (!(await confirmDialog("Delete this note from the vault?", "Delete"))) return;
   try {
     const res = await action("note_delete", { relpath: currentNoteRelpath });
     if (!res.ok) { setStatus("nr-status", res.error || "delete failed", false); return; }
@@ -518,7 +559,7 @@ async function deleteCustomMode() {
     setStatus("cm-status", "⚠ Pick an existing custom mode to delete.", false);
     return;
   }
-  if (!window.confirm(`Delete custom mode '${id}'?`)) return;
+  if (!(await confirmDialog(`Delete custom mode '${id}'?`, "Delete"))) return;
   try {
     await action("apply_config_patch", { patch: { modes: { [id]: null } } });
     setStatus("cm-status", `✅ Deleted '${id}'.`);
@@ -755,7 +796,7 @@ async function setActiveModel() {
 async function removeModel() {
   const name = $("models-list").value;
   if (!name) return;
-  if (!window.confirm(`Remove model '${name}' from local storage?`)) return;
+  if (!(await confirmDialog(`Remove model '${name}' from local storage?`, "Remove"))) return;
   setStatus("config-status", `Removing ${name}…`);
   try {
     const out = await action("remove_model", { value: name });
@@ -777,7 +818,7 @@ async function pullModel() {
   const params = parseParamsB(name);
   if (modelBudget && params && params > modelBudget.max_params_b * 1.5) {
     const msg = `'${name}' looks like a ${params}B model — likely too big for this machine (${modelBudget.summary}). Pull anyway?`;
-    if (!window.confirm(msg)) return;
+    if (!(await confirmDialog(msg, "Pull anyway"))) return;
   }
   try {
     const state = await action("pull_start", { model: name });
@@ -873,7 +914,7 @@ async function runBenchmark() {
   const msg = benchProvider === "ollama"
     ? `Benchmark '${model}'?\n\nThis runs timed generations against Ollama for ~1–3 minutes. The server keeps serving, but responses will be slow during the run.`
     : `Benchmark '${model}'?\n\nThis runs flm bench for ~10–20 minutes, stops the server, and saturates the NPU. Hotkeys will be unresponsive until it finishes.`;
-  if (!window.confirm(msg)) return;
+  if (!(await confirmDialog(msg, "Run benchmark"))) return;
   try {
     await action("bench_start", { model });
     setText("bench-status", benchProvider === "ollama"
@@ -995,7 +1036,7 @@ function newChat() {
 }
 
 async function deleteChatThread(id) {
-  if (!confirm("Delete this conversation?")) return;
+  if (!(await confirmDialog("Delete this conversation?", "Delete"))) return;
   try {
     await action("chat_thread_delete", { thread_id: id });
     if (id === chatThreadId) { chatThreadId = ""; renderTranscript([]); }

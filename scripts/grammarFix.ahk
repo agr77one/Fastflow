@@ -19,13 +19,13 @@ chatHk := (*) => OpenWebDashboard("chat")
 noteHk := (*) => CaptureNote()
 askHk  := (*) => AskWithSelection()
 Hotkey("^+g", gramHk)
-Hotkey("^+t", chatHk)
+Hotkey("^!c", chatHk)   ; open chat — Ctrl+Alt+C. Was ^+t (Ctrl+Shift+T collides with the browser "reopen closed tab" and other apps); Alt is stable, mirrors note capture ^!n.
 Hotkey("^!n", noteHk)   ; note capture — Ctrl+Alt+N. Was ^+n (keyboard ghosting on Shift+N for some users) and briefly ^+q (collides with Chrome's global "Quit Chrome" shortcut). Alt is stable + no app conflict.
 Hotkey("^+a", askHk)
 
 currentHotkeys := Map(
     "grammar_fix",  "^+g",
-    "open_chat",    "^+t",
+    "open_chat",    "^!c",
     "capture_note", "^!n",
     "ask_chat",     "^+a"
 )
@@ -41,7 +41,7 @@ hotkeyHandlers := Map(
 ; keys to turn off before applying any config-overridden bindings.
 lastRegistered := Map(
     "grammar_fix",  "^+g",
-    "open_chat",    "^+t",
+    "open_chat",    "^!c",
     "capture_note", "^!n",
     "ask_chat",     "^+a"
 )

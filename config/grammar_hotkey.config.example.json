@@ -32,7 +32,7 @@
   },
   "hotkeys": {
     "grammar_fix":  "^+g",
-    "open_chat":    "^+t",
+    "open_chat":    "^!c",
     "capture_note": "^!n",
     "ask_chat":     "^+a"
   },
