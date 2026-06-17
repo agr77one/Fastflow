@@ -314,3 +314,62 @@ def test_load_config_forces_builtin_prompts_from_code(tmp_path):
     assert tone["system_prompt"] == ffp_config.DEFAULT_CONFIG["modes"]["tone"]["presets"]["casual"]["system_prompt"]
     # Custom modes pass through untouched.
     assert loaded["modes"]["translate"]["system_prompt"] == "Translate to English."
+
+
+def test_filter_config_patch_notifications_full():
+    patch = {
+        "notifications": {
+            "enabled": False,
+            "dnd": True,
+            "log_enabled": False,
+            "dedupe_seconds": 12,
+            "quiet_hours": {"enabled": True, "start": "23:30", "end": "06:15"},
+            "categories": {
+                "errors": {"enabled": True},
+                "updates": {"enabled": False},
+            },
+        }
+    }
+    filtered = ffp_config.filter_config_patch(patch)
+    assert filtered == {
+        "notifications": {
+            "enabled": False,
+            "dnd": True,
+            "log_enabled": False,
+            "dedupe_seconds": 12.0,
+            "quiet_hours": {"enabled": True, "start": "23:30", "end": "06:15"},
+            "categories": {
+                "errors": {"enabled": True},
+                "updates": {"enabled": False},
+            },
+        }
+    }
+
+
+def test_filter_config_patch_notifications_rejects_junk():
+    patch = {
+        "notifications": {
+            "enabled": 1,                       # coerced to bool
+            "dedupe_seconds": "not-a-number",   # dropped
+            "quiet_hours": {"start": "99:99", "end": "07:00", "bogus": 1},  # bad start dropped
+            "categories": {
+                "not_a_real_category": {"enabled": False},  # dropped
+                "settings": {"label": "hax"},               # no 'enabled' -> dropped
+                "lifecycle": {"enabled": 0},                # coerced to bool
+            },
+            "evil_key": "x",                    # dropped
+        }
+    }
+    filtered = ffp_config.filter_config_patch(patch)["notifications"]
+    assert filtered["enabled"] is True
+    assert "dedupe_seconds" not in filtered
+    assert filtered["quiet_hours"] == {"end": "07:00"}
+    assert filtered["categories"] == {"lifecycle": {"enabled": False}}
+    assert "evil_key" not in filtered
+
+
+def test_filter_config_patch_notifications_clamps_dedupe():
+    filtered = ffp_config.filter_config_patch(
+        {"notifications": {"dedupe_seconds": 999999}}
+    )
+    assert filtered["notifications"]["dedupe_seconds"] == 3600.0

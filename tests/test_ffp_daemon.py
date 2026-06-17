@@ -69,12 +69,16 @@ def test_actions_count_and_expected_names(daemon_module):
     # web chat backend added chat_threads_list/chat_thread_get/chat_send/
     # chat_thread_delete/chat_stage_selection/chat_take_staged -> 59; retiring the
     # tkinter popup removed chat_send_selection/chat_reload/chat_restart -> 56;
-    # richer notes view added note_get/note_move/note_delete -> 59.
-    assert len(daemon_module.ACTIONS) == 59
+    # richer notes view added note_get/note_move/note_delete -> 59;
+    # notifications settings added notify_gate/notifications_log -> 61.
+    assert len(daemon_module.ACTIONS) == 61
     for a in ("chat_threads_list", "chat_thread_get", "chat_send",
               "chat_thread_delete", "chat_stage_selection", "chat_take_staged",
-              "note_get", "note_move", "note_delete"):
+              "note_get", "note_move", "note_delete",
+              "notify_gate", "notifications_log"):
         assert a in daemon_module.ACTIONS
+    # notify_gate writes the log + dedupe state, so it must be a WRITE action.
+    assert "notify_gate" in daemon_module._WRITE_ACTIONS
     # popup-era socket actions are gone (chat is daemon-backed now)
     for a in ("chat_send_selection", "chat_reload", "chat_restart"):
         assert a not in daemon_module.ACTIONS

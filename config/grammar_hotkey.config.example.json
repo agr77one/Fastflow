@@ -30,6 +30,22 @@
   "dictionary": {
     "protected_words": []
   },
+  "notifications": {
+    "enabled": true,
+    "dedupe_seconds": 5,
+    "dnd": false,
+    "log_enabled": true,
+    "quiet_hours": { "enabled": false, "start": "22:00", "end": "07:00" },
+    "categories": {
+      "errors": { "enabled": true },
+      "clipboard_suggestions": { "enabled": true },
+      "updates": { "enabled": true },
+      "diagnostics": { "enabled": true },
+      "settings": { "enabled": true },
+      "lifecycle": { "enabled": true },
+      "action_result": { "enabled": true }
+    }
+  },
   "hotkeys": {
     "grammar_fix":  "^+g",
     "open_chat":    "^!c",

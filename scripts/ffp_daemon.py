@@ -41,6 +41,7 @@ if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
 import ffp_config  # noqa: E402
+import ffp_notifications  # noqa: E402
 import ffp_notify  # noqa: E402
 import ffp_provider_runtime  # noqa: E402
 import grammar_fix  # noqa: E402
@@ -558,6 +559,25 @@ def _act_notify(args: dict) -> str:
     return "queued"
 
 
+def _act_notify_gate(args: dict) -> dict:
+    """Decide whether the AHK front-end should display a toast, and log the
+    decision. Returns {show, reason, category}; AHK shows iff show is true (and
+    fails open — shows anyway — when this daemon is unreachable). All policy
+    (per-category on/off, dedupe, quiet-hours, DND) lives in ffp_notifications."""
+    title = str(args.get("title") or "").strip() or "Flowkey"
+    message = str(args.get("message") or "")
+    return ffp_notifications.gate(title, message, config=grammar_fix.load_config())
+
+
+def _act_notifications_log(args: dict) -> list[dict]:
+    """Recent notification decisions (newest first) for the Telemetry feed."""
+    try:
+        limit = int(args.get("limit") or 50)
+    except (TypeError, ValueError):
+        limit = 50
+    return ffp_notifications.read_log(max(1, min(limit, 500)))
+
+
 def _act_open_dashboard(_args: dict) -> str:
     """Signal the AHK front-end to open the dashboard (marker file)."""
     try:
@@ -659,6 +679,8 @@ ACTIONS: dict[str, Callable[[dict], Any]] = {
     "pull_start": _act_pull_start,
     "pull_status": _act_pull_status,
     "notify": _act_notify,
+    "notify_gate": _act_notify_gate,
+    "notifications_log": _act_notifications_log,
     "save_note": _act_save_note,
     "chat_threads_list": _act_chat_threads_list,
     "chat_thread_get": _act_chat_thread_get,
@@ -683,6 +705,7 @@ _WRITE_ACTIONS = {
     "set_autostart", "bench_start", "pull_start",
     "chat_send", "chat_thread_delete", "chat_stage_selection", "chat_take_staged",
     "note_move", "note_delete",
+    "notify_gate",  # writes the notifications log + updates dedupe state
 }
 
 _shutdown_event = threading.Event()

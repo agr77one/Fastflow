@@ -21,6 +21,7 @@ import ffp_actions
 import ffp_config
 import ffp_flm_server
 import ffp_llm_client
+import ffp_notifications
 import ffp_provider_runtime
 import ffp_provider_status
 import ffp_telemetry
@@ -826,6 +827,7 @@ def build_config_snapshot() -> dict:
             "capture_note": str(hotkeys_cfg.get("capture_note") or "^!n"),
             "ask_chat": str(hotkeys_cfg.get("ask_chat") or "^+a"),
         },
+        "notifications": ffp_notifications.snapshot(cfg.get("notifications")),
     }
 
 

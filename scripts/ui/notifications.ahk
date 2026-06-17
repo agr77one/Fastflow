@@ -1,18 +1,40 @@
 Notify_Impl(title, message) {
     global lastNotifications
-    key := title "|" message
-    now := A_TickCount
-    if lastNotifications.Has(key) {
-        if (now - lastNotifications[key] < 5000)
+    ; The daemon owns all notification policy (per-event on/off, dedupe window,
+    ; quiet hours, DND) and the telemetry log — see ffp_notifications.gate. Ask
+    ; it whether to show this toast. The verdict is a small JSON object
+    ; {"show": true/false, ...}; the daemon has already logged the decision.
+    verdict := NotifyGate_Impl(title, message)
+    if InStr(verdict, '"show"') {
+        ; A real verdict came back. Show only if the daemon said so; it already
+        ; applied dedupe/quiet-hours/DND server-side, so no local dedupe here.
+        if !InStr(verdict, '"show": true')
             return
+    } else {
+        ; Daemon unreachable (or an unexpected reply) — fail OPEN so toasts are
+        ; never silently lost, but keep a 5s local dedupe so a burst of
+        ; identical toasts can't spam while the daemon is down.
+        key := title "|" message
+        now := A_TickCount
+        if (lastNotifications.Has(key) && (now - lastNotifications[key] < 5000))
+            return
+        lastNotifications[key] := now
     }
-    lastNotifications[key] := now
 
     try TrayTip()
     try TrayTip(message, title)
     catch {
         try ShowWindowsToast_Impl(title, message)
     }
+}
+
+; Ask the daemon for a show/suppress verdict (and let it log the decision +
+; apply policy). Single-shot POST via _DaemonPostOnce — it never tries to spawn
+; the daemon, so a toast can't block on a cold start. Returns the raw JSON
+; verdict, or "" when the daemon is unreachable (caller then fails open).
+NotifyGate_Impl(title, message) {
+    body := '{"args":{"title":"' EscapeJson(title) '","message":"' EscapeJson(message) '"}}'
+    return _DaemonPostOnce_Impl("notify_gate", body)
 }
 
 ShowWindowsToast_Impl(title, message) {
