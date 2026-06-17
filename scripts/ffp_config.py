@@ -77,6 +77,22 @@ DEFAULT_CONFIG = {
     "dictionary": {
         "protected_words": [],
     },
+    "notifications": {
+        "enabled": True,
+        "dedupe_seconds": 5,
+        "dnd": False,
+        "log_enabled": True,
+        "quiet_hours": {"enabled": False, "start": "22:00", "end": "07:00"},
+        "categories": {
+            "errors": {"enabled": True},
+            "clipboard_suggestions": {"enabled": True},
+            "updates": {"enabled": True},
+            "diagnostics": {"enabled": True},
+            "settings": {"enabled": True},
+            "lifecycle": {"enabled": True},
+            "action_result": {"enabled": True},
+        },
+    },
     "modes": {
         "grammar": {
             "label": "Grammar fix",
@@ -313,6 +329,46 @@ _PATCH_NOTES_KEYS = frozenset({
 _PATCH_HOTKEYS_KEYS = frozenset({"ask_chat", "capture_note", "grammar_fix", "open_chat"})
 _PATCH_TONE_KEYS = frozenset({"preset"})
 _PATCH_PROVIDER_PROFILE_KEYS = frozenset({"base_url", "model", "auth_bearer", "timeout_seconds", "auto_start"})
+# Notification categories accepted in a patch. Keep in sync with
+# ffp_notifications.CATEGORIES (a test guards against drift).
+_PATCH_NOTIF_CATEGORIES = frozenset({
+    "errors", "clipboard_suggestions", "updates", "diagnostics",
+    "settings", "lifecycle", "action_result",
+})
+_HHMM_RE = re.compile(r"^([01]?\d|2[0-3]):[0-5]\d$")
+
+
+def _filter_notifications_patch(value: dict) -> dict:
+    """Whitelist + type-coerce the notifications settings block."""
+    out: dict = {}
+    for flag in ("enabled", "dnd", "log_enabled"):
+        if flag in value:
+            out[flag] = bool(value[flag])
+    if "dedupe_seconds" in value:
+        try:
+            out["dedupe_seconds"] = max(0.0, min(float(value["dedupe_seconds"]), 3600.0))
+        except (TypeError, ValueError):
+            pass
+    quiet = value.get("quiet_hours")
+    if isinstance(quiet, dict):
+        filtered_quiet: dict = {}
+        if "enabled" in quiet:
+            filtered_quiet["enabled"] = bool(quiet["enabled"])
+        for time_key in ("start", "end"):
+            tv = quiet.get(time_key)
+            if isinstance(tv, str) and _HHMM_RE.match(tv):
+                filtered_quiet[time_key] = tv
+        if filtered_quiet:
+            out["quiet_hours"] = filtered_quiet
+    cats = value.get("categories")
+    if isinstance(cats, dict):
+        filtered_cats: dict = {}
+        for cat_id, cat_val in cats.items():
+            if cat_id in _PATCH_NOTIF_CATEGORIES and isinstance(cat_val, dict) and "enabled" in cat_val:
+                filtered_cats[cat_id] = {"enabled": bool(cat_val["enabled"])}
+        if filtered_cats:
+            out["categories"] = filtered_cats
+    return out
 
 # Built-in mode prompts stay locked against patching (system-prompt injection
 # guard); only tone.preset is patchable among them. User-defined modes accept
@@ -390,6 +446,10 @@ def filter_config_patch(patch: dict) -> dict:
                 out[key] = filtered
         elif key == "notes" and isinstance(value, dict):
             filtered = {k: v for k, v in value.items() if k in _PATCH_NOTES_KEYS}
+            if filtered:
+                out[key] = filtered
+        elif key == "notifications" and isinstance(value, dict):
+            filtered = _filter_notifications_patch(value)
             if filtered:
                 out[key] = filtered
         elif key == "hotkeys" and isinstance(value, dict):

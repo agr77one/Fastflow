@@ -293,6 +293,38 @@ async function loadTelemetry() {
   } catch (e) {
     fillTable("stats-body", [[`Stats unavailable: ${e.message}`, ""]]);
   }
+  loadNotificationsLog();
+}
+
+// Category id -> human label. Mirrors ffp_notifications.CATEGORY_LABELS.
+const NOTIF_CATEGORY_LABELS = {
+  errors: "Errors & warnings",
+  clipboard_suggestions: "Clipboard suggestions",
+  updates: "Update checks",
+  diagnostics: "Diagnostics",
+  settings: "Settings changes",
+  lifecycle: "App lifecycle",
+  action_result: "Action results",
+};
+// Per-event toggle ids (must match the ntf-cat-* checkbox ids in index.html and
+// ffp_notifications.CATEGORIES).
+const NOTIF_CATEGORY_IDS = Object.keys(NOTIF_CATEGORY_LABELS);
+
+async function loadNotificationsLog() {
+  try {
+    const entries = await action("notifications_log", { limit: 50 });
+    const rows = entries.map((e) => [
+      String(e.ts || "-").slice(0, 19).replace("T", " "),
+      NOTIF_CATEGORY_LABELS[e.category] || e.category || "?",
+      e.shown ? "shown" : `muted (${e.reason || "?"})`,
+      e.message || "",
+    ]);
+    const n = fillTable("notif-log-body", rows);
+    $("notif-log-empty").hidden = n > 0;
+  } catch (e) {
+    fillTable("notif-log-body", [[`Notifications log unavailable: ${e.message}`, "", "", ""]]);
+    $("notif-log-empty").hidden = true;
+  }
 }
 
 function renderHours(buckets) {
@@ -601,6 +633,7 @@ async function loadConfig() {
     $("cfg-min-chunk").value = routing.min_chunk_chars ?? 700;
     const tone = (cfg.tone || {}).preset || "formal";
     document.querySelectorAll('input[name="tone"]').forEach((r) => (r.checked = r.value === tone));
+    populateNotifications(cfg.notifications || {});
     setStatus("config-status", "");
   } catch (e) {
     setStatus("config-status", `Load failed: ${e.message}`, false);
@@ -609,6 +642,46 @@ async function loadConfig() {
   loadModels();
   loadAutostart();
   if (($("cfg-provider").value || "fastflowlm") === "fastflowlm") loadFlmVersion(false);
+}
+
+// Notifications settings <-> the Config tab inputs. The snapshot from
+// build_config_snapshot() always carries every category (defaults merged), so
+// older config files render fine.
+function populateNotifications(ntf) {
+  $("ntf-enabled").checked = ntf.enabled !== false;
+  $("ntf-dnd").checked = !!ntf.dnd;
+  $("ntf-log").checked = ntf.log_enabled !== false;
+  $("ntf-dedupe").value = ntf.dedupe_seconds ?? 5;
+  const qh = ntf.quiet_hours || {};
+  $("ntf-qh-enabled").checked = !!qh.enabled;
+  $("ntf-qh-start").value = qh.start || "22:00";
+  $("ntf-qh-end").value = qh.end || "07:00";
+  const cats = ntf.categories || {};
+  for (const id of NOTIF_CATEGORY_IDS) {
+    const el = $(`ntf-cat-${id}`);
+    if (el) el.checked = (cats[id] || {}).enabled !== false;
+  }
+}
+
+function notificationsPatch() {
+  const categories = {};
+  for (const id of NOTIF_CATEGORY_IDS) {
+    const el = $(`ntf-cat-${id}`);
+    if (el) categories[id] = { enabled: el.checked };
+  }
+  const dedupe = Number($("ntf-dedupe").value);
+  return {
+    enabled: $("ntf-enabled").checked,
+    dnd: $("ntf-dnd").checked,
+    log_enabled: $("ntf-log").checked,
+    dedupe_seconds: Number.isFinite(dedupe) && dedupe >= 0 ? dedupe : 5,
+    quiet_hours: {
+      enabled: $("ntf-qh-enabled").checked,
+      start: $("ntf-qh-start").value || "22:00",
+      end: $("ntf-qh-end").value || "07:00",
+    },
+    categories,
+  };
 }
 
 async function loadServerStatus() {
@@ -769,6 +842,7 @@ async function saveConfig() {
     },
     modes: { tone: { preset: tone ? tone.value : "formal" } },
     hotkeys,
+    notifications: notificationsPatch(),
   };
   try {
     await action("apply_config_patch", { patch });

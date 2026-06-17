@@ -108,6 +108,14 @@
         <h2>Token &amp; latency stats</h2>
         <table class="stats-table"><tbody id="stats-body"></tbody></table>
       </div>
+      <div class="card card-wide">
+        <h2>Notifications <span class="muted small">(last 50 — shown &amp; muted; configure in Config › Notifications)</span></h2>
+        <table class="data-table">
+          <thead><tr><th>When</th><th>Category</th><th>Status</th><th>Message</th></tr></thead>
+          <tbody id="notif-log-body"></tbody>
+        </table>
+        <p class="muted small" id="notif-log-empty" hidden>No notifications recorded yet.</p>
+      </div>
     </div>
   </section>
 
@@ -277,6 +285,29 @@
         <div class="form-row"><label for="cfg-long-thr">Long threshold</label><input type="number" id="cfg-long-thr" min="200" max="5000"></div>
         <div class="form-row"><label for="cfg-chunk-size">Chunk size</label><input type="number" id="cfg-chunk-size" min="200" max="4000"></div>
         <div class="form-row"><label for="cfg-min-chunk">Min chunk</label><input type="number" id="cfg-min-chunk" min="100" max="2000"></div>
+      </div>
+      <div class="card card-wide">
+        <h2>Notifications</h2>
+        <p class="muted small">Choose which desktop toasts appear, mute duplicates, and set quiet hours. Errors &amp; warnings always come through while Do&nbsp;Not&nbsp;Disturb or quiet hours are on. Every notification — shown or muted — is recorded in the Telemetry tab's feed.</p>
+        <label class="check-row"><input type="checkbox" id="ntf-enabled"> Show desktop notifications <span class="muted small">— master switch; off mutes everything</span></label>
+        <label class="check-row"><input type="checkbox" id="ntf-dnd"> Do Not Disturb <span class="muted small">— mute everything except errors</span></label>
+        <label class="check-row"><input type="checkbox" id="ntf-log"> Log notifications for the Telemetry feed</label>
+        <div class="form-row"><label for="ntf-dedupe">Dedupe window (s)</label><input type="number" id="ntf-dedupe" min="0" max="3600"><span class="muted small">repeat of the same toast is muted within this many seconds</span></div>
+        <label class="check-row"><input type="checkbox" id="ntf-qh-enabled"> Quiet hours <span class="muted small">— mute non-errors during a daily window</span></label>
+        <div class="form-row">
+          <label for="ntf-qh-start">From</label>
+          <input type="time" id="ntf-qh-start">
+          <label for="ntf-qh-end" style="min-width:auto">to</label>
+          <input type="time" id="ntf-qh-end">
+        </div>
+        <h2>Per-event</h2>
+        <label class="check-row"><input type="checkbox" id="ntf-cat-action_result"> Action results <span class="muted small">— grammar fixed, note saved, sent to chat</span></label>
+        <label class="check-row"><input type="checkbox" id="ntf-cat-clipboard_suggestions"> Clipboard suggestions <span class="muted small">— 📋 URL / stack trace / code detected</span></label>
+        <label class="check-row"><input type="checkbox" id="ntf-cat-settings"> Settings changes <span class="muted small">— performance, tone, server, autostart</span></label>
+        <label class="check-row"><input type="checkbox" id="ntf-cat-updates"> Update checks</label>
+        <label class="check-row"><input type="checkbox" id="ntf-cat-diagnostics"> Diagnostics</label>
+        <label class="check-row"><input type="checkbox" id="ntf-cat-lifecycle"> App lifecycle <span class="muted small">— app ready, config reloaded</span></label>
+        <label class="check-row"><input type="checkbox" id="ntf-cat-errors"> Errors &amp; warnings <span class="muted small">— always shown when DND / quiet hours are on</span></label>
       </div>
       <div class="card-actions card-wide">
         <button class="btn btn-primary" id="config-save">Save all settings</button>
