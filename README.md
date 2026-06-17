@@ -4,7 +4,17 @@ Flowkey is a Windows desktop assistant that adds local-LLM hotkeys for grammar f
 
 Everything runs locally through [FastFlowLM](https://fastflowlm.com) (AMD Ryzen AI NPU) or, on machines without the NPU, through [Ollama](https://ollama.com) (CPU/GPU) as a secondary provider. No cloud service, analytics, or telemetry is used by the app.
 
-Current version: `1.6.0`
+Current version: `2.0.0`
+
+## What's new in 2.0
+
+- **Runs without an AMD NPU.** [Ollama](https://ollama.com) (any CPU/GPU) is now a first-class provider alongside [FastFlowLM](https://fastflowlm.com) (AMD Ryzen AI NPU). Pick one in Dashboard → Config, or let the first-run wizard detect what's installed; if the configured provider isn't running, Flowkey falls back to the other automatically. Model suggestions are hardware-aware — they scale to your RAM/VRAM and hide models that won't fit.
+- **The web dashboard is the home for everything.** Served by the local daemon at `127.0.0.1:52650`, it's now where you chat, organize notes, manage models, run benchmarks, change settings, and control notifications. The old standalone chat popup and native AHK dashboard are retired.
+- **Chat is a dashboard tab** with optional "ground answers in my notes," carried-over threads, and history.
+- **Notes is an organizer** — read a note, re-file it into a different bucket, or delete it (the LLM's categorization is no longer final).
+- **Notification controls + a feed** — per-event toggles, a dedupe window, Do-Not-Disturb, and quiet hours (errors always come through), plus a log of every toast shown or muted in the Telemetry tab.
+
+See [CHANGELOG.md](CHANGELOG.md) for the full list.
 
 ## Screenshots
 
