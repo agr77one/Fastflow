@@ -1,6 +1,9 @@
 SetupTrayMenu_Impl() {
+    global currentHotkeys
     A_TrayMenu.Delete()
-    A_TrayMenu.Add("Open Chat`tCtrl+Shift+T", (*) => OpenWebDashboard_Impl("chat"))
+    ; Show the ACTUAL configured accelerator, not a hardcoded default — the user
+    ; can rebind open_chat in the Config tab. SetupTrayMenu re-runs on reload.
+    A_TrayMenu.Add("Open Chat`t" HumanHotkey(currentHotkeys["open_chat"]), (*) => OpenWebDashboard_Impl("chat"))
     A_TrayMenu.Add("Dashboard", (*) => OpenWebDashboard_Impl())
     A_TrayMenu.Add()
     A_TrayMenu.Add("Quick toggles", BuildTogglesMenu_Impl())

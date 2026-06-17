@@ -16,6 +16,9 @@
 
 ### Fixed
 
+- **Destructive actions use an in-page confirmation, not a browser pop-up.** Deleting a chat thread or note, removing a model, deleting a custom mode, pulling an oversized model, and starting a benchmark all previously used the native `confirm()` dialog; they now use a styled in-dashboard modal that matches the rest of the UI.
+- **The tray "Open Chat" entry shows your real hotkey.** It was hardcoded to `Ctrl+Shift+T` even after you rebound the key; it now reflects the configured `open_chat` binding (and updates when you change it). The default `open_chat` hotkey also moved off `Ctrl+Shift+T` (which collides with the browser "reopen closed tab") to `Ctrl+Alt+C`, mirroring the Alt-based note-capture key.
+
 - **Hotkey actions no longer trample each other.** Grammar fix, note capture, and ask-in-chat share the clipboard; firing one while another's model call was in flight (10–30 s) could corrupt the clipboard save/restore dance, and a re-press of the same hotkey re-ran on stale state. A busy guard now makes them mutually exclusive — a second press gets a "still busy" toast instead.
 - **Your clipboard comes back immediately.** The grammar hotkey used to hold the captured selection in the clipboard for the whole model call; it is now restored within milliseconds (the result still lands in the clipboard for the paste), restores happen on *every* path including mid-capture errors, and a busy clipboard at restore time is retried instead of silently losing your copy.
 - The chat window now watches its parent via a kernel wait instead of spawning `tasklist` every 5 seconds forever; a hung toast PowerShell is killed instead of orphaned; the update-available dialog auto-dismisses after a minute.
