@@ -21,6 +21,7 @@ import ffp_actions
 import ffp_config
 import ffp_flm_server
 import ffp_llm_client
+import ffp_meetings
 import ffp_notifications
 import ffp_provider_runtime
 import ffp_provider_status
@@ -828,6 +829,7 @@ def build_config_snapshot() -> dict:
             "ask_chat": str(hotkeys_cfg.get("ask_chat") or "^+a"),
         },
         "notifications": ffp_notifications.snapshot(cfg.get("notifications")),
+        "meetings": ffp_meetings.config_snapshot(cfg.get("meetings")),
     }
 
 

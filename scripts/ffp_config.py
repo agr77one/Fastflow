@@ -93,6 +93,20 @@ DEFAULT_CONFIG = {
             "action_result": {"enabled": True},
         },
     },
+    "meetings": {
+        "enabled": False,
+        "mcp_url": "http://127.0.0.1:19532/mcp",
+        "source": "auto",
+        "max_context_tokens": 6000,
+        "batch": {
+            "enabled": True,
+            "start": "17:00",
+            "end": "21:00",
+            "only_when_idle": True,
+            "idle_minutes": 10,
+            "max_per_run": 10,
+        },
+    },
     "modes": {
         "grammar": {
             "label": "Grammar fix",
@@ -370,6 +384,59 @@ def _filter_notifications_patch(value: dict) -> dict:
             out["categories"] = filtered_cats
     return out
 
+
+_PATCH_MEETINGS_SOURCES = frozenset({"auto", "minutes", "transcript"})
+
+
+def _validate_mcp_url(url: str) -> str:
+    """Quill MCP endpoint must be loopback http/https (SSRF guard, mirrors
+    validate_flm_base_url)."""
+    cleaned = str(url or "").strip()
+    if not cleaned:
+        return "http://127.0.0.1:19532/mcp"
+    parsed = urlparse(cleaned)
+    if parsed.scheme not in ("http", "https"):
+        raise ValueError(f"meetings.mcp_url must use http/https, got {url!r}")
+    if (parsed.hostname or "").lower() not in _LOOPBACK_HOSTS:
+        raise ValueError(f"meetings.mcp_url must be loopback, got {url!r}")
+    return cleaned
+
+
+def _filter_meetings_patch(value: dict) -> dict:
+    """Whitelist + type-coerce the meetings (Quill) settings block."""
+    out: dict = {}
+    if "enabled" in value:
+        out["enabled"] = bool(value["enabled"])
+    if "mcp_url" in value:
+        out["mcp_url"] = _validate_mcp_url(str(value["mcp_url"]))
+    if value.get("source") in _PATCH_MEETINGS_SOURCES:
+        out["source"] = value["source"]
+    if "max_context_tokens" in value:
+        try:
+            out["max_context_tokens"] = max(500, min(int(value["max_context_tokens"]), 32000))
+        except (TypeError, ValueError):
+            pass
+    batch = value.get("batch")
+    if isinstance(batch, dict):
+        fb: dict = {}
+        if "enabled" in batch:
+            fb["enabled"] = bool(batch["enabled"])
+        for time_key in ("start", "end"):
+            tv = batch.get(time_key)
+            if isinstance(tv, str) and _HHMM_RE.match(tv):
+                fb[time_key] = tv
+        if "only_when_idle" in batch:
+            fb["only_when_idle"] = bool(batch["only_when_idle"])
+        for ik, lo, hi in (("idle_minutes", 0, 240), ("max_per_run", 1, 50)):
+            if ik in batch:
+                try:
+                    fb[ik] = max(lo, min(int(batch[ik]), hi))
+                except (TypeError, ValueError):
+                    pass
+        if fb:
+            out["batch"] = fb
+    return out
+
 # Built-in mode prompts stay locked against patching (system-prompt injection
 # guard); only tone.preset is patchable among them. User-defined modes accept
 # label + system_prompt under ids matching _MODE_ID_RE, and a JSON null value
@@ -450,6 +517,10 @@ def filter_config_patch(patch: dict) -> dict:
                 out[key] = filtered
         elif key == "notifications" and isinstance(value, dict):
             filtered = _filter_notifications_patch(value)
+            if filtered:
+                out[key] = filtered
+        elif key == "meetings" and isinstance(value, dict):
+            filtered = _filter_meetings_patch(value)
             if filtered:
                 out[key] = filtered
         elif key == "hotkeys" and isinstance(value, dict):

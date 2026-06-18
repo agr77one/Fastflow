@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- **Meetings (Quill integration) + after-hours digest processing.** Flowkey can connect to the local [Quill](https://quillapp.com) note-taking app over MCP to search your meetings and answer questions about them — entirely on the local model. Because asking a model about a full transcript costs real prefill time (~15–17 s of time-to-first-token for a ~7k-token transcript on the NPU), a background **scheduler** pre-computes a digest (summary / goals / action items) for each meeting during a configurable idle window (default 17:00–21:00, only when the machine has been idle), caching it in `data/meeting_digests.jsonl` so daytime reads are instant. New **Meetings** dashboard tab (search → read cached digest, "Process now", or "Ask about this meeting") and a Config card for all the settings (enable, Quill MCP URL, content source, schedule window, idle gating, max-per-run) with a "Run batch now" button. Off by default (opt-in). New modules `ffp_quill` (stdlib MCP-over-HTTP client) and `ffp_meetings` (digest store, batch worker, scheduler logic, idle detection); new config block `meetings`; new daemon actions `quill_status` / `quill_search_meetings` / `meeting_digest_get` / `meeting_digests_list` / `meeting_process` / `meeting_batch_run` / `meeting_batch_status` / `meeting_ask`. The Quill MCP URL is validated loopback-only; the meeting actions write a separate cache file under their own lock, so a long after-hours batch never blocks config saves or notifications.
+
 ## 2.0.0
 
 **The dashboard release.** Two things change what Flowkey *is* in 2.0:
