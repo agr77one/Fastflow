@@ -630,6 +630,63 @@ def _act_chat_take_staged(_args: dict) -> dict:
     return ffp_chat.take_staged()
 
 
+# ---- Quill meetings (MCP) + after-hours digest processing --------------------
+def _meetings_cfg() -> dict:
+    return grammar_fix.load_config().get("meetings") or {}
+
+
+def _act_quill_status(_args: dict) -> dict:
+    import ffp_quill
+    return ffp_quill.status(str(_meetings_cfg().get("mcp_url") or ffp_quill.DEFAULT_MCP_URL))
+
+
+def _act_quill_search_meetings(args: dict) -> dict:
+    import ffp_quill
+    url = str(_meetings_cfg().get("mcp_url") or ffp_quill.DEFAULT_MCP_URL)
+    return ffp_quill.search_meetings(str(args.get("query") or ""), int(args.get("limit") or 12), url=url)
+
+
+def _act_meeting_digest_get(args: dict) -> dict:
+    import ffp_meetings
+    return ffp_meetings.get_digest(str(args.get("meeting_id") or ""))
+
+
+def _act_meeting_digests_list(_args: dict) -> dict:
+    import ffp_meetings
+    return ffp_meetings.list_digests()
+
+
+def _act_meeting_process(args: dict) -> dict:
+    """Process one meeting now (used by the dashboard 'Process now' button)."""
+    import ffp_meetings
+    mid = str(args.get("meeting_id") or "")
+    if not mid:
+        raise ValueError("meeting_process requires args.meeting_id")
+    meeting = {"id": mid, "title": str(args.get("title") or ""),
+               "date": str(args.get("date") or ""), "url": str(args.get("url") or "")}
+    rec = ffp_meetings.process_meeting(meeting, grammar_fix.load_config())
+    ffp_meetings.save_digest(rec)
+    return {"ok": True, **rec}
+
+
+def _act_meeting_batch_run(args: dict) -> dict:
+    import ffp_meetings
+    mpr = args.get("max_per_run")
+    return ffp_meetings.run_batch(grammar_fix.load_config(),
+                                  max_per_run=int(mpr) if mpr else None, reason="manual")
+
+
+def _act_meeting_batch_status(_args: dict) -> dict:
+    import ffp_meetings
+    return ffp_meetings.batch_status()
+
+
+def _act_meeting_ask(args: dict) -> dict:
+    import ffp_meetings
+    return ffp_meetings.ask(str(args.get("meeting_id") or ""),
+                            str(args.get("question") or ""), grammar_fix.load_config())
+
+
 ACTIONS: dict[str, Callable[[dict], Any]] = {
     "status": _act_status,
     "start": _act_start,
@@ -688,6 +745,14 @@ ACTIONS: dict[str, Callable[[dict], Any]] = {
     "chat_thread_delete": _act_chat_thread_delete,
     "chat_stage_selection": _act_chat_stage_selection,
     "chat_take_staged": _act_chat_take_staged,
+    "quill_status": _act_quill_status,
+    "quill_search_meetings": _act_quill_search_meetings,
+    "meeting_digest_get": _act_meeting_digest_get,
+    "meeting_digests_list": _act_meeting_digests_list,
+    "meeting_process": _act_meeting_process,
+    "meeting_batch_run": _act_meeting_batch_run,
+    "meeting_batch_status": _act_meeting_batch_status,
+    "meeting_ask": _act_meeting_ask,
     "get_autostart_state": _act_get_autostart_state,
     "set_autostart": _act_set_autostart,
     "open_dashboard": _act_open_dashboard,
@@ -912,6 +977,31 @@ def _watch_parent(parent_pid: int) -> None:
         _shutdown_event.wait(5.0)
 
 
+_SCHED_INTERVAL_SECONDS = 300
+
+
+def _meeting_scheduler() -> None:
+    """Background thread: during the configured idle window, pre-compute meeting
+    digests so daytime reads are instant. Idempotent (run_batch skips cached
+    meetings); gated by ffp_meetings.should_run_batch (enabled + window + idle).
+    Exits promptly on shutdown via the _shutdown_event wait."""
+    import datetime
+
+    import ffp_meetings
+    log.info("meeting scheduler thread started (interval %ds)", _SCHED_INTERVAL_SECONDS)
+    while not _shutdown_event.wait(_SCHED_INTERVAL_SECONDS):
+        try:
+            cfg = grammar_fix.load_config()
+            ok, reason = ffp_meetings.should_run_batch(
+                cfg.get("meetings") or {}, datetime.datetime.now(), ffp_meetings.machine_idle_seconds()
+            )
+            if ok:
+                log.info("scheduled meeting batch starting")
+                log.info("scheduled meeting batch result: %s", ffp_meetings.run_batch(cfg, reason="scheduled"))
+        except Exception as exc:
+            log.warning("meeting scheduler tick failed: %s", exc)
+
+
 def _setup_logging(log_level: str) -> None:
     level = getattr(logging, log_level.upper(), logging.INFO)
 
@@ -956,6 +1046,9 @@ def main() -> int:
 
     if args.parent_pid > 0:
         threading.Thread(target=_watch_parent, args=(args.parent_pid,), daemon=True).start()
+
+    # After-hours meeting digest scheduler (no-op unless meetings.enabled + in window).
+    threading.Thread(target=_meeting_scheduler, daemon=True).start()
 
     server = ThreadingHTTPServer((HOST, args.port), Handler)
     server.timeout = 1.0

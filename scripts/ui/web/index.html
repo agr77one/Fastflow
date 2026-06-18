@@ -29,6 +29,7 @@
   <button class="tab" data-tab="telemetry">Telemetry</button>
   <button class="tab" data-tab="history">History</button>
   <button class="tab" data-tab="notes">Notes</button>
+  <button class="tab" data-tab="meetings">Meetings</button>
   <button class="tab" data-tab="config">Config</button>
   <button class="tab" data-tab="benchmark">Benchmark</button>
 </nav>
@@ -193,6 +194,43 @@
     </div>
   </section>
 
+  <section class="panel" id="tab-meetings">
+    <div class="grid">
+      <div class="card card-wide">
+        <h2>Meetings <span class="muted small" id="mtg-status">checking Quill…</span></h2>
+        <div class="form-row">
+          <input type="text" id="mtg-query" placeholder="Search meetings… (title, people, topics)">
+          <button class="btn" id="mtg-search-btn">Search</button>
+        </div>
+        <table class="data-table">
+          <thead><tr><th>Title</th><th>Date</th><th>Participants</th><th>Digest</th></tr></thead>
+          <tbody id="mtg-results"></tbody>
+        </table>
+        <p class="muted small" id="mtg-empty" hidden>No meetings. Make sure Quill is running and the integration is enabled in Config.</p>
+        <p class="muted small">Click a meeting to read its cached digest, generate one now, or ask a question about it.</p>
+      </div>
+      <div class="card card-wide" id="mtg-reader" hidden>
+        <div class="card-actions reader-head">
+          <h2 id="mtg-title" class="nr-title">Meeting</h2>
+          <button class="btn" id="mtg-close" title="Close">✕</button>
+        </div>
+        <p class="muted small"><span id="mtg-meta"></span> <a id="mtg-link" href="#" target="_blank" rel="noopener" hidden>· open in Quill</a></p>
+        <div class="card-actions">
+          <button class="btn btn-primary" id="mtg-process">Process now</button>
+          <span class="muted small" id="mtg-process-status"></span>
+        </div>
+        <pre class="note-body" id="mtg-digest"></pre>
+        <h2>Ask about this meeting</h2>
+        <div class="form-row">
+          <input type="text" id="mtg-ask-input" placeholder="e.g. What were the action items?">
+          <button class="btn" id="mtg-ask-btn">Ask</button>
+        </div>
+        <pre class="note-body" id="mtg-answer" hidden></pre>
+        <span class="muted small" id="mtg-ask-status"></span>
+      </div>
+    </div>
+  </section>
+
   <section class="panel" id="tab-config">
     <div class="grid">
       <div class="card">
@@ -308,6 +346,35 @@
         <label class="check-row"><input type="checkbox" id="ntf-cat-diagnostics"> Diagnostics</label>
         <label class="check-row"><input type="checkbox" id="ntf-cat-lifecycle"> App lifecycle <span class="muted small">— app ready, config reloaded</span></label>
         <label class="check-row"><input type="checkbox" id="ntf-cat-errors"> Errors &amp; warnings <span class="muted small">— always shown when DND / quiet hours are on</span></label>
+      </div>
+      <div class="card card-wide">
+        <h2>Meetings &amp; after-hours processing <span class="muted small" id="mtg-cfg-status"></span></h2>
+        <p class="muted small">Connect the local <strong>Quill</strong> note app over MCP to search meetings and ask about them. During the idle window below, Flowkey pre-computes each meeting's summary + action items on the local model so daytime reads are instant (a full transcript costs ~15&nbsp;s of prefill — paid once, after hours).</p>
+        <label class="check-row"><input type="checkbox" id="mtg-enabled"> Enable Quill integration</label>
+        <div class="form-row"><label for="mtg-url">Quill MCP URL</label><input type="text" id="mtg-url" class="mono"></div>
+        <div class="form-row"><label for="mtg-source">Content source</label>
+          <select id="mtg-source">
+            <option value="auto">Auto — minutes, else transcript</option>
+            <option value="minutes">Minutes only</option>
+            <option value="transcript">Transcript</option>
+          </select>
+        </div>
+        <div class="form-row"><label for="mtg-maxctx">Max context tokens</label><input type="number" id="mtg-maxctx" min="500" max="32000"><span class="muted small">caps what's fed to the model (bigger = slower prefill)</span></div>
+        <h2>After-hours batch</h2>
+        <label class="check-row"><input type="checkbox" id="mtg-batch-enabled"> Auto-process during the window below</label>
+        <div class="form-row">
+          <label for="mtg-start">From</label>
+          <input type="time" id="mtg-start">
+          <label for="mtg-end" style="min-width:auto">to</label>
+          <input type="time" id="mtg-end">
+        </div>
+        <label class="check-row"><input type="checkbox" id="mtg-idle"> Only when the machine is idle</label>
+        <div class="form-row"><label for="mtg-idle-min">Idle threshold (min)</label><input type="number" id="mtg-idle-min" min="0" max="240"></div>
+        <div class="form-row"><label for="mtg-maxrun">Max meetings per run</label><input type="number" id="mtg-maxrun" min="1" max="50"></div>
+        <div class="card-actions">
+          <button class="btn" id="mtg-run-now">Run batch now</button>
+          <span class="muted small" id="mtg-run-status"></span>
+        </div>
       </div>
       <div class="card-actions card-wide">
         <button class="btn btn-primary" id="config-save">Save all settings</button>

@@ -373,3 +373,47 @@ def test_filter_config_patch_notifications_clamps_dedupe():
         {"notifications": {"dedupe_seconds": 999999}}
     )
     assert filtered["notifications"]["dedupe_seconds"] == 3600.0
+
+
+def test_filter_config_patch_meetings_full():
+    patch = {
+        "meetings": {
+            "enabled": True,
+            "mcp_url": "http://127.0.0.1:19532/mcp",
+            "source": "minutes",
+            "max_context_tokens": 4000,
+            "batch": {
+                "enabled": True, "start": "18:00", "end": "23:00",
+                "only_when_idle": False, "idle_minutes": 5, "max_per_run": 8,
+            },
+        }
+    }
+    filtered = ffp_config.filter_config_patch(patch)
+    assert filtered == patch
+
+
+def test_filter_config_patch_meetings_rejects_non_loopback_url():
+    with pytest.raises(ValueError, match="loopback"):
+        ffp_config.filter_config_patch({"meetings": {"mcp_url": "http://evil.example.com/mcp"}})
+
+
+def test_filter_config_patch_meetings_rejects_junk():
+    filtered = ffp_config.filter_config_patch({
+        "meetings": {
+            "source": "bogus",                 # not in enum -> dropped
+            "max_context_tokens": "lots",      # not int -> dropped
+            "evil": 1,                         # unknown -> dropped
+            "batch": {"start": "99:99", "max_per_run": 999, "junk": 1},
+        }
+    })["meetings"]
+    assert "source" not in filtered
+    assert "max_context_tokens" not in filtered
+    assert "evil" not in filtered
+    assert "start" not in filtered["batch"]    # bad HH:MM dropped
+    assert filtered["batch"]["max_per_run"] == 50   # clamped to max
+    assert "junk" not in filtered["batch"]
+
+
+def test_filter_config_patch_meetings_clamps_context():
+    filtered = ffp_config.filter_config_patch({"meetings": {"max_context_tokens": 100}})
+    assert filtered["meetings"]["max_context_tokens"] == 500  # clamped to min

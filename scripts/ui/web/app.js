@@ -634,6 +634,7 @@ async function loadConfig() {
     const tone = (cfg.tone || {}).preset || "formal";
     document.querySelectorAll('input[name="tone"]').forEach((r) => (r.checked = r.value === tone));
     populateNotifications(cfg.notifications || {});
+    populateMeetings(cfg.meetings || {});
     setStatus("config-status", "");
   } catch (e) {
     setStatus("config-status", `Load failed: ${e.message}`, false);
@@ -843,6 +844,7 @@ async function saveConfig() {
     modes: { tone: { preset: tone ? tone.value : "formal" } },
     hotkeys,
     notifications: notificationsPatch(),
+    meetings: meetingsPatch(),
   };
   try {
     await action("apply_config_patch", { patch });
@@ -1159,6 +1161,182 @@ async function sendChat() {
   }
 }
 
+// ---- Meetings (Quill via MCP; after-hours digests) -------------------------
+// Search meetings, read a cached digest (summary / goals / action items), or
+// generate one on demand. All data comes from the daemon's quill_*/meeting_*
+// actions; the daemon talks MCP to the local Quill app. CSP-safe DOM only.
+let currentMeeting = null;
+let digestIds = new Set();
+
+async function loadMeetings() {
+  const st = $("mtg-status");
+  try {
+    const s = await action("quill_status");
+    st.textContent = s.reachable
+      ? `Quill ${s.server_version || ""} connected`.trim()
+      : "Quill not reachable — enable it in Config and make sure Quill is running";
+    st.className = s.reachable ? "muted small ok" : "muted small bad";
+  } catch (e) {
+    st.textContent = `status unavailable: ${e.message}`;
+    st.className = "muted small bad";
+  }
+  try {
+    const d = await action("meeting_digests_list");
+    digestIds = new Set((d.digests || []).map((x) => x.meeting_id));
+  } catch {
+    digestIds = new Set();
+  }
+  searchMeetings();
+}
+
+async function searchMeetings() {
+  const q = $("mtg-query").value.trim();
+  const body = $("mtg-results");
+  body.replaceChildren();
+  try {
+    const r = await action("quill_search_meetings", { query: q, limit: 15 });
+    const meetings = r.meetings || [];
+    $("mtg-empty").hidden = meetings.length > 0;
+    for (const m of meetings) {
+      const tr = document.createElement("tr");
+      tr.className = "mtg-row";
+      tr.style.cursor = "pointer";
+      tr.dataset.id = m.id;
+      tr.dataset.title = m.title || "";
+      tr.dataset.date = m.date || "";
+      tr.dataset.url = m.url || "";
+      const cells = [m.title || "(untitled)", (m.date || "").slice(0, 10), m.participants || "", digestIds.has(m.id) ? "✓" : "—"];
+      for (const c of cells) {
+        const td = document.createElement("td");
+        td.textContent = c;
+        tr.append(td);
+      }
+      body.append(tr);
+    }
+  } catch (e) {
+    $("mtg-empty").hidden = true;
+    const tr = document.createElement("tr");
+    const td = document.createElement("td");
+    td.colSpan = 4;
+    td.textContent = `Search failed: ${e.message}`;
+    tr.append(td);
+    body.append(tr);
+  }
+}
+
+function openMeeting(row) {
+  currentMeeting = { id: row.dataset.id, title: row.dataset.title, date: row.dataset.date, url: row.dataset.url };
+  $("mtg-reader").hidden = false;
+  $("mtg-title").textContent = currentMeeting.title || "Meeting";
+  $("mtg-meta").textContent = (currentMeeting.date || "").slice(0, 16).replace("T", " ");
+  const link = $("mtg-link");
+  if (currentMeeting.url) { link.href = currentMeeting.url; link.hidden = false; } else { link.hidden = true; }
+  $("mtg-answer").hidden = true;
+  $("mtg-ask-input").value = "";
+  $("mtg-ask-status").textContent = "";
+  loadDigest();
+}
+
+async function loadDigest() {
+  const body = $("mtg-digest");
+  body.textContent = "Loading…";
+  $("mtg-process-status").textContent = "";
+  try {
+    const d = await action("meeting_digest_get", { meeting_id: currentMeeting.id });
+    if (d.found) {
+      body.textContent = d.digest_md || "(empty digest)";
+      $("mtg-process-status").textContent = `cached ${(d.processed_at || "").replace("T", " ")} · ${d.source} · ${d.seconds}s`;
+    } else {
+      body.textContent = "Not processed yet. Click “Process now” to generate a summary + action items on the local model, or wait for the after-hours batch.";
+    }
+  } catch (e) {
+    body.textContent = `Failed: ${e.message}`;
+  }
+}
+
+async function processMeetingNow() {
+  if (!currentMeeting) return;
+  $("mtg-process-status").textContent = "Processing on the local model… (first token can take ~15s on a full transcript)";
+  try {
+    const r = await action("meeting_process", {
+      meeting_id: currentMeeting.id, title: currentMeeting.title, date: currentMeeting.date, url: currentMeeting.url,
+    });
+    $("mtg-digest").textContent = r.digest_md || "(empty)";
+    $("mtg-process-status").textContent = `done · ${r.source} · ${r.seconds}s`;
+    digestIds.add(currentMeeting.id);
+  } catch (e) {
+    $("mtg-process-status").textContent = `⚠ ${e.message}`;
+  }
+}
+
+async function askMeeting() {
+  if (!currentMeeting) return;
+  const q = $("mtg-ask-input").value.trim();
+  if (!q) return;
+  const ans = $("mtg-answer");
+  ans.hidden = false;
+  ans.textContent = "Thinking on the local model…";
+  $("mtg-ask-status").textContent = "";
+  try {
+    const r = await action("meeting_ask", { meeting_id: currentMeeting.id, question: q });
+    if (r.ok) {
+      ans.textContent = r.answer || "(no answer)";
+      $("mtg-ask-status").textContent = `${r.source} · ${r.seconds}s`;
+    } else {
+      ans.textContent = `⚠ ${r.error || "failed"}`;
+    }
+  } catch (e) {
+    ans.textContent = `⚠ ${e.message}`;
+  }
+}
+
+// Meetings settings <-> the Config tab inputs.
+function populateMeetings(m) {
+  m = m || {};
+  $("mtg-enabled").checked = !!m.enabled;
+  $("mtg-url").value = m.mcp_url || "http://127.0.0.1:19532/mcp";
+  $("mtg-source").value = m.source || "auto";
+  $("mtg-maxctx").value = m.max_context_tokens ?? 6000;
+  const b = m.batch || {};
+  $("mtg-batch-enabled").checked = b.enabled !== false;
+  $("mtg-start").value = b.start || "17:00";
+  $("mtg-end").value = b.end || "21:00";
+  $("mtg-idle").checked = b.only_when_idle !== false;
+  $("mtg-idle-min").value = b.idle_minutes ?? 10;
+  $("mtg-maxrun").value = b.max_per_run ?? 10;
+}
+
+function meetingsPatch() {
+  const ctx = Number($("mtg-maxctx").value);
+  return {
+    enabled: $("mtg-enabled").checked,
+    mcp_url: $("mtg-url").value.trim() || "http://127.0.0.1:19532/mcp",
+    source: $("mtg-source").value,
+    max_context_tokens: Number.isFinite(ctx) && ctx > 0 ? ctx : 6000,
+    batch: {
+      enabled: $("mtg-batch-enabled").checked,
+      start: $("mtg-start").value || "17:00",
+      end: $("mtg-end").value || "21:00",
+      only_when_idle: $("mtg-idle").checked,
+      idle_minutes: Number($("mtg-idle-min").value) || 0,
+      max_per_run: Number($("mtg-maxrun").value) || 10,
+    },
+  };
+}
+
+async function runBatchNow() {
+  const s = $("mtg-run-status");
+  s.textContent = "Running… (this processes on the local model; may take a while)";
+  try {
+    const r = await action("meeting_batch_run", {});
+    s.textContent = r.ok
+      ? `processed ${r.processed} of ${r.queued} queued${r.errors && r.errors.length ? `, ${r.errors.length} errors` : ""}`
+      : `⚠ ${r.error}`;
+  } catch (e) {
+    s.textContent = `⚠ ${e.message}`;
+  }
+}
+
 // ---- Tabs & refresh --------------------------------------------------------
 
 const TAB_LOADERS = {
@@ -1167,6 +1345,7 @@ const TAB_LOADERS = {
   telemetry: loadTelemetry,
   history: loadHistory,
   notes: loadNotes,
+  meetings: loadMeetings,
   config: loadConfig,
   benchmark: loadBenchmark,
 };
@@ -1218,6 +1397,17 @@ document.addEventListener("DOMContentLoaded", () => {
   $("nr-move").addEventListener("click", moveNoteToBucket);
   $("nr-delete").addEventListener("click", deleteCurrentNote);
   $("nr-close").addEventListener("click", () => { $("note-reader").hidden = true; });
+  $("mtg-search-btn").addEventListener("click", searchMeetings);
+  $("mtg-query").addEventListener("keydown", (e) => { if (e.key === "Enter") searchMeetings(); });
+  $("mtg-results").addEventListener("click", (e) => {
+    const row = e.target.closest(".mtg-row");
+    if (row) openMeeting(row);
+  });
+  $("mtg-close").addEventListener("click", () => { $("mtg-reader").hidden = true; });
+  $("mtg-process").addEventListener("click", processMeetingNow);
+  $("mtg-ask-btn").addEventListener("click", askMeeting);
+  $("mtg-ask-input").addEventListener("keydown", (e) => { if (e.key === "Enter") askMeeting(); });
+  $("mtg-run-now").addEventListener("click", runBatchNow);
   $("config-save").addEventListener("click", saveConfig);
   $("config-revert").addEventListener("click", loadConfig);
   $("cm-select").addEventListener("change", fillCustomModeForm);
