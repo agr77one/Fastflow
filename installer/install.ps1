@@ -72,7 +72,12 @@ $venvDir      = Join-Path $scriptsDir ".venv"
 $venvPythonw  = Join-Path $venvDir    "Scripts\pythonw.exe"
 
 $RunKeyPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
-$RunKeyName = "Flowkey"
+# Must match ffp_daemon._AUTOSTART_VALUE_NAME exactly -- that daemon action is
+# the single source of truth the dashboard checkbox reads/writes. A source
+# install used to register a DIFFERENT value name ("Flowkey") here, so the
+# dashboard toggle couldn't see it (and enabling the toggle added a second,
+# redundant Run entry -> double launch at logon). See SPEC.md B6 / T10.
+$RunKeyName = "FastFlowPrompt"
 
 function Info($m) { Write-Host "[FFP] $m"  -ForegroundColor Cyan }
 function Ok($m)   { Write-Host "[ok]  $m"  -ForegroundColor Green }

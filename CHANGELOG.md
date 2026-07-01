@@ -21,6 +21,7 @@
 - The Meetings results list is now scrollable and shows a meeting counter.
 - **Packaging now ships all runtime modules.** `ffp_meetings`, `ffp_notifications`, and `ffp_quill` were missing from `pyproject.toml` `py-modules` and the PyInstaller spec `hiddenimports`, so a wheel / frozen installer could omit them and crash on import even though source-tree tests passed. All three are now declared, and a new test (`test_packaging_modules`) asserts `py-modules` and the spec stay in sync with `scripts/*.py`.
 - The Telemetry time-of-day chart now renders only **active hours** — zero-activity hours are dropped instead of drawn as empty bars (and an empty history shows "No activity yet").
+- **Autostart unified to a single per-user entry.** Three independent autostart registrations had drifted out of sync: the daemon wrote `HKCU\...\Run\FastFlowPrompt` (what the dashboard toggle reads/writes), a source install (`install.ps1`) wrote a *different* value name (`HKCU\...\Run\Flowkey`) the toggle couldn't see, and the packaged installer optionally wrote a third, machine-wide `HKLM\...\Run\Flowkey` entry — enabling the dashboard toggle after either install path could add a redundant entry and launch the app twice at logon. All three now agree on the one per-user `HKCU\...\Run\FastFlowPrompt` entry the daemon owns; the packaged installer no longer offers a machine-wide autostart option, and its uninstaller now removes the per-user entry. Guarded by a new `test_installer_autostart` regression test.
 
 ### Internal
 
