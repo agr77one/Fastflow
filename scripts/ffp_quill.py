@@ -152,11 +152,13 @@ def status(url: str = DEFAULT_MCP_URL) -> dict:
     }
 
 
-def search_meetings(query: str, limit: int = 10, *, url: str = DEFAULT_MCP_URL, client: QuillClient | None = None) -> dict:
+def search_meetings(query: str, limit: int = 10, offset: int = 0, *, url: str = DEFAULT_MCP_URL, client: QuillClient | None = None) -> dict:
     c = client or QuillClient(url)
     args: dict = {"limit": max(1, min(int(limit or 10), 30))}
     if query:
         args["query"] = str(query)
+    if offset:
+        args["offset"] = int(offset)
     text = c.call_tool("search_meetings", args)
     return {"meetings": _parse_meetings(text), "reachable": bool(c.session_id)}
 

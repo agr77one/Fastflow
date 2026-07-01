@@ -329,6 +329,10 @@ def history(bench_root) -> dict:
             log.warning("skipping unreadable benchmark result (%s): %s", f, exc)
             continue
         rows = data.get("rows") or []
+        if not rows:
+            # A run that was interrupted / errored before producing any data point
+            # leaves an empty result file; don't surface it as a blank history row.
+            continue
         decode_vals = [r.get("decode_tps") for r in rows if isinstance(r.get("decode_tps"), (int, float))]
         prefill_vals = [r.get("prefill_tps") for r in rows if isinstance(r.get("prefill_tps"), (int, float))]
         runs.append({

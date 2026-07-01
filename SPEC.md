@@ -1,0 +1,106 @@
+# Flowkey SPEC
+
+Caveman-encoded (compression, not amputation). Paths / ids / action names / numbers / endpoints verbatim.
+
+## §G goals
+
+- G1: local LLM hotkey assistant, Windows. ⊥ cloud, ⊥ analytics, ⊥ telemetry off-machine.
+- G2: run on AMD NPU (FastFlowLM) | any CPU/GPU (Ollama). provider ? → auto-fallback to other.
+- G3: web dashboard = single home for chat, notes, meetings, config, benchmark, notifications.
+- G4: heavy LLM cost (prefill) → pre-compute after-hours, read cached.
+
+## §C context / stack
+
+- front: AHK v2 — `scripts/grammarFix.ahk` + `scripts/lib/*` + `scripts/ui/*`
+- daemon: Python stdlib — `scripts/ffp_daemon.py` @ `http://127.0.0.1:52650` (single-instance = bound port)
+- LLM: FastFlowLM NPU @ `:52625` | Ollama @ `:11434`, OpenAI-compat `POST /v1/chat/completions`
+- dashboard: daemon-served `scripts/ui/web/{index.html,app.js,styles.css}`, CSP `default-src 'self'`
+- paths: `scripts/paths.py` → USER_ROOT/{config,data,logs}; `_version.py` = version src of truth
+- version: current `2.1.0` (held `release/v2.1.0`); public `2.0.0`; repo `agr77one/Fastflow`
+- run tree = `flowkey-pub2` (worktree, branch `live`=origin/main). old `FastFlowPrompt_Local_Setup`=1.5.0 stale.
+
+## §I interfaces
+
+- cfg blocks: `enabled`, `llm`, `providers.{fastflowlm,ollama}`, `server`, `routing`, `notes`, `chat`, `modes`, `dictionary`, `notifications`, `meetings`, `hotkeys`
+- api: `POST /action/<name>` ! header `X-FFP-API: 1` → 200 `{ok,result,error,elapsed_ms}`
+- api: `GET /` → dashboard; `GET /healthz` → `{ok,version,api,actions}`
+- action: `config_snapshot` → full cfg; `apply_config_patch {patch}` → merge (whitelist `filter_config_patch`)
+- action: `notify_gate {title,message}` → `{show,reason,category}` (logs); `notifications_log {limit}` → rows
+- action: `quill_status` → `{reachable,enabled,server,server_version}`
+- action: `quill_search_meetings {query,limit}` → `{meetings:[{id,title,date,duration,participants,url}]}`
+- action: `meeting_overview` → `{enabled,reachable,today:{count,minutes},week:{count,minutes}}`
+- action: `meeting_process {meeting_id,title,date,url}` → digest rec (writes `meeting_digests.jsonl`)
+- action: `meeting_batch_run {max_per_run?}` → `{ok,processed,queued,errors}`; `meeting_batch_status` → status
+- action: `meeting_digest_get {meeting_id}` → `{found,digest_md,...}`; `meeting_digests_list` → `{digests,count}`
+- action: `meeting_ask {meeting_id,question}` → `{ok,answer,source,seconds}`
+- action: `meeting_actions_list {range:week|month}` → `{range,items:[{id,text,owner,status,...}],counts}`
+- action: `meeting_action_set_status {id,status:pending|accepted|rejected}` → `{ok}`
+- action: `meeting_week_summary {week_offset}` → `{ok,week_label,meeting_count,summary}`
+- mcp: Quill @ `http://127.0.0.1:19532/mcp` — Streamable-HTTP, SSE `data:`, `Mcp-Session-Id` header; init→notifications/initialized→tools/call
+- cmd: `flm serve <model> --pmode turbo --host 127.0.0.1 --port 52625`
+- data: `data/{meeting_digests,meeting_action_status,notifications,chat_threads}.jsonl`
+- autostart: HKCU Run `FastFlowPrompt` → bundled `AutoHotkey64.exe` + `grammarFix.ahk`; `FlowkeyGitSync` → `sync.ps1`
+- sched: Windows task `FlowkeyGitSync` daily 12:00 → `sync.ps1` (ff-only pull, guarded)
+- ACTIONS count = 73
+
+## §V invariants
+
+- V1: ∀ `POST /action` → header `X-FFP-API` = API_VERSION `1` | 403
+- V2: ∀ req Host ∉ {`127.0.0.1`,`localhost`} → 403 (DNS-rebind defense)
+- V3: config patch → only keys ∈ `filter_config_patch` whitelist; rest dropped
+- V4: flm/llm/`meetings.mcp_url` ! loopback http/https | reject (SSRF guard)
+- V5: dashboard DOM → createElement/textContent only; ⊥ innerHTML; ⊥ native alert/confirm/prompt → use `confirmDialog`
+- V6: history text redacted by default (`history_store_text` false)
+- V7: notes ops ! contained via `_vault_subpath`; `../` → reject
+- V8: notify → daemon `notify_gate` decides+logs; AHK `Notify_Impl` fail-OPEN if daemon unreachable
+- V9: notify category `errors` (critical) → bypass DND & quiet_hours; still logged; still honors per-cat disable
+- V10: notify master `enabled`=false → mute all incl errors
+- V11: scheduler run ⟺ `should_run_batch` = meetings.enabled & in-window & (idle ? idle≥threshold)
+- V12: after-hours batch idempotent → skip meeting ∃ cached digest
+- V13: `meeting_*` actions ∉ `_WRITE_ACTIONS` → self-lock (`_io_lock`/`_batch_lock`), separate files ∴ long batch ⊥ block config/notify writes
+- V14: NPU prefill ∝ context (~17s @ ~7k tok) ∴ pre-compute digests after-hours; ask grounds on cached digest
+- V15: action-item id = `sha1(meeting_id|norm(text))[:16]` → stable across re-list ∴ status persists
+- V16: week = Monday 00:00 local; month = 1st 00:00 local
+- V17: builtin mode prompts locked from patching (only `tone.preset` patchable)
+- V18: version ∀ ∈ {`_version.py`,`pyproject.toml`,`installer/installer.iss`,`README.md`} equal; CI smoke fails on drift
+- V19: `main` branch-protected (ruleset 17344133) → land via PR + ruleset toggle; ⊥ direct push
+- V20: change gates ! pass: `ruff check scripts tests`, `pytest`, `node --check scripts/ui/web/app.js`, AHK parse-check (PowerShell `/ErrorStdOut`)
+- V21: local data (config/data/logs/vendor/certs) ∈ `.gitignore` ∴ pull moves code only, never user data
+- V22: `sync.ps1` ∃ uncommitted tracked changes → skip pull (⊥ clobber un-pushed WIP)
+
+## §T tasks
+
+```
+id|status|task|cites
+T1|x|web dashboard = home (chat/notes/config/bench/notifications/meetings)|V5
+T2|x|Ollama provider + auto-fallback + hw-aware model sizing|G2
+T3|x|notifications gate+log+panel (`ffp_notifications`)|V8,V9,V10
+T4|x|Quill meetings + after-hours digest scheduler (`ffp_quill`,`ffp_meetings`)|V11,V12,V14
+T5|x|overview meeting hours + action-item board + weekly review|V15,V16
+T6|x|git autosync: `sync.ps1` + daily task + autostart→flowkey-pub2|V21,V22
+T7|~|2.1.0 release held on `release/v2.1.0` → land after user test|V18,V19
+T8|.|installer clean-VM smoke test|—
+T9|.|[AUDIT] dead-code: unused daemon helper + 2 AHK wrappers + stale chat-popup config key + obsolete settings ref in test fixture + deprecated install shims|—
+T10|.|[AUDIT-P1] autostart: unify 3 divergent Run keys (daemon/src-installer/pkg-installer) → single HKCU entry; fix UI autostart status reporting|V20
+T11|.|[AUDIT] old open_chat default `^+t` still appears in first-run + web config fallback → replace with `^!c`|B5
+T12|.|[AUDIT] first-run seed thinner than DEFAULT_CONFIG schema → add seed-vs-schema drift guard (compare keys on first-run copy)|—
+T13|.|[AUDIT] installer bootstrap wrapper hardcodes old installer filename → derive from `_version.py`|V18
+T14|.|[AUDIT] quality-gate gaps: installer policy drift, autostart reg-name drift, bootstrap output name, README/dashboard tab count|V20
+T15|.|[DOCS] dashboard docs: 7 tabs listed, live = 8 (add Benchmark)|—
+T16|.|[DOCS] autostart docs conflict: main says no machine-wide entry; installer docs+impl still describe it → align on HKCU-only|—
+T17|.|[DOCS] installer layout: build script says flattened, installer.md still shows nested layout|—
+T18|.|[DOCS] provider roadmap marks selector/status UX incomplete → update to reflect it exists|—
+T19|.|[DOCS] first-run wizard text: "chat popup" + retired hotkey → update to current|B5
+T20|.|[DOCS] daemon log location stale in docs → update to current path|—
+```
+
+## §B bugs
+
+```
+id|date|cause|fix
+B1|2026-06|"Run batch now" ran vs last-saved cfg not form → "disabled"|autosave meetings patch before `meeting_batch_run`
+B2|2026-06|bench history blank row from 0-point result file|skip `rows==[]` in `ffp_benchmark.history`
+B3|2026-06|autostart → stale tree / empty `flowkey-public`|repoint HKCU Run → flowkey-pub2 + bundled AHK
+B4|2026-06|install launch: AHK called `.py`, shipped only `.exe`|flatten bundle to {app} + AHK→exe bridge (PR #19)
+B5|2026-06|`Ctrl+Shift+T` open_chat collided w/ browser reopen-tab|default → `^!c`; tray label = configured hotkey
+```

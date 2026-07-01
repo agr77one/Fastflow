@@ -4,7 +4,11 @@ Flowkey is a Windows desktop assistant that adds local-LLM hotkeys for grammar f
 
 Everything runs locally through [FastFlowLM](https://fastflowlm.com) (AMD Ryzen AI NPU) or, on machines without the NPU, through [Ollama](https://ollama.com) (CPU/GPU) as a secondary provider. No cloud service, analytics, or telemetry is used by the app.
 
-Current version: `2.0.0`
+Current version: `2.1.0`
+
+## What's new in 2.1
+
+- **Meetings, on your own time.** Connect the local [Quill](https://quillapp.com) note app to search your meetings and ask about them on the local model. Because asking about a full transcript costs real prefill time on the NPU, an **after-hours scheduler** pre-computes each meeting's digest (summary / goals / action items) during a configurable idle window (default 17:00–21:00) so daytime reads are instant. New **Meetings** tab + Config card; off by default.
 
 ## What's new in 2.0
 
@@ -98,7 +102,7 @@ Launch the app with AutoHotkey v2:
 | `explain:` + `Ctrl+Shift+G` | Explain code, regex, SQL, or technical text |
 | `tone:` + `Ctrl+Shift+G` | Rewrite in the selected tone preset |
 | `<custom>:` + `Ctrl+Shift+G` | Any mode you define in Dashboard → Config → Custom modes (e.g. `translate:`) |
-| `Ctrl+Shift+T` | Open chat (each tab has a "My notes" toggle that grounds replies in your notes vault) |
+| `Ctrl+Alt+C` | Open chat (the Chat tab has a "My notes" toggle that grounds replies in your notes vault) |
 | `Ctrl+Shift+A` | Ask in chat with selected text |
 | `Ctrl+Alt+N` | Capture a note |
 
@@ -108,12 +112,20 @@ Prefix tip: put the keyword on the first line of your selection — `prompt: rou
 
 The dashboard is a web page served by the local daemon — open it from the tray menu ("Dashboard") or browse to `http://127.0.0.1:52650/`. It is loopback-only and works in any browser.
 
-- **Tabs:** Overview, History, Telemetry, Notes, Benchmark, Config.
+- **Tabs:** Overview, Chat, Telemetry, History, Notes, Meetings, Config.
 - **Theme:** auto-follows your OS day/night setting; the topbar button cycles auto → light → dark.
 - **Custom modes:** Config → Custom modes lets you add your own `prefix:` commands (id + system prompt). Changes apply to the running app within a second.
 - **Models:** pull models with live progress — pick a suggestion or type any name (on Ollama, anything from the [library](https://ollama.com/library) works); set active, remove. Suggestions are hardware-aware: detected RAM/VRAM caps the model size (e.g. 32 GB RAM → ~4B on the NPU; 8 GB VRAM → ~9B on the GPU), oversized models are hidden, and free-typing one asks before pulling.
 - **Benchmark:** works on both providers — `flm bench` on FastFlowLM (~10–20 min, NPU), timed generations with native metrics on Ollama (~1–3 min, server keeps running).
 - **Notes:** browse or search your vault; History shows recent runs (text is stored only if history storage is enabled).
+- **Meetings:** connect the local [Quill](https://quillapp.com) app to search meetings, read AI digests (pre-computed after-hours), review action items (accept / reject), and generate a weekly review. Off by default — enable in Config → Meetings.
+- **Notifications:** per-event toggles, dedupe window, Do-Not-Disturb, and quiet hours; every toast (shown or muted) is logged to the Telemetry feed.
+
+## Supported surfaces
+
+- **Chat is web-only.** Chat lives in the dashboard's **Chat** tab (`Ctrl+Alt+C` or tray → "Open Chat"). The old standalone modal chat popup is retired — there is no separate chat window.
+- **Two install paths.** The signed **Inno Setup installer** (`Flowkey-Setup-<version>.exe`, per-machine, admin) *or* a **source install** (`INSTALL.cmd`, runs from an unzipped folder — no build, no signing). Both are supported; pick one.
+- **Autostart is per-user.** "Launch Flowkey when I sign in" is a single per-user `HKCU\…\Run` entry the daemon manages from Dashboard → Config — that toggle is the source of truth. The installer doesn't add machine-wide autostart.
 
 ## Project Layout
 

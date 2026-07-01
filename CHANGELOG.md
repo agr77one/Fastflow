@@ -2,9 +2,31 @@
 
 ## Unreleased
 
+## 2.1.0
+
+**Meetings, on your own time.** Flowkey can now read your local Quill meetings and answer questions about them on the local model — and an after-hours scheduler pre-computes each meeting's digest (summary / goals / action items) during your idle window, so daytime reads are instant.
+
 ### Added
 
 - **Meetings (Quill integration) + after-hours digest processing.** Flowkey can connect to the local [Quill](https://quillapp.com) note-taking app over MCP to search your meetings and answer questions about them — entirely on the local model. Because asking a model about a full transcript costs real prefill time (~15–17 s of time-to-first-token for a ~7k-token transcript on the NPU), a background **scheduler** pre-computes a digest (summary / goals / action items) for each meeting during a configurable idle window (default 17:00–21:00, only when the machine has been idle), caching it in `data/meeting_digests.jsonl` so daytime reads are instant. New **Meetings** dashboard tab (search → read cached digest, "Process now", or "Ask about this meeting") and a Config card for all the settings (enable, Quill MCP URL, content source, schedule window, idle gating, max-per-run) with a "Run batch now" button. Off by default (opt-in). New modules `ffp_quill` (stdlib MCP-over-HTTP client) and `ffp_meetings` (digest store, batch worker, scheduler logic, idle detection); new config block `meetings`; new daemon actions `quill_status` / `quill_search_meetings` / `meeting_digest_get` / `meeting_digests_list` / `meeting_process` / `meeting_batch_run` / `meeting_batch_status` / `meeting_ask`. The Quill MCP URL is validated loopback-only; the meeting actions write a separate cache file under their own lock, so a long after-hours batch never blocks config saves or notifications.
+- **Action-item review board.** A weekly/monthly board on the Meetings tab aggregates the action items parsed from your meeting digests, each markable **accepted / rejected / pending** (status persisted in `data/meeting_action_status.jsonl`). New daemon actions `meeting_actions_list` / `meeting_action_set_status`.
+- **Weekly review.** A one-click roll-up of the week's processed meetings (highlights / themes / open items) generated on the local model from the cached digests — pick the week and Generate. New daemon action `meeting_week_summary`.
+- **Meeting hours on the Overview tab** — today / this-week meeting counts and hours, pulled from Quill (new daemon action `meeting_overview`).
+- **Digest quality flags + strict re-digest.** Each meeting digest is checked for low-substance / social-filler / too-short / trivial-meeting signals and flagged in the Meetings tab; a "Re-digest (strict)" button re-runs the summary with a stricter prompt. New daemon action `meeting_redigest`.
+
+### Fixed
+
+- Benchmark history no longer shows a blank row for an interrupted/empty run.
+- "Run batch now" persists the current Meetings settings (including the Enable toggle) before running, so it reflects the form rather than the last-saved config.
+- The Meetings results list is now scrollable and shows a meeting counter.
+- **Packaging now ships all runtime modules.** `ffp_meetings`, `ffp_notifications`, and `ffp_quill` were missing from `pyproject.toml` `py-modules` and the PyInstaller spec `hiddenimports`, so a wheel / frozen installer could omit them and crash on import even though source-tree tests passed. All three are now declared, and a new test (`test_packaging_modules`) asserts `py-modules` and the spec stay in sync with `scripts/*.py`.
+- The Telemetry time-of-day chart now renders only **active hours** — zero-activity hours are dropped instead of drawn as empty bars (and an empty history shows "No activity yet").
+
+### Internal
+
+- Removed the unused `ffp_tools.py` tool-calling prototype (no runtime caller).
+- Unified the config seed templates: the dev example (`config/`) and the shipped first-run seed (`setup/defaults/`) had drifted (the seed was missing the `llm` block) — they're now identical, enforced by `test_config_seeds`.
+- Docs refreshed for the current UI/build: README dashboard tabs (Chat + Meetings), the `open_chat` hotkey (`Ctrl+Alt+C`), a new "Supported surfaces" section (web chat only, installer-vs-source install, per-user autostart), and the installer README (3 exes, dropped retired `ffp-chat.exe` references).
 
 ## 2.0.0
 

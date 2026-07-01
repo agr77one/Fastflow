@@ -73,6 +73,14 @@
           <dt>Ask</dt><dd><kbd id="hk-ask">…</kbd></dd>
         </dl>
       </div>
+      <div class="card">
+        <h2>Meetings <span class="muted small">(from Quill)</span></h2>
+        <div class="stats-row">
+          <div class="stat"><span class="stat-num" id="ov-mtg-today">–</span><span class="stat-lbl">Today (hrs)</span></div>
+          <div class="stat"><span class="stat-num" id="ov-mtg-week">–</span><span class="stat-lbl">This week (hrs)</span></div>
+        </div>
+        <p class="muted small" id="ov-mtg-detail">…</p>
+      </div>
     </div>
   </section>
 
@@ -197,15 +205,19 @@
   <section class="panel" id="tab-meetings">
     <div class="grid">
       <div class="card card-wide">
-        <h2>Meetings <span class="muted small" id="mtg-status">checking Quill…</span></h2>
+        <h2>Meetings <span id="mtg-header-count" class="muted small"></span> <span class="muted small" id="mtg-status">checking Quill…</span></h2>
         <div class="form-row">
           <input type="text" id="mtg-query" placeholder="Search meetings… (title, people, topics)">
           <button class="btn" id="mtg-search-btn">Search</button>
         </div>
-        <table class="data-table">
-          <thead><tr><th>Title</th><th>Date</th><th>Participants</th><th>Digest</th></tr></thead>
-          <tbody id="mtg-results"></tbody>
-        </table>
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead><tr><th>Title</th><th>Date</th><th>Participants</th><th>Digest</th></tr></thead>
+            <tbody id="mtg-results"></tbody>
+          </table>
+        </div>
+        <p class="muted small"><span id="mtg-count"></span></p>
+        <button class="btn btn-sm" id="mtg-load-more" hidden>Load more</button>
         <p class="muted small" id="mtg-empty" hidden>No meetings. Make sure Quill is running and the integration is enabled in Config.</p>
         <p class="muted small">Click a meeting to read its cached digest, generate one now, or ask a question about it.</p>
       </div>
@@ -217,8 +229,10 @@
         <p class="muted small"><span id="mtg-meta"></span> <a id="mtg-link" href="#" target="_blank" rel="noopener" hidden>· open in Quill</a></p>
         <div class="card-actions">
           <button class="btn btn-primary" id="mtg-process">Process now</button>
+          <button class="btn" id="mtg-redigest">Re-digest (strict)</button>
           <span class="muted small" id="mtg-process-status"></span>
         </div>
+        <div id="mtg-quality" class="muted small" hidden></div>
         <pre class="note-body" id="mtg-digest"></pre>
         <h2>Ask about this meeting</h2>
         <div class="form-row">
@@ -227,6 +241,31 @@
         </div>
         <pre class="note-body" id="mtg-answer" hidden></pre>
         <span class="muted small" id="mtg-ask-status"></span>
+      </div>
+      <div class="card card-wide">
+        <h2>Action items <span class="muted small" id="mtg-actions-counts"></span></h2>
+        <div class="radio-row">
+          <label><input type="radio" name="mtg-range" value="week" checked> This week</label>
+          <label><input type="radio" name="mtg-range" value="month"> This month</label>
+        </div>
+        <div class="table-scroll" id="mtg-actions-list"></div>
+        <p class="muted small" id="mtg-actions-empty" hidden>No action items in this range yet — process some meetings first.</p>
+      </div>
+      <div class="card card-wide">
+        <h2>Weekly review</h2>
+        <p class="muted small">A roll-up of the week's processed meetings — highlights, themes, and open items — generated on the local model.</p>
+        <div class="form-row">
+          <label for="mtg-week-sel">Week</label>
+          <select id="mtg-week-sel">
+            <option value="0">This week</option>
+            <option value="1">Last week</option>
+            <option value="2">2 weeks ago</option>
+            <option value="3">3 weeks ago</option>
+          </select>
+          <button class="btn btn-primary" id="mtg-week-gen">Generate review</button>
+          <span class="muted small" id="mtg-week-status"></span>
+        </div>
+        <pre class="note-body" id="mtg-week-output"></pre>
       </div>
     </div>
   </section>

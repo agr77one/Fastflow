@@ -56,3 +56,6 @@ Thumbs.db
 ehthumbs.db
 .DS_Store
 desktop.ini
+
+# Serena agent artifacts
+.serena/

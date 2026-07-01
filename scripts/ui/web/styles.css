@@ -456,6 +456,33 @@ input[type="number"] { max-width: 120px; }
 }
 .check-row input { width: auto; margin-right: 8px; accent-color: var(--accent); }
 
+/* Scrollable list container (meetings results, etc.) */
+.table-scroll { max-height: 520px; overflow-y: auto; }
+
+/* Action-item review rows */
+.action-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 7px 2px;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.18);
+}
+.action-main { flex: 1; min-width: 0; }
+.action-btns { display: flex; gap: 4px; flex-shrink: 0; align-items: center; }
+.action-btns .btn { padding: 2px 8px; }
+.action-badge {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.65;
+  align-self: center;
+  min-width: 58px;
+  text-align: right;
+}
+.action-row.status-accepted .action-text { text-decoration: line-through; opacity: 0.55; }
+.action-row.status-rejected .action-text { text-decoration: line-through; opacity: 0.35; }
+
 .radio-row { display: flex; gap: 18px; margin: 8px 0 14px; }
 .radio-row label { cursor: pointer; }
 .radio-row input { width: auto; margin-right: 6px; accent-color: var(--accent); }

@@ -7,7 +7,7 @@ Everything needed to turn this project into a signed Windows installer that non-
 ```
 installer/
 ├── build.ps1              ← end-to-end orchestrator (run this)
-├── fastflowprompt.spec    ← PyInstaller spec (4 exes, onedir, MERGE-dedup)
+├── fastflowprompt.spec    ← PyInstaller spec (3 exes, onedir, MERGE-dedup)
 ├── installer.iss          ← Inno Setup 6.x script (per-machine, admin)
 ├── sign.ps1               ← cert generation + signtool wrapper
 ├── certs/                 ← .pfx and .cer (gitignored)
@@ -66,12 +66,12 @@ SmartScreen on first launch.
 
 Steps the script runs:
 
-1. Read `scripts\_version.py` → derive version (e.g. `2.0.0`)
+1. Read `scripts\_version.py` → derive version (e.g. `2.1.0`)
 2. Generate `file_version_info.txt` for the Win32 VERSIONINFO resource
 3. Download `vendor\ahk\AutoHotkey64.exe` if missing (`-BundleAhk`)
 4. Download `vendor\flm\flm-setup.exe` if missing (`-BundleFlm`)
 5. Run `pyinstaller --clean --noconfirm fastflowprompt.spec` → `dist\FastFlowPrompt\`
-6. Run `iscc installer.iss` → `out\Flowkey-Setup-2.0.0.exe`
+6. Run `iscc installer.iss` → `out\Flowkey-Setup-2.1.0.exe`
 7. Run `sign.ps1` against the output (`-Sign`)
 
 Debug flags:
@@ -93,7 +93,7 @@ Debug flags:
 
 ## What the uninstaller does
 
-1. Kills `ffp-daemon.exe`, `ffp-chat.exe`, and the AHK process running
+1. Kills `ffp-daemon.exe` and the AHK process running
    `grammarFix.ahk` so file removal doesn't fail on in-use binaries.
 2. Chain-uninstalls FastFlowLM via its `QuietUninstallString` — but only if
    we set the `.flm_installed_by_us` marker. Users who already had FLM keep
@@ -128,7 +128,6 @@ C:\Program Files\FastFlowPrompt\           (read-only, admin-installed)
 ├── Flowkey\                        PyInstaller bundle
 │   ├── ffp-daemon.exe
 │   ├── ffp-grammar-fix.exe
-│   ├── ffp-chat.exe
 │   ├── ffp-first-run.exe
 │   ├── _internal\
 │   └── setup\defaults\

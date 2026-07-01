@@ -62,7 +62,7 @@ CLASSIFY_CASES = [
     ("📋 Code snippet detected", "Paste, prefix with `explain:` to explain what it does.", "clipboard_suggestions"),
     # updates
     ("Flowkey", "Checking for updates…", "updates"),
-    ("Flowkey", "You're up to date (2.0.0).", "updates"),
+    ("Flowkey", "You're up to date (2.1.0).", "updates"),
     ("Flowkey", "Downloading update…", "updates"),
     ("Flowkey", "Update applied. Please restart grammarFix.ahk.", "updates"),
     # diagnostics
