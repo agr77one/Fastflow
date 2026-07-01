@@ -16,7 +16,7 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - LLM: FastFlowLM NPU @ `:52625` | Ollama @ `:11434`, OpenAI-compat `POST /v1/chat/completions`
 - dashboard: daemon-served `scripts/ui/web/{index.html,app.js,styles.css}`, CSP `default-src 'self'`
 - paths: `scripts/paths.py` → USER_ROOT/{config,data,logs}; `_version.py` = version src of truth
-- version: current `2.1.0` (held `release/v2.1.0`); public `2.0.0`; repo `agr77one/Fastflow`
+- version: `2.1.0` merged to `main`, tag/installer/Release NOT yet cut; public `2.0.0`; repo `agr77one/Fastflow`
 - run tree = `flowkey-pub2` (worktree, branch `live`=origin/main). old `FastFlowPrompt_Local_Setup`=1.5.0 stale.
 
 ## §I interfaces
@@ -81,13 +81,13 @@ T6|x|git autosync: `sync.ps1` + daily task + autostart→flowkey-pub2|V21,V22
 T7|~|2.1.0 release held on `release/v2.1.0` → land after user test|V18,V19
 T8|.|installer clean-VM smoke test|—
 T9|.|[AUDIT] dead-code: unused daemon helper + 2 AHK wrappers + stale chat-popup config key + obsolete settings ref in test fixture + deprecated install shims|—
-T10|.|[AUDIT-P1] autostart: unify 3 divergent Run keys (daemon/src-installer/pkg-installer) → single HKCU entry; fix UI autostart status reporting|V20
+T10|x|[AUDIT-P1] autostart: unify 3 divergent Run keys (daemon/src-installer/pkg-installer) → single HKCU entry|V20,B6
 T11|.|[AUDIT] old open_chat default `^+t` still appears in first-run + web config fallback → replace with `^!c`|B5
 T12|.|[AUDIT] first-run seed thinner than DEFAULT_CONFIG schema → add seed-vs-schema drift guard (compare keys on first-run copy)|—
 T13|.|[AUDIT] installer bootstrap wrapper hardcodes old installer filename → derive from `_version.py`|V18
 T14|.|[AUDIT] quality-gate gaps: installer policy drift, autostart reg-name drift, bootstrap output name, README/dashboard tab count|V20
 T15|.|[DOCS] dashboard docs: 7 tabs listed, live = 8 (add Benchmark)|—
-T16|.|[DOCS] autostart docs conflict: main says no machine-wide entry; installer docs+impl still describe it → align on HKCU-only|—
+T16|x|[DOCS] autostart docs conflict: main says no machine-wide entry; installer docs+impl still describe it → align on HKCU-only|B6
 T17|.|[DOCS] installer layout: build script says flattened, installer.md still shows nested layout|—
 T18|.|[DOCS] provider roadmap marks selector/status UX incomplete → update to reflect it exists|—
 T19|.|[DOCS] first-run wizard text: "chat popup" + retired hotkey → update to current|B5
@@ -103,4 +103,5 @@ B2|2026-06|bench history blank row from 0-point result file|skip `rows==[]` in `
 B3|2026-06|autostart → stale tree / empty `flowkey-public`|repoint HKCU Run → flowkey-pub2 + bundled AHK
 B4|2026-06|install launch: AHK called `.py`, shipped only `.exe`|flatten bundle to {app} + AHK→exe bridge (PR #19)
 B5|2026-06|`Ctrl+Shift+T` open_chat collided w/ browser reopen-tab|default → `^!c`; tray label = configured hotkey
+B6|2026-07|3 divergent autostart Run keys: daemon HKCU\Run\FastFlowPrompt, `install.ps1` HKCU\Run\Flowkey (different name!), `installer.iss` optional HKLM\Run\Flowkey → toggle blind to other 2, could double-launch|unify on HKCU\Run\FastFlowPrompt everywhere; drop installer.iss HKLM task; uninstall now cleans the HKCU value; guarded by `test_installer_autostart.py`
 ```

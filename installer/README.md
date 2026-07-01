@@ -101,7 +101,7 @@ Debug flags:
 3. Asks (default = No) whether to wipe per-user data at
    `%LOCALAPPDATA%\FastFlowPrompt\`. The user can decline and keep their
    notes / config / logs across reinstalls.
-4. Removes the HKLM `Run` autostart entry.
+4. Removes the per-user `HKCU\...\Run\FastFlowPrompt` autostart entry, if one was set via the dashboard's "Launch Flowkey when I sign in" toggle. The installer itself never sets machine-wide (HKLM) autostart — that's a single per-user entry the daemon owns.
 
 ## End-user SmartScreen note
 

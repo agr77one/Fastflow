@@ -84,8 +84,11 @@ MinVersion=10.0.17763
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
-Name: "autostart";    Description: "Launch {#AppName} when Windows starts (all users)"; \
-                      GroupDescription: "Additional options:"
+; NOTE: autostart is intentionally NOT an install-time task. The daemon owns a
+; single per-user HKCU\...\Run\FastFlowPrompt entry (Dashboard -> Config ->
+; "Launch Flowkey when I sign in") -- that's the one source of truth. A prior
+; machine-wide HKLM task here used a different value name and could run
+; alongside the per-user one, double-launching the app at logon. See T10/B6.
 Name: "desktopicon";  Description: "Create a desktop shortcut"; \
                       GroupDescription: "Additional options:"; Flags: unchecked
 
@@ -160,13 +163,6 @@ Name: "{commondesktop}\{#AppName}";            Filename: "{app}\ahk\AutoHotkey64
   Parameters: """{app}\scripts\grammarFix.ahk"""; WorkingDir: "{app}"; \
   IconFilename: "{app}\ffp-daemon.exe"; Tasks: desktopicon
 
-[Registry]
-; --- Autostart (per-machine HKLM Run) — controlled by the autostart task -----
-Root: HKLM; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; \
-  ValueType: string; ValueName: "{#AppName}"; \
-  ValueData: """{app}\ahk\AutoHotkey64.exe"" ""{app}\scripts\grammarFix.ahk"""; \
-  Flags: uninsdeletevalue; Tasks: autostart
-
 [UninstallRun]
 ; --- 1. Stop our processes before removing files -----------------------------
 ;     CloseApplications=force handles in-use files but a windowless daemon
@@ -176,6 +172,14 @@ Filename: "{sys}\taskkill.exe"; Parameters: "/F /IM ffp-daemon.exe /T"; \
 Filename: "{sys}\taskkill.exe"; \
   Parameters: "/F /IM AutoHotkey64.exe /FI ""WINDOWTITLE eq grammarFix*"""; \
   RunOnceId: "KillAhk"; Flags: runhidden waituntilterminated
+
+; --- 1b. Remove the per-user autostart entry, if the dashboard toggle or a
+;     source install set it (installer itself never sets it — see [Tasks]).
+;     reg.exe exits non-zero when the value is absent; that's fine, Inno
+;     doesn't treat a nonzero [UninstallRun] exit as fatal.
+Filename: "{sys}\reg.exe"; \
+  Parameters: "delete ""HKCU\Software\Microsoft\Windows\CurrentVersion\Run"" /v ""FastFlowPrompt"" /f"; \
+  RunOnceId: "RemoveAutostart"; Flags: runhidden waituntilterminated
 
 ; --- 2. Chain FLM uninstaller — but ONLY if we installed it ------------------
 ;     We tagged it with {app}\.flm_installed_by_us. Pascal helper reads the

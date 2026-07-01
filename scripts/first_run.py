@@ -309,7 +309,6 @@ class WizardApp:
         self.var_base_url = tk.StringVar(value=str(llm.get("base_url") or self.cfg.get("flm_base_url") or base_url))
         self.var_model = tk.StringVar(value=str(llm.get("model") or self.cfg.get("flm_model") or default_model))
         self.var_license_accept = tk.BooleanVar(value=False)
-        self.var_autostart_hint = tk.BooleanVar(value=True)  # display-only — installer owns Run key
 
         hk = self.cfg.get("hotkeys") or {}
         self.var_hotkeys: dict[str, tk.StringVar] = {
