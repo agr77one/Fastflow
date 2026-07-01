@@ -1,5 +1,13 @@
 {
   "enabled": true,
+  "llm": {
+    "provider": "fastflowlm",
+    "base_url": "http://127.0.0.1:52625",
+    "model": "qwen3.5:4b",
+    "auth_bearer": "flm",
+    "timeout_seconds": 30,
+    "auto_start": true
+  },
   "flm_base_url": "http://127.0.0.1:52625",
   "flm_model": "qwen3.5:4b",
   "flm_timeout_seconds": 30,

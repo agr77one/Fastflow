@@ -161,6 +161,7 @@ PROMPT_HISTORY_FILE: Path = DATA_DIR / "prompt_history.jsonl"
 GRAMMAR_HISTORY_FILE: Path = DATA_DIR / "grammar_fix_history.jsonl"
 CHAT_THREADS_FILE:   Path = DATA_DIR / "chat_threads.jsonl"
 MEETING_DIGESTS_FILE: Path = DATA_DIR / "meeting_digests.jsonl"
+MEETING_ACTION_STATUS_FILE: Path = DATA_DIR / "meeting_action_status.jsonl"
 FLM_PID_FILE:        Path = DATA_DIR / "flm_server.pid"
 
 # Markers (tiny presence-only files)

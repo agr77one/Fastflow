@@ -13,6 +13,7 @@ import pytest
 @pytest.fixture(autouse=True)
 def _tmp_digests(tmp_path, monkeypatch):
     monkeypatch.setattr(M, "DIGESTS_PATH", tmp_path / "meeting_digests.jsonl")
+    monkeypatch.setattr(M, "ACTION_STATUS_PATH", tmp_path / "meeting_action_status.jsonl")
 
 
 class FakeQuill:
@@ -35,8 +36,8 @@ class FakeQuill:
             if offset:  # single page of results, like a small vault
                 return "<results></results>"
             rows = "".join(
-                f'<meeting id="{m["id"]}" date="{m["date"]}" url="quill://meeting/{m["id"]}">'
-                f'<title>{m["title"]}</title></meeting>'
+                f'<meeting id="{m["id"]}" date="{m["date"]}" duration="{m.get("duration", "")}" '
+                f'url="quill://meeting/{m["id"]}"><title>{m["title"]}</title></meeting>'
                 for m in self._meetings
             )
             return f"<results>{rows}</results>"
@@ -197,3 +198,135 @@ def test_config_snapshot_defaults():
     assert snap["mcp_url"].endswith("/mcp")
     assert snap["batch"]["start"] == "17:00"
     assert snap["batch"]["max_per_run"] == 10
+
+
+# ---------- meeting hours / overview --------------------------------------------------
+
+def test_parse_duration_minutes():
+    assert M.parse_duration_minutes("31min") == 31
+    assert M.parse_duration_minutes("1h 5min") == 65
+    assert M.parse_duration_minutes("1h") == 60
+    assert M.parse_duration_minutes("8min") == 8
+    assert M.parse_duration_minutes("") == 0
+    assert M.parse_duration_minutes(None) == 0
+
+
+def test_meeting_overview_buckets():
+    # Naive dates (no 'Z') keep this timezone-independent on CI runners.
+    now = datetime.datetime(2026, 6, 18, 15, 0)   # Thursday; Monday = 2026-06-15
+    meetings = [
+        {"id": "a", "title": "t1", "date": "2026-06-18T09:00:00", "duration": "30min"},
+        {"id": "b", "title": "t2", "date": "2026-06-18T13:00:00", "duration": "1h"},
+        {"id": "c", "title": "mon", "date": "2026-06-15T10:00:00", "duration": "45min"},
+        {"id": "d", "title": "lastweek", "date": "2026-06-10T10:00:00", "duration": "60min"},
+    ]
+    out = M.meeting_overview(_cfg(), now=now, client=FakeQuill(meetings))
+    assert out["reachable"] is True
+    assert out["today"] == {"count": 2, "minutes": 90}
+    assert out["week"] == {"count": 3, "minutes": 135}   # excludes last week
+
+
+def test_meeting_overview_disabled():
+    assert M.meeting_overview({"meetings": {"enabled": False}}) == {"enabled": False, "reachable": False}
+
+
+# ---------- action items board --------------------------------------------------------
+
+DIGEST_MD = (
+    "## Summary\n- discussed staffing\n"
+    "## Goals\n- finalize roles\n"
+    "## Action items\n"
+    "- [Jeff] meet with Alan next week\n"
+    "- [unassigned] post the job opening\n"
+    "- (not discussed)\n"
+)
+
+
+def test_extract_action_items():
+    items = M.extract_action_items(DIGEST_MD)
+    assert items == [
+        {"owner": "Jeff", "text": "meet with Alan next week"},
+        {"owner": "unassigned", "text": "post the job opening"},
+    ]  # placeholder bullet skipped; Summary/Goals bullets not included
+
+
+def test_extract_action_items_handles_no_section():
+    assert M.extract_action_items("## Summary\n- x\n## Goals\n- y") == []
+
+
+def test_action_items_list_and_status_roundtrip():
+    now = datetime.datetime(2026, 6, 18, 12, 0)   # Thursday
+    M.save_digest({"meeting_id": "m1", "title": "Staffing", "date": "2026-06-17T10:00:00",
+                   "processed_at": "2026-06-17T18:00:00", "digest_md": DIGEST_MD})
+    out = M.list_action_items("week", now=now)
+    assert len(out["items"]) == 2
+    assert out["counts"] == {"pending": 2, "accepted": 0, "rejected": 0}
+    assert all(it["status"] == "pending" for it in out["items"])
+
+    target = out["items"][0]["id"]
+    M.set_action_status(target, "accepted")
+    out2 = M.list_action_items("week", now=now)
+    statuses = {it["id"]: it["status"] for it in out2["items"]}
+    assert statuses[target] == "accepted"
+    assert out2["counts"]["accepted"] == 1 and out2["counts"]["pending"] == 1
+
+
+def test_action_items_range_filter():
+    now = datetime.datetime(2026, 6, 18, 12, 0)   # week starts Mon 2026-06-15
+    M.save_digest({"meeting_id": "recent", "title": "R", "date": "2026-06-16T10:00:00",
+                   "processed_at": "2026-06-16T18:00:00", "digest_md": DIGEST_MD})
+    M.save_digest({"meeting_id": "old", "title": "O", "date": "2026-05-20T10:00:00",
+                   "processed_at": "2026-05-20T18:00:00", "digest_md": DIGEST_MD})
+    week = M.list_action_items("week", now=now)
+    assert {it["meeting_id"] for it in week["items"]} == {"recent"}
+    month = M.list_action_items("month", now=now)  # since 2026-06-01
+    assert {it["meeting_id"] for it in month["items"]} == {"recent"}  # 'old' is May
+
+
+def test_set_action_status_rejects_bad_value():
+    with pytest.raises(ValueError):
+        M.set_action_status("abc", "maybe")
+
+
+# ---------- weekly review summary -----------------------------------------------------
+
+def test_week_summary_rolls_up_digests():
+    now = datetime.datetime(2026, 6, 18, 12, 0)   # week Mon 2026-06-15 .. Sun 06-21
+    M.save_digest({"meeting_id": "w1", "title": "Mon sync", "date": "2026-06-15T10:00:00",
+                   "processed_at": "2026-06-15T18:00:00", "digest_md": "## Summary\n- shipped X"})
+    M.save_digest({"meeting_id": "w2", "title": "Wed 1:1", "date": "2026-06-17T10:00:00",
+                   "processed_at": "2026-06-17T18:00:00", "digest_md": "## Summary\n- planned Y"})
+    M.save_digest({"meeting_id": "old", "title": "Old", "date": "2026-06-01T10:00:00",
+                   "processed_at": "2026-06-01T18:00:00", "digest_md": "## Summary\n- ancient"})
+    seen = {}
+    def fake_llm(messages):
+        seen["ctx"] = messages[-1]["content"]
+        return "## Highlights\n- shipped X and planned Y"
+    out = M.week_summary({}, week_offset=0, now=now, llm_call=fake_llm)
+    assert out["meeting_count"] == 2                 # only this week's two
+    assert "shipped X" in seen["ctx"] and "planned Y" in seen["ctx"]
+    assert "ancient" not in seen["ctx"]              # last-period digest excluded
+    assert out["summary"].startswith("## Highlights")
+
+
+def test_week_summary_empty_week():
+    now = datetime.datetime(2026, 6, 18, 12, 0)
+    out = M.week_summary({}, week_offset=2, now=now, llm_call=lambda m: "should not be called")
+    assert out["meeting_count"] == 0 and out["summary"] == ""
+
+
+# ---------- digest quality flags (strict/quality feature) -----------------------------
+
+def test_digest_quality_flags():
+    q_short = M._digest_quality("tiny", 100)
+    assert "too_short" in q_short["flags"]
+    assert "trivial_meeting" in q_short["flags"]
+    assert q_short["ok"] is False
+
+    long_text = "## Summary\n" + ("- a solid substantive point about the project and next steps\n" * 4)
+    q_ok = M._digest_quality(long_text, 5000)
+    assert "too_short" not in q_ok["flags"]
+    assert "trivial_meeting" not in q_ok["flags"]
+
+    q_low = M._digest_quality("- not discussed\n- not discussed\n" + long_text, 5000)
+    assert "low_substance" in q_low["flags"] and q_low["ok"] is False

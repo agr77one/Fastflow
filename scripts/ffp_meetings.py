@@ -21,7 +21,11 @@ endpoint chat/grammar use (via ffp_chat._default_llm_call).
 
 from __future__ import annotations
 
+import datetime
+import hashlib
+import json
 import logging
+import re
 import threading
 import time
 
@@ -31,6 +35,8 @@ import paths as _paths
 log = logging.getLogger("ffp.meetings")
 
 DIGESTS_PATH = _paths.MEETING_DIGESTS_FILE
+ACTION_STATUS_PATH = _paths.MEETING_ACTION_STATUS_FILE
+VALID_ACTION_STATUSES = ("pending", "accepted", "rejected")
 
 DEFAULTS = {
     "enabled": False,
@@ -228,19 +234,52 @@ _DIGEST_SYSTEM = (
     "on, write '- (not discussed)'."
 )
 
+_STRICT_DIGEST_SYSTEM = (
+    "You write concise, factual digests of meetings for later reference. "
+    "Use ONLY the provided content; never invent details. "
+    "STRICT RULES: "
+    "(1) Never include social pleasantries — greetings, thanks, farewells are NOT meeting content. "
+    "(2) Only bullet concrete decisions, problems raised, or information shared. "
+    "(3) If a section has no real content, write exactly '- None'. "
+    "(4) If the entire meeting was a trivial social exchange with no decisions, topics, or tasks, "
+    "write Summary as one bullet: '- Trivial exchange; no substantive content recorded.' "
+    "and Goals and Action items each as '- None'. "
+    "(5) Never pad empty sections with explanatory sentences."
+)
 
-def _digest_prompt(title: str, date: str, content: str) -> list[dict]:
+_SOCIAL_FILLER_PHRASES = (
+    "thanked", "no further topics", "brief interaction",
+    "no topics were discussed", "signed off", "said goodbye",
+)
+
+
+def _digest_prompt(title: str, date: str, content: str, *, strict: bool = False) -> list[dict]:
+    system = _STRICT_DIGEST_SYSTEM if strict else _DIGEST_SYSTEM
     user = (
         f"MEETING: {title} ({date})\n\nCONTENT:\n{content}\n\n"
         "Write the digest using EXACTLY these three markdown sections, nothing else:\n"
-        "## Summary\n- 3-5 short bullets\n"
+        "## Summary\n- 3-5 short bullets (decisions, topics, outcomes only — no pleasantries)\n"
         "## Goals\n- what the meeting set out to decide or achieve\n"
         "## Action items\n- one bullet per item as '[owner] task' (use [unassigned] if no owner stated)\n"
     )
-    return [{"role": "system", "content": _DIGEST_SYSTEM}, {"role": "user", "content": user}]
+    return [{"role": "system", "content": system}, {"role": "user", "content": user}]
 
 
-def process_meeting(meeting: dict, cfg: dict, *, client=None, llm_call=None) -> dict:
+def _digest_quality(digest_md: str, context_chars: int) -> dict:
+    text = (digest_md or "").lower()
+    flags: list[str] = []
+    if text.count("not discussed") >= 2 or text.count("- none") >= 2:
+        flags.append("low_substance")
+    if any(p in text for p in _SOCIAL_FILLER_PHRASES):
+        flags.append("social_filler")
+    if context_chars < 400:
+        flags.append("trivial_meeting")
+    if len((digest_md or "").strip()) < 100:
+        flags.append("too_short")
+    return {"flags": flags, "ok": not bool(flags)}
+
+
+def process_meeting(meeting: dict, cfg: dict, *, client=None, llm_call=None, strict: bool = False) -> dict:
     """Fetch one meeting's content and produce + return a digest record."""
     mcfg = cfg.get("meetings") if isinstance(cfg.get("meetings"), dict) else {}
     mid = str(meeting.get("id") or "")
@@ -252,7 +291,7 @@ def process_meeting(meeting: dict, cfg: dict, *, client=None, llm_call=None) -> 
         raise RuntimeError("no minutes or transcript available for meeting")
     call = _resolve_llm_call(llm_call)
     t0 = time.time()
-    digest_md = str(call(_digest_prompt(meeting.get("title") or "", meeting.get("date") or "", content)) or "").strip()
+    digest_md = str(call(_digest_prompt(meeting.get("title") or "", meeting.get("date") or "", content, strict=strict)) or "").strip()
     seconds = round(time.time() - t0, 2)
     provider, model = _provider_model()
     return {
@@ -267,6 +306,8 @@ def process_meeting(meeting: dict, cfg: dict, *, client=None, llm_call=None) -> 
         "context_chars": len(content),
         "seconds": seconds,
         "digest_md": digest_md,
+        "strict": strict,
+        "quality": _digest_quality(digest_md, len(content)),
     }
 
 
@@ -363,6 +404,229 @@ def ask(meeting_id: str, question: str, cfg: dict, *, client=None, llm_call=None
     t0 = time.time()
     answer = str(call(msgs) or "").strip()
     return {"ok": True, "answer": answer, "source": source, "seconds": round(time.time() - t0, 2)}
+
+
+# ---------- meeting aggregation (Overview hours) --------------------------------------
+
+_DUR_H_RE = re.compile(r"(\d+)\s*h")
+_DUR_M_RE = re.compile(r"(\d+)\s*m")
+
+
+def parse_duration_minutes(text) -> int:
+    """'31min' -> 31, '1h 5min' -> 65, '1h' -> 60. 0 if unparseable."""
+    t = str(text or "").lower()
+    total = 0
+    mh = _DUR_H_RE.search(t)
+    if mh:
+        total += int(mh.group(1)) * 60
+    mm = _DUR_M_RE.search(t)
+    if mm:
+        total += int(mm.group(1))
+    return total
+
+
+def _parse_meeting_dt(value):
+    """ISO date (often UTC 'Z') -> local naive datetime, or None."""
+    try:
+        dt = datetime.datetime.fromisoformat(str(value or "").replace("Z", "+00:00"))
+        if dt.tzinfo is not None:
+            dt = dt.astimezone().replace(tzinfo=None)
+        return dt
+    except (ValueError, TypeError):
+        return None
+
+
+def meeting_overview(cfg: dict, *, now=None, client=None) -> dict:
+    """Today / this-week meeting counts + minutes from Quill, for the Overview tab.
+    'week' is since Monday 00:00 local. Returns reachable=False (fast) when the
+    integration is off or Quill is down."""
+    mcfg = cfg.get("meetings") if isinstance(cfg.get("meetings"), dict) else {}
+    if not mcfg.get("enabled"):
+        return {"enabled": False, "reachable": False}
+    c = client or ffp_quill.QuillClient(str(mcfg.get("mcp_url") or ffp_quill.DEFAULT_MCP_URL))
+    if not c.connect():
+        return {"enabled": True, "reachable": False}
+    meetings = ffp_quill.list_recent_meetings(limit=30, client=c)
+    now = now or datetime.datetime.now()
+    today0 = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    week0 = today0 - datetime.timedelta(days=today0.weekday())  # Monday 00:00
+    agg = {"today": {"count": 0, "minutes": 0}, "week": {"count": 0, "minutes": 0}}
+    for m in meetings:
+        dt = _parse_meeting_dt(m.get("date"))
+        if dt is None:
+            continue
+        mins = parse_duration_minutes(m.get("duration"))
+        if dt >= week0:
+            agg["week"]["count"] += 1
+            agg["week"]["minutes"] += mins
+        if dt >= today0:
+            agg["today"]["count"] += 1
+            agg["today"]["minutes"] += mins
+    return {"enabled": True, "reachable": True, **agg}
+
+
+# ---------- action items (review board) -----------------------------------------------
+
+_ACTION_HEADER_RE = re.compile(r"##\s*action items?", re.IGNORECASE)
+_BULLET_RE = re.compile(r"^[-*]\s+(.*)$")
+_OWNER_RE = re.compile(r"^\[([^\]]*)\]\s*(.*)$")
+_SKIP_ITEMS = {"(not discussed)", "(none)", "none", "n/a", "(not discussed.)"}
+
+
+def extract_action_items(digest_md: str) -> list[dict]:
+    """Pull the bullets under the '## Action items' section of a digest.
+    Returns [{owner, text}]; skips placeholder bullets like '(not discussed)'."""
+    items: list[dict] = []
+    in_section = False
+    for raw in (digest_md or "").splitlines():
+        s = raw.strip()
+        if s.startswith("##"):
+            in_section = bool(_ACTION_HEADER_RE.match(s))
+            continue
+        if not in_section:
+            continue
+        mb = _BULLET_RE.match(s)
+        if not mb:
+            continue
+        body = mb.group(1).strip()
+        if not body or body.lower() in _SKIP_ITEMS or body.lower().startswith("(not discussed"):
+            continue
+        owner = ""
+        mo = _OWNER_RE.match(body)
+        if mo:
+            owner = mo.group(1).strip()
+            body = mo.group(2).strip()
+        if body:
+            items.append({"owner": owner, "text": body})
+    return items
+
+
+def _action_id(meeting_id: str, text: str) -> str:
+    norm = re.sub(r"\s+", " ", str(text or "").strip().lower())
+    return hashlib.sha1(f"{meeting_id}|{norm}".encode()).hexdigest()[:16]
+
+
+def _load_action_status() -> dict:
+    out: dict = {}
+    if not ACTION_STATUS_PATH.exists():
+        return out
+    try:
+        with ACTION_STATUS_PATH.open("r", encoding="utf-8", errors="replace") as f:
+            for raw in f:
+                raw = raw.strip()
+                if not raw:
+                    continue
+                try:
+                    row = json.loads(raw)
+                except json.JSONDecodeError:
+                    continue
+                iid = row.get("id")
+                if iid:
+                    out[iid] = row
+    except OSError as exc:
+        log.warning("load action status failed: %s", exc)
+    return out
+
+
+def set_action_status(item_id: str, status: str) -> dict:
+    """Persist a review status for one action item (pending/accepted/rejected)."""
+    item_id = str(item_id or "")
+    if not item_id:
+        raise ValueError("missing item id")
+    if status not in VALID_ACTION_STATUSES:
+        raise ValueError(f"invalid status: {status!r}")
+    with _io_lock:
+        statuses = _load_action_status()
+        statuses[item_id] = {"id": item_id, "status": status, "updated_at": _now_iso()}
+        try:
+            ACTION_STATUS_PATH.parent.mkdir(parents=True, exist_ok=True)
+            tmp = ACTION_STATUS_PATH.with_suffix(".jsonl.tmp")
+            with tmp.open("w", encoding="utf-8") as f:
+                for row in statuses.values():
+                    f.write(json.dumps(row, ensure_ascii=False) + "\n")
+            tmp.replace(ACTION_STATUS_PATH)
+        except OSError as exc:
+            log.warning("set action status failed: %s", exc)
+    return {"ok": True, "id": item_id, "status": status}
+
+
+def _range_cutoff(range_key: str, now: datetime.datetime) -> datetime.datetime:
+    today0 = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    if range_key == "month":
+        return today0.replace(day=1)
+    return today0 - datetime.timedelta(days=today0.weekday())  # this week (Monday)
+
+
+def list_action_items(range_key: str = "week", *, now=None) -> dict:
+    """Aggregate action items from cached digests in the range (week|month),
+    each tagged with its persisted review status. Purely local — no Quill call."""
+    range_key = "month" if str(range_key) == "month" else "week"
+    now = now or datetime.datetime.now()
+    cutoff = _range_cutoff(range_key, now)
+    statuses = _load_action_status()
+    items: list[dict] = []
+    for d in load_digests():
+        dt = _parse_meeting_dt(d.get("date"))
+        if dt is not None and dt < cutoff:
+            continue
+        mid = str(d.get("meeting_id") or "")
+        for it in extract_action_items(d.get("digest_md")):
+            iid = _action_id(mid, it["text"])
+            items.append({
+                "id": iid,
+                "text": it["text"],
+                "owner": it["owner"],
+                "meeting_id": mid,
+                "meeting_title": d.get("title") or "",
+                "date": d.get("date") or "",
+                "status": (statuses.get(iid) or {}).get("status", "pending"),
+            })
+    items.sort(key=lambda x: str(x.get("date") or ""), reverse=True)
+    counts = {"pending": 0, "accepted": 0, "rejected": 0}
+    for it in items:
+        counts[it["status"]] = counts.get(it["status"], 0) + 1
+    return {"range": range_key, "items": items, "counts": counts}
+
+
+# ---------- weekly review summary -----------------------------------------------------
+
+_WEEK_SYSTEM = (
+    "You write a brief, concrete weekly review from a set of meeting digests. "
+    "Use only the provided content; do not invent."
+)
+
+
+def week_summary(cfg: dict = None, *, week_offset: int = 0, now=None, llm_call=None) -> dict:
+    """Roll up the week's cached digests into one review. week_offset=0 is the
+    current week, 1 is last week, etc. Local — grounds on cached digests."""
+    now = now or datetime.datetime.now()
+    today0 = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    monday = today0 - datetime.timedelta(days=today0.weekday()) - datetime.timedelta(weeks=int(week_offset or 0))
+    week_end = monday + datetime.timedelta(days=7)
+    label = f"{monday.date().isoformat()} – {(week_end - datetime.timedelta(days=1)).date().isoformat()}"
+
+    week_digests = []
+    for d in load_digests():
+        dt = _parse_meeting_dt(d.get("date"))
+        if dt is not None and monday <= dt < week_end:
+            week_digests.append(d)
+    if not week_digests:
+        return {"ok": True, "week_label": label, "meeting_count": 0, "summary": ""}
+
+    blocks = []
+    for d in sorted(week_digests, key=lambda x: str(x.get("date") or "")):
+        blocks.append(f"### {d.get('title') or 'Meeting'} ({str(d.get('date') or '')[:10]})\n{d.get('digest_md') or ''}")
+    context = "\n\n".join(blocks)[:24000]
+    user = (
+        f"WEEK: {label}\nThis week's {len(week_digests)} meeting digest(s):\n\n{context}\n\n"
+        "Write a concise weekly review using EXACTLY these sections:\n"
+        "## Highlights\n- what got done / key decisions\n"
+        "## Themes\n- recurring topics across meetings\n"
+        "## Open items\n- follow-ups still needing attention\n"
+    )
+    call = _resolve_llm_call(llm_call)
+    summary = str(call([{"role": "system", "content": _WEEK_SYSTEM}, {"role": "user", "content": user}]) or "").strip()
+    return {"ok": True, "week_label": label, "meeting_count": len(week_digests), "summary": summary}
 
 
 # ---------- dashboard snapshot --------------------------------------------------------

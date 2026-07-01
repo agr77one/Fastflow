@@ -1,5 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""PyInstaller spec for Flowkey v1.5.0.
+"""PyInstaller spec for Flowkey (version resolved from scripts/_version.py).
 
 Build:
 
@@ -53,20 +53,22 @@ HIDDEN_IMPORTS = [
     "ffp_benchmark",
     "ffp_chat",
     "ffp_config",
+    "ffp_daemon",
     "ffp_flm_server",
     "ffp_hardware",
     "ffp_llm_client",
+    "ffp_meetings",
+    "ffp_notifications",
     "ffp_notify",
     "ffp_provider_runtime",
     "ffp_provider_status",
     "ffp_pull",
+    "ffp_quill",
     "ffp_telemetry",
-    "ffp_tools",
     "ffp_updater",
     "loopback_http",
     "paths",
     "grammar_fix",
-    "ffp_daemon",
     "first_run",
     "install",
     "notes",

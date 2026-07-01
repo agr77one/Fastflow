@@ -637,13 +637,21 @@ def _meetings_cfg() -> dict:
 
 def _act_quill_status(_args: dict) -> dict:
     import ffp_quill
-    return ffp_quill.status(str(_meetings_cfg().get("mcp_url") or ffp_quill.DEFAULT_MCP_URL))
+    cfg = _meetings_cfg()
+    out = ffp_quill.status(str(cfg.get("mcp_url") or ffp_quill.DEFAULT_MCP_URL))
+    out["enabled"] = bool(cfg.get("enabled"))
+    return out
+
+
+def _act_meeting_overview(_args: dict) -> dict:
+    import ffp_meetings
+    return ffp_meetings.meeting_overview(grammar_fix.load_config())
 
 
 def _act_quill_search_meetings(args: dict) -> dict:
     import ffp_quill
     url = str(_meetings_cfg().get("mcp_url") or ffp_quill.DEFAULT_MCP_URL)
-    return ffp_quill.search_meetings(str(args.get("query") or ""), int(args.get("limit") or 12), url=url)
+    return ffp_quill.search_meetings(str(args.get("query") or ""), int(args.get("limit") or 30), int(args.get("offset") or 0), url=url)
 
 
 def _act_meeting_digest_get(args: dict) -> dict:
@@ -669,6 +677,19 @@ def _act_meeting_process(args: dict) -> dict:
     return {"ok": True, **rec}
 
 
+def _act_meeting_redigest(args: dict) -> dict:
+    """Re-run digest with the strict prompt, overwriting the cached result."""
+    import ffp_meetings
+    mid = str(args.get("meeting_id") or "")
+    if not mid:
+        raise ValueError("meeting_redigest requires args.meeting_id")
+    meeting = {"id": mid, "title": str(args.get("title") or ""),
+               "date": str(args.get("date") or ""), "url": str(args.get("url") or "")}
+    rec = ffp_meetings.process_meeting(meeting, grammar_fix.load_config(), strict=True)
+    ffp_meetings.save_digest(rec)
+    return {"ok": True, **rec}
+
+
 def _act_meeting_batch_run(args: dict) -> dict:
     import ffp_meetings
     mpr = args.get("max_per_run")
@@ -685,6 +706,28 @@ def _act_meeting_ask(args: dict) -> dict:
     import ffp_meetings
     return ffp_meetings.ask(str(args.get("meeting_id") or ""),
                             str(args.get("question") or ""), grammar_fix.load_config())
+
+
+def _act_meeting_actions_list(args: dict) -> dict:
+    """Action items from cached digests in the range (week|month), with status."""
+    import ffp_meetings
+    return ffp_meetings.list_action_items(str(args.get("range") or "week"))
+
+
+def _act_meeting_action_set_status(args: dict) -> dict:
+    """Set an action item's review status (pending|accepted|rejected)."""
+    import ffp_meetings
+    return ffp_meetings.set_action_status(str(args.get("id") or ""), str(args.get("status") or ""))
+
+
+def _act_meeting_week_summary(args: dict) -> dict:
+    """Roll up a week's cached digests into one review (week_offset: 0=this week)."""
+    import ffp_meetings
+    try:
+        offset = int(args.get("week_offset") or 0)
+    except (TypeError, ValueError):
+        offset = 0
+    return ffp_meetings.week_summary(grammar_fix.load_config(), week_offset=offset)
 
 
 ACTIONS: dict[str, Callable[[dict], Any]] = {
@@ -747,12 +790,17 @@ ACTIONS: dict[str, Callable[[dict], Any]] = {
     "chat_take_staged": _act_chat_take_staged,
     "quill_status": _act_quill_status,
     "quill_search_meetings": _act_quill_search_meetings,
+    "meeting_overview": _act_meeting_overview,
     "meeting_digest_get": _act_meeting_digest_get,
     "meeting_digests_list": _act_meeting_digests_list,
     "meeting_process": _act_meeting_process,
+    "meeting_redigest": _act_meeting_redigest,
     "meeting_batch_run": _act_meeting_batch_run,
     "meeting_batch_status": _act_meeting_batch_status,
     "meeting_ask": _act_meeting_ask,
+    "meeting_actions_list": _act_meeting_actions_list,
+    "meeting_action_set_status": _act_meeting_action_set_status,
+    "meeting_week_summary": _act_meeting_week_summary,
     "get_autostart_state": _act_get_autostart_state,
     "set_autostart": _act_set_autostart,
     "open_dashboard": _act_open_dashboard,
