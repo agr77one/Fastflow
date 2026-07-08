@@ -220,6 +220,79 @@ def force_prompt_shape(input_text: str) -> str:
     )
 
 
+def _strip_outer_fence(text: str) -> str:
+    match = re.fullmatch(r"\s*```[a-zA-Z0-9_-]*\s*(.*?)\s*```\s*", str(text or ""), flags=re.DOTALL)
+    return match.group(1).strip() if match else str(text or "").strip()
+
+
+def _normalize_output_format_section(text: str) -> str:
+    raw = str(text or "").strip()
+    if re.fullmatch(r"```[a-zA-Z0-9_-]*\s*```", raw, flags=re.DOTALL):
+        match = re.match(r"```([a-zA-Z0-9_-]*)", raw)
+        lang = (match.group(1) if match else "") or "fenced"
+        return f"{lang} fenced code block"
+    cleaned = re.sub(r"```[a-zA-Z0-9_-]*", "", raw)
+    cleaned = cleaned.replace("```", "").strip()
+    return cleaned or raw
+
+
+def _repair_labeled_prompt_sections(text: str) -> str | None:
+    source = _strip_outer_fence(text)
+    specs = [
+        ("task", r"(?:\*\*)?task(?:\*\*)?\s*:\s*"),
+        ("context", r"(?:\*\*)?context(?:\*\*)?\s*:\s*"),
+        ("constraints", r"(?:\*\*)?constraints(?:\*\*)?\s*:\s*"),
+        ("output_format", r"(?:\*\*)?output\s*format(?:\*\*)?\s*:\s*"),
+    ]
+    matches: list[tuple[str, int, int]] = []
+    cursor = 0
+    for tag, pattern in specs:
+        match = re.search(pattern, source[cursor:], flags=re.IGNORECASE)
+        if not match:
+            return None
+        start = cursor + match.start()
+        end = cursor + match.end()
+        matches.append((tag, start, end))
+        cursor = end
+
+    pieces: dict[str, str] = {}
+    for index, (tag, _start, end) in enumerate(matches):
+        next_start = matches[index + 1][1] if index + 1 < len(matches) else len(source)
+        value = source[end:next_start].strip()
+        if tag == "output_format":
+            value = _normalize_output_format_section(value)
+        if not value:
+            return None
+        pieces[tag] = value
+
+    return "\n".join(
+        f"<{tag}>\n{pieces[tag]}\n</{tag}>"
+        for tag, _start, _end in matches
+    )
+
+
+def repair_prompt_scaffold(text: str) -> str:
+    """Repair known prompt-mode near-misses into the XML scaffold.
+
+    This intentionally handles only deterministic shapes proven by local
+    benchmarks: a stray closing context tag from Qwen2.5 and label-style
+    Task/Context/Constraints/Output format sections from LM Studio. It does not
+    invent missing sections from arbitrary prose.
+    """
+    cleaned = str(text or "").strip()
+    if not cleaned:
+        return ""
+
+    if "<context" not in cleaned.lower() and re.search(r"</context\s*>", cleaned, flags=re.IGNORECASE):
+        return re.sub(r"</context\s*>", "<context>", cleaned, count=1, flags=re.IGNORECASE).strip()
+
+    if has_prompt_structure(cleaned):
+        return cleaned
+
+    repaired = _repair_labeled_prompt_sections(cleaned)
+    return repaired.strip() if repaired else cleaned
+
+
 def strip_prompt_scaffold_labels(text: str) -> str:
     cleaned = str(text or "")
     cleaned = re.sub(r"(?im)^\s*\*{0,2}\s*(task|constraints|output format)\s*\*{0,2}\s*:\s*", "", cleaned)
@@ -365,9 +438,13 @@ def call_flm(
         raise RuntimeError("Local LLM returned no usable text.")
 
     if is_prompt_mode(mode):
-        stripped = strip_prompt_scaffold_labels(text)
-        if stripped:
-            text = stripped
+        repaired = repair_prompt_scaffold(text)
+        if repaired != text:
+            text = repaired
+        elif not has_prompt_structure(text):
+            stripped = strip_prompt_scaffold_labels(text)
+            if stripped:
+                text = stripped
         out_norm = re.sub(r"\s+", " ", str(text).lower()).strip()
         in_norm = re.sub(r"\s+", " ", str(masked_input).lower()).strip()
         reuse_ratio = line_reuse_ratio(masked_input, text)
@@ -398,6 +475,9 @@ def call_flm(
                 log.debug("anti-echo retry failed, keeping original prompt text: %s", exc)
 
     if is_prompt_mode(mode):
+        repaired = repair_prompt_scaffold(text)
+        if repaired != text:
+            text = repaired
         overlap_ratio = word_overlap_ratio(masked_input, text)
         reuse_ratio = line_reuse_ratio(masked_input, text)
         near_copy = overlap_ratio >= 0.9 or reuse_ratio >= 0.9
@@ -429,6 +509,11 @@ def call_flm(
     if is_prompt_mode(mode) and is_weak_prompt_echo(masked_input, text):
         log.warning("prompt mode still weak after retries; using deterministic prompt shape")
         text = force_prompt_shape(masked_input)
+
+    if is_prompt_mode(mode):
+        repaired = repair_prompt_scaffold(text)
+        if repaired != text:
+            text = repaired
 
     if not text.strip():
         raise RuntimeError("Local LLM returned no usable text.")

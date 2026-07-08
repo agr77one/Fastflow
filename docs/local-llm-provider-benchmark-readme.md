@@ -43,8 +43,8 @@ Practical recommendation:
 
 - Keep `fastflowlm` as the production default.
 - Treat Lemonade `Qwen2.5-3B-Instruct-NPU` as the leading replacement candidate,
-  pending a second session and product implementation of the validated
-  `prompt_plan` repair/retry policy.
+  pending a second session. The deterministic repair path for its known
+  `prompt_plan` miss is now implemented and unit-tested in the app path.
 - Treat Lemonade `Qwen3-4B-Hybrid` as a short-task-only candidate, pending a
   long-context fix or a workload-specific route that excludes meetings.
 - Keep `ollama` wired as a portable CPU fallback.
@@ -89,6 +89,18 @@ So bigger did not reliably solve the contract problem. The best all-around
 candidate remains the 3B Lemonade NPU Qwen2.5 model because it also passed the
 8k meeting sweep. The best short prompt-only candidate is Qwen3 4B Hybrid with
 thinking disabled.
+
+## Ollama And The NPU
+
+The AMD Ollama playbook is useful for installing Ollama, checking AMD software
+updates, pulling a model, and calling the Ollama REST API at
+`http://localhost:11434`. It is not the same as the Lemonade NPU path used in
+the benchmark. On this machine, the observed Ollama runtime reported
+`100% CPU` in `ollama ps`; no Ollama NPU cell was available or measured.
+
+So the direct answer is: using only Ollama does not currently give Flowkey the
+AMD NPU acceleration measured here. The measured NPU alternatives are FLM and
+Lemonade.
 
 ## Machine Snapshot
 
@@ -158,6 +170,18 @@ New reproducible benchmark harness:
 - `tools/provider_bench.py`
 - `tests/test_provider_bench.py`
 
+Prompt-mode output repair is now implemented in:
+
+- `scripts/ffp_llm_client.py`
+- `tests/test_prompt_output_repair.py`
+
+The repair layer handles only deterministic benchmark-proven near-misses:
+
+- Qwen2.5 malformed prompt output with a stray `</context>` and no opening
+  `<context>`.
+- LM Studio label-style prompt output using `Task:`, `Context:`,
+  `Constraints:`, and `Output format:` instead of XML tags.
+
 Harness validation:
 
 ```powershell
@@ -169,6 +193,19 @@ Result:
 
 ```text
 9 passed
+```
+
+Current app-path prompt-repair validation:
+
+```powershell
+python -m pytest tests\test_grammar_fix.py tests\test_prompt_output_repair.py tests\test_provider_bench.py -q
+python -m py_compile scripts\ffp_llm_client.py scripts\grammar_fix.py tools\provider_bench.py
+```
+
+Result:
+
+```text
+53 passed
 ```
 
 Earlier full suite result from the provider-wiring POC:
@@ -418,9 +455,10 @@ LM Studio Qwen2.5 7B output-repair diagnostic:
 | Deterministic label-to-XML repair | 49/49 | 0 | unchanged | converts labeled sections to `<task>`, `<context>`, `<constraints>`, `<output_format>` |
 
 Interpretation: LM Studio Qwen2.5 7B remains an experimental route, not a
-production prompt replacement, until the output-repair layer is implemented and
-covered in the app path. If implemented, it becomes the most interesting fast
-non-NPU prompt candidate.
+production prompt replacement. The deterministic output-repair layer is now
+implemented and covered in the app path, so the remaining gate is route-level
+validation in a clean provider session. It is the most interesting fast non-NPU
+prompt candidate.
 
 ## July 8 Matrix A: Llama 3.2 Rows
 
@@ -1439,10 +1477,10 @@ Experimental:
 - `lmstudio qwen2.5-3b-instruct`: very fast local experimental route, but prompt
   output needs repair or a provider-specific prompt.
 - `lmstudio qwen2.5-7b-instruct`: good grammar and fastest repairable prompt
-  path so far, but still experimental until label-to-XML repair is implemented
-  in the app path.
+  path so far; label-to-XML repair is implemented and unit-tested, but the
+  provider route remains experimental until a clean app-level route run is done.
 - `lemonade Qwen2.5-3B-Instruct-NPU`: leading replacement candidate, pending
-  second session and prompt-plan hardening.
+  second session. The known prompt-plan repair is implemented and unit-tested.
 - `lemonade Qwen3-4B-Hybrid`: strong short prompt candidate with thinking
   disabled; exclude from meetings for now.
 - `lemonade Qwen2.5-7B-Instruct-NPU`: do not continue under the current prompt;
@@ -1462,10 +1500,10 @@ The full rerun plan is not complete. Still needed:
    routing is considered.
 3. Track or fix Qwen3 Hybrid's visible-output failure above roughly 2.1k prompt
    tokens before using it for meetings.
-4. Implement and test the validated deterministic repair plus strict-retry
-   fallback for the Qwen2.5 `prompt_plan` miss before production prompt routing.
-5. Implement and test label-to-XML output repair before considering LM Studio
-   7B as a fast prompt route.
+4. Exercise the implemented deterministic prompt repair in a clean provider
+   session before production prompt routing.
+5. Run an app-level LM Studio Qwen2.5 7B route validation now that label-to-XML
+   output repair is implemented.
 6. Decide whether to pull and test optional stretch
    `Meta-Llama-3.1-8B-Instruct-NPU`; it remains catalog-available but was not
    pulled in the July 8 batch.
@@ -1508,8 +1546,8 @@ Dropping FLM globally does not make sense yet.
 Lemonade `Qwen2.5-3B-Instruct-NPU` is now the first credible FLM replacement
 candidate. It passes the headline short-task quality threshold, beats FLM on
 calibrated 8k TTFT, and stays inside the memory guard. It is not production-ready
-until it passes the second-session reproducibility gate and the consistent
-`prompt_plan` repair/retry policy is implemented in the product path.
+until it passes the second-session reproducibility gate and the implemented
+`prompt_plan` repair path is exercised in a clean app-level provider run.
 
 Lemonade `Qwen3-4B-Hybrid` with thinking disabled is the best short prompt-mode
 score so far (`50/50`), but it is not a global replacement because direct API
@@ -1523,4 +1561,5 @@ it is not a Flowkey prompt-mode replacement.
 
 The correct near-term path is to keep FLM as default, keep the new provider
 wiring, and focus the next rerun on Lemonade Qwen2.5 reproducibility, Qwen3
-short-mode reproducibility, and a targeted fix for Qwen3 long-context output.
+short-mode reproducibility, LM Studio repair-route validation, and a targeted
+fix for Qwen3 long-context output.
