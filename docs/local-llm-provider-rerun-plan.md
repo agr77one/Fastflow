@@ -39,6 +39,9 @@ Completed in the July 8 batch:
   or test in this batch.
 - Next-day rerun helper added: `tools/run_next_day_provider_rerun.ps1`.
   Dry-run validation passed on July 8 with `-DryRun -AllowSameDay`.
+- Second-day artifact evaluator added: `tools/evaluate_second_day_provider_rerun.py`.
+  Unit tests cover pass/fail gates for prompt quality, long-context coverage, and
+  memory guard violations.
 
 Not complete yet:
 
@@ -68,6 +71,15 @@ Next batch:
 
 3. Keep LM Studio Qwen2.5 7B opt-in only unless a future second-day route test
    and product decision promotes it.
+4. Evaluate the new artifacts and use the output as the replace-FLM gate record:
+
+   ```powershell
+   python tools\evaluate_second_day_provider_rerun.py `
+     --qwen25-short data\benchmarks\second_day_lemonade_qwen2.5-3b-instruct-npu_<yyyymmdd>.json `
+     --qwen25-longctx data\benchmarks\second_day_lemonade_qwen2.5-3b-instruct-npu_longctx_calibrated_<yyyymmdd>.json `
+     --out data\benchmarks\second_day_lemonade_qwen2.5-3b-instruct-npu_gate_<yyyymmdd>.json `
+     --markdown-out data\benchmarks\second_day_lemonade_qwen2.5-3b-instruct-npu_gate_<yyyymmdd>.md
+   ```
 
 ## Why a rerun
 

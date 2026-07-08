@@ -1551,6 +1551,22 @@ methodology, writes `second_day_*` artifacts under `data/benchmarks`, unloads
 Lemonade, and restores the Flowkey hotkey unless `-NoRestoreFlowkey` is passed.
 It refuses live execution on July 8, 2026 or earlier.
 
+After the second-day run, evaluate the gate:
+
+```powershell
+python tools\evaluate_second_day_provider_rerun.py `
+  --qwen25-short data\benchmarks\second_day_lemonade_qwen2.5-3b-instruct-npu_<yyyymmdd>.json `
+  --qwen25-longctx data\benchmarks\second_day_lemonade_qwen2.5-3b-instruct-npu_longctx_calibrated_<yyyymmdd>.json `
+  --out data\benchmarks\second_day_lemonade_qwen2.5-3b-instruct-npu_gate_<yyyymmdd>.json `
+  --markdown-out data\benchmarks\second_day_lemonade_qwen2.5-3b-instruct-npu_gate_<yyyymmdd>.md
+```
+
+The evaluator returns exit code `0` only when Qwen2.5 clears the grammar,
+prompt, calibrated long-context, required-size, and memory-guard gates. If Qwen3
+short mode was rerun too, pass `--qwen3-short <artifact>` to include it in the
+report; Qwen3 still remains excluded from meetings until the long-context
+visible-output bug is fixed.
+
 ## Cleanup Commands
 
 Unload providers:
