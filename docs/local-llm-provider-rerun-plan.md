@@ -42,6 +42,9 @@ Completed in the July 8 batch:
 - Second-day artifact evaluator added: `tools/evaluate_second_day_provider_rerun.py`.
   Unit tests cover pass/fail gates for prompt quality, long-context coverage, and
   memory guard violations.
+- Lemonade app defaults and suggestions moved from `Qwen3-4B-Hybrid` to
+  `Qwen2.5-3B-Instruct-NPU` so meeting-style workloads are not steered toward
+  the Qwen3 long-context failure path.
 
 Not complete yet:
 

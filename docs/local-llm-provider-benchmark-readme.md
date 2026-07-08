@@ -152,7 +152,7 @@ Important provider defaults:
 | FLM | `http://127.0.0.1:52625` | `qwen3.5:4b` | none |
 | Ollama | `http://127.0.0.1:11434` | `llama3.2:3b` | none |
 | LM Studio | `http://127.0.0.1:1234` | `qwen2.5-3b-instruct` | none |
-| Lemonade | `http://127.0.0.1:13305/api/v1` | `Qwen3-4B-Hybrid` | bearer `lemonade` |
+| Lemonade | `http://127.0.0.1:13305/api/v1` | `Qwen2.5-3B-Instruct-NPU` | bearer `lemonade` |
 
 Key provider implementation files:
 
