@@ -158,6 +158,39 @@ def has_prompt_structure(text: str) -> bool:
     return any(tag in lowered for tag in ("<task>", "<context>", "<constraints>", "<output_format>"))
 
 
+def has_complete_prompt_structure(text: str) -> bool:
+    visible = re.sub(r"<think\b[^>]*>.*?</think>", "", str(text or ""), flags=re.IGNORECASE | re.DOTALL)
+    visible = re.sub(r"<think\b[^>]*>.*", "", visible, flags=re.IGNORECASE | re.DOTALL).strip()
+    if not visible or "```" in visible or re.search(r"</?think\b", visible, flags=re.IGNORECASE):
+        return False
+
+    lowered = visible.lower()
+    tags = ("task", "context", "constraints", "output_format")
+    positions: list[int] = []
+    cursor = 0
+    for tag in tags:
+        match = re.search(rf"<{tag}\b[^>]*>", lowered[cursor:], flags=re.IGNORECASE)
+        if not match:
+            return False
+        position = cursor + match.start()
+        positions.append(position)
+        cursor = position + len(match.group(0))
+    if positions != sorted(positions):
+        return False
+
+    for index, tag in enumerate(tags):
+        start_match = re.search(rf"<{tag}\b[^>]*>", visible[positions[index]:], flags=re.IGNORECASE)
+        if not start_match:
+            return False
+        start = positions[index] + start_match.end()
+        end = positions[index + 1] if index + 1 < len(tags) else len(visible)
+        section = visible[start:end]
+        section = re.sub(rf"</{tag}>", "", section, flags=re.IGNORECASE).strip()
+        if not section:
+            return False
+    return True
+
+
 def is_weak_prompt_echo(input_text: str, output_text: str) -> bool:
     """True when the model only grammar-fixed/reformatted or prefixed with 'Prompt:' instead of expanding."""
     out = str(output_text or "").strip()
@@ -445,13 +478,37 @@ def call_flm(
             stripped = strip_prompt_scaffold_labels(text)
             if stripped:
                 text = stripped
+        if not has_complete_prompt_structure(text):
+            strict_retry_prompt = (
+                "Rewrite into a Claude-ready prompt using exactly these XML opening sections in order: "
+                "<task>, <context>, <constraints>, <output_format>. "
+                "Each section must be non-empty. Do not use Markdown fences, bare labels, or meta-commentary. "
+                "Return only the rewritten prompt."
+            )
+            try:
+                retried, retry_model = call_api(
+                    model,
+                    strict_retry_prompt,
+                    masked_input,
+                    max(max_tokens, 240),
+                    remaining_timeout(),
+                )
+                if retried and retried.strip():
+                    text = repair_prompt_scaffold(retried)
+                    model_used = retry_model
+            except Exception as exc:
+                log.debug("strict prompt-contract retry failed, keeping repaired prompt text: %s", exc)
         out_norm = re.sub(r"\s+", " ", str(text).lower()).strip()
         in_norm = re.sub(r"\s+", " ", str(masked_input).lower()).strip()
         reuse_ratio = line_reuse_ratio(masked_input, text)
+        complete_prompt = has_complete_prompt_structure(text)
         near_verbatim = (
-            (out_norm == in_norm)
-            or (reuse_ratio >= 0.85)
-            or is_weak_prompt_echo(masked_input, text)
+            not complete_prompt
+            and (
+                (out_norm == in_norm)
+                or (reuse_ratio >= 0.85)
+                or is_weak_prompt_echo(masked_input, text)
+            )
         )
         if near_verbatim:
             anti_echo_prompt = (

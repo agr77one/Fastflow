@@ -103,3 +103,61 @@ def test_call_flm_repairs_labeled_prompt_without_retry() -> None:
     assert elapsed >= 0
     assert model_used == "test-model"
     assert strategy == "prompt_short"
+
+
+def test_call_flm_strict_retries_incomplete_prompt_structure() -> None:
+    calls: list[tuple[str, str, str, int, int]] = []
+
+    def fake_call_api(model: str, system_prompt: str, prompt: str, max_tokens: int, timeout: int) -> tuple[str, str]:
+        calls.append((model, system_prompt, prompt, max_tokens, timeout))
+        if len(calls) == 1:
+            return "<task>\nCreate a checklist.\n</task>", model
+        return (
+            "<task>\nCreate a release checklist.\n</task>\n"
+            "<context>\nThe release compares local LLM providers.\n</context>\n"
+            "<constraints>\nKeep steps auditable.\n</constraints>\n"
+            "<output_format>\nMarkdown checklist.\n</output_format>",
+            model,
+        )
+
+    text, _elapsed, _model_used, _strategy = llm.call_flm(
+        _runtime(),
+        "prompt",
+        "make release checklist for provider switch",
+        fake_call_api,
+        is_server_reachable=lambda: True,
+        start_server=lambda _visible: "",
+        usage_acc={},
+    )
+
+    _assert_prompt_tags(text)
+    assert len(calls) == 2
+    assert "exactly these XML opening sections" in calls[1][1]
+
+
+def test_call_flm_does_not_anti_echo_retry_complete_repaired_prompt() -> None:
+    calls: list[tuple[str, str, str, int, int]] = []
+    user_text = "create a rollout plan for switching providers with fallback and performance gates"
+
+    def fake_call_api(model: str, system_prompt: str, prompt: str, max_tokens: int, timeout: int) -> tuple[str, str]:
+        calls.append((model, system_prompt, prompt, max_tokens, timeout))
+        return (
+            "Task: create a rollout plan for switching providers with fallback and performance gates\n"
+            "Context: The team is changing local LLM providers.\n"
+            "Constraints: Include fallback steps and performance gates.\n"
+            "Output format: Markdown rollout checklist.",
+            model,
+        )
+
+    text, _elapsed, _model_used, _strategy = llm.call_flm(
+        _runtime(),
+        "prompt",
+        user_text,
+        fake_call_api,
+        is_server_reachable=lambda: True,
+        start_server=lambda _visible: "",
+        usage_acc={},
+    )
+
+    _assert_prompt_tags(text)
+    assert len(calls) == 1

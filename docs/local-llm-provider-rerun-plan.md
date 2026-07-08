@@ -29,20 +29,20 @@ Completed in the July 8 batch:
   repair recovers all timed prompt outputs.
 - Product prompt-output repair implemented and unit-tested for the Qwen2.5
   malformed-context case and LM Studio label-to-XML case.
+- Clean app-level prompt-repair validation completed:
+  Lemonade `Qwen2.5-3B-Instruct-NPU` `prompt_plan` passed `5/5`, and
+  LM Studio `qwen2.5-7b-instruct` passed `10/10` prompt cases through
+  `grammar_fix.call_flm`.
 
 Not complete yet:
 
 - Replace-FLM gate is not satisfied because the strongest candidate,
   Lemonade `Qwen2.5-3B-Instruct-NPU`, still needs a second-day rerun.
-- Lemonade Qwen2.5 3B also has a consistent `prompt_plan` miss. A recovery
-  policy is validated in the benchmark artifacts and implemented in the product
-  path, but still needs a clean app-level provider run.
 - Lemonade Qwen3 4B Hybrid passes short prompt mode but is disqualified for
   meetings until its visible-output failure above roughly 2.1k prompt tokens is
   fixed.
-- LM Studio Qwen2.5 7B remains experimental; its output repair is implemented
-  and unit-tested, but still needs route-level validation in a clean provider
-  session.
+- LM Studio Qwen2.5 7B remains experimental until a routing decision is made;
+  its prompt repair now passes app-level validation.
 - Optional stretch `Meta-Llama-3.1-8B-Instruct-NPU` is available in the
   catalog but was not pulled or tested in the July 8 batch.
 
@@ -52,12 +52,9 @@ Next batch:
    grammar/prompt and calibrated long-context.
 2. If short prompt routing is still under consideration, rerun Lemonade
    `Qwen3-4B-Hybrid` grammar/prompt with thinking disabled.
-3. Exercise deterministic repair plus strict retry fallback for the Qwen2.5
-   `prompt_plan` miss in a clean app-level provider session if production
-   prompt routing is pursued.
-4. Validate LM Studio Qwen2.5 7B through the app route now that label-to-XML
-   output repair is implemented.
-5. Decide whether the optional `Meta-Llama-3.1-8B-Instruct-NPU` stretch cell is
+3. Decide whether LM Studio Qwen2.5 7B should become a supported fast non-NPU
+   prompt route.
+4. Decide whether the optional `Meta-Llama-3.1-8B-Instruct-NPU` stretch cell is
    worth pulling, given the existing Llama prompt failures and RAM risk.
 
 ## Why a rerun
