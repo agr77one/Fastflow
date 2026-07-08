@@ -23,8 +23,8 @@ The corrected rerun shows:
   replacing FLM, and one prompt case failed consistently.
 - Lemonade `Qwen3-4B-Hybrid`, retested with thinking disabled, is now a strong
   short prompt-mode candidate: `40/40` grammar and `50/50` prompt XML. It is not
-  a global replacement because its 4k and 8k long-context runs returned empty
-  scored output.
+  a global replacement because its long-context route returns empty visible
+  output after roughly 2.1k prompt tokens.
 - Ollama `llama3.2:3b` is a useful small CPU fallback. It is faster than FLM for
   grammar, but it scored `0/50` on prompt XML.
 - The completed Llama Matrix A rows did not change the routing decision:
@@ -338,6 +338,7 @@ Still not run from the rerun plan:
 | `data/benchmarks/rerun_lemonade_qwen3-4b-hybrid_no-think_quick_20260708.json` | superseded by full run | passed quick gate and was promoted |
 | `data/benchmarks/rerun_lemonade_qwen3-4b-hybrid_no-think_20260708.json` | valid | full short-task Qwen3 Hybrid retest with thinking disabled |
 | `data/benchmarks/rerun_lemonade_qwen3-4b-hybrid_no-think_longctx_20260708.json` | valid with workload failure | 4k/8k returned empty scored output |
+| `data/benchmarks/rerun_lemonade_qwen3-4b-hybrid_no-think_context-threshold_probe_20260708.json` | diagnostic | direct API shows empty visible output starts between 2055 and 2255 prompt tokens |
 | `data/benchmarks/rerun_lemonade_qwen2.5-3b-instruct-npu_longctx_20260708.json` | anomaly | superseded; prompt-size calibration only reached about 6.1k tokens for the 8k label |
 | `data/benchmarks/rerun_lemonade_mistral-7b-instruct-v0.3-npu_quick_20260708.json` | quick-quality only | failed prompt gate, no full 5-run pass |
 | `data/benchmarks/rerun_lmstudio_qwen2.5-3b-instruct_20260708.json` | anomaly | memory guard fired during initial run |
@@ -457,10 +458,31 @@ Long-context gate:
   `2.831s` vs FLM `22.697s`.
 - Lemonade Qwen3 4B Hybrid did not clear the meetings workload despite good
   short-mode quality: the 4k and 8k cells returned empty scored output.
-- No context cap was hit at roughly 8k prompt tokens.
+- The Qwen3 Hybrid failure is not a harness scoring artifact. A direct Lemonade
+  API threshold probe returned visible content at `2055` prompt tokens and empty
+  `message.content` from `2255` prompt tokens onward while still reporting
+  nonzero completion tokens.
+- No context cap was hit for Lemonade Qwen2.5 3B NPU or FLM at roughly 8k
+  prompt tokens.
 - No memory guard fired for the calibrated long-context cells.
 - The replacement decision still remains gated on second-day reproducibility and
   the prompt-plan failure noted above.
+
+Qwen3 Hybrid threshold probe:
+
+| Target prompt tokens | Actual prompt tokens | Content length | Completion tokens | TTFT s | Result |
+|---:|---:|---:|---:|---:|---|
+| 1800 | 1856 | 447 | 80 | 5.330 | visible output |
+| 2000 | 2055 | 414 | 80 | 5.382 | visible output |
+| 2200 | 2255 | 0 | 80 | 5.366 | empty content |
+| 2400 | 2453 | 0 | 80 | 5.564 | empty content |
+| 2600 | 2652 | 0 | 80 | 5.175 | empty content |
+| 2800 | 2851 | 0 | 80 | 5.129 | empty content |
+| 3000 | 3052 | 0 | 80 | 7.799 | empty content |
+
+Interpretation: Qwen3 Hybrid remains eligible only for short prompt/grammar
+experiments until Lemonade or the model configuration fixes this visible-output
+failure.
 
 Ollama native timing metadata from the corrected run:
 
@@ -879,6 +901,83 @@ python tools\provider_bench.py `
   --out data\benchmarks\rerun_lemonade_qwen3-4b-hybrid_no-think_20260708.json
 ```
 
+### Lemonade Qwen3 Long-Context Threshold Probe
+
+```powershell
+& "$env:LOCALAPPDATA\lemonade_server\bin\lemonade.exe" load Qwen3-4B-Hybrid
+
+@'
+import json
+import sys
+import time
+import urllib.request
+from datetime import datetime, timezone
+from pathlib import Path
+
+sys.path.insert(0, str(Path('tools').resolve()))
+import provider_bench as pb
+
+url = 'http://127.0.0.1:13305/api/v1/chat/completions'
+headers = {'Content-Type': 'application/json', 'Authorization': 'Bearer lemonade'}
+results = []
+for target in [1800, 2000, 2200, 2400, 2600, 2800, 3000]:
+    prompt = pb.long_context_prompt(target)
+    body = {
+        'model': 'Qwen3-4B-Hybrid',
+        'messages': [
+            {'role': 'system', 'content': pb.LONGCTX_SYSTEM + '\n/no_think'},
+            {'role': 'user', 'content': prompt},
+        ],
+        'temperature': 0.1,
+        'max_tokens': 80,
+        'stream': False,
+        'chat_template_kwargs': {'enable_thinking': False},
+    }
+    started = time.perf_counter()
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(body).encode('utf-8'),
+        headers=headers,
+        method='POST',
+    )
+    with urllib.request.urlopen(req, timeout=300) as resp:
+        data = json.loads(resp.read().decode('utf-8'))
+    wall = time.perf_counter() - started
+    msg = data.get('choices', [{}])[0].get('message', {})
+    content = msg.get('content') or ''
+    usage = data.get('usage') or {}
+    results.append({
+        'target_prompt_tokens': target,
+        'wall_seconds': round(wall, 3),
+        'prompt_tokens': usage.get('prompt_tokens'),
+        'completion_tokens': usage.get('completion_tokens'),
+        'ttft_seconds': usage.get('prefill_duration_ttft'),
+        'content_length': len(content),
+        'content_head': content[:160],
+    })
+
+artifact = {
+    'schema_version': 1,
+    'created_at': datetime.now(timezone.utc).isoformat(),
+    'provider': 'lemonade',
+    'base_url': 'http://127.0.0.1:13305/api/v1',
+    'model': 'Qwen3-4B-Hybrid',
+    'quant': 'ryzenai-llm-hybrid',
+    'purpose': 'diagnose the long-context empty visible output threshold with thinking disabled',
+    'request': {
+        'temperature': 0.1,
+        'max_tokens': 80,
+        'stream': False,
+        'disable_thinking': True,
+        'system_prompt_suffix': '/no_think',
+    },
+    'results': results,
+}
+out = Path('data/benchmarks/rerun_lemonade_qwen3-4b-hybrid_no-think_context-threshold_probe_20260708.json')
+out.write_text(json.dumps(artifact, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
+'@ | python -
+```
+
 ## Original July 7 POC Artifacts
 
 These were useful exploration but not final methodology. Problems:
@@ -943,6 +1042,18 @@ be mixed into replacement gates as same-day data.
 | `data/benchmarks/qwen3-5-4b_1780503503.json` | `qwen3.5:4b` |
 | `data/benchmarks/gemma4-it-e4b_1780518283.json` | `gemma4-it:e4b` |
 | `data/benchmarks/nanbeige4-1-3b_1780520438.json` | `nanbeige4.1:3b` |
+| `data/benchmarks/quality_eval_1780693787.json` | June 5 quality probe for `gemma4-it:e4b`, `nanbeige4.1:3b`, and `qwen3.5:4b` |
+
+June 5 historical quality probe:
+
+| Model | Task | Quality score | Median seconds | Cases |
+|---|---|---:|---:|---:|
+| `gemma4-it:e4b` | grammar | 17/18 | 4.434 | 2 |
+| `gemma4-it:e4b` | prompt | 28/29 | 16.645 | 2 |
+| `nanbeige4.1:3b` | grammar | 9/18 | 13.354 | 2 |
+| `nanbeige4.1:3b` | prompt | 27/29 | 54.097 | 2 |
+| `qwen3.5:4b` | grammar | 17/18 | 4.725 | 2 |
+| `qwen3.5:4b` | prompt | 10/29 | 12.146 | 2 |
 
 FLM `qwen3.5:4b` historical context:
 
@@ -1128,8 +1239,8 @@ The full rerun plan is not complete. Still needed:
    production switch.
 2. Rerun Lemonade `Qwen3-4B-Hybrid` short mode on a second day if short prompt
    routing is considered.
-3. Investigate Qwen3 Hybrid long-context empty output at 4k/8k before using it
-   for meetings.
+3. Track or fix Qwen3 Hybrid's visible-output failure above roughly 2.1k prompt
+   tokens before using it for meetings.
 4. Add a targeted retry/output-repair check for the `prompt_plan` miss if
    Lemonade Qwen2.5 is going to route production prompt mode.
 5. Test provider-specific prompt templates or output repair for LM Studio 7B,
@@ -1179,8 +1290,9 @@ until it passes the second-session reproducibility gate and the consistent
 `prompt_plan` failure is addressed.
 
 Lemonade `Qwen3-4B-Hybrid` with thinking disabled is the best short prompt-mode
-score so far (`50/50`), but it is not a global replacement because 4k and 8k
-long-context runs returned empty scored output.
+score so far (`50/50`), but it is not a global replacement because direct API
+probing shows visible long-context output fails between `2055` and `2255` prompt
+tokens.
 
 The Llama Matrix A rerun answers the "why not just Llama 3.2 3B?" question:
 Llama 3.2 was small and sometimes fast, but every tested provider/model row
