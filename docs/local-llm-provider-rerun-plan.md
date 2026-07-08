@@ -45,6 +45,10 @@ Completed in the July 8 batch:
 - Lemonade app defaults and suggestions moved from `Qwen3-4B-Hybrid` to
   `Qwen2.5-3B-Instruct-NPU` so meeting-style workloads are not steered toward
   the Qwen3 long-context failure path.
+- Second-day preflight completed on 2026-07-08: Lemonade CLI `10.9.0` is
+  present and running with no model loaded; `Qwen2.5-3B-Instruct-NPU` and
+  `Qwen3-4B-Hybrid` are already downloaded; LM Studio CLI is present and its
+  server is stopped.
 
 Not complete yet:
 
