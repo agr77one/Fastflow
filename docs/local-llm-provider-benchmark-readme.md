@@ -20,7 +20,8 @@ The corrected rerun shows:
 - Lemonade `Qwen2.5-3B-Instruct-NPU` is the first serious replacement
   candidate: `40/40` grammar, `45/50` prompt XML, and much faster calibrated
   8k TTFT than the FLM incumbent. It still needs a second-day rerun before
-  replacing FLM, and one prompt case failed consistently.
+  replacing FLM. Its one consistent prompt miss is narrow: `prompt_plan`
+  is recoverable with deterministic tag repair or a stricter retry prompt.
 - Lemonade `Qwen3-4B-Hybrid`, retested with thinking disabled, is now a strong
   short prompt-mode candidate: `40/40` grammar and `50/50` prompt XML. It is not
   a global replacement because its long-context route returns empty visible
@@ -40,8 +41,8 @@ Practical recommendation:
 
 - Keep `fastflowlm` as the production default.
 - Treat Lemonade `Qwen2.5-3B-Instruct-NPU` as the leading replacement candidate,
-  pending a second session and a fix or retry policy for the consistently
-  failing `prompt_plan` case.
+  pending a second session and product implementation of the validated
+  `prompt_plan` repair/retry policy.
 - Treat Lemonade `Qwen3-4B-Hybrid` as a short-task-only candidate, pending a
   long-context fix or a workload-specific route that excludes meetings.
 - Keep `ollama` wired as a portable CPU fallback.
@@ -328,6 +329,7 @@ Still not run from the rerun plan:
 | `data/benchmarks/rerun_fastflowlm_qwen2.5-it-3b_turbo_20260708.json` | valid | Matrix A Qwen2.5 FLM cell |
 | `data/benchmarks/rerun_ollama_qwen2.5-3b_20260708.json` | valid | Matrix A Qwen2.5 Ollama CPU cell |
 | `data/benchmarks/rerun_lemonade_qwen2.5-3b-instruct-npu_20260708.json` | valid | Matrix A Qwen2.5 Lemonade NPU cell |
+| `data/benchmarks/rerun_lemonade_qwen2.5-3b-instruct-npu_prompt-plan-repair_20260708.json` | diagnostic | deterministic repair and strict retry both fix the `prompt_plan` miss |
 | `data/benchmarks/rerun_lemonade_qwen2.5-3b-instruct-npu_longctx_calibrated_20260708.json` | valid | calibrated Matrix C candidate long-context |
 | `data/benchmarks/rerun_fastflowlm_qwen3.5-4b_turbo_longctx_calibrated_20260708.json` | valid | calibrated Matrix C FLM incumbent long-context |
 | `data/benchmarks/rerun_fastflowlm_llama3.2-1b_turbo_20260708.json` | valid | Matrix A Llama 1B FLM cell |
@@ -386,10 +388,23 @@ Matrix A decision:
 - Lemonade Qwen2.5 3B NPU is the only tested Qwen2.5 runtime that passes the
   short-task replacement quality gate: grammar `40/40`, prompt `45/50`.
 - The one prompt failure is concentrated in `prompt_plan` (`0/5`, missing
-  `<context>`), so a production switch still needs either a second-session pass
-  or a targeted retry/repair rule.
+  `<context>`). The targeted diagnostic below shows both deterministic repair
+  and strict retry can recover it; production still needs the policy implemented
+  and covered by tests before routing prompt mode.
 - Ollama and LM Studio are faster or smaller in some short cases, but both fail
   prompt XML completely for this model family.
+
+Qwen2.5 `prompt_plan` repair/retry diagnostic:
+
+| Policy | Pass rate | Median wall s | Median TTFT s | Median completion tokens | Peak RSS MB | Notes |
+|---|---:|---:|---:|---:|---:|---|
+| Original prompt | 0/5 | 4.319 | 0.557 | 57 | 3808 | emitted `</context>` without opening `<context>` |
+| Deterministic repair | 5/5 | no extra model call | n/a | n/a | n/a | replace first stray `</context>` with `<context>` when no opening context tag exists |
+| Strict retry prompt | 5/5 | 11.009 | 0.545 | 173 | 3910 | works, but adds a second generation call |
+
+Interpretation: use deterministic repair first for this specific malformed-tag
+case, then fall back to model retry only if repair still fails the contract.
+This does not remove the second-day reproducibility gate.
 
 ## July 8 Matrix A: Llama 3.2 Rows
 
@@ -474,7 +489,7 @@ Long-context gate:
   prompt tokens.
 - No memory guard fired for the calibrated long-context cells.
 - The replacement decision still remains gated on second-day reproducibility and
-  the prompt-plan failure noted above.
+  product hardening of the validated `prompt_plan` repair/retry policy.
 
 Qwen3 Hybrid threshold probe:
 
@@ -794,6 +809,85 @@ python tools\provider_bench.py `
   --warmup 1 `
   --timeout 300 `
   --out data\benchmarks\rerun_lemonade_qwen2.5-3b-instruct-npu_20260708.json
+```
+
+### Qwen2.5 Prompt Plan Repair/Retry Diagnostic
+
+```powershell
+& "$env:LOCALAPPDATA\lemonade_server\bin\lemonade.exe" load Qwen2.5-3B-Instruct-NPU
+
+# The diagnostic reads the original Matrix A artifact, applies a deterministic
+# missing-context-tag repair to the stored failing outputs, then runs a stricter
+# 1-warmup/5-run retry prompt for the same prompt_plan case.
+@'
+import json, re, sys, time
+from pathlib import Path
+from types import SimpleNamespace
+
+sys.path.insert(0, str(Path('tools').resolve()))
+import provider_bench as pb
+
+source = json.loads(Path('data/benchmarks/rerun_lemonade_qwen2.5-3b-instruct-npu_20260708.json').read_text(encoding='utf-8'))
+source_case = next(c for c in source['cases'] if c['case_id'] == 'prompt_plan')
+
+def repair_missing_context_opening(text):
+    visible, _had, _unclosed = pb.strip_thinking(text)
+    if '<context' not in visible.lower() and re.search(r'</context\s*>', visible, flags=re.I):
+        return re.sub(r'</context\s*>', '<context>', visible, count=1, flags=re.I), True
+    return visible, False
+
+repair_runs = []
+for run in source_case['runs']:
+    if run.get('warmup'):
+        continue
+    repaired, changed = repair_missing_context_opening(run.get('raw_output') or '')
+    repair_runs.append({
+        'source_run_index': run.get('run_index'),
+        'changed': changed,
+        'repaired_output': repaired,
+        'repaired_contract': pb.check_prompt_contract(repaired),
+    })
+
+strict_system = pb.PROMPT_SYSTEM + (
+    '\n\nFailure correction for retry: the answer must contain the literal '
+    'opening tags <task>, <context>, <constraints>, and <output_format>, in '
+    'that exact order. Do not use a closing tag such as </context> unless the '
+    'matching opening tag has already appeared.'
+)
+case = pb.BenchCase('prompt_plan_strict_retry', 'prompt', strict_system, source_case['user_prompt'], source_case['max_tokens'])
+args = SimpleNamespace(
+    provider='lemonade',
+    base_url='http://127.0.0.1:13305/api/v1',
+    bearer='lemonade',
+    model='Qwen2.5-3B-Instruct-NPU',
+    temperature=0.1,
+    timeout=300,
+    disable_thinking=False,
+)
+runs = [pb.timed_run(args, case, i + 1, i == 0, pb.DEFAULT_PROCESS_NAMES['lemonade']) for i in range(6)]
+
+artifact = {
+    'schema_version': 1,
+    'created_at': time.strftime('%Y-%m-%dT%H:%M:%S'),
+    'provider': 'lemonade',
+    'model': 'Qwen2.5-3B-Instruct-NPU',
+    'purpose': 'diagnose targeted retry and deterministic repair for prompt_plan',
+    'source_artifact': 'data/benchmarks/rerun_lemonade_qwen2.5-3b-instruct-npu_20260708.json',
+    'deterministic_repair': {
+        'policy': 'If output has </context> but no <context opening tag, replace the first </context> with <context>.',
+        'runs': repair_runs,
+    },
+    'strict_retry': {
+        'system_prompt': strict_system,
+        'summary': pb.summarize_runs(runs),
+        'runs': runs,
+    },
+}
+Path('data/benchmarks/rerun_lemonade_qwen2.5-3b-instruct-npu_prompt-plan-repair_20260708.json').write_text(
+    json.dumps(artifact, indent=2, ensure_ascii=False) + '\n',
+    encoding='utf-8',
+)
+'@ | python -
 ```
 
 ### Matrix C Calibrated Long-Context
@@ -1233,7 +1327,7 @@ Production:
 
 - `prompt`: keep FLM default until Lemonade Qwen2.5 or Qwen3 passes a second-day
   rerun. Qwen3 has the cleaner short prompt score, but Qwen2.5 has the better
-  all-workload profile.
+  all-workload profile and a validated recovery path for its `prompt_plan` miss.
 - `meeting/long-context`: Lemonade Qwen2.5 is the leading candidate based on the
   calibrated 8k sweep, but do not switch production until the second-session gate
   is satisfied. Do not route meetings to Qwen3 Hybrid until the empty 4k/8k
@@ -1271,8 +1365,8 @@ The full rerun plan is not complete. Still needed:
    routing is considered.
 3. Track or fix Qwen3 Hybrid's visible-output failure above roughly 2.1k prompt
    tokens before using it for meetings.
-4. Add a targeted retry/output-repair check for the `prompt_plan` miss if
-   Lemonade Qwen2.5 is going to route production prompt mode.
+4. Implement and test the validated deterministic repair plus strict-retry
+   fallback for the Qwen2.5 `prompt_plan` miss before production prompt routing.
 5. Test provider-specific prompt templates or output repair for LM Studio 7B,
    because it is fast and near-miss heavy.
 6. Decide whether to pull and test optional stretch
@@ -1318,7 +1412,7 @@ Lemonade `Qwen2.5-3B-Instruct-NPU` is now the first credible FLM replacement
 candidate. It passes the headline short-task quality threshold, beats FLM on
 calibrated 8k TTFT, and stays inside the memory guard. It is not production-ready
 until it passes the second-session reproducibility gate and the consistent
-`prompt_plan` failure is addressed.
+`prompt_plan` repair/retry policy is implemented in the product path.
 
 Lemonade `Qwen3-4B-Hybrid` with thinking disabled is the best short prompt-mode
 score so far (`50/50`), but it is not a global replacement because direct API

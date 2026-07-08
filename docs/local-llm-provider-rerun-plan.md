@@ -23,13 +23,16 @@ Completed in the July 8 batch:
 - Qwen3 retest: short grammar/prompt retested with thinking disabled.
 - Matrix C calibrated long-context: FLM incumbent, Lemonade Qwen2.5 3B NPU,
   and Lemonade Qwen3 4B Hybrid tested.
+- Qwen2.5 `prompt_plan` miss diagnosed: deterministic repair and strict retry
+  both recover the failing case.
 
 Not complete yet:
 
 - Replace-FLM gate is not satisfied because the strongest candidate,
   Lemonade `Qwen2.5-3B-Instruct-NPU`, still needs a second-day rerun.
-- Lemonade Qwen2.5 3B also has a consistent `prompt_plan` miss that needs a
-  retry or output-repair policy before production prompt routing.
+- Lemonade Qwen2.5 3B also has a consistent `prompt_plan` miss. A recovery
+  policy is validated in the benchmark artifacts, but it is not implemented in
+  the product path yet.
 - Lemonade Qwen3 4B Hybrid passes short prompt mode but is disqualified for
   meetings until its visible-output failure above roughly 2.1k prompt tokens is
   fixed.
@@ -42,8 +45,8 @@ Next batch:
    grammar/prompt and calibrated long-context.
 2. If short prompt routing is still under consideration, rerun Lemonade
    `Qwen3-4B-Hybrid` grammar/prompt with thinking disabled.
-3. Test a targeted retry/output-repair policy for the Qwen2.5 `prompt_plan`
-   miss.
+3. Implement and test deterministic repair plus strict retry fallback for the
+   Qwen2.5 `prompt_plan` miss if production prompt routing is pursued.
 4. Decide whether the optional `Meta-Llama-3.1-8B-Instruct-NPU` stretch cell is
    worth pulling, given the existing Llama prompt failures and RAM risk.
 
