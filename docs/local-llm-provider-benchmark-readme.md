@@ -34,6 +34,8 @@ The corrected rerun shows:
   Hybrid substitution.
 - LM Studio is the fastest tested path for short local grammar work. Qwen2.5 3B
   and 7B both failed prompt XML completely under the current system prompt.
+  Qwen2.5 7B is repairable: deterministic label-to-XML conversion fixes all
+  `49/49` timed prompt near-misses without another model call.
 - Lemonade NPU works, but Qwen2.5 7B, Phi-4-mini, and Mistral 7B missed the
   quick-quality promotion gate under the current Flowkey prompts.
 
@@ -76,7 +78,8 @@ rerun confirmed this:
   prompt.
 - FLM/Ollama/LM Studio Llama 3.2 3B cells: all `0/50` prompt XML passes.
 - LM Studio Qwen2.5 3B: `0/50` prompt XML passes.
-- LM Studio Qwen2.5 7B: `0/49` timed prompt XML passes, but `49/49` near misses.
+- LM Studio Qwen2.5 7B: `0/49` timed prompt XML passes, but `49/49` near
+  misses and `49/49` pass after deterministic label-to-XML repair.
 - Lemonade Phi-4-mini NPU quick cell: `14/20` prompt XML passes.
 - Lemonade Qwen2.5 7B NPU quick cell: `0/20` prompt XML passes.
 - Lemonade Mistral 7B NPU quick cell: `0/20` prompt XML passes.
@@ -326,6 +329,7 @@ Still not run from the rerun plan:
 | `data/benchmarks/rerun_ollama_llama3.2-3b_20260708_memfix.json` | valid | corrected Ollama RSS tracking |
 | `data/benchmarks/rerun_lmstudio_qwen2.5-3b-instruct_20260708_cleanmem.json` | valid | clean-memory LM Studio 3B rerun |
 | `data/benchmarks/rerun_lmstudio_qwen2.5-7b-instruct_20260708.json` | valid with one timeout | 1 timed prompt run timed out |
+| `data/benchmarks/rerun_lmstudio_qwen2.5-7b-instruct_output-repair_20260708.json` | diagnostic | deterministic label-to-XML repair passes 49/49 timed prompt near-misses |
 | `data/benchmarks/rerun_fastflowlm_qwen2.5-it-3b_turbo_20260708.json` | valid | Matrix A Qwen2.5 FLM cell |
 | `data/benchmarks/rerun_ollama_qwen2.5-3b_20260708.json` | valid | Matrix A Qwen2.5 Ollama CPU cell |
 | `data/benchmarks/rerun_lemonade_qwen2.5-3b-instruct-npu_20260708.json` | valid | Matrix A Qwen2.5 Lemonade NPU cell |
@@ -405,6 +409,18 @@ Qwen2.5 `prompt_plan` repair/retry diagnostic:
 Interpretation: use deterministic repair first for this specific malformed-tag
 case, then fall back to model retry only if repair still fails the contract.
 This does not remove the second-day reproducibility gate.
+
+LM Studio Qwen2.5 7B output-repair diagnostic:
+
+| Policy | Pass rate | Extra model calls | Source median wall s | Notes |
+|---|---:|---:|---:|---|
+| Original prompt | 0/49 | 0 | 7.026 | used `Task:`, `Context:`, `Constraints:`, `Output format:` labels instead of XML tags |
+| Deterministic label-to-XML repair | 49/49 | 0 | unchanged | converts labeled sections to `<task>`, `<context>`, `<constraints>`, `<output_format>` |
+
+Interpretation: LM Studio Qwen2.5 7B remains an experimental route, not a
+production prompt replacement, until the output-repair layer is implemented and
+covered in the app path. If implemented, it becomes the most interesting fast
+non-NPU prompt candidate.
 
 ## July 8 Matrix A: Llama 3.2 Rows
 
@@ -582,6 +598,86 @@ python tools\provider_bench.py `
   --warmup 1 `
   --timeout 240 `
   --out data\benchmarks\rerun_lmstudio_qwen2.5-7b-instruct_20260708.json
+```
+
+### LM Studio 7B Output-Repair Diagnostic
+
+```powershell
+# Reads the original LM Studio 7B artifact and converts labeled near-miss
+# sections into the required XML tags. No model call is made.
+@'
+import json, re, sys, time
+from pathlib import Path
+
+sys.path.insert(0, str(Path('tools').resolve()))
+import provider_bench as pb
+
+src = Path('data/benchmarks/rerun_lmstudio_qwen2.5-7b-instruct_20260708.json')
+out = Path('data/benchmarks/rerun_lmstudio_qwen2.5-7b-instruct_output-repair_20260708.json')
+data = json.loads(src.read_text(encoding='utf-8'))
+
+def repair_labeled_prompt(text):
+    visible, _had, _unclosed = pb.strip_thinking(text)
+    specs = [
+        ('task', r'(?:\*\*)?task(?:\*\*)?\s*:\s*'),
+        ('context', r'(?:\*\*)?context(?:\*\*)?\s*:\s*'),
+        ('constraints', r'(?:\*\*)?constraints(?:\*\*)?\s*:\s*'),
+        ('output_format', r'(?:\*\*)?output\s*format(?:\*\*)?\s*:\s*'),
+    ]
+    matches = []
+    cursor = 0
+    for tag, pattern in specs:
+        match = re.search(pattern, visible[cursor:], flags=re.I)
+        if not match:
+            return visible
+        start = cursor + match.start()
+        end = cursor + match.end()
+        matches.append((tag, start, end))
+        cursor = end
+    pieces = {}
+    for index, (tag, _start, end) in enumerate(matches):
+        next_start = matches[index + 1][1] if index + 1 < len(matches) else len(visible)
+        value = visible[end:next_start].strip()
+        if tag == 'output_format' and re.fullmatch(r'```[a-zA-Z0-9_-]*\s*```', value, flags=re.S):
+            lang = (re.match(r'```([a-zA-Z0-9_-]*)', value).group(1) or 'fenced')
+            value = f'{lang} fenced code block'
+        else:
+            value = re.sub(r'```[a-zA-Z0-9_-]*', '', value).replace('```', '').strip() or value
+        pieces[tag] = value
+    return '\n'.join(f'<{tag}>\n{pieces[tag]}\n</{tag}>' for tag, _start, _end in matches)
+
+runs = []
+for case in data['cases']:
+    if case['task'] != 'prompt':
+        continue
+    for run in case['runs']:
+        if run.get('warmup') or run.get('error'):
+            continue
+        repaired = repair_labeled_prompt(run.get('raw_output') or '')
+        runs.append({
+            'case_id': case['case_id'],
+            'source_run_index': run.get('run_index'),
+            'source_contract': run.get('contract'),
+            'repaired_output': repaired,
+            'repaired_contract': pb.check_prompt_contract(repaired),
+        })
+
+artifact = {
+    'schema_version': 1,
+    'created_at': time.strftime('%Y-%m-%dT%H:%M:%S'),
+    'provider': 'lmstudio',
+    'model': data.get('model'),
+    'purpose': 'diagnose deterministic output repair for LM Studio Qwen2.5 7B prompt near-misses',
+    'source_artifact': str(src),
+    'summary': {
+        'timed_runs': len(runs),
+        'pass_count_after_repair': sum(1 for run in runs if run['repaired_contract'].get('pass')),
+        'extra_model_calls': 0,
+    },
+    'runs': runs,
+}
+out.write_text(json.dumps(artifact, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
+'@ | python -
 ```
 
 ### FLM Incumbent
@@ -1257,7 +1353,7 @@ Fastest prompt medians with passing or near-passing XML quality:
 2. Lemonade Qwen3 4B Hybrid: `14.538s`, prompt quality `50/50`.
 3. FLM Qwen3.5 4B: `16.661s`, prompt quality `49/50`.
 4. LM Studio Qwen2.5 7B: `7.026s`, prompt quality `0/49`, but `49/49`
-   near-misses that are likely repairable.
+   near-misses and `49/49` pass after deterministic repair.
 
 Fast but not contract-safe:
 
@@ -1342,8 +1438,9 @@ Experimental:
   the current Flowkey prompt; every Llama Matrix A prompt row was `0/50`.
 - `lmstudio qwen2.5-3b-instruct`: very fast local experimental route, but prompt
   output needs repair or a provider-specific prompt.
-- `lmstudio qwen2.5-7b-instruct`: good grammar, prompt near-miss, worth testing
-  with a stricter system prompt or output repair.
+- `lmstudio qwen2.5-7b-instruct`: good grammar and fastest repairable prompt
+  path so far, but still experimental until label-to-XML repair is implemented
+  in the app path.
 - `lemonade Qwen2.5-3B-Instruct-NPU`: leading replacement candidate, pending
   second session and prompt-plan hardening.
 - `lemonade Qwen3-4B-Hybrid`: strong short prompt candidate with thinking
@@ -1367,8 +1464,8 @@ The full rerun plan is not complete. Still needed:
    tokens before using it for meetings.
 4. Implement and test the validated deterministic repair plus strict-retry
    fallback for the Qwen2.5 `prompt_plan` miss before production prompt routing.
-5. Test provider-specific prompt templates or output repair for LM Studio 7B,
-   because it is fast and near-miss heavy.
+5. Implement and test label-to-XML output repair before considering LM Studio
+   7B as a fast prompt route.
 6. Decide whether to pull and test optional stretch
    `Meta-Llama-3.1-8B-Instruct-NPU`; it remains catalog-available but was not
    pulled in the July 8 batch.

@@ -25,6 +25,8 @@ Completed in the July 8 batch:
   and Lemonade Qwen3 4B Hybrid tested.
 - Qwen2.5 `prompt_plan` miss diagnosed: deterministic repair and strict retry
   both recover the failing case.
+- LM Studio Qwen2.5 7B prompt near-misses diagnosed: deterministic label-to-XML
+  repair recovers all timed prompt outputs.
 
 Not complete yet:
 
@@ -36,6 +38,8 @@ Not complete yet:
 - Lemonade Qwen3 4B Hybrid passes short prompt mode but is disqualified for
   meetings until its visible-output failure above roughly 2.1k prompt tokens is
   fixed.
+- LM Studio Qwen2.5 7B remains experimental; its output repair is validated in
+  artifacts but not implemented in the product path.
 - Optional stretch `Meta-Llama-3.1-8B-Instruct-NPU` is available in the
   catalog but was not pulled or tested in the July 8 batch.
 
@@ -47,7 +51,9 @@ Next batch:
    `Qwen3-4B-Hybrid` grammar/prompt with thinking disabled.
 3. Implement and test deterministic repair plus strict retry fallback for the
    Qwen2.5 `prompt_plan` miss if production prompt routing is pursued.
-4. Decide whether the optional `Meta-Llama-3.1-8B-Instruct-NPU` stretch cell is
+4. Implement and test label-to-XML output repair before considering LM Studio
+   Qwen2.5 7B as a fast prompt route.
+5. Decide whether the optional `Meta-Llama-3.1-8B-Instruct-NPU` stretch cell is
    worth pulling, given the existing Llama prompt failures and RAM risk.
 
 ## Why a rerun
