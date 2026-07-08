@@ -205,7 +205,7 @@ def check_grammar_contract(input_text: str, output_text: str, *, case_id: str) -
 
 
 def long_context_prompt(target_tokens: int) -> str:
-    target_chars = max(500, int(target_tokens) * 4)
+    target_chars = max(500, int(target_tokens * 5.25))
     repeated = (FILLER * ((target_chars // len(FILLER)) + 2))[:target_chars]
     return (
         "Meeting transcript follows. Produce the requested digest.\n\n"
