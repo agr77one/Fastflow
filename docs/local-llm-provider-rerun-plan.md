@@ -37,6 +37,8 @@ Completed in the July 8 batch:
   opt-in fast prompt route, not as a default or automatic replacement.
 - Optional `Meta-Llama-3.1-8B-Instruct-NPU` stretch decision made: do not pull
   or test in this batch.
+- Next-day rerun helper added: `tools/run_next_day_provider_rerun.ps1`.
+  Dry-run validation passed on July 8 with `-DryRun -AllowSameDay`.
 
 Not complete yet:
 
@@ -51,9 +53,19 @@ Not complete yet:
 Next batch:
 
 1. On the next calendar day, rerun Lemonade `Qwen2.5-3B-Instruct-NPU`
-   grammar/prompt and calibrated long-context.
+   grammar/prompt and calibrated long-context:
+
+   ```powershell
+   pwsh -NoProfile -ExecutionPolicy Bypass -File tools\run_next_day_provider_rerun.ps1
+   ```
+
 2. If short prompt routing is still under consideration, rerun Lemonade
-   `Qwen3-4B-Hybrid` grammar/prompt with thinking disabled.
+   `Qwen3-4B-Hybrid` grammar/prompt with thinking disabled:
+
+   ```powershell
+   pwsh -NoProfile -ExecutionPolicy Bypass -File tools\run_next_day_provider_rerun.ps1 -RunQwen3Short
+   ```
+
 3. Keep LM Studio Qwen2.5 7B opt-in only unless a future second-day route test
    and product decision promotes it.
 

@@ -1532,6 +1532,25 @@ The full rerun plan is not complete. Still needed:
 4. Keep LM Studio Qwen2.5 7B opt-in only unless a future second-day route test
    and product decision promotes it.
 
+Second-day helper:
+
+```powershell
+# Qwen2.5 second-day gate: grammar/prompt plus calibrated long-context.
+pwsh -NoProfile -ExecutionPolicy Bypass -File tools\run_next_day_provider_rerun.ps1
+
+# Include Qwen3 Hybrid short rerun if still considering short prompt routing.
+pwsh -NoProfile -ExecutionPolicy Bypass -File tools\run_next_day_provider_rerun.ps1 -RunQwen3Short
+
+# Same-day command validation only; this refuses to perform a live same-day run.
+pwsh -NoProfile -ExecutionPolicy Bypass -File tools\run_next_day_provider_rerun.ps1 -DryRun -AllowSameDay
+```
+
+The helper stops Flowkey/FLM and other provider contaminants, unloads LM Studio,
+loads Lemonade, runs `tools/provider_bench.py` with the same 1-warmup/5-run
+methodology, writes `second_day_*` artifacts under `data/benchmarks`, unloads
+Lemonade, and restores the Flowkey hotkey unless `-NoRestoreFlowkey` is passed.
+It refuses live execution on July 8, 2026 or earlier.
+
 ## Cleanup Commands
 
 Unload providers:
