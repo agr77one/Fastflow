@@ -53,6 +53,8 @@ Completed in the July 8 batch:
   `tools/check_second_day_provider_preflight.ps1`.
 - Date-stamped gate evaluation wrapper added:
   `tools/evaluate_second_day_provider_gate.ps1`.
+- Single-command second-day batch wrapper added:
+  `tools/run_second_day_provider_batch.ps1`.
 
 Not complete yet:
 
@@ -65,6 +67,14 @@ Not complete yet:
   non-default prompt route after app-level repair validation.
 
 Next batch:
+
+For the normal run, use the single-command wrapper:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File tools\run_second_day_provider_batch.ps1 -RunQwen3Short
+```
+
+Use the step-by-step commands below if a failure needs to be isolated.
 
 0. Before the live run, repeat the non-benchmark preflight:
 
