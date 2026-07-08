@@ -51,6 +51,8 @@ Completed in the July 8 batch:
   server is stopped.
 - Repeatable preflight helper added:
   `tools/check_second_day_provider_preflight.ps1`.
+- Date-stamped gate evaluation wrapper added:
+  `tools/evaluate_second_day_provider_gate.ps1`.
 
 Not complete yet:
 
@@ -89,12 +91,10 @@ Next batch:
 4. Evaluate the new artifacts and use the output as the replace-FLM gate record:
 
    ```powershell
-   python tools\evaluate_second_day_provider_rerun.py `
-     --qwen25-short data\benchmarks\second_day_lemonade_qwen2.5-3b-instruct-npu_<yyyymmdd>.json `
-     --qwen25-longctx data\benchmarks\second_day_lemonade_qwen2.5-3b-instruct-npu_longctx_calibrated_<yyyymmdd>.json `
-     --out data\benchmarks\second_day_lemonade_qwen2.5-3b-instruct-npu_gate_<yyyymmdd>.json `
-     --markdown-out data\benchmarks\second_day_lemonade_qwen2.5-3b-instruct-npu_gate_<yyyymmdd>.md
+   pwsh -NoProfile -ExecutionPolicy Bypass -File tools\evaluate_second_day_provider_gate.ps1
    ```
+
+   Add `-RunQwen3Short` if the optional Qwen3 short rerun was included.
 
 ## Why a rerun
 
