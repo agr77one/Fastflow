@@ -28,7 +28,9 @@ The corrected rerun shows:
 - Ollama `llama3.2:3b` is a useful small CPU fallback. It is faster than FLM for
   grammar, but it scored `0/50` on prompt XML.
 - The completed Llama Matrix A rows did not change the routing decision:
-  every Llama 3.2 1B/3B provider cell scored `0/50` on prompt XML.
+  every Llama 3.2 1B/3B provider cell scored `0/50` on prompt XML, including
+  the exact Lemonade `Llama-3.2-1B-Instruct-NPU` cell added after the initial
+  Hybrid substitution.
 - LM Studio is the fastest tested path for short local grammar work. Qwen2.5 3B
   and 7B both failed prompt XML completely under the current system prompt.
 - Lemonade NPU works, but Qwen2.5 7B, Phi-4-mini, and Mistral 7B missed the
@@ -69,7 +71,8 @@ rerun confirmed this:
 - Lemonade Qwen3 4B Hybrid, thinking disabled: `50/50` prompt XML passes.
 - Ollama `llama3.2:3b`: `0/50` prompt XML passes.
 - FLM/Ollama/LM Studio/Lemonade Llama 3.2 1B cells: all `0/50` prompt XML
-  passes.
+  passes. The exact Lemonade NPU cell scored `25/40` grammar and `0/50`
+  prompt.
 - FLM/Ollama/LM Studio Llama 3.2 3B cells: all `0/50` prompt XML passes.
 - LM Studio Qwen2.5 3B: `0/50` prompt XML passes.
 - LM Studio Qwen2.5 7B: `0/49` timed prompt XML passes, but `49/49` near misses.
@@ -300,7 +303,8 @@ Lemonade downloaded before/at rerun:
 | `Qwen2.5-3B-Instruct-NPU` | 4.10 | Matrix A and calibrated long-context tested |
 | `Qwen2.5-7B-Instruct-NPU` | 8.22 | July 8 quick quality tested; failed prompt gate |
 | `Phi-4-mini-instruct-NPU` | 5.21 | July 8 quick quality tested; failed quick gate |
-| `Llama-3.2-1B-Instruct-Hybrid` | 1.89 | full Matrix A substitution tested; exact `-NPU` variant was not exposed |
+| `Llama-3.2-1B-Instruct-NPU` | 1.96 | exact Matrix A NPU cell tested after catalog re-check |
+| `Llama-3.2-1B-Instruct-Hybrid` | 1.89 | full Matrix A substitution tested before exact `-NPU` cell was pulled |
 | `Qwen3-4B-Hybrid` | 5.17 | retested with thinking disabled; short mode passed, long-context failed |
 | `Mistral-7B-Instruct-v0.3-NPU` | 8.09 | July 8 quick quality tested; failed prompt gate |
 | `CodeLlama-7b-Instruct-hf-NPU` | 7.03 | downloaded, excluded from headline |
@@ -309,10 +313,9 @@ Lemonade downloaded before/at rerun:
 
 Still not run from the rerun plan:
 
-- exact Lemonade `Llama-3.2-1B-Instruct-NPU`; only `Llama-3.2-1B-Instruct-Hybrid`
-  was exposed by the installed Lemonade catalog
 - Matrix A Lemonade Llama 3B; the rerun plan correctly lists no Lemonade 3B cell
 - second-day reproducibility for Lemonade `Qwen2.5-3B-Instruct-NPU`
+- optional Matrix B stretch `Meta-Llama-3.1-8B-Instruct-NPU`
 
 ## July 8 Corrected Rerun Artifacts
 
@@ -330,7 +333,8 @@ Still not run from the rerun plan:
 | `data/benchmarks/rerun_fastflowlm_llama3.2-1b_turbo_20260708.json` | valid | Matrix A Llama 1B FLM cell |
 | `data/benchmarks/rerun_ollama_llama3.2-1b_20260708.json` | valid | Matrix A Llama 1B Ollama CPU cell |
 | `data/benchmarks/rerun_lmstudio_llama-3.2-1b-instruct_20260708.json` | valid | Matrix A Llama 1B LM Studio cell |
-| `data/benchmarks/rerun_lemonade_llama3.2-1b-instruct-hybrid_20260708.json` | valid with model substitution | Lemonade Hybrid 1B substituted for unavailable `-NPU` cell |
+| `data/benchmarks/rerun_lemonade_llama3.2-1b-instruct-hybrid_20260708.json` | valid with model substitution | Lemonade Hybrid 1B substitution run before exact `-NPU` cell was pulled |
+| `data/benchmarks/rerun_lemonade_llama3.2-1b-instruct-npu_20260708.json` | valid | exact Lemonade Llama 1B NPU cell; added after catalog re-check |
 | `data/benchmarks/rerun_fastflowlm_llama3.2-3b_turbo_20260708.json` | valid | Matrix A Llama 3B FLM cell |
 | `data/benchmarks/rerun_lmstudio_llama-3.2-3b-instruct_20260708.json` | valid | Matrix A Llama 3B LM Studio cell |
 | `data/benchmarks/rerun_lemonade_qwen2.5-7b-instruct-npu_quick_20260708.json` | quick-quality only | failed prompt gate, no full 5-run pass |
@@ -396,9 +400,9 @@ Qwen2.5 row.
 
 ### Llama 3.2 1B
 
-Lemonade did not expose the exact `Llama-3.2-1B-Instruct-NPU` name from the
-plan. The installed catalog exposed `Llama-3.2-1B-Instruct-Hybrid`, so that is
-reported as a substitution rather than a pure-NPU cell.
+The first Llama 1B Lemonade pass used `Llama-3.2-1B-Instruct-Hybrid` as a
+substitution. A later catalog re-check exposed `Llama-3.2-1B-Instruct-NPU`, so
+the exact NPU cell was pulled and tested too.
 
 | Provider | Model | Runtime | Task | Pass rate | Median s | Min s | Max s | Median s/token | Median completion tokens | TTFT median | Peak RSS MB | Min available MB | Memory guard |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
@@ -408,6 +412,8 @@ reported as a substitution rather than a pure-NPU cell.
 | Ollama | `llama3.2:1b` | CPU | prompt | 0/50 | 5.906 | 3.842 | 30.586 | 0.0513 | 112.0 | n/a | 1986 | 11269 | no |
 | LM Studio | `llama-3.2-1b-instruct` | Vulkan/iGPU | grammar | 30/40 | 0.938 | 0.809 | 1.721 | 0.0568 | 16.5 | n/a | 1870 | 12363 | no |
 | LM Studio | `llama-3.2-1b-instruct` | Vulkan/iGPU | prompt | 0/50 | 3.723 | 0.756 | 14.912 | 0.0259 | 149.0 | n/a | 2350 | 11043 | no |
+| Lemonade | `Llama-3.2-1B-Instruct-NPU` | NPU | grammar | 25/40 | 1.227 | 0.959 | 1.562 | 0.0589 | 21.0 | 0.198 | 2614 | 10427 | no |
+| Lemonade | `Llama-3.2-1B-Instruct-NPU` | NPU | prompt | 0/50 | 3.640 | 2.794 | 9.063 | 0.0274 | 129.0 | 0.235 | 2649 | 10547 | no |
 | Lemonade | `Llama-3.2-1B-Instruct-Hybrid` | NPU+iGPU hybrid | grammar | 0/40 | 5.049 | 1.685 | 5.551 | 0.0320 | 160.0 | 0.236 | 2272 | 10356 | no |
 | Lemonade | `Llama-3.2-1B-Instruct-Hybrid` | NPU+iGPU hybrid | prompt | 0/50 | 7.462 | 3.905 | 26.092 | 0.0372 | 204.0 | 0.257 | 2278 | 10734 | no |
 
@@ -429,6 +435,8 @@ Llama Matrix A decision:
 
 - No Llama 3.2 cell is eligible for prompt-mode routing; every prompt row scored
   `0/50`.
+- The exact Lemonade Llama 1B NPU cell is faster than the Hybrid substitution,
+  but still fails prompt XML completely and misses the grammar quality gate.
 - LM Studio Llama 1B was the fastest grammar row in the whole rerun (`0.938s`)
   but grammar quality was only `30/40`.
 - FLM Llama 3B had high RSS for a 3B model and left only about `3.3 GB`
@@ -710,6 +718,24 @@ python tools\provider_bench.py `
   --out data\benchmarks\rerun_lemonade_llama3.2-1b-instruct-hybrid_20260708.json
 
 & "$env:LOCALAPPDATA\lemonade_server\bin\lemonade.exe" unload Llama-3.2-1B-Instruct-Hybrid
+
+# Lemonade Llama 1B exact NPU cell
+& "$env:LOCALAPPDATA\lemonade_server\bin\lemonade.exe" pull Llama-3.2-1B-Instruct-NPU
+& "$env:LOCALAPPDATA\lemonade_server\bin\lemonade.exe" load Llama-3.2-1B-Instruct-NPU
+
+python tools\provider_bench.py `
+  --provider lemonade `
+  --base-url http://127.0.0.1:13305/api/v1 `
+  --bearer lemonade `
+  --model Llama-3.2-1B-Instruct-NPU `
+  --quant ryzenai-llm-npu `
+  --tasks grammar,prompt `
+  --runs 5 `
+  --warmup 1 `
+  --timeout 300 `
+  --out data\benchmarks\rerun_lemonade_llama3.2-1b-instruct-npu_20260708.json
+
+& "$env:LOCALAPPDATA\lemonade_server\bin\lemonade.exe" unload Llama-3.2-1B-Instruct-NPU
 ```
 
 ### Matrix A FLM Qwen2.5 3B
@@ -1117,18 +1143,19 @@ Sources:
 Fastest grammar medians:
 
 1. LM Studio Llama 3.2 1B: `0.938s`, but grammar quality was `30/40`.
-2. LM Studio Llama 3.2 3B: `1.260s`, grammar quality `35/40`.
-3. FLM Llama 3.2 1B: `1.338s`, grammar quality `36/40`.
-4. LM Studio Qwen2.5 3B: `1.427s`, but grammar quality was `35/40`.
-5. LM Studio Qwen2.5 7B: `1.493s`, grammar quality `40/40`.
-6. Ollama Llama 3.2 1B: `1.634s`, grammar quality `29/40`.
-7. Ollama Qwen2.5 3B: `1.743s`, grammar quality `35/40`.
-8. Lemonade Qwen2.5 3B NPU: `1.799s`, grammar quality `40/40`.
-9. Ollama Llama 3.2 3B: `2.065s`, grammar quality `35/40`.
-10. FLM Qwen2.5 3B: `2.441s`, grammar quality `40/40`.
-11. FLM Llama 3.2 3B: `2.972s`, grammar quality `35/40`.
-12. FLM Qwen3.5 4B: `3.251s`, grammar quality `40/40`.
-13. Lemonade Qwen3 4B Hybrid: `3.580s`, grammar quality `40/40`.
+2. Lemonade Llama 3.2 1B NPU: `1.227s`, grammar quality `25/40`.
+3. LM Studio Llama 3.2 3B: `1.260s`, grammar quality `35/40`.
+4. FLM Llama 3.2 1B: `1.338s`, grammar quality `36/40`.
+5. LM Studio Qwen2.5 3B: `1.427s`, but grammar quality was `35/40`.
+6. LM Studio Qwen2.5 7B: `1.493s`, grammar quality `40/40`.
+7. Ollama Llama 3.2 1B: `1.634s`, grammar quality `29/40`.
+8. Ollama Qwen2.5 3B: `1.743s`, grammar quality `35/40`.
+9. Lemonade Qwen2.5 3B NPU: `1.799s`, grammar quality `40/40`.
+10. Ollama Llama 3.2 3B: `2.065s`, grammar quality `35/40`.
+11. FLM Qwen2.5 3B: `2.441s`, grammar quality `40/40`.
+12. FLM Llama 3.2 3B: `2.972s`, grammar quality `35/40`.
+13. FLM Qwen3.5 4B: `3.251s`, grammar quality `40/40`.
+14. Lemonade Qwen3 4B Hybrid: `3.580s`, grammar quality `40/40`.
 
 Fastest prompt medians with passing or near-passing XML quality:
 
@@ -1143,6 +1170,8 @@ Fast but not contract-safe:
 - LM Studio Qwen2.5 3B prompt median was `3.157s`, but prompt quality was
   `0/50`.
 - FLM Llama 3.2 1B prompt median was `2.930s`, but prompt quality was `0/50`.
+- Lemonade Llama 3.2 1B NPU prompt median was `3.640s`, but prompt quality was
+  `0/50`.
 - LM Studio Llama 3.2 1B prompt median was `3.723s`, but prompt quality was
   `0/50`.
 - Ollama Qwen2.5 3B prompt median was `5.290s`, but prompt quality was `0/50`.
@@ -1176,6 +1205,7 @@ NPU memory:
 - FLM Llama 3.2 3B peaked around 10.28 GB RSS and available RAM dropped near
   `3.3 GB`, which makes it a poor fit despite no formal memory-guard violation.
 - Lemonade Llama 3.2 1B Hybrid peaked around 2.28 GB RSS, but quality failed.
+- Lemonade Llama 3.2 1B NPU peaked around 2.65 GB RSS, but quality failed.
 - Lemonade Qwen2.5 7B NPU quick peaked around 6.66 GB RSS.
 - Lemonade Phi-4-mini NPU quick peaked around 5.78 GB RSS.
 - Lemonade Mistral 7B NPU quick peaked around 6.23 GB RSS.
@@ -1245,8 +1275,9 @@ The full rerun plan is not complete. Still needed:
    Lemonade Qwen2.5 is going to route production prompt mode.
 5. Test provider-specific prompt templates or output repair for LM Studio 7B,
    because it is fast and near-miss heavy.
-6. If exact catalog parity is required, re-check whether Lemonade later exposes
-   `Llama-3.2-1B-Instruct-NPU`. On July 8, only the Hybrid variant was available.
+6. Decide whether to pull and test optional stretch
+   `Meta-Llama-3.1-8B-Instruct-NPU`; it remains catalog-available but was not
+   pulled in the July 8 batch.
 
 ## Cleanup Commands
 
@@ -1295,8 +1326,9 @@ probing shows visible long-context output fails between `2055` and `2255` prompt
 tokens.
 
 The Llama Matrix A rerun answers the "why not just Llama 3.2 3B?" question:
-Llama 3.2 was small and sometimes fast, but every tested provider/model row
-failed prompt XML (`0/50`), so it is not a Flowkey prompt-mode replacement.
+Llama 3.2 was small and sometimes fast, and the exact Lemonade 1B NPU cell was
+also light, but every tested provider/model row failed prompt XML (`0/50`), so
+it is not a Flowkey prompt-mode replacement.
 
 The correct near-term path is to keep FLM as default, keep the new provider
 wiring, and focus the next rerun on Lemonade Qwen2.5 reproducibility, Qwen3

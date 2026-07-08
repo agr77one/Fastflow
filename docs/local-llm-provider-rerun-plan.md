@@ -1,8 +1,51 @@
 # Local LLM Provider Benchmark — Proper Rerun Plan
 
 Date: 2026-07-07
-Status: NOT STARTED — this is the execution plan
+Status: JULY 8 BATCH EXECUTED — second-day reproducibility and optional stretch cells remain
 Supersedes the methodology of: `docs/local-llm-provider-poc-readme.md` (POC of 2026-07-07)
+
+## Execution Tracker
+
+Current report: `docs/local-llm-provider-benchmark-readme.md`
+
+Completed in the July 8 batch:
+
+- Harness delivered: `tools/provider_bench.py` plus
+  `tests/test_provider_bench.py`.
+- Matrix A Qwen2.5 3B row: FLM, Ollama, LM Studio, and Lemonade NPU tested.
+- Matrix A Llama 3.2 1B row: FLM, Ollama, LM Studio, Lemonade Hybrid
+  substitution, and exact Lemonade `Llama-3.2-1B-Instruct-NPU` tested.
+- Matrix A Llama 3.2 3B row: FLM, Ollama, and LM Studio tested. No Lemonade
+  3B NPU cell exists in the catalog row for this plan.
+- Matrix B quick quality: `Qwen2.5-7B-Instruct-NPU`,
+  `Phi-4-mini-instruct-NPU`, `Mistral-7B-Instruct-v0.3-NPU`, and
+  `Qwen3-4B-Hybrid` with thinking disabled tested.
+- Qwen3 retest: short grammar/prompt retested with thinking disabled.
+- Matrix C calibrated long-context: FLM incumbent, Lemonade Qwen2.5 3B NPU,
+  and Lemonade Qwen3 4B Hybrid tested.
+
+Not complete yet:
+
+- Replace-FLM gate is not satisfied because the strongest candidate,
+  Lemonade `Qwen2.5-3B-Instruct-NPU`, still needs a second-day rerun.
+- Lemonade Qwen2.5 3B also has a consistent `prompt_plan` miss that needs a
+  retry or output-repair policy before production prompt routing.
+- Lemonade Qwen3 4B Hybrid passes short prompt mode but is disqualified for
+  meetings until its visible-output failure above roughly 2.1k prompt tokens is
+  fixed.
+- Optional stretch `Meta-Llama-3.1-8B-Instruct-NPU` is available in the
+  catalog but was not pulled or tested in the July 8 batch.
+
+Next batch:
+
+1. On the next calendar day, rerun Lemonade `Qwen2.5-3B-Instruct-NPU`
+   grammar/prompt and calibrated long-context.
+2. If short prompt routing is still under consideration, rerun Lemonade
+   `Qwen3-4B-Hybrid` grammar/prompt with thinking disabled.
+3. Test a targeted retry/output-repair policy for the Qwen2.5 `prompt_plan`
+   miss.
+4. Decide whether the optional `Meta-Llama-3.1-8B-Instruct-NPU` stretch cell is
+   worth pulling, given the existing Llama prompt failures and RAM risk.
 
 ## Why a rerun
 
