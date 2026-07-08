@@ -33,6 +33,10 @@ Completed in the July 8 batch:
   Lemonade `Qwen2.5-3B-Instruct-NPU` `prompt_plan` passed `5/5`, and
   LM Studio `qwen2.5-7b-instruct` passed `10/10` prompt cases through
   `grammar_fix.call_flm`.
+- LM Studio Qwen2.5 7B route decision made: keep it as a supported experimental
+  opt-in fast prompt route, not as a default or automatic replacement.
+- Optional `Meta-Llama-3.1-8B-Instruct-NPU` stretch decision made: do not pull
+  or test in this batch.
 
 Not complete yet:
 
@@ -41,10 +45,8 @@ Not complete yet:
 - Lemonade Qwen3 4B Hybrid passes short prompt mode but is disqualified for
   meetings until its visible-output failure above roughly 2.1k prompt tokens is
   fixed.
-- LM Studio Qwen2.5 7B remains experimental until a routing decision is made;
-  its prompt repair now passes app-level validation.
-- Optional stretch `Meta-Llama-3.1-8B-Instruct-NPU` is available in the
-  catalog but was not pulled or tested in the July 8 batch.
+- LM Studio Qwen2.5 7B remains experimental; it is approved only as an opt-in
+  non-default prompt route after app-level repair validation.
 
 Next batch:
 
@@ -52,10 +54,8 @@ Next batch:
    grammar/prompt and calibrated long-context.
 2. If short prompt routing is still under consideration, rerun Lemonade
    `Qwen3-4B-Hybrid` grammar/prompt with thinking disabled.
-3. Decide whether LM Studio Qwen2.5 7B should become a supported fast non-NPU
-   prompt route.
-4. Decide whether the optional `Meta-Llama-3.1-8B-Instruct-NPU` stretch cell is
-   worth pulling, given the existing Llama prompt failures and RAM risk.
+3. Keep LM Studio Qwen2.5 7B opt-in only unless a future second-day route test
+   and product decision promotes it.
 
 ## Why a rerun
 

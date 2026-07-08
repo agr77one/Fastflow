@@ -49,7 +49,9 @@ Practical recommendation:
 - Treat Lemonade `Qwen3-4B-Hybrid` as a short-task-only candidate, pending a
   long-context fix or a workload-specific route that excludes meetings.
 - Keep `ollama` wired as a portable CPU fallback.
-- Keep `lmstudio` wired as an experimental fast local provider.
+- Keep `lmstudio` wired as an experimental fast local provider. LM Studio
+  Qwen2.5 7B can be a supported opt-in prompt route, but not a default or
+  automatic replacement.
 - Keep `lemonade` wired as the AMD NPU experiment path, but do not route
   production Flowkey prompt mode to it yet without the second-session gate.
 
@@ -357,7 +359,8 @@ Still not run from the rerun plan:
 
 - Matrix A Lemonade Llama 3B; the rerun plan correctly lists no Lemonade 3B cell
 - second-day reproducibility for Lemonade `Qwen2.5-3B-Instruct-NPU`
-- optional Matrix B stretch `Meta-Llama-3.1-8B-Instruct-NPU`
+- optional Matrix B stretch `Meta-Llama-3.1-8B-Instruct-NPU`, intentionally
+  skipped for this batch after the Llama matrix failures and RAM-risk review
 
 ## July 8 Corrected Rerun Artifacts
 
@@ -471,6 +474,17 @@ The first LM Studio app-route run exposed an anti-echo bug: a complete repaired
 prompt could be retried because its `<task>` line overlapped the user's input.
 The app now checks complete XML scaffold validity before anti-echo retry, with a
 regression test covering that case.
+
+Route decision: keep LM Studio Qwen2.5 7B as a supported experimental opt-in
+prompt route. Do not make it the default and do not automatically route prompt
+mode to it yet: it is non-NPU, one original full-run prompt call timed out, no
+long-context gate was run, and no second-day route validation exists.
+
+Stretch decision: do not pull `Meta-Llama-3.1-8B-Instruct-NPU` in this batch.
+All tested Llama 3.2 1B/3B prompt rows failed XML at `0/50`, while the leading
+Qwen2.5 candidate already clears the quality and long-context gates pending
+second-day reproducibility. Pulling a 9.30 GB Llama stretch model adds RAM/disk
+risk without a strong path to changing the current routing decision.
 
 ## July 8 Matrix A: Llama 3.2 Rows
 
@@ -1490,9 +1504,9 @@ Experimental:
   output needs repair or a provider-specific prompt.
 - `lmstudio qwen2.5-7b-instruct`: good grammar and fastest repairable prompt
   path so far; label-to-XML repair is implemented, unit-tested, and validated
-  through the app route. It remains experimental until a routing decision is
-  made because it is non-NPU and has not been second-day rerun as a production
-  route.
+  through the app route. Supported only as an opt-in experimental prompt route;
+  do not make it the default or automatic route because it is non-NPU and has not
+  been second-day rerun as a production route.
 - `lemonade Qwen2.5-3B-Instruct-NPU`: leading replacement candidate, pending
   second session. The known prompt-plan repair is implemented, unit-tested, and
   app-route validated.
@@ -1515,11 +1529,8 @@ The full rerun plan is not complete. Still needed:
    routing is considered.
 3. Track or fix Qwen3 Hybrid's visible-output failure above roughly 2.1k prompt
    tokens before using it for meetings.
-4. Decide whether LM Studio Qwen2.5 7B should become a supported fast non-NPU
-   prompt route now that app-level repair validation passes.
-5. Decide whether to pull and test optional stretch
-   `Meta-Llama-3.1-8B-Instruct-NPU`; it remains catalog-available but was not
-   pulled in the July 8 batch.
+4. Keep LM Studio Qwen2.5 7B opt-in only unless a future second-day route test
+   and product decision promotes it.
 
 ## Cleanup Commands
 
