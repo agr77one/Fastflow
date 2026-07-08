@@ -49,6 +49,8 @@ Completed in the July 8 batch:
   present and running with no model loaded; `Qwen2.5-3B-Instruct-NPU` and
   `Qwen3-4B-Hybrid` are already downloaded; LM Studio CLI is present and its
   server is stopped.
+- Repeatable preflight helper added:
+  `tools/check_second_day_provider_preflight.ps1`.
 
 Not complete yet:
 
@@ -61,6 +63,12 @@ Not complete yet:
   non-default prompt route after app-level repair validation.
 
 Next batch:
+
+0. Before the live run, repeat the non-benchmark preflight:
+
+   ```powershell
+   pwsh -NoProfile -ExecutionPolicy Bypass -File tools\check_second_day_provider_preflight.ps1 -RunQwen3Short -StrictDateGate
+   ```
 
 1. On the next calendar day, rerun Lemonade `Qwen2.5-3B-Instruct-NPU`
    grammar/prompt and calibrated long-context:
