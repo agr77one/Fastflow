@@ -13,19 +13,24 @@ Do not drop FLM as the global default yet.
 
 The corrected rerun shows:
 
-- FLM `qwen3.5:4b` is still the only tested provider/model that passes Flowkey's
-  strict prompt XML contract at production quality: `49/50` prompt passes and
-  `40/40` grammar passes.
+- FLM `qwen3.5:4b` is still the safest global default because it passes short
+  prompt/grammar quality and the long-context meeting workload in the same
+  session: `49/50` prompt passes, `40/40` grammar passes, and `5/5` at roughly
+  8k prompt tokens.
 - Lemonade `Qwen2.5-3B-Instruct-NPU` is the first serious replacement
   candidate: `40/40` grammar, `45/50` prompt XML, and much faster calibrated
   8k TTFT than the FLM incumbent. It still needs a second-day rerun before
   replacing FLM, and one prompt case failed consistently.
+- Lemonade `Qwen3-4B-Hybrid`, retested with thinking disabled, is now a strong
+  short prompt-mode candidate: `40/40` grammar and `50/50` prompt XML. It is not
+  a global replacement because its 4k and 8k long-context runs returned empty
+  scored output.
 - Ollama `llama3.2:3b` is a useful small CPU fallback. It is faster than FLM for
   grammar, but it scored `0/50` on prompt XML.
 - LM Studio is the fastest tested path for short local grammar work. Qwen2.5 3B
   and 7B both failed prompt XML completely under the current system prompt.
-- Lemonade NPU works, but the tested Mistral 7B NPU quick cell scored `0/20` on
-  prompt XML and did not qualify for a full 5-run speed pass.
+- Lemonade NPU works, but Qwen2.5 7B, Phi-4-mini, and Mistral 7B missed the
+  quick-quality promotion gate under the current Flowkey prompts.
 
 Practical recommendation:
 
@@ -33,6 +38,8 @@ Practical recommendation:
 - Treat Lemonade `Qwen2.5-3B-Instruct-NPU` as the leading replacement candidate,
   pending a second session and a fix or retry policy for the consistently
   failing `prompt_plan` case.
+- Treat Lemonade `Qwen3-4B-Hybrid` as a short-task-only candidate, pending a
+  long-context fix or a workload-specific route that excludes meetings.
 - Keep `ollama` wired as a portable CPU fallback.
 - Keep `lmstudio` wired as an experimental fast local provider.
 - Keep `lemonade` wired as the AMD NPU experiment path, but do not route
@@ -57,15 +64,19 @@ Small and fast models often produced Markdown headings or prose instead. The
 rerun confirmed this:
 
 - Lemonade Qwen2.5 3B NPU: `45/50` prompt XML passes.
+- Lemonade Qwen3 4B Hybrid, thinking disabled: `50/50` prompt XML passes.
 - Ollama `llama3.2:3b`: `0/50` prompt XML passes.
 - LM Studio Qwen2.5 3B: `0/50` prompt XML passes.
 - LM Studio Qwen2.5 7B: `0/49` timed prompt XML passes, but `49/49` near misses.
+- Lemonade Phi-4-mini NPU quick cell: `14/20` prompt XML passes.
+- Lemonade Qwen2.5 7B NPU quick cell: `0/20` prompt XML passes.
 - Lemonade Mistral 7B NPU quick cell: `0/20` prompt XML passes.
 - FLM `qwen3.5:4b`: `49/50` prompt XML passes.
 
-So bigger helped grammar in one case, but the best prompt-mode result came from
-the 3B Lemonade NPU Qwen2.5 model, not from the 7B LM Studio or 7B Lemonade
-Mistral tests.
+So bigger did not reliably solve the contract problem. The best all-around
+candidate remains the 3B Lemonade NPU Qwen2.5 model because it also passed the
+8k meeting sweep. The best short prompt-only candidate is Qwen3 4B Hybrid with
+thinking disabled.
 
 ## Machine Snapshot
 
@@ -280,20 +291,20 @@ Lemonade downloaded before/at rerun:
 | Model | Size GB | Notes |
 |---|---:|---|
 | `Qwen2.5-3B-Instruct-NPU` | 4.10 | Matrix A and calibrated long-context tested |
+| `Qwen2.5-7B-Instruct-NPU` | 8.22 | July 8 quick quality tested; failed prompt gate |
+| `Phi-4-mini-instruct-NPU` | 5.21 | July 8 quick quality tested; failed quick gate |
 | `Llama-3.2-1B-Instruct-Hybrid` | 1.89 | POC tested |
-| `Qwen3-4B-Hybrid` | 5.17 | POC tested, thinking issue noted |
-| `Mistral-7B-Instruct-v0.3-NPU` | 7.54 | July 8 quick quality tested |
+| `Qwen3-4B-Hybrid` | 5.17 | retested with thinking disabled; short mode passed, long-context failed |
+| `Mistral-7B-Instruct-v0.3-NPU` | 8.09 | July 8 quick quality tested; failed prompt gate |
 | `CodeLlama-7b-Instruct-hf-NPU` | 7.03 | downloaded, excluded from headline |
 | `DeepSeek-R1-Distill-Qwen-7B-NPU` | 8.26 | downloaded, reasoning model, excluded |
 | `chatglm3-6b-NPU` | 6.55 | downloaded, excluded as older/weak contract fit |
 
 Still not run from the rerun plan:
 
-- `Qwen2.5-7B-Instruct-NPU`
-- `Phi-4-mini-instruct-NPU`
 - `Llama-3.2-1B-Instruct-NPU`
-- `Qwen3-4B-Hybrid` retest with thinking disabled
-- Matrix C for any additional survivors from the remaining Lemonade quality hunt
+- full Matrix A Llama 1B/3B same-weight rows across FLM, Ollama, LM Studio, and
+  Lemonade
 - second-day reproducibility for Lemonade `Qwen2.5-3B-Instruct-NPU`
 
 ## July 8 Corrected Rerun Artifacts
@@ -309,6 +320,11 @@ Still not run from the rerun plan:
 | `data/benchmarks/rerun_lemonade_qwen2.5-3b-instruct-npu_20260708.json` | valid | Matrix A Qwen2.5 Lemonade NPU cell |
 | `data/benchmarks/rerun_lemonade_qwen2.5-3b-instruct-npu_longctx_calibrated_20260708.json` | valid | calibrated Matrix C candidate long-context |
 | `data/benchmarks/rerun_fastflowlm_qwen3.5-4b_turbo_longctx_calibrated_20260708.json` | valid | calibrated Matrix C FLM incumbent long-context |
+| `data/benchmarks/rerun_lemonade_qwen2.5-7b-instruct-npu_quick_20260708.json` | quick-quality only | failed prompt gate, no full 5-run pass |
+| `data/benchmarks/rerun_lemonade_phi-4-mini-instruct-npu_quick_20260708.json` | quick-quality only | failed quick gate, no full 5-run pass |
+| `data/benchmarks/rerun_lemonade_qwen3-4b-hybrid_no-think_quick_20260708.json` | superseded by full run | passed quick gate and was promoted |
+| `data/benchmarks/rerun_lemonade_qwen3-4b-hybrid_no-think_20260708.json` | valid | full short-task Qwen3 Hybrid retest with thinking disabled |
+| `data/benchmarks/rerun_lemonade_qwen3-4b-hybrid_no-think_longctx_20260708.json` | valid with workload failure | 4k/8k returned empty scored output |
 | `data/benchmarks/rerun_lemonade_qwen2.5-3b-instruct-npu_longctx_20260708.json` | anomaly | superseded; prompt-size calibration only reached about 6.1k tokens for the 8k label |
 | `data/benchmarks/rerun_lemonade_mistral-7b-instruct-v0.3-npu_quick_20260708.json` | quick-quality only | failed prompt gate, no full 5-run pass |
 | `data/benchmarks/rerun_lmstudio_qwen2.5-3b-instruct_20260708.json` | anomaly | memory guard fired during initial run |
@@ -328,6 +344,8 @@ Full cells used 1 warmup plus 5 timed runs per case.
 | LM Studio | `qwen2.5-3b-instruct` | Vulkan/iGPU | prompt | 0/50 | 3.157 | 2.303 | 9.162 | 0.0416 | 76.0 | n/a | 1690 | 11582 | no |
 | LM Studio | `qwen2.5-7b-instruct` | Vulkan/iGPU | grammar | 40/40 | 1.493 | 1.262 | 4.164 | 0.1016 | 14.5 | n/a | 5247 | 6968 | no |
 | LM Studio | `qwen2.5-7b-instruct` | Vulkan/iGPU | prompt | 0/49 | 7.026 | 2.672 | 11.968 | 0.0816 | 83.0 | n/a | 5297 | 4798 | no |
+| Lemonade | `Qwen3-4B-Hybrid` | NPU+iGPU hybrid, thinking disabled | grammar | 40/40 | 3.580 | 2.731 | 5.691 | 0.1869 | 17.5 | 0.510 | 6135 | 4409 | no |
+| Lemonade | `Qwen3-4B-Hybrid` | NPU+iGPU hybrid, thinking disabled | prompt | 50/50 | 14.538 | 11.788 | 17.812 | 0.1294 | 111.5 | 0.734 | 6164 | 4366 | no |
 
 ## July 8 Matrix A: Qwen2.5 3B Same-Weight Row
 
@@ -366,6 +384,9 @@ counts near 1k/4k/8k.
 | Lemonade | `Qwen2.5-3B-Instruct-NPU` | 1059 | 5/5 | 11.203 | 10.951 | 11.842 | 1.534 | 0.0675 | 166 | 5181 | 8525 | no |
 | Lemonade | `Qwen2.5-3B-Instruct-NPU` | 4042 | 5/5 | 15.488 | 15.297 | 15.899 | 2.828 | 0.0704 | 220 | 4585 | 9253 | no |
 | Lemonade | `Qwen2.5-3B-Instruct-NPU` | 8022 | 5/5 | 15.162 | 14.966 | 15.394 | 2.831 | 0.0715 | 212 | 4585 | 9282 | no |
+| Lemonade | `Qwen3-4B-Hybrid` | 1062 | 5/5 | 17.518 | 17.363 | 17.832 | 2.904 | 0.1485 | 118 | 1377 | 4918 | no |
+| Lemonade | `Qwen3-4B-Hybrid` | 4045 | 0/5 | 32.995 | 32.629 | 33.413 | 5.221 | 0.1500 | 220 | 1640 | 4586 | no |
+| Lemonade | `Qwen3-4B-Hybrid` | 8025 | 0/5 | 32.845 | 32.271 | 32.998 | 5.126 | 0.1493 | 220 | 1641 | 4637 | no |
 | FLM | `qwen3.5:4b` | 1064 | 5/5 | 19.802 | 19.592 | 21.084 | 3.872 | 0.1088 | 188 | 7419 | 5562 | no |
 | FLM | `qwen3.5:4b` | 4047 | 5/5 | 29.435 | 26.510 | 33.655 | 11.367 | 0.1498 | 193 | 7889 | 4188 | no |
 | FLM | `qwen3.5:4b` | 8027 | 5/5 | 42.170 | 39.011 | 44.091 | 22.697 | 0.2130 | 207 | 7901 | 3669 | no |
@@ -374,8 +395,10 @@ Long-context gate:
 
 - Lemonade Qwen2.5 3B NPU clears the 8k TTFT gate against FLM by a wide margin:
   `2.831s` vs FLM `22.697s`.
+- Lemonade Qwen3 4B Hybrid did not clear the meetings workload despite good
+  short-mode quality: the 4k and 8k cells returned empty scored output.
 - No context cap was hit at roughly 8k prompt tokens.
-- No memory guard fired for either calibrated long-context cell.
+- No memory guard fired for the calibrated long-context cells.
 - The replacement decision still remains gated on second-day reproducibility and
   the prompt-plan failure noted above.
 
@@ -392,38 +415,31 @@ Ollama process observation:
 ollama ps: llama3.2:3b, 2.6 GB loaded, PROCESSOR 100% CPU, context 4096
 ```
 
-## July 8 Lemonade NPU Quick Quality
+## July 8 Lemonade Matrix B Quick Quality
 
-This was a Matrix-B quick-quality cell, not a full 5-run speed cell.
-
-Command:
-
-```powershell
-python tools\provider_bench.py `
-  --provider lemonade `
-  --base-url http://127.0.0.1:13305/api/v1 `
-  --bearer lemonade `
-  --model Mistral-7B-Instruct-v0.3-NPU `
-  --quant ryzenai-llm-npu `
-  --tasks grammar,prompt `
-  --runs 2 `
-  --warmup 1 `
-  --timeout 300 `
-  --out data\benchmarks\rerun_lemonade_mistral-7b-instruct-v0.3-npu_quick_20260708.json
-```
-
-Results:
+These were 1-warmup/2-run quick-quality cells. Only Qwen3 Hybrid passed the
+quick gate and was promoted to a full 5-run short benchmark.
 
 | Provider | Model | Runtime | Task | Pass rate | Median s | Min s | Max s | Median s/token | Median completion tokens | TTFT median | Peak RSS MB | Min available MB | Memory guard |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| Lemonade | `Qwen2.5-7B-Instruct-NPU` | NPU | grammar | 16/16 | 3.025 | 2.566 | 4.707 | 0.2138 | 13.5 | 0.952 | 6626 | 4893 | no |
+| Lemonade | `Qwen2.5-7B-Instruct-NPU` | NPU | prompt | 0/20 | 7.967 | 6.111 | 14.868 | 0.1220 | 64.0 | 1.020 | 6660 | 5103 | no |
+| Lemonade | `Phi-4-mini-instruct-NPU` | NPU | grammar | 8/16 | 2.555 | 2.425 | 14.136 | 0.1753 | 14.5 | 0.651 | 5746 | 5456 | no |
+| Lemonade | `Phi-4-mini-instruct-NPU` | NPU | prompt | 14/20 | 13.607 | 10.493 | 51.561 | 0.0859 | 159.0 | 0.625 | 5782 | 5373 | no |
 | Lemonade | `Mistral-7B-Instruct-v0.3-NPU` | NPU | grammar | 10/16 | 3.406 | 2.355 | 6.650 | 0.1512 | 22.5 | 0.796 | 6212 | 7439 | no |
 | Lemonade | `Mistral-7B-Instruct-v0.3-NPU` | NPU | prompt | 0/20 | 24.874 | 18.398 | 43.060 | 0.0909 | 271.5 | 0.857 | 6227 | 7488 | no |
+| Lemonade | `Qwen3-4B-Hybrid` | NPU+iGPU hybrid, thinking disabled | grammar | 16/16 | 3.109 | 2.605 | 5.764 | 0.1728 | 17.5 | 0.478 | 6036 | 6312 | no |
+| Lemonade | `Qwen3-4B-Hybrid` | NPU+iGPU hybrid, thinking disabled | prompt | 20/20 | 16.270 | 11.532 | 19.123 | 0.1345 | 111.5 | 0.792 | 6151 | 5476 | no |
 
-Decision for this cell:
+Quick-gate decisions:
 
-- Do not advance this Mistral NPU model to full 5-run timing.
-- It missed the prompt gate completely (`0/20`).
-- It was slower than FLM in prompt wall time while still failing the contract.
+- Qwen3 Hybrid advanced to full 5-run short timing because it passed `20/20`
+  prompt XML and `16/16` grammar.
+- Qwen2.5 7B did not advance: grammar passed, but prompt was `0/20` and all
+  prompt runs were missing the required XML tags.
+- Phi-4-mini did not advance: prompt was `14/20`, grammar was `8/16`, and the
+  prompt median was slower than Qwen2.5 3B.
+- Mistral did not advance: prompt was `0/20` and grammar was only `10/16`.
 
 ## Exact Rerun Commands
 
@@ -585,6 +601,58 @@ python tools\provider_bench.py `
   --warmup 1 `
   --timeout 900 `
   --out data\benchmarks\rerun_fastflowlm_qwen3.5-4b_turbo_longctx_calibrated_20260708.json
+
+& "$env:LOCALAPPDATA\lemonade_server\bin\lemonade.exe" load Qwen3-4B-Hybrid
+
+python tools\provider_bench.py `
+  --provider lemonade `
+  --base-url http://127.0.0.1:13305/api/v1 `
+  --bearer lemonade `
+  --model Qwen3-4B-Hybrid `
+  --quant ryzenai-llm-hybrid `
+  --tasks longctx `
+  --longctx-sizes 1000,4000,8000 `
+  --runs 5 `
+  --warmup 1 `
+  --timeout 900 `
+  --disable-thinking `
+  --out data\benchmarks\rerun_lemonade_qwen3-4b-hybrid_no-think_longctx_20260708.json
+```
+
+### Lemonade Qwen2.5 7B NPU Quick Quality
+
+```powershell
+& "$env:LOCALAPPDATA\lemonade_server\bin\lemonade.exe" load Qwen2.5-7B-Instruct-NPU
+
+python tools\provider_bench.py `
+  --provider lemonade `
+  --base-url http://127.0.0.1:13305/api/v1 `
+  --bearer lemonade `
+  --model Qwen2.5-7B-Instruct-NPU `
+  --quant ryzenai-llm-npu `
+  --tasks grammar,prompt `
+  --runs 2 `
+  --warmup 1 `
+  --timeout 600 `
+  --out data\benchmarks\rerun_lemonade_qwen2.5-7b-instruct-npu_quick_20260708.json
+```
+
+### Lemonade Phi-4 Mini NPU Quick Quality
+
+```powershell
+& "$env:LOCALAPPDATA\lemonade_server\bin\lemonade.exe" load Phi-4-mini-instruct-NPU
+
+python tools\provider_bench.py `
+  --provider lemonade `
+  --base-url http://127.0.0.1:13305/api/v1 `
+  --bearer lemonade `
+  --model Phi-4-mini-instruct-NPU `
+  --quant ryzenai-llm-npu `
+  --tasks grammar,prompt `
+  --runs 2 `
+  --warmup 1 `
+  --timeout 600 `
+  --out data\benchmarks\rerun_lemonade_phi-4-mini-instruct-npu_quick_20260708.json
 ```
 
 ### Lemonade Mistral 7B NPU Quick Quality
@@ -603,6 +671,38 @@ python tools\provider_bench.py `
   --warmup 1 `
   --timeout 300 `
   --out data\benchmarks\rerun_lemonade_mistral-7b-instruct-v0.3-npu_quick_20260708.json
+```
+
+### Lemonade Qwen3 4B Hybrid With Thinking Disabled
+
+```powershell
+& "$env:LOCALAPPDATA\lemonade_server\bin\lemonade.exe" load Qwen3-4B-Hybrid
+
+python tools\provider_bench.py `
+  --provider lemonade `
+  --base-url http://127.0.0.1:13305/api/v1 `
+  --bearer lemonade `
+  --model Qwen3-4B-Hybrid `
+  --quant ryzenai-llm-hybrid `
+  --tasks grammar,prompt `
+  --runs 2 `
+  --warmup 1 `
+  --timeout 600 `
+  --disable-thinking `
+  --out data\benchmarks\rerun_lemonade_qwen3-4b-hybrid_no-think_quick_20260708.json
+
+python tools\provider_bench.py `
+  --provider lemonade `
+  --base-url http://127.0.0.1:13305/api/v1 `
+  --bearer lemonade `
+  --model Qwen3-4B-Hybrid `
+  --quant ryzenai-llm-hybrid `
+  --tasks grammar,prompt `
+  --runs 5 `
+  --warmup 1 `
+  --timeout 600 `
+  --disable-thinking `
+  --out data\benchmarks\rerun_lemonade_qwen3-4b-hybrid_no-think_20260708.json
 ```
 
 ## Original July 7 POC Artifacts
@@ -729,21 +829,32 @@ Sources:
 
 ### Speed
 
-Fastest valid grammar median:
+Fastest grammar medians:
 
 1. LM Studio Qwen2.5 3B: `1.427s`, but grammar quality was `35/40`.
 2. LM Studio Qwen2.5 7B: `1.493s`, grammar quality `40/40`.
-3. Ollama Llama 3.2 3B: `2.065s`, grammar quality `35/40`.
-4. FLM Qwen3.5 4B: `3.251s`, grammar quality `40/40`.
-5. Lemonade Mistral 7B NPU quick: `3.406s`, grammar quality `10/16`.
+3. Ollama Qwen2.5 3B: `1.743s`, grammar quality `35/40`.
+4. Lemonade Qwen2.5 3B NPU: `1.799s`, grammar quality `40/40`.
+5. Ollama Llama 3.2 3B: `2.065s`, grammar quality `35/40`.
+6. FLM Qwen2.5 3B: `2.441s`, grammar quality `40/40`.
+7. FLM Qwen3.5 4B: `3.251s`, grammar quality `40/40`.
+8. Lemonade Qwen3 4B Hybrid: `3.580s`, grammar quality `40/40`.
 
-Fastest prompt median among tested alternatives:
+Fastest prompt medians with passing or near-passing XML quality:
 
-1. LM Studio Qwen2.5 3B: `3.157s`, but prompt quality `0/50`.
-2. LM Studio Qwen2.5 7B: `7.026s`, but prompt quality `0/49`.
-3. Ollama Llama 3.2 3B: `10.564s`, but prompt quality `0/50`.
-4. FLM Qwen3.5 4B: `16.661s`, prompt quality `49/50`.
-5. Lemonade Mistral 7B NPU quick: `24.874s`, prompt quality `0/20`.
+1. Lemonade Qwen2.5 3B NPU: `5.497s`, prompt quality `45/50`.
+2. Lemonade Qwen3 4B Hybrid: `14.538s`, prompt quality `50/50`.
+3. FLM Qwen3.5 4B: `16.661s`, prompt quality `49/50`.
+4. LM Studio Qwen2.5 7B: `7.026s`, prompt quality `0/49`, but `49/49`
+   near-misses that are likely repairable.
+
+Fast but not contract-safe:
+
+- LM Studio Qwen2.5 3B prompt median was `3.157s`, but prompt quality was
+  `0/50`.
+- Ollama Qwen2.5 3B prompt median was `5.290s`, but prompt quality was `0/50`.
+- Ollama Llama 3.2 3B prompt median was `10.564s`, but prompt quality was
+  `0/50`.
 
 ### Size
 
@@ -760,7 +871,12 @@ Smallest Ollama baseline:
 NPU memory:
 
 - FLM `qwen3.5:4b` process RSS peaked around 7.25 GB.
-- Lemonade Mistral 7B NPU quick peaked around 6.23 GB RSS in the harness run.
+- Lemonade Qwen2.5 3B NPU peaked around 3.81 GB RSS in the short run and about
+  5.18 GB in the long-context run.
+- Lemonade Qwen3 4B Hybrid peaked around 6.16 GB RSS in the short run.
+- Lemonade Qwen2.5 7B NPU quick peaked around 6.66 GB RSS.
+- Lemonade Phi-4-mini NPU quick peaked around 5.78 GB RSS.
+- Lemonade Mistral 7B NPU quick peaked around 6.23 GB RSS.
 
 ### Quality
 
@@ -771,19 +887,24 @@ Current quality gates:
 - Prompt mode replacement requires XML pass rate >= 9/10.
 - Grammar replacement requires grammar pass >= 7/8.
 
-Only FLM passed prompt mode. LM Studio 7B is the most interesting near miss
-because it produced repairable Markdown-style structure in all timed prompt
-runs, but the current contract checker correctly rejects it.
+FLM, Lemonade Qwen2.5 3B, and Lemonade Qwen3 4B Hybrid passed the short prompt
+quality threshold. Lemonade Qwen2.5 3B is the only non-FLM candidate that also
+passed the calibrated 8k long-context workload. LM Studio 7B is the most
+interesting non-NPU near miss because it produced repairable Markdown-style
+structure in all timed prompt runs, but the current contract checker correctly
+rejects it.
 
 ## Current Routing Recommendation
 
 Production:
 
-- `prompt`: keep FLM default until Lemonade Qwen2.5 passes a second-day rerun or
-  gets a targeted retry/repair for the `prompt_plan` failure.
+- `prompt`: keep FLM default until Lemonade Qwen2.5 or Qwen3 passes a second-day
+  rerun. Qwen3 has the cleaner short prompt score, but Qwen2.5 has the better
+  all-workload profile.
 - `meeting/long-context`: Lemonade Qwen2.5 is the leading candidate based on the
   calibrated 8k sweep, but do not switch production until the second-session gate
-  is satisfied.
+  is satisfied. Do not route meetings to Qwen3 Hybrid until the empty 4k/8k
+  output failure is fixed.
 - `grammar`: Lemonade Qwen2.5 is the leading candidate; it passed `40/40` and was
   faster than both FLM Qwen2.5 and FLM Qwen3.5.
 
@@ -796,6 +917,12 @@ Experimental:
   with a stricter system prompt or output repair.
 - `lemonade Qwen2.5-3B-Instruct-NPU`: leading replacement candidate, pending
   second session and prompt-plan hardening.
+- `lemonade Qwen3-4B-Hybrid`: strong short prompt candidate with thinking
+  disabled; exclude from meetings for now.
+- `lemonade Qwen2.5-7B-Instruct-NPU`: do not continue under the current prompt;
+  prompt quality was `0/20` in quick testing.
+- `lemonade Phi-4-mini-instruct-NPU`: do not continue under the current prompt;
+  prompt and grammar both missed the quick gate.
 - `lemonade Mistral-7B-Instruct-v0.3-NPU`: do not continue for prompt mode under
   current prompt; it failed quick quality.
 
@@ -803,18 +930,19 @@ Experimental:
 
 The full rerun plan is not complete. Still needed:
 
-1. Pull and test remaining Lemonade quality candidates:
-   - `Qwen2.5-7B-Instruct-NPU`
-   - `Phi-4-mini-instruct-NPU`
-   - optionally `Qwen3-4B-Hybrid` with thinking disabled
-2. Run Matrix C long-context 1k/4k/8k for any additional survivors from the
-   remaining Lemonade quality hunt.
-3. Rerun Lemonade `Qwen2.5-3B-Instruct-NPU` on a second day/session before a
+1. Rerun Lemonade `Qwen2.5-3B-Instruct-NPU` on a second day/session before a
    production switch.
+2. Rerun Lemonade `Qwen3-4B-Hybrid` short mode on a second day if short prompt
+   routing is considered.
+3. Investigate Qwen3 Hybrid long-context empty output at 4k/8k before using it
+   for meetings.
 4. Add a targeted retry/output-repair check for the `prompt_plan` miss if
    Lemonade Qwen2.5 is going to route production prompt mode.
 5. Test provider-specific prompt templates or output repair for LM Studio 7B,
    because it is fast and near-miss heavy.
+6. Optionally finish the full Matrix A Llama rows. They are lower priority
+   because Ollama Llama 3.2 3B already failed prompt XML and Lemonade's available
+   Llama 1B Hybrid failed the original POC quality check.
 
 ## Cleanup Commands
 
@@ -857,6 +985,10 @@ calibrated 8k TTFT, and stays inside the memory guard. It is not production-read
 until it passes the second-session reproducibility gate and the consistent
 `prompt_plan` failure is addressed.
 
+Lemonade `Qwen3-4B-Hybrid` with thinking disabled is the best short prompt-mode
+score so far (`50/50`), but it is not a global replacement because 4k and 8k
+long-context runs returned empty scored output.
+
 The correct near-term path is to keep FLM as default, keep the new provider
-wiring, and focus the next rerun on Lemonade Qwen2.5 reproducibility plus the
-remaining Qwen2.5-7B and Phi-4-mini NPU candidates.
+wiring, and focus the next rerun on Lemonade Qwen2.5 reproducibility, Qwen3
+short-mode reproducibility, and a targeted fix for Qwen3 long-context output.
