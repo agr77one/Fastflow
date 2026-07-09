@@ -87,7 +87,8 @@ def refresh_runtime_config() -> None:
         configured_base_url = "http://127.0.0.1:52625"
     configured_model = str(LLM_CFG.get("model") or CONFIG.get("flm_model") or "qwen3.5:4b").strip()
     configured_timeout = int(LLM_CFG.get("timeout_seconds") or CONFIG.get("flm_timeout_seconds") or 30)
-    configured_auth = str(LLM_CFG.get("auth_bearer") or "flm").strip()
+    configured_spec = ffp_provider_status.PROVIDERS.get(CONFIGURED_LLM_PROVIDER) or ffp_provider_status.PROVIDERS["fastflowlm"]
+    configured_auth = str(LLM_CFG.get("auth_bearer", configured_spec.auth_bearer)).strip()
     effective = resolve_effective_llm(
         provider=CONFIGURED_LLM_PROVIDER,
         base_url=configured_base_url,
@@ -288,6 +289,10 @@ def start_llm_server(force_restart: bool = False) -> str:
         return "already_running"
     if LLM_PROVIDER == "ollama":
         return start_ollama_server()
+    if LLM_PROVIDER == "lmstudio":
+        return start_lmstudio_server()
+    if LLM_PROVIDER == "lemonade":
+        return start_lemonade_server()
     raise RuntimeError("Local LLM provider is not reachable.")
 
 
@@ -307,6 +312,61 @@ def start_ollama_server() -> str:
             return "started"
         time.sleep(0.2)
     raise RuntimeError("Ollama start requested, but the API did not come up within 8s.")
+
+
+def start_lmstudio_server() -> str:
+    cli = ffp_provider_runtime.provider_cli("lmstudio")
+    _host, port = ffp_provider_status._host_port(LLM_BASE_URL)
+    result = subprocess.run(
+        [cli, "server", "start", "--port", str(port)],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        creationflags=_NO_WINDOW if os.name == "nt" else 0,
+    )
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout or "").strip()
+        raise RuntimeError(f"LM Studio server start failed: {detail or result.returncode}")
+    deadline = time.time() + 10.0
+    while time.time() < deadline:
+        if is_llm_server_reachable():
+            break
+        time.sleep(0.2)
+    else:
+        raise RuntimeError("LM Studio start requested, but the API did not come up within 10s.")
+    model = str(LLM_MODEL or "").strip()
+    if model:
+        load = subprocess.run(
+            [cli, "load", model, "--gpu", "max", "--context-length", "4096", "--identifier", model],
+            capture_output=True,
+            text=True,
+            timeout=180,
+            creationflags=_NO_WINDOW if os.name == "nt" else 0,
+        )
+        if load.returncode != 0:
+            detail = (load.stderr or load.stdout or "").strip()
+            log.warning("LM Studio model load failed for %s: %s", model, detail)
+            return f"started (model load failed: {detail or load.returncode})"
+    return "started"
+
+
+def start_lemonade_server() -> str:
+    cli = ffp_provider_runtime.provider_cli("lemonade")
+    model = str(LLM_MODEL or ffp_provider_status.PROVIDERS["lemonade"].default_model).strip()
+    kwargs: dict = {
+        "stdin": subprocess.DEVNULL,
+        "stdout": subprocess.DEVNULL,
+        "stderr": subprocess.DEVNULL,
+    }
+    if os.name == "nt":
+        kwargs["creationflags"] = _NO_WINDOW
+    subprocess.Popen([cli, "run", model], **kwargs)
+    deadline = time.time() + 20.0
+    while time.time() < deadline:
+        if is_llm_server_reachable():
+            return "started"
+        time.sleep(0.3)
+    raise RuntimeError("Lemonade start requested, but the API did not come up within 20s.")
 
 
 def stop_flm_server(force: bool = False) -> bool:
@@ -465,10 +525,13 @@ def _call_flm_api(
             "stream": False,
         }
     ).encode("utf-8")
+    headers = {"Content-Type": "application/json"}
+    if LLM_AUTH_BEARER:
+        headers["Authorization"] = f"Bearer {LLM_AUTH_BEARER}"
     req = urllib.request.Request(
-        FLM_BASE_URL + "/v1/chat/completions",
+        ffp_provider_runtime.openai_url(FLM_BASE_URL, "chat/completions"),
         data=body,
-        headers={"Content-Type": "application/json", "Authorization": f"Bearer {LLM_AUTH_BEARER}"},
+        headers=headers,
         method="POST",
     )
     with urllib.request.urlopen(req, timeout=max(2, timeout_seconds)) as resp:
@@ -769,6 +832,15 @@ def build_config_snapshot() -> dict:
     provider_info = effective["provider_status"]
     provider_info["configured"] = effective["configured_provider"]
     provider_info["active"] = effective["provider"]
+    provider_configs = {}
+    for key, spec in ffp_provider_status.PROVIDERS.items():
+        profile = provider_cfgs.get(key) or {}
+        provider_configs[key] = {
+            "base_url": str(profile.get("base_url") or spec.base_url),
+            "model": str(profile.get("model") or spec.default_model),
+            "timeout_seconds": int(profile.get("timeout_seconds") or 120),
+            "auto_start": bool(profile.get("auto_start", spec.can_autostart)),
+        }
     return {
         "version": APP_VERSION,
         "modes": modes_summary,
@@ -782,20 +854,7 @@ def build_config_snapshot() -> dict:
             "auto_start": bool(llm_cfg.get("auto_start", True)),
         },
         "provider_status": provider_info,
-        "provider_configs": {
-            "fastflowlm": {
-                "base_url": str((provider_cfgs.get("fastflowlm") or {}).get("base_url") or "http://127.0.0.1:52625"),
-                "model": str((provider_cfgs.get("fastflowlm") or {}).get("model") or "qwen3.5:4b"),
-                "timeout_seconds": int((provider_cfgs.get("fastflowlm") or {}).get("timeout_seconds") or 60),
-                "auto_start": bool((provider_cfgs.get("fastflowlm") or {}).get("auto_start", True)),
-            },
-            "ollama": {
-                "base_url": str((provider_cfgs.get("ollama") or {}).get("base_url") or "http://127.0.0.1:11434"),
-                "model": str((provider_cfgs.get("ollama") or {}).get("model") or "llama3.2:3b"),
-                "timeout_seconds": int((provider_cfgs.get("ollama") or {}).get("timeout_seconds") or 120),
-                "auto_start": bool((provider_cfgs.get("ollama") or {}).get("auto_start", False)),
-            },
-        },
+        "provider_configs": provider_configs,
         "flm_base_url": effective["base_url"],
         "flm_model": effective["model"],
         "flm_timeout_seconds": effective["timeout_seconds"],
@@ -824,7 +883,7 @@ def build_config_snapshot() -> dict:
         },
         "hotkeys": {
             "grammar_fix": str(hotkeys_cfg.get("grammar_fix") or "^+g"),
-            "open_chat": str(hotkeys_cfg.get("open_chat") or "^+t"),
+            "open_chat": str(hotkeys_cfg.get("open_chat") or "^!c"),
             "capture_note": str(hotkeys_cfg.get("capture_note") or "^!n"),
             "ask_chat": str(hotkeys_cfg.get("ask_chat") or "^+a"),
         },

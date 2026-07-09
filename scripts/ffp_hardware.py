@@ -53,6 +53,28 @@ OLLAMA_CATALOG: tuple[tuple[str, float], ...] = (
     ("qwen2.5:14b", 14.8),
 )
 
+LMSTUDIO_CATALOG: tuple[tuple[str, float], ...] = (
+    ("qwen2.5-3b-instruct", 3.1),
+    ("qwen2.5-7b-instruct", 7.6),
+    ("llama-3.1-8b-instruct", 8.0),
+)
+
+LEMONADE_CATALOG: tuple[tuple[str, float], ...] = (
+    ("Gemma-4-E2B-it-GGUF", 2.0),
+    ("Qwen2.5-3B-Instruct-NPU", 3.1),
+    ("Llama-3.2-3B-Instruct-Hybrid", 3.0),
+    ("Qwen3-4B-Hybrid", 4.0),
+    ("Qwen2.5-7B-Instruct-NPU", 7.0),
+    ("Qwen3.5-4B-GGUF", 4.0),
+    ("Qwen3.5-9B-GGUF", 9.0),
+)
+
+PROVIDER_CATALOGS: dict[str, tuple[tuple[str, float], ...]] = {
+    "ollama": OLLAMA_CATALOG,
+    "lmstudio": LMSTUDIO_CATALOG,
+    "lemonade": LEMONADE_CATALOG,
+}
+
 _PARAMS_RE = re.compile(r"(\d+(?:\.\d+)?)\s*b\b", re.IGNORECASE)
 _PARAMS_M_RE = re.compile(r"(\d+(?:\.\d+)?)\s*m\b", re.IGNORECASE)
 
@@ -177,7 +199,7 @@ def model_budget(provider: str, hw: dict | None = None) -> dict:
     vram = float(hw.get("vram_gb") or 0)
     provider = str(provider or "fastflowlm").strip().lower()
 
-    if provider == "fastflowlm":
+    if provider in {"fastflowlm", "lemonade"}:
         # NPU runs from system RAM. On Ryzen AI laptops the iGPU's "dedicated"
         # VRAM is a UMA carve-out of the same DIMMs, so count it back in —
         # Windows reports 23.6 GB free RAM on a 32 GB machine with an 8 GB
@@ -194,7 +216,7 @@ def model_budget(provider: str, hw: dict | None = None) -> dict:
         else:
             max_b = 1.0
         basis = "ram"
-        summary = f"{mem:.0f} GB installed RAM → up to ~{max_b:g}B on the NPU"
+        summary = f"{mem:.0f} GB installed RAM -> up to ~{max_b:g}B on the NPU"
     elif vram >= 5:
         max_b = max(1.0, round((vram - _VRAM_OVERHEAD_GB) / _GB_PER_B, 1))
         basis = "vram"

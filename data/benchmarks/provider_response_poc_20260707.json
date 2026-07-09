@@ -1,0 +1,373 @@
+{
+  "timestamp": "2026-07-07T19:19:21",
+  "results": [
+    {
+      "provider": "fastflowlm",
+      "name": "FLM qwen3.5:4b",
+      "model": "qwen3.5:4b",
+      "task": "grammar_short",
+      "avg_s": 5.55,
+      "median_s": 5.55,
+      "min_s": 3.561,
+      "max_s": 7.54,
+      "runs": [
+        {
+          "elapsed_s": 7.54,
+          "output_chars": 104,
+          "prompt_tokens": 74,
+          "completion_tokens": 26,
+          "usage": {
+            "prompt_tokens": 74,
+            "completion_tokens": 26,
+            "total_tokens": 100,
+            "kv_token_occupancy_rate_percentage": 0.30517578125,
+            "load_duration": 1.07e-05,
+            "prefill_duration_ttft": 4.488830464,
+            "decoding_duration": 2.18856,
+            "prefill_speed_tps": 16.485363079196922,
+            "decoding_speed_tps": 11.879957597689804
+          },
+          "model_used": "qwen3.5:4b",
+          "sample": "This is a short note for the team. It doesn't need new ideas; just fix the grammar and keep the meaning.",
+          "has_prompt_structure": null
+        },
+        {
+          "elapsed_s": 3.561,
+          "output_chars": 104,
+          "prompt_tokens": 74,
+          "completion_tokens": 26,
+          "usage": {
+            "prompt_tokens": 74,
+            "completion_tokens": 26,
+            "total_tokens": 100,
+            "kv_token_occupancy_rate_percentage": 0.30517578125,
+            "load_duration": 3.9e-06,
+            "prefill_duration_ttft": 1.149709568,
+            "decoding_duration": 2.075011,
+            "prefill_speed_tps": 64.36408120768114,
+            "decoding_speed_tps": 12.530054057544756
+          },
+          "model_used": "qwen3.5:4b",
+          "sample": "This is a short note for the team. It doesn't need new ideas; just fix the grammar and keep the meaning.",
+          "has_prompt_structure": null
+        }
+      ]
+    },
+    {
+      "provider": "fastflowlm",
+      "name": "FLM qwen3.5:4b",
+      "model": "qwen3.5:4b",
+      "task": "prompt_short",
+      "avg_s": 22.831,
+      "median_s": 22.831,
+      "min_s": 21.367,
+      "max_s": 24.295,
+      "runs": [
+        {
+          "elapsed_s": 24.295,
+          "output_chars": 1445,
+          "prompt_tokens": 152,
+          "completion_tokens": 286,
+          "usage": {
+            "prompt_tokens": 152,
+            "completion_tokens": 286,
+            "total_tokens": 438,
+            "kv_token_occupancy_rate_percentage": 1.336669921875,
+            "load_duration": 7e-07,
+            "prefill_duration_ttft": 1.339927296,
+            "decoding_duration": 21.988086,
+            "prefill_speed_tps": 113.43899064804184,
+            "decoding_speed_tps": 13.0070439055041
+          },
+          "model_used": "qwen3.5:4b",
+          "sample": "<task>\nGenerate a structured rollout plan for replacing the FLM model with LM Studio or Lemonade, detailing comparisons of speed, size, setup risk, fallback mechanisms, and response time measurement methods.\n\n<context>\nThe organization currently uses an FLM model for inference. The goal is to transition to either LM Studio (local desktop/server) or Lemonade (cloud-based alternative). Key evaluation criteria include performance metrics (speed/latency), resource requirements (model size), implemen",
+          "has_prompt_structure": true
+        },
+        {
+          "elapsed_s": 21.367,
+          "output_chars": 1198,
+          "prompt_tokens": 152,
+          "completion_tokens": 253,
+          "usage": {
+            "prompt_tokens": 152,
+            "completion_tokens": 253,
+            "total_tokens": 405,
+            "kv_token_occupancy_rate_percentage": 1.2359619140625,
+            "load_duration": 6e-07,
+            "prefill_duration_ttft": 1.202661248,
+            "decoding_duration": 19.30154,
+            "prefill_speed_tps": 126.38637875193264,
+            "decoding_speed_tps": 13.107762385799269
+          },
+          "model_used": "qwen3.5:4b",
+          "sample": "<task>\nCreate a technical rollout plan for migrating from FLM to LM Studio or Lemonade, comparing speed, model size requirements, setup risk mitigation strategies, fallback protocols, and response time measurement methodologies.\n\n<context>\nThe organization currently uses FLM (Flux Local Model) as its primary inference engine. The goal is to transition to either LM Studio running locally or Lemonade for cloud-based inference. Key comparison points include performance metrics (latency/throughput),",
+          "has_prompt_structure": true
+        }
+      ]
+    },
+    {
+      "provider": "ollama",
+      "name": "Ollama llama3.2:3b",
+      "model": "llama3.2:3b",
+      "task": "grammar_short",
+      "avg_s": 4.665,
+      "median_s": 4.665,
+      "min_s": 1.796,
+      "max_s": 7.533,
+      "runs": [
+        {
+          "elapsed_s": 7.533,
+          "output_chars": 104,
+          "prompt_tokens": 86,
+          "completion_tokens": 26,
+          "usage": {
+            "prompt_tokens": 86,
+            "completion_tokens": 26,
+            "total_tokens": 112
+          },
+          "model_used": "llama3.2:3b",
+          "sample": "This is a short note for the team. It doesn't need new ideas; just fix the grammar and keep the meaning.",
+          "has_prompt_structure": null
+        },
+        {
+          "elapsed_s": 1.796,
+          "output_chars": 90,
+          "prompt_tokens": 86,
+          "completion_tokens": 23,
+          "usage": {
+            "prompt_tokens": 86,
+            "completion_tokens": 23,
+            "total_tokens": 109
+          },
+          "model_used": "llama3.2:3b",
+          "sample": "This is a short note for the team. It doesn't need new ideas; it just needs grammar fixed.",
+          "has_prompt_structure": null
+        }
+      ]
+    },
+    {
+      "provider": "ollama",
+      "name": "Ollama llama3.2:3b",
+      "model": "llama3.2:3b",
+      "task": "prompt_short",
+      "avg_s": 20.349,
+      "median_s": 20.349,
+      "min_s": 19.701,
+      "max_s": 20.998,
+      "runs": [
+        {
+          "elapsed_s": 20.998,
+          "output_chars": 1506,
+          "prompt_tokens": 164,
+          "completion_tokens": 315,
+          "usage": {
+            "prompt_tokens": 164,
+            "completion_tokens": 315,
+            "total_tokens": 479
+          },
+          "model_used": "llama3.2:3b",
+          "sample": "**Task**: Develop a comprehensive rollout plan comparing FLM with LM Studio/Lemonade.\n\n**Context**: The company is considering replacing its existing FLM system with either LM Studio or Lemonade for improved performance and reliability.\n\n**Constraints**:\n\n* Length: 500-750 words\n* Format: Markdown headers, bullet points, and concise paragraphs\n* Tone: Technical and objective\n\n**Output_format**:\n```markdown\n# Rollout Plan Comparison\n\n## Introduction\n### Overview of FLM, LM Studio, and Lemonade\n\n|",
+          "has_prompt_structure": false
+        },
+        {
+          "elapsed_s": 19.701,
+          "output_chars": 1318,
+          "prompt_tokens": 164,
+          "completion_tokens": 314,
+          "usage": {
+            "prompt_tokens": 164,
+            "completion_tokens": 314,
+            "total_tokens": 478
+          },
+          "model_used": "llama3.2:3b",
+          "sample": "**Task**: Develop a comprehensive rollout plan comparing FLM with LM Studio/Lemonade.\n\n**Context**: The company is considering replacing its existing FLM platform with either LM Studio or Lemonade for improved performance and reliability.\n\n**Constraints**:\n\n* Length: 500-750 words\n* Format: Markdown headers, bullet points, and concise paragraphs\n* Tone: Technical and objective\n\n**Output_format**: \n```markdown\n# Rollout Plan Comparison\n## Introduction\n### FLM vs LM Studio/Lemonade\n\n| Criteria | F",
+          "has_prompt_structure": false
+        }
+      ]
+    },
+    {
+      "provider": "lmstudio",
+      "name": "LM Studio Qwen2.5 3B",
+      "model": "qwen2.5-3b-instruct",
+      "task": "grammar_short",
+      "avg_s": 2.885,
+      "median_s": 2.885,
+      "min_s": 1.067,
+      "max_s": 4.702,
+      "runs": [
+        {
+          "elapsed_s": 4.702,
+          "output_chars": 104,
+          "prompt_tokens": 74,
+          "completion_tokens": 26,
+          "usage": {
+            "prompt_tokens": 74,
+            "completion_tokens": 26,
+            "total_tokens": 100,
+            "completion_tokens_details": {
+              "reasoning_tokens": 0
+            }
+          },
+          "model_used": "qwen2.5-3b-instruct",
+          "sample": "This is a short note for the team; it doesn't need new ideas. Just fix the grammar and keep the meaning.",
+          "has_prompt_structure": null
+        },
+        {
+          "elapsed_s": 1.067,
+          "output_chars": 104,
+          "prompt_tokens": 74,
+          "completion_tokens": 26,
+          "usage": {
+            "prompt_tokens": 74,
+            "completion_tokens": 26,
+            "total_tokens": 100,
+            "completion_tokens_details": {
+              "reasoning_tokens": 0
+            }
+          },
+          "model_used": "qwen2.5-3b-instruct",
+          "sample": "This is a short note for the team; it doesn't need new ideas. Just fix the grammar and keep the meaning.",
+          "has_prompt_structure": null
+        }
+      ]
+    },
+    {
+      "provider": "lmstudio",
+      "name": "LM Studio Qwen2.5 3B",
+      "model": "qwen2.5-3b-instruct",
+      "task": "prompt_short",
+      "avg_s": 5.115,
+      "median_s": 5.115,
+      "min_s": 3.09,
+      "max_s": 7.141,
+      "runs": [
+        {
+          "elapsed_s": 7.141,
+          "output_chars": 728,
+          "prompt_tokens": 152,
+          "completion_tokens": 169,
+          "usage": {
+            "prompt_tokens": 152,
+            "completion_tokens": 169,
+            "total_tokens": 321,
+            "completion_tokens_details": {
+              "reasoning_tokens": 0
+            }
+          },
+          "model_used": "qwen2.5-3b-instruct",
+          "sample": "task: create_a_rollout_plan\ncontext: \nconstraints: \noutput_format: ---\nrollout_plan:\n  - name: FLM_to_LM_Studio_or_Lemonade\n    reasons_for_change: \"Switch from FLM to LM Studio or Lemonade due to performance issues.\"\n    speed_impact: \"Decrease in response time by [percentage]% compared to FLM.\"\n    size_impact: \"[Size difference] bytes, as measured by the total data transferred between systems.\"\n    setup_risk: \"Low risk for LM Studio and Lemonade setups; moderate risk for LM Studio due to its",
+          "has_prompt_structure": false
+        },
+        {
+          "elapsed_s": 3.09,
+          "output_chars": 303,
+          "prompt_tokens": 152,
+          "completion_tokens": 78,
+          "usage": {
+            "prompt_tokens": 152,
+            "completion_tokens": 78,
+            "total_tokens": 230,
+            "completion_tokens_details": {
+              "reasoning_tokens": 0
+            }
+          },
+          "model_used": "qwen2.5-3b-instruct",
+          "sample": "task: create_a_rollout_plan_for_FLM_switch  \ncontext: none provided  \nconstraints:  \n- length: concise  \n- format: JSON  \n- tone: professional  \noutput_format:  \n```json\n{\n  \"speed_comparison\": \"\",\n  \"size_analysis\": \"\",\n  \"setup_risk\": \"\",\n  \"fallback_plan\": \"\",\n  \"response_time_measurement\": \"\"\n}\n```",
+          "has_prompt_structure": false
+        }
+      ]
+    },
+    {
+      "provider": "lemonade",
+      "name": "Lemonade Llama3.2 1B Hybrid",
+      "model": "Llama-3.2-1B-Instruct-Hybrid",
+      "task": "grammar_short",
+      "avg_s": 3.412,
+      "median_s": 3.412,
+      "min_s": 3.149,
+      "max_s": 3.674,
+      "runs": [
+        {
+          "elapsed_s": 3.674,
+          "output_chars": 472,
+          "prompt_tokens": 69,
+          "completion_tokens": 91,
+          "usage": {
+            "completion_time_ms": 3665.0,
+            "completion_tokens": 91,
+            "decoding_speed_tps": 27.898326100433973,
+            "prefill_duration_ttft": 0.439,
+            "prompt_tokens": 69,
+            "total_tokens": 160
+          },
+          "model_used": "4a814619e51faf20b93d1b14792d1c1d99586dbf",
+          "sample": "I understand your concern about the quality of our content. Here is the revised version:\n\nThis article contains a few minor errors in grammar, spelling, punctuation, and capitalization. However, the main point of the article remains unchanged. The original text was well-written, but some adjustments were necessary to ensure clarity and accuracy.\n\nBest,\n[Your Name]\n\nNote: This response does not meet the requirements because it includes a preamble and a note at the end.",
+          "has_prompt_structure": null
+        },
+        {
+          "elapsed_s": 3.149,
+          "output_chars": 472,
+          "prompt_tokens": 69,
+          "completion_tokens": 91,
+          "usage": {
+            "completion_time_ms": 3143.0,
+            "completion_tokens": 91,
+            "decoding_speed_tps": 31.424581005586592,
+            "prefill_duration_ttft": 0.279,
+            "prompt_tokens": 69,
+            "total_tokens": 160
+          },
+          "model_used": "4a814619e51faf20b93d1b14792d1c1d99586dbf",
+          "sample": "I understand your concern about the quality of our content. Here is the revised version:\n\nThis article contains a few minor errors in grammar, spelling, punctuation, and capitalization. However, the main point of the article remains unchanged. The original text was well-written, but some adjustments were necessary to ensure clarity and accuracy.\n\nBest,\n[Your Name]\n\nNote: This response does not meet the requirements because it includes a preamble and a note at the end.",
+          "has_prompt_structure": null
+        }
+      ]
+    },
+    {
+      "provider": "lemonade",
+      "name": "Lemonade Llama3.2 1B Hybrid",
+      "model": "Llama-3.2-1B-Instruct-Hybrid",
+      "task": "prompt_short",
+      "avg_s": 13.174,
+      "median_s": 13.174,
+      "min_s": 12.526,
+      "max_s": 13.822,
+      "runs": [
+        {
+          "elapsed_s": 13.822,
+          "output_chars": 1894,
+          "prompt_tokens": 145,
+          "completion_tokens": 364,
+          "usage": {
+            "completion_time_ms": 13815.0,
+            "completion_tokens": 364,
+            "decoding_speed_tps": 26.857058301272566,
+            "prefill_duration_ttft": 0.299,
+            "prompt_tokens": 145,
+            "total_tokens": 509
+          },
+          "model_used": "4a814619e51faf20b93d1b14792d1c1d99586dbf",
+          "sample": "1. Create a rollout plan with specific dates for drop-off of FLM and LM Studio/Lemonade. \n2. Identify the key factors that affect speed, size, setup risk, fallback, and response time.\n3. Provide a detailed comparison between FLM and LM Studio/Lemonade based on your analysis.\n\nTask: Develop a comprehensive guide to help users understand the differences between FLM and LM Studio/Lemonade in terms of their respective strengths and weaknesses.\n\nTask: Write a clear and concise introduction to the top",
+          "has_prompt_structure": false
+        },
+        {
+          "elapsed_s": 12.526,
+          "output_chars": 1894,
+          "prompt_tokens": 145,
+          "completion_tokens": 364,
+          "usage": {
+            "completion_time_ms": 12509.0,
+            "completion_tokens": 364,
+            "decoding_speed_tps": 29.690822836577784,
+            "prefill_duration_ttft": 0.283,
+            "prompt_tokens": 145,
+            "total_tokens": 509
+          },
+          "model_used": "4a814619e51faf20b93d1b14792d1c1d99586dbf",
+          "sample": "1. Create a rollout plan with specific dates for drop-off of FLM and LM Studio/Lemonade. \n2. Identify the key factors that affect speed, size, setup risk, fallback, and response time.\n3. Provide a detailed comparison between FLM and LM Studio/Lemonade based on your analysis.\n\nTask: Develop a comprehensive guide to help users understand the differences between FLM and LM Studio/Lemonade in terms of their respective strengths and weaknesses.\n\nTask: Write a clear and concise introduction to the top",
+          "has_prompt_structure": false
+        }
+      ]
+    }
+  ]
+}

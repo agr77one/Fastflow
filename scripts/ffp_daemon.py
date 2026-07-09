@@ -76,18 +76,6 @@ def _spawn_logged(name: str, argv: list[str], **kwargs) -> subprocess.CompletedP
         raise
 
 
-def _popen_logged(name: str, argv: list[str], **kwargs) -> subprocess.Popen:
-    """Start a long-lived child without waiting for it to exit."""
-    kwargs.setdefault("creationflags", _NO_WINDOW)
-    kwargs.setdefault("stdin", subprocess.DEVNULL)
-    kwargs.setdefault("stdout", subprocess.DEVNULL)
-    kwargs.setdefault("stderr", subprocess.DEVNULL)
-    proc = subprocess.Popen(argv, **kwargs)
-    log.info("spawn name=%s argv=%s pid=%s", name,
-             argv[0:1] + ["..."] if len(argv) > 2 else argv, proc.pid)
-    return proc
-
-
 HOST = "127.0.0.1"
 DEFAULT_PORT = 52650
 # API_VERSION doubles as the required POST header value (X-FFP-API). The AHK
@@ -335,8 +323,8 @@ def _act_model_recommendations(_args: dict) -> dict:
     RAM/VRAM, a size budget, and candidate models tagged fits yes/tight/no."""
     import ffp_hardware
     provider = grammar_fix.LLM_PROVIDER
-    if provider == "ollama":
-        candidates = list(ffp_hardware.OLLAMA_CATALOG)
+    if provider in {"ollama", "lmstudio", "lemonade"}:
+        candidates = list(ffp_hardware.PROVIDER_CATALOGS.get(provider, ffp_hardware.OLLAMA_CATALOG))
     else:
         listing = grammar_fix._provider_list("all")
         names = listing.get("models") or []
@@ -449,13 +437,14 @@ def _act_bench_start(args: dict) -> dict:
     model = str(args.get("model") or args.get("value") or "").strip()
     if not model:
         return {"ok": False, "error": "bench_start requires args.model"}
-    if grammar_fix.LLM_PROVIDER == "ollama":
+    if grammar_fix.LLM_PROVIDER != "fastflowlm":
         return ffp_benchmark.start_benchmark(
             model,
             _NO_WINDOW,
             _paths.DATA_DIR / "benchmarks",
-            provider="ollama",
+            provider=grammar_fix.LLM_PROVIDER,
             base_url=grammar_fix.LLM_BASE_URL,
+            auth_bearer=grammar_fix.LLM_AUTH_BEARER,
         )
     return ffp_benchmark.start_benchmark(
         model,
@@ -702,6 +691,16 @@ def _act_meeting_batch_status(_args: dict) -> dict:
     return ffp_meetings.batch_status()
 
 
+def _act_meeting_skips_list(_args: dict) -> dict:
+    import ffp_meetings
+    return ffp_meetings.list_skips()
+
+
+def _act_meeting_skip_clear(args: dict) -> dict:
+    import ffp_meetings
+    return ffp_meetings.clear_skip(str(args.get("meeting_id") or ""))
+
+
 def _act_meeting_ask(args: dict) -> dict:
     import ffp_meetings
     return ffp_meetings.ask(str(args.get("meeting_id") or ""),
@@ -797,6 +796,8 @@ ACTIONS: dict[str, Callable[[dict], Any]] = {
     "meeting_redigest": _act_meeting_redigest,
     "meeting_batch_run": _act_meeting_batch_run,
     "meeting_batch_status": _act_meeting_batch_status,
+    "meeting_skips_list": _act_meeting_skips_list,
+    "meeting_skip_clear": _act_meeting_skip_clear,
     "meeting_ask": _act_meeting_ask,
     "meeting_actions_list": _act_meeting_actions_list,
     "meeting_action_set_status": _act_meeting_action_set_status,

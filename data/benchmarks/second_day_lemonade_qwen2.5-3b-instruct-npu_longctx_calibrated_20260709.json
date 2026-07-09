@@ -1,0 +1,949 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-07-09T00:16:10",
+  "provider": "lemonade",
+  "base_url": "http://127.0.0.1:13305/api/v1",
+  "model": "Qwen2.5-3B-Instruct-NPU",
+  "quant": "ryzenai-llm-npu",
+  "bearer_present": true,
+  "tasks": [
+    "longctx"
+  ],
+  "runs": 5,
+  "warmup": 1,
+  "temperature": 0.1,
+  "disable_thinking": false,
+  "process_names": [
+    "LemonadeServer",
+    "lemonade",
+    "ryzenai-server",
+    "ryzenai_server"
+  ],
+  "versions": {
+    "flm": {
+      "returncode": 0,
+      "stdout": "{ \"version\": \"0.9.43\" }",
+      "stderr": ""
+    },
+    "ollama": {
+      "returncode": 0,
+      "stdout": "Warning: could not connect to a running Ollama instance\nWarning: client version is 0.30.7",
+      "stderr": ""
+    },
+    "lms": {
+      "returncode": 0,
+      "stdout": "CLI commit: 9902c3a",
+      "stderr": ""
+    },
+    "lemonade": {
+      "returncode": 0,
+      "stdout": "lemonade version 10.9.0",
+      "stderr": ""
+    }
+  },
+  "cases": [
+    {
+      "case_id": "longctx_1000",
+      "task": "longctx",
+      "system_prompt": "Summarize the meeting transcript into a concise digest. Return Markdown with exactly three sections: Summary, Decisions, Action items. Keep the total answer near 150 tokens.",
+      "user_prompt": "Meeting transcript follows. Produce the requested digest.\n\nSpeaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B aske\n\nEnd of transcript.",
+      "max_tokens": 220,
+      "summary": {
+        "timed_runs": 5,
+        "pass_count": 5,
+        "pass_rate": 1.0,
+        "wall_seconds_median": 12.06126,
+        "wall_seconds_min": 11.172893,
+        "wall_seconds_max": 12.346228,
+        "seconds_per_completion_token_median": 0.072658,
+        "memory_guard_violations": 0
+      },
+      "runs": [
+        {
+          "run_index": 1,
+          "warmup": true,
+          "wall_seconds": 11.391462,
+          "ttft_seconds": 2.086,
+          "provider_native_metrics": {},
+          "prompt_tokens": 1059,
+          "completion_tokens": 166,
+          "total_tokens": 1225,
+          "seconds_per_completion_token": 0.068623,
+          "model_used": "94f88326aa8ca67cd9fa9607d7af0227eff2d1e3",
+          "raw_output": "Summary:\nKey topics included rollout risk, benchmark design, provider startups, memory pressure, and model quality. Discussion revolved around seeking concrete evidence, repeatable commands, and establishing clear decision gates.\n\nDecisions:\n- Establish a clear process for evaluating rollout risks.\n- Develop benchmarks that are reproducible and verifiable.\n- Define criteria for provider startups to ensure they meet certain standards.\n- Implement measures to manage memory pressure effectively.\n- Improve model quality through rigorous testing and validation processes.\n\nAction Items:\n- Speaker A will develop detailed documentation on rollout risk evaluation methods.\n- Speaker B will create repeatable command sets for benchmarking purposes.\n- Both speakers will define clear criteria for provider startups and implement them strictly.\n- Memory management strategies will be revised based on identified issues.\n- Quality improvements in models will be monitored closely and adjusted accordingly.",
+          "visible_output": "Summary:\nKey topics included rollout risk, benchmark design, provider startups, memory pressure, and model quality. Discussion revolved around seeking concrete evidence, repeatable commands, and establishing clear decision gates.\n\nDecisions:\n- Establish a clear process for evaluating rollout risks.\n- Develop benchmarks that are reproducible and verifiable.\n- Define criteria for provider startups to ensure they meet certain standards.\n- Implement measures to manage memory pressure effectively.\n- Improve model quality through rigorous testing and validation processes.\n\nAction Items:\n- Speaker A will develop detailed documentation on rollout risk evaluation methods.\n- Speaker B will create repeatable command sets for benchmarking purposes.\n- Both speakers will define clear criteria for provider startups and implement them strictly.\n- Memory management strategies will be revised based on identified issues.\n- Quality improvements in models will be monitored closely and adjusted accordingly.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 1000,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 10795.0,
+            "completion_tokens": 166,
+            "decoding_speed_tps": 18.945918015845677,
+            "prefill_duration_ttft": 2.086,
+            "prompt_tokens": 1059,
+            "total_tokens": 1225
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 3955453952,
+              "system_available_bytes": 11031928832
+            },
+            "after": {
+              "provider_rss_bytes": 4427784192,
+              "system_available_bytes": 10342563840
+            },
+            "max_provider_rss_bytes": 4427714560,
+            "min_system_available_bytes": 10337136640,
+            "available_delta_bytes": 694792192,
+            "memory_guard_violation": false,
+            "sample_count": 8
+          },
+          "error": ""
+        },
+        {
+          "run_index": 2,
+          "warmup": false,
+          "wall_seconds": 11.172893,
+          "ttft_seconds": 1.775,
+          "provider_native_metrics": {},
+          "prompt_tokens": 1059,
+          "completion_tokens": 166,
+          "total_tokens": 1225,
+          "seconds_per_completion_token": 0.067307,
+          "model_used": "94f88326aa8ca67cd9fa9607d7af0227eff2d1e3",
+          "raw_output": "Summary:\nKey topics included rollout risk, benchmark design, provider startups, memory pressure, and model quality. Discussion revolved around seeking concrete evidence, repeatable commands, and establishing clear decision gates.\n\nDecisions:\n- Establish a clear process for evaluating rollout risks.\n- Develop benchmarks that are reproducible and verifiable.\n- Define criteria for provider startups to ensure they meet certain standards.\n- Implement measures to manage memory pressure effectively.\n- Improve model quality through rigorous testing and validation processes.\n\nAction Items:\n- Speaker A will develop detailed documentation on rollout risk evaluation methods.\n- Speaker B will create repeatable command sets for benchmarking purposes.\n- Both speakers will define clear criteria for provider startups and implement them strictly.\n- Memory management strategies will be revised based on identified issues.\n- Quality improvements in models will be monitored closely and adjusted accordingly.",
+          "visible_output": "Summary:\nKey topics included rollout risk, benchmark design, provider startups, memory pressure, and model quality. Discussion revolved around seeking concrete evidence, repeatable commands, and establishing clear decision gates.\n\nDecisions:\n- Establish a clear process for evaluating rollout risks.\n- Develop benchmarks that are reproducible and verifiable.\n- Define criteria for provider startups to ensure they meet certain standards.\n- Implement measures to manage memory pressure effectively.\n- Improve model quality through rigorous testing and validation processes.\n\nAction Items:\n- Speaker A will develop detailed documentation on rollout risk evaluation methods.\n- Speaker B will create repeatable command sets for benchmarking purposes.\n- Both speakers will define clear criteria for provider startups and implement them strictly.\n- Memory management strategies will be revised based on identified issues.\n- Quality improvements in models will be monitored closely and adjusted accordingly.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 1000,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 10657.0,
+            "completion_tokens": 166,
+            "decoding_speed_tps": 18.576897095248817,
+            "prefill_duration_ttft": 1.775,
+            "prompt_tokens": 1059,
+            "total_tokens": 1225
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 4427784192,
+              "system_available_bytes": 10290147328
+            },
+            "after": {
+              "provider_rss_bytes": 4427825152,
+              "system_available_bytes": 10554626048
+            },
+            "max_provider_rss_bytes": 4457164800,
+            "min_system_available_bytes": 9850974208,
+            "available_delta_bytes": 439173120,
+            "memory_guard_violation": false,
+            "sample_count": 8
+          },
+          "error": ""
+        },
+        {
+          "run_index": 3,
+          "warmup": false,
+          "wall_seconds": 12.305961,
+          "ttft_seconds": 1.787,
+          "provider_native_metrics": {},
+          "prompt_tokens": 1059,
+          "completion_tokens": 166,
+          "total_tokens": 1225,
+          "seconds_per_completion_token": 0.074132,
+          "model_used": "94f88326aa8ca67cd9fa9607d7af0227eff2d1e3",
+          "raw_output": "Summary:\nKey topics included rollout risk, benchmark design, provider startups, memory pressure, and model quality. Discussion revolved around seeking concrete evidence, repeatable commands, and establishing clear decision gates.\n\nDecisions:\n- Establish a clear process for evaluating rollout risks.\n- Develop benchmarks that are reproducible and verifiable.\n- Define criteria for provider startups to ensure they meet certain standards.\n- Implement measures to manage memory pressure effectively.\n- Improve model quality through rigorous testing and validation processes.\n\nAction Items:\n- Speaker A will develop detailed documentation on rollout risk evaluation methods.\n- Speaker B will create repeatable command sets for benchmarking purposes.\n- Both speakers will define clear criteria for provider startups and implement them strictly.\n- Memory management strategies will be revised based on identified issues.\n- Quality improvements in models will be monitored closely and adjusted accordingly.",
+          "visible_output": "Summary:\nKey topics included rollout risk, benchmark design, provider startups, memory pressure, and model quality. Discussion revolved around seeking concrete evidence, repeatable commands, and establishing clear decision gates.\n\nDecisions:\n- Establish a clear process for evaluating rollout risks.\n- Develop benchmarks that are reproducible and verifiable.\n- Define criteria for provider startups to ensure they meet certain standards.\n- Implement measures to manage memory pressure effectively.\n- Improve model quality through rigorous testing and validation processes.\n\nAction Items:\n- Speaker A will develop detailed documentation on rollout risk evaluation methods.\n- Speaker B will create repeatable command sets for benchmarking purposes.\n- Both speakers will define clear criteria for provider startups and implement them strictly.\n- Memory management strategies will be revised based on identified issues.\n- Quality improvements in models will be monitored closely and adjusted accordingly.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 1000,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 11777.0,
+            "completion_tokens": 166,
+            "decoding_speed_tps": 16.516516516516518,
+            "prefill_duration_ttft": 1.787,
+            "prompt_tokens": 1059,
+            "total_tokens": 1225
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 4427825152,
+              "system_available_bytes": 10514788352
+            },
+            "after": {
+              "provider_rss_bytes": 4427841536,
+              "system_available_bytes": 10411212800
+            },
+            "max_provider_rss_bytes": 4653125632,
+            "min_system_available_bytes": 10136993792,
+            "available_delta_bytes": 377794560,
+            "memory_guard_violation": false,
+            "sample_count": 9
+          },
+          "error": ""
+        },
+        {
+          "run_index": 4,
+          "warmup": false,
+          "wall_seconds": 12.06126,
+          "ttft_seconds": 1.9,
+          "provider_native_metrics": {},
+          "prompt_tokens": 1059,
+          "completion_tokens": 166,
+          "total_tokens": 1225,
+          "seconds_per_completion_token": 0.072658,
+          "model_used": "94f88326aa8ca67cd9fa9607d7af0227eff2d1e3",
+          "raw_output": "Summary:\nKey topics included rollout risk, benchmark design, provider startups, memory pressure, and model quality. Discussion revolved around seeking concrete evidence, repeatable commands, and establishing clear decision gates.\n\nDecisions:\n- Establish a clear process for evaluating rollout risks.\n- Develop benchmarks that are reproducible and verifiable.\n- Define criteria for provider startups to ensure they meet certain standards.\n- Implement measures to manage memory pressure effectively.\n- Improve model quality through rigorous testing and validation processes.\n\nAction Items:\n- Speaker A will develop detailed documentation on rollout risk evaluation methods.\n- Speaker B will create repeatable command sets for benchmarking purposes.\n- Both speakers will define clear criteria for provider startups and implement them strictly.\n- Memory management strategies will be revised based on identified issues.\n- Quality improvements in models will be monitored closely and adjusted accordingly.",
+          "visible_output": "Summary:\nKey topics included rollout risk, benchmark design, provider startups, memory pressure, and model quality. Discussion revolved around seeking concrete evidence, repeatable commands, and establishing clear decision gates.\n\nDecisions:\n- Establish a clear process for evaluating rollout risks.\n- Develop benchmarks that are reproducible and verifiable.\n- Define criteria for provider startups to ensure they meet certain standards.\n- Implement measures to manage memory pressure effectively.\n- Improve model quality through rigorous testing and validation processes.\n\nAction Items:\n- Speaker A will develop detailed documentation on rollout risk evaluation methods.\n- Speaker B will create repeatable command sets for benchmarking purposes.\n- Both speakers will define clear criteria for provider startups and implement them strictly.\n- Memory management strategies will be revised based on identified issues.\n- Quality improvements in models will be monitored closely and adjusted accordingly.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 1000,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 11521.0,
+            "completion_tokens": 166,
+            "decoding_speed_tps": 17.14998440910508,
+            "prefill_duration_ttft": 1.9,
+            "prompt_tokens": 1059,
+            "total_tokens": 1225
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 4427841536,
+              "system_available_bytes": 10366586880
+            },
+            "after": {
+              "provider_rss_bytes": 4427853824,
+              "system_available_bytes": 10343272448
+            },
+            "max_provider_rss_bytes": 4779425792,
+            "min_system_available_bytes": 10019880960,
+            "available_delta_bytes": 346705920,
+            "memory_guard_violation": false,
+            "sample_count": 9
+          },
+          "error": ""
+        },
+        {
+          "run_index": 5,
+          "warmup": false,
+          "wall_seconds": 12.346228,
+          "ttft_seconds": 1.906,
+          "provider_native_metrics": {},
+          "prompt_tokens": 1059,
+          "completion_tokens": 166,
+          "total_tokens": 1225,
+          "seconds_per_completion_token": 0.074375,
+          "model_used": "94f88326aa8ca67cd9fa9607d7af0227eff2d1e3",
+          "raw_output": "Summary:\nKey topics included rollout risk, benchmark design, provider startups, memory pressure, and model quality. Discussion revolved around seeking concrete evidence, repeatable commands, and establishing clear decision gates.\n\nDecisions:\n- Establish a clear process for evaluating rollout risks.\n- Develop benchmarks that are reproducible and verifiable.\n- Define criteria for provider startups to ensure they meet certain standards.\n- Implement measures to manage memory pressure effectively.\n- Improve model quality through rigorous testing and validation processes.\n\nAction Items:\n- Speaker A will develop detailed documentation on rollout risk evaluation methods.\n- Speaker B will create repeatable command sets for benchmarking purposes.\n- Both speakers will define clear criteria for provider startups and implement them strictly.\n- Memory management strategies will be revised based on identified issues.\n- Quality improvements in models will be monitored closely and adjusted accordingly.",
+          "visible_output": "Summary:\nKey topics included rollout risk, benchmark design, provider startups, memory pressure, and model quality. Discussion revolved around seeking concrete evidence, repeatable commands, and establishing clear decision gates.\n\nDecisions:\n- Establish a clear process for evaluating rollout risks.\n- Develop benchmarks that are reproducible and verifiable.\n- Define criteria for provider startups to ensure they meet certain standards.\n- Implement measures to manage memory pressure effectively.\n- Improve model quality through rigorous testing and validation processes.\n\nAction Items:\n- Speaker A will develop detailed documentation on rollout risk evaluation methods.\n- Speaker B will create repeatable command sets for benchmarking purposes.\n- Both speakers will define clear criteria for provider startups and implement them strictly.\n- Memory management strategies will be revised based on identified issues.\n- Quality improvements in models will be monitored closely and adjusted accordingly.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 1000,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 11783.0,
+            "completion_tokens": 166,
+            "decoding_speed_tps": 16.70547737167156,
+            "prefill_duration_ttft": 1.906,
+            "prompt_tokens": 1059,
+            "total_tokens": 1225
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 4427853824,
+              "system_available_bytes": 10294706176
+            },
+            "after": {
+              "provider_rss_bytes": 4427857920,
+              "system_available_bytes": 10282876928
+            },
+            "max_provider_rss_bytes": 4775149568,
+            "min_system_available_bytes": 10103451648,
+            "available_delta_bytes": 191254528,
+            "memory_guard_violation": false,
+            "sample_count": 9
+          },
+          "error": ""
+        },
+        {
+          "run_index": 6,
+          "warmup": false,
+          "wall_seconds": 11.210542,
+          "ttft_seconds": 1.733,
+          "provider_native_metrics": {},
+          "prompt_tokens": 1059,
+          "completion_tokens": 166,
+          "total_tokens": 1225,
+          "seconds_per_completion_token": 0.067533,
+          "model_used": "94f88326aa8ca67cd9fa9607d7af0227eff2d1e3",
+          "raw_output": "Summary:\nKey topics included rollout risk, benchmark design, provider startups, memory pressure, and model quality. Discussion revolved around seeking concrete evidence, repeatable commands, and establishing clear decision gates.\n\nDecisions:\n- Establish a clear process for evaluating rollout risks.\n- Develop benchmarks that are reproducible and verifiable.\n- Define criteria for provider startups to ensure they meet certain standards.\n- Implement measures to manage memory pressure effectively.\n- Improve model quality through rigorous testing and validation processes.\n\nAction Items:\n- Speaker A will develop detailed documentation on rollout risk evaluation methods.\n- Speaker B will create repeatable command sets for benchmarking purposes.\n- Both speakers will define clear criteria for provider startups and implement them strictly.\n- Memory management strategies will be revised based on identified issues.\n- Quality improvements in models will be monitored closely and adjusted accordingly.",
+          "visible_output": "Summary:\nKey topics included rollout risk, benchmark design, provider startups, memory pressure, and model quality. Discussion revolved around seeking concrete evidence, repeatable commands, and establishing clear decision gates.\n\nDecisions:\n- Establish a clear process for evaluating rollout risks.\n- Develop benchmarks that are reproducible and verifiable.\n- Define criteria for provider startups to ensure they meet certain standards.\n- Implement measures to manage memory pressure effectively.\n- Improve model quality through rigorous testing and validation processes.\n\nAction Items:\n- Speaker A will develop detailed documentation on rollout risk evaluation methods.\n- Speaker B will create repeatable command sets for benchmarking purposes.\n- Both speakers will define clear criteria for provider startups and implement them strictly.\n- Memory management strategies will be revised based on identified issues.\n- Quality improvements in models will be monitored closely and adjusted accordingly.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 1000,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 10650.0,
+            "completion_tokens": 166,
+            "decoding_speed_tps": 18.50398115958282,
+            "prefill_duration_ttft": 1.733,
+            "prompt_tokens": 1059,
+            "total_tokens": 1225
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 4427857920,
+              "system_available_bytes": 10279419904
+            },
+            "after": {
+              "provider_rss_bytes": 4427857920,
+              "system_available_bytes": 10313465856
+            },
+            "max_provider_rss_bytes": 4617715712,
+            "min_system_available_bytes": 9655209984,
+            "available_delta_bytes": 624209920,
+            "memory_guard_violation": false,
+            "sample_count": 8
+          },
+          "error": ""
+        }
+      ]
+    },
+    {
+      "case_id": "longctx_4000",
+      "task": "longctx",
+      "system_prompt": "Summarize the meeting transcript into a concise digest. Return Markdown with exactly three sections: Summary, Decisions, Action items. Keep the total answer near 150 tokens.",
+      "user_prompt": "Meeting transcript follows. Produce the requested digest.\n\nSpeaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model qua\n\nEnd of transcript.",
+      "max_tokens": 220,
+      "summary": {
+        "timed_runs": 5,
+        "pass_count": 5,
+        "pass_rate": 1.0,
+        "wall_seconds_median": 15.427321,
+        "wall_seconds_min": 14.985665,
+        "wall_seconds_max": 15.77166,
+        "seconds_per_completion_token_median": 0.070124,
+        "memory_guard_violations": 0
+      },
+      "runs": [
+        {
+          "run_index": 1,
+          "warmup": true,
+          "wall_seconds": 15.531391,
+          "ttft_seconds": 3.076,
+          "provider_native_metrics": {},
+          "prompt_tokens": 4042,
+          "completion_tokens": 220,
+          "total_tokens": 4262,
+          "seconds_per_completion_token": 0.070597,
+          "model_used": "94f88326aa8ca67cd9fa9607d7af0227eff2d1e3",
+          "raw_output": "It seems like the conversation between Speaker A and Speaker B is revolving around discussing various aspects related to machine learning models, particularly focusing on rollout risk, benchmark design, provider startup times, memory pressure, and ensuring model quality. However, Speaker B keeps asking for more concrete and verifiable details (exact evidence, repeatable commands) as well as a clearly defined decision point.\n\nGiven this context, let's summarize the key points:\n\n1. **Rollout Risk**: This likely refers to potential issues that could arise during or after deploying a new model into production environments.\n2. **Benchmark Design**: This involves setting up tests or metrics to evaluate how well a model performs under different conditions or scenarios.\n3. **Provider Startup Time**: This might refer to the time it takes for a service or system to become fully operational once deployed.\n4. **Memory Pressure**: This can indicate when a system runs out of available memory resources, potentially leading to crashes or degraded performance.\n5. **Model Quality**: Ensuring that the model behaves correctly and consistently across different use cases and environments.\n\nTo address Speaker B’s request",
+          "visible_output": "It seems like the conversation between Speaker A and Speaker B is revolving around discussing various aspects related to machine learning models, particularly focusing on rollout risk, benchmark design, provider startup times, memory pressure, and ensuring model quality. However, Speaker B keeps asking for more concrete and verifiable details (exact evidence, repeatable commands) as well as a clearly defined decision point.\n\nGiven this context, let's summarize the key points:\n\n1. **Rollout Risk**: This likely refers to potential issues that could arise during or after deploying a new model into production environments.\n2. **Benchmark Design**: This involves setting up tests or metrics to evaluate how well a model performs under different conditions or scenarios.\n3. **Provider Startup Time**: This might refer to the time it takes for a service or system to become fully operational once deployed.\n4. **Memory Pressure**: This can indicate when a system runs out of available memory resources, potentially leading to crashes or degraded performance.\n5. **Model Quality**: Ensuring that the model behaves correctly and consistently across different use cases and environments.\n\nTo address Speaker B’s request",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 1217,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 14964.0,
+            "completion_tokens": 220,
+            "decoding_speed_tps": 18.421938088829073,
+            "prefill_duration_ttft": 3.076,
+            "prompt_tokens": 4042,
+            "total_tokens": 4262
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 4427857920,
+              "system_available_bytes": 10248429568
+            },
+            "after": {
+              "provider_rss_bytes": 4733947904,
+              "system_available_bytes": 10045382656
+            },
+            "max_provider_rss_bytes": 5734895616,
+            "min_system_available_bytes": 9875451904,
+            "available_delta_bytes": 372977664,
+            "memory_guard_violation": false,
+            "sample_count": 11
+          },
+          "error": ""
+        },
+        {
+          "run_index": 2,
+          "warmup": false,
+          "wall_seconds": 14.985665,
+          "ttft_seconds": 2.704,
+          "provider_native_metrics": {},
+          "prompt_tokens": 4042,
+          "completion_tokens": 220,
+          "total_tokens": 4262,
+          "seconds_per_completion_token": 0.068117,
+          "model_used": "94f88326aa8ca67cd9fa9607d7af0227eff2d1e3",
+          "raw_output": "It seems like the conversation between Speaker A and Speaker B is revolving around discussing various aspects related to machine learning models, particularly focusing on rollout risk, benchmark design, provider startup times, memory pressure, and ensuring model quality. However, Speaker B keeps asking for more concrete and verifiable details (exact evidence, repeatable commands) as well as a clearly defined decision point.\n\nGiven this context, let's summarize the key points:\n\n1. **Rollout Risk**: This likely refers to potential issues that could arise during or after deploying a new model into production environments.\n2. **Benchmark Design**: This involves setting up tests or metrics to evaluate how well a model performs under different conditions or scenarios.\n3. **Provider Startup Time**: This might refer to the time it takes for a service or system to become fully operational once deployed.\n4. **Memory Pressure**: This can indicate when a system runs out of available memory resources, potentially leading to crashes or degraded performance.\n5. **Model Quality**: Ensuring that the model behaves correctly and consistently across different use cases and environments.\n\nTo address Speaker B’s request",
+          "visible_output": "It seems like the conversation between Speaker A and Speaker B is revolving around discussing various aspects related to machine learning models, particularly focusing on rollout risk, benchmark design, provider startup times, memory pressure, and ensuring model quality. However, Speaker B keeps asking for more concrete and verifiable details (exact evidence, repeatable commands) as well as a clearly defined decision point.\n\nGiven this context, let's summarize the key points:\n\n1. **Rollout Risk**: This likely refers to potential issues that could arise during or after deploying a new model into production environments.\n2. **Benchmark Design**: This involves setting up tests or metrics to evaluate how well a model performs under different conditions or scenarios.\n3. **Provider Startup Time**: This might refer to the time it takes for a service or system to become fully operational once deployed.\n4. **Memory Pressure**: This can indicate when a system runs out of available memory resources, potentially leading to crashes or degraded performance.\n5. **Model Quality**: Ensuring that the model behaves correctly and consistently across different use cases and environments.\n\nTo address Speaker B’s request",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 1217,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 14454.0,
+            "completion_tokens": 220,
+            "decoding_speed_tps": 18.638297872340427,
+            "prefill_duration_ttft": 2.704,
+            "prompt_tokens": 4042,
+            "total_tokens": 4262
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 4733947904,
+              "system_available_bytes": 10003492864
+            },
+            "after": {
+              "provider_rss_bytes": 4734029824,
+              "system_available_bytes": 10120593408
+            },
+            "max_provider_rss_bytes": 4782030848,
+            "min_system_available_bytes": 9956904960,
+            "available_delta_bytes": 46587904,
+            "memory_guard_violation": false,
+            "sample_count": 11
+          },
+          "error": ""
+        },
+        {
+          "run_index": 3,
+          "warmup": false,
+          "wall_seconds": 15.427321,
+          "ttft_seconds": 2.752,
+          "provider_native_metrics": {},
+          "prompt_tokens": 4042,
+          "completion_tokens": 220,
+          "total_tokens": 4262,
+          "seconds_per_completion_token": 0.070124,
+          "model_used": "94f88326aa8ca67cd9fa9607d7af0227eff2d1e3",
+          "raw_output": "It seems like the conversation between Speaker A and Speaker B is revolving around discussing various aspects related to machine learning models, particularly focusing on rollout risk, benchmark design, provider startup times, memory pressure, and ensuring model quality. However, Speaker B keeps asking for more concrete and verifiable details (exact evidence, repeatable commands) as well as a clearly defined decision point.\n\nGiven this context, let's summarize the key points:\n\n1. **Rollout Risk**: This likely refers to potential issues that could arise during or after deploying a new model into production environments.\n2. **Benchmark Design**: This involves setting up tests or metrics to evaluate how well a model performs under different conditions or scenarios.\n3. **Provider Startup Time**: This might refer to the time it takes for a service or system to become fully operational once deployed.\n4. **Memory Pressure**: This can indicate when a system runs out of available memory resources, potentially leading to crashes or degraded performance.\n5. **Model Quality**: Ensuring that the model behaves correctly and consistently across different use cases and environments.\n\nTo address Speaker B’s request",
+          "visible_output": "It seems like the conversation between Speaker A and Speaker B is revolving around discussing various aspects related to machine learning models, particularly focusing on rollout risk, benchmark design, provider startup times, memory pressure, and ensuring model quality. However, Speaker B keeps asking for more concrete and verifiable details (exact evidence, repeatable commands) as well as a clearly defined decision point.\n\nGiven this context, let's summarize the key points:\n\n1. **Rollout Risk**: This likely refers to potential issues that could arise during or after deploying a new model into production environments.\n2. **Benchmark Design**: This involves setting up tests or metrics to evaluate how well a model performs under different conditions or scenarios.\n3. **Provider Startup Time**: This might refer to the time it takes for a service or system to become fully operational once deployed.\n4. **Memory Pressure**: This can indicate when a system runs out of available memory resources, potentially leading to crashes or degraded performance.\n5. **Model Quality**: Ensuring that the model behaves correctly and consistently across different use cases and environments.\n\nTo address Speaker B’s request",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 1217,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 14871.0,
+            "completion_tokens": 220,
+            "decoding_speed_tps": 18.070797920620514,
+            "prefill_duration_ttft": 2.752,
+            "prompt_tokens": 4042,
+            "total_tokens": 4262
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 4734029824,
+              "system_available_bytes": 10073542656
+            },
+            "after": {
+              "provider_rss_bytes": 4734025728,
+              "system_available_bytes": 10036719616
+            },
+            "max_provider_rss_bytes": 4782047232,
+            "min_system_available_bytes": 9979006976,
+            "available_delta_bytes": 94535680,
+            "memory_guard_violation": false,
+            "sample_count": 11
+          },
+          "error": ""
+        },
+        {
+          "run_index": 4,
+          "warmup": false,
+          "wall_seconds": 15.08808,
+          "ttft_seconds": 2.713,
+          "provider_native_metrics": {},
+          "prompt_tokens": 4042,
+          "completion_tokens": 220,
+          "total_tokens": 4262,
+          "seconds_per_completion_token": 0.068582,
+          "model_used": "94f88326aa8ca67cd9fa9607d7af0227eff2d1e3",
+          "raw_output": "It seems like the conversation between Speaker A and Speaker B is revolving around discussing various aspects related to machine learning models, particularly focusing on rollout risk, benchmark design, provider startup times, memory pressure, and ensuring model quality. However, Speaker B keeps asking for more concrete and verifiable details (exact evidence, repeatable commands) as well as a clearly defined decision point.\n\nGiven this context, let's summarize the key points:\n\n1. **Rollout Risk**: This likely refers to potential issues that could arise during or after deploying a new model into production environments.\n2. **Benchmark Design**: This involves setting up tests or metrics to evaluate how well a model performs under different conditions or scenarios.\n3. **Provider Startup Time**: This might refer to the time it takes for a service or system to become fully operational once deployed.\n4. **Memory Pressure**: This can indicate when a system runs out of available memory resources, potentially leading to crashes or degraded performance.\n5. **Model Quality**: Ensuring that the model behaves correctly and consistently across different use cases and environments.\n\nTo address Speaker B’s request",
+          "visible_output": "It seems like the conversation between Speaker A and Speaker B is revolving around discussing various aspects related to machine learning models, particularly focusing on rollout risk, benchmark design, provider startup times, memory pressure, and ensuring model quality. However, Speaker B keeps asking for more concrete and verifiable details (exact evidence, repeatable commands) as well as a clearly defined decision point.\n\nGiven this context, let's summarize the key points:\n\n1. **Rollout Risk**: This likely refers to potential issues that could arise during or after deploying a new model into production environments.\n2. **Benchmark Design**: This involves setting up tests or metrics to evaluate how well a model performs under different conditions or scenarios.\n3. **Provider Startup Time**: This might refer to the time it takes for a service or system to become fully operational once deployed.\n4. **Memory Pressure**: This can indicate when a system runs out of available memory resources, potentially leading to crashes or degraded performance.\n5. **Model Quality**: Ensuring that the model behaves correctly and consistently across different use cases and environments.\n\nTo address Speaker B’s request",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 1217,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 14558.0,
+            "completion_tokens": 220,
+            "decoding_speed_tps": 18.48881384550443,
+            "prefill_duration_ttft": 2.713,
+            "prompt_tokens": 4042,
+            "total_tokens": 4262
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 4734025728,
+              "system_available_bytes": 10041696256
+            },
+            "after": {
+              "provider_rss_bytes": 4734033920,
+              "system_available_bytes": 10103701504
+            },
+            "max_provider_rss_bytes": 4782059520,
+            "min_system_available_bytes": 9969074176,
+            "available_delta_bytes": 72622080,
+            "memory_guard_violation": false,
+            "sample_count": 11
+          },
+          "error": ""
+        },
+        {
+          "run_index": 5,
+          "warmup": false,
+          "wall_seconds": 15.616713,
+          "ttft_seconds": 2.758,
+          "provider_native_metrics": {},
+          "prompt_tokens": 4042,
+          "completion_tokens": 220,
+          "total_tokens": 4262,
+          "seconds_per_completion_token": 0.070985,
+          "model_used": "94f88326aa8ca67cd9fa9607d7af0227eff2d1e3",
+          "raw_output": "It seems like the conversation between Speaker A and Speaker B is revolving around discussing various aspects related to machine learning models, particularly focusing on rollout risk, benchmark design, provider startup times, memory pressure, and ensuring model quality. However, Speaker B keeps asking for more concrete and verifiable details (exact evidence, repeatable commands) as well as a clearly defined decision point.\n\nGiven this context, let's summarize the key points:\n\n1. **Rollout Risk**: This likely refers to potential issues that could arise during or after deploying a new model into production environments.\n2. **Benchmark Design**: This involves setting up tests or metrics to evaluate how well a model performs under different conditions or scenarios.\n3. **Provider Startup Time**: This might refer to the time it takes for a service or system to become fully operational once deployed.\n4. **Memory Pressure**: This can indicate when a system runs out of available memory resources, potentially leading to crashes or degraded performance.\n5. **Model Quality**: Ensuring that the model behaves correctly and consistently across different use cases and environments.\n\nTo address Speaker B’s request",
+          "visible_output": "It seems like the conversation between Speaker A and Speaker B is revolving around discussing various aspects related to machine learning models, particularly focusing on rollout risk, benchmark design, provider startup times, memory pressure, and ensuring model quality. However, Speaker B keeps asking for more concrete and verifiable details (exact evidence, repeatable commands) as well as a clearly defined decision point.\n\nGiven this context, let's summarize the key points:\n\n1. **Rollout Risk**: This likely refers to potential issues that could arise during or after deploying a new model into production environments.\n2. **Benchmark Design**: This involves setting up tests or metrics to evaluate how well a model performs under different conditions or scenarios.\n3. **Provider Startup Time**: This might refer to the time it takes for a service or system to become fully operational once deployed.\n4. **Memory Pressure**: This can indicate when a system runs out of available memory resources, potentially leading to crashes or degraded performance.\n5. **Model Quality**: Ensuring that the model behaves correctly and consistently across different use cases and environments.\n\nTo address Speaker B’s request",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 1217,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 15042.0,
+            "completion_tokens": 220,
+            "decoding_speed_tps": 17.82806903288831,
+            "prefill_duration_ttft": 2.758,
+            "prompt_tokens": 4042,
+            "total_tokens": 4262
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 4734033920,
+              "system_available_bytes": 10058133504
+            },
+            "after": {
+              "provider_rss_bytes": 4734042112,
+              "system_available_bytes": 10090323968
+            },
+            "max_provider_rss_bytes": 4782071808,
+            "min_system_available_bytes": 10000830464,
+            "available_delta_bytes": 57303040,
+            "memory_guard_violation": false,
+            "sample_count": 12
+          },
+          "error": ""
+        },
+        {
+          "run_index": 6,
+          "warmup": false,
+          "wall_seconds": 15.77166,
+          "ttft_seconds": 2.64,
+          "provider_native_metrics": {},
+          "prompt_tokens": 4042,
+          "completion_tokens": 220,
+          "total_tokens": 4262,
+          "seconds_per_completion_token": 0.071689,
+          "model_used": "94f88326aa8ca67cd9fa9607d7af0227eff2d1e3",
+          "raw_output": "It seems like the conversation between Speaker A and Speaker B is revolving around discussing various aspects related to machine learning models, particularly focusing on rollout risk, benchmark design, provider startup times, memory pressure, and ensuring model quality. However, Speaker B keeps asking for more concrete and verifiable details (exact evidence, repeatable commands) as well as a clearly defined decision point.\n\nGiven this context, let's summarize the key points:\n\n1. **Rollout Risk**: This likely refers to potential issues that could arise during or after deploying a new model into production environments.\n2. **Benchmark Design**: This involves setting up tests or metrics to evaluate how well a model performs under different conditions or scenarios.\n3. **Provider Startup Time**: This might refer to the time it takes for a service or system to become fully operational once deployed.\n4. **Memory Pressure**: This can indicate when a system runs out of available memory resources, potentially leading to crashes or degraded performance.\n5. **Model Quality**: Ensuring that the model behaves correctly and consistently across different use cases and environments.\n\nTo address Speaker B’s request",
+          "visible_output": "It seems like the conversation between Speaker A and Speaker B is revolving around discussing various aspects related to machine learning models, particularly focusing on rollout risk, benchmark design, provider startup times, memory pressure, and ensuring model quality. However, Speaker B keeps asking for more concrete and verifiable details (exact evidence, repeatable commands) as well as a clearly defined decision point.\n\nGiven this context, let's summarize the key points:\n\n1. **Rollout Risk**: This likely refers to potential issues that could arise during or after deploying a new model into production environments.\n2. **Benchmark Design**: This involves setting up tests or metrics to evaluate how well a model performs under different conditions or scenarios.\n3. **Provider Startup Time**: This might refer to the time it takes for a service or system to become fully operational once deployed.\n4. **Memory Pressure**: This can indicate when a system runs out of available memory resources, potentially leading to crashes or degraded performance.\n5. **Model Quality**: Ensuring that the model behaves correctly and consistently across different use cases and environments.\n\nTo address Speaker B’s request",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 1217,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 15257.0,
+            "completion_tokens": 220,
+            "decoding_speed_tps": 17.357533486565742,
+            "prefill_duration_ttft": 2.64,
+            "prompt_tokens": 4042,
+            "total_tokens": 4262
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 4734042112,
+              "system_available_bytes": 10068852736
+            },
+            "after": {
+              "provider_rss_bytes": 4733992960,
+              "system_available_bytes": 10065137664
+            },
+            "max_provider_rss_bytes": 4782059520,
+            "min_system_available_bytes": 10043269120,
+            "available_delta_bytes": 25583616,
+            "memory_guard_violation": false,
+            "sample_count": 12
+          },
+          "error": ""
+        }
+      ]
+    },
+    {
+      "case_id": "longctx_8000",
+      "task": "longctx",
+      "system_prompt": "Summarize the meeting transcript into a concise digest. Return Markdown with exactly three sections: Summary, Decisions, Action items. Keep the total answer near 150 tokens.",
+      "user_prompt": "Meeting transcript follows. Produce the requested digest.\n\nSpeaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A discussed rollout risk, benchmark design, provider startup, memory pressure, and model quality. Speaker B asked for exact evidence, repeatable commands, and a clear decision gate. Speaker A \n\nEnd of transcript.",
+      "max_tokens": 220,
+      "summary": {
+        "timed_runs": 5,
+        "pass_count": 5,
+        "pass_rate": 1.0,
+        "wall_seconds_median": 14.823114,
+        "wall_seconds_min": 14.670722,
+        "wall_seconds_max": 15.868844,
+        "seconds_per_completion_token_median": 0.06992,
+        "memory_guard_violations": 0
+      },
+      "runs": [
+        {
+          "run_index": 1,
+          "warmup": true,
+          "wall_seconds": 15.683897,
+          "ttft_seconds": 2.977,
+          "provider_native_metrics": {},
+          "prompt_tokens": 8022,
+          "completion_tokens": 212,
+          "total_tokens": 8234,
+          "seconds_per_completion_token": 0.073981,
+          "model_used": "94f88326aa8ca67cd9fa9607d7af0227eff2d1e3",
+          "raw_output": "It seems like the transcription might have been cut off or incorrectly formatted at some points, but based on what's provided, it appears to be a dialogue between two speakers discussing various aspects related to machine learning models and their deployment processes. Let me summarize the key points from this conversation:\n\n1. **Deployment Risks**: Both speakers discuss risks associated with deploying machine learning models.\n2. **Benchmark Design**: They mention the importance of designing benchmarks for evaluating these models effectively.\n3. **Provider Startup**: The role of providers in managing model startups is also highlighted.\n4. **Memory Pressure**: Managing memory usage during model execution is another critical topic.\n5. **Model Quality**: Ensuring high-quality outputs from deployed models is emphasized.\n\nThe conversation revolves around ensuring that any new ML models are robust, reliable, and perform well under different conditions. Both speakers seem to prioritize clarity, repeatability, and verifiability when discussing potential issues and solutions.\n\nIf you need further analysis, specific recommendations, or additional insights into one of these topics, please let me know!",
+          "visible_output": "It seems like the transcription might have been cut off or incorrectly formatted at some points, but based on what's provided, it appears to be a dialogue between two speakers discussing various aspects related to machine learning models and their deployment processes. Let me summarize the key points from this conversation:\n\n1. **Deployment Risks**: Both speakers discuss risks associated with deploying machine learning models.\n2. **Benchmark Design**: They mention the importance of designing benchmarks for evaluating these models effectively.\n3. **Provider Startup**: The role of providers in managing model startups is also highlighted.\n4. **Memory Pressure**: Managing memory usage during model execution is another critical topic.\n5. **Model Quality**: Ensuring high-quality outputs from deployed models is emphasized.\n\nThe conversation revolves around ensuring that any new ML models are robust, reliable, and perform well under different conditions. Both speakers seem to prioritize clarity, repeatability, and verifiability when discussing potential issues and solutions.\n\nIf you need further analysis, specific recommendations, or additional insights into one of these topics, please let me know!",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 1209,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 15151.0,
+            "completion_tokens": 212,
+            "decoding_speed_tps": 17.332019057006736,
+            "prefill_duration_ttft": 2.977,
+            "prompt_tokens": 8022,
+            "total_tokens": 8234
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 4733992960,
+              "system_available_bytes": 10006740992
+            },
+            "after": {
+              "provider_rss_bytes": 4734767104,
+              "system_available_bytes": 10043953152
+            },
+            "max_provider_rss_bytes": 5140451328,
+            "min_system_available_bytes": 9948876800,
+            "available_delta_bytes": 57864192,
+            "memory_guard_violation": false,
+            "sample_count": 12
+          },
+          "error": ""
+        },
+        {
+          "run_index": 2,
+          "warmup": false,
+          "wall_seconds": 14.670722,
+          "ttft_seconds": 2.695,
+          "provider_native_metrics": {},
+          "prompt_tokens": 8022,
+          "completion_tokens": 212,
+          "total_tokens": 8234,
+          "seconds_per_completion_token": 0.069202,
+          "model_used": "94f88326aa8ca67cd9fa9607d7af0227eff2d1e3",
+          "raw_output": "It seems like the transcription might have been cut off or incorrectly formatted at some points, but based on what's provided, it appears to be a dialogue between two speakers discussing various aspects related to machine learning models and their deployment processes. Let me summarize the key points from this conversation:\n\n1. **Deployment Risks**: Both speakers discuss risks associated with deploying machine learning models.\n2. **Benchmark Design**: They mention the importance of designing benchmarks for evaluating these models effectively.\n3. **Provider Startup**: The role of providers in managing model startups is also highlighted.\n4. **Memory Pressure**: Managing memory usage during model execution is another critical topic.\n5. **Model Quality**: Ensuring high-quality outputs from deployed models is emphasized.\n\nThe conversation revolves around ensuring that any new ML models are robust, reliable, and perform well under different conditions. Both speakers seem to prioritize clarity, repeatability, and verifiability when discussing potential issues and solutions.\n\nIf you need further analysis, specific recommendations, or additional insights into one of these topics, please let me know!",
+          "visible_output": "It seems like the transcription might have been cut off or incorrectly formatted at some points, but based on what's provided, it appears to be a dialogue between two speakers discussing various aspects related to machine learning models and their deployment processes. Let me summarize the key points from this conversation:\n\n1. **Deployment Risks**: Both speakers discuss risks associated with deploying machine learning models.\n2. **Benchmark Design**: They mention the importance of designing benchmarks for evaluating these models effectively.\n3. **Provider Startup**: The role of providers in managing model startups is also highlighted.\n4. **Memory Pressure**: Managing memory usage during model execution is another critical topic.\n5. **Model Quality**: Ensuring high-quality outputs from deployed models is emphasized.\n\nThe conversation revolves around ensuring that any new ML models are robust, reliable, and perform well under different conditions. Both speakers seem to prioritize clarity, repeatability, and verifiability when discussing potential issues and solutions.\n\nIf you need further analysis, specific recommendations, or additional insights into one of these topics, please let me know!",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 1209,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 14031.0,
+            "completion_tokens": 212,
+            "decoding_speed_tps": 18.613267466478476,
+            "prefill_duration_ttft": 2.695,
+            "prompt_tokens": 8022,
+            "total_tokens": 8234
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 4734767104,
+              "system_available_bytes": 10042167296
+            },
+            "after": {
+              "provider_rss_bytes": 4734824448,
+              "system_available_bytes": 10046361600
+            },
+            "max_provider_rss_bytes": 4782858240,
+            "min_system_available_bytes": 9989771264,
+            "available_delta_bytes": 52396032,
+            "memory_guard_violation": false,
+            "sample_count": 11
+          },
+          "error": ""
+        },
+        {
+          "run_index": 3,
+          "warmup": false,
+          "wall_seconds": 14.823114,
+          "ttft_seconds": 2.765,
+          "provider_native_metrics": {},
+          "prompt_tokens": 8022,
+          "completion_tokens": 212,
+          "total_tokens": 8234,
+          "seconds_per_completion_token": 0.06992,
+          "model_used": "94f88326aa8ca67cd9fa9607d7af0227eff2d1e3",
+          "raw_output": "It seems like the transcription might have been cut off or incorrectly formatted at some points, but based on what's provided, it appears to be a dialogue between two speakers discussing various aspects related to machine learning models and their deployment processes. Let me summarize the key points from this conversation:\n\n1. **Deployment Risks**: Both speakers discuss risks associated with deploying machine learning models.\n2. **Benchmark Design**: They mention the importance of designing benchmarks for evaluating these models effectively.\n3. **Provider Startup**: The role of providers in managing model startups is also highlighted.\n4. **Memory Pressure**: Managing memory usage during model execution is another critical topic.\n5. **Model Quality**: Ensuring high-quality outputs from deployed models is emphasized.\n\nThe conversation revolves around ensuring that any new ML models are robust, reliable, and perform well under different conditions. Both speakers seem to prioritize clarity, repeatability, and verifiability when discussing potential issues and solutions.\n\nIf you need further analysis, specific recommendations, or additional insights into one of these topics, please let me know!",
+          "visible_output": "It seems like the transcription might have been cut off or incorrectly formatted at some points, but based on what's provided, it appears to be a dialogue between two speakers discussing various aspects related to machine learning models and their deployment processes. Let me summarize the key points from this conversation:\n\n1. **Deployment Risks**: Both speakers discuss risks associated with deploying machine learning models.\n2. **Benchmark Design**: They mention the importance of designing benchmarks for evaluating these models effectively.\n3. **Provider Startup**: The role of providers in managing model startups is also highlighted.\n4. **Memory Pressure**: Managing memory usage during model execution is another critical topic.\n5. **Model Quality**: Ensuring high-quality outputs from deployed models is emphasized.\n\nThe conversation revolves around ensuring that any new ML models are robust, reliable, and perform well under different conditions. Both speakers seem to prioritize clarity, repeatability, and verifiability when discussing potential issues and solutions.\n\nIf you need further analysis, specific recommendations, or additional insights into one of these topics, please let me know!",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 1209,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 14282.0,
+            "completion_tokens": 212,
+            "decoding_speed_tps": 18.320743249110013,
+            "prefill_duration_ttft": 2.765,
+            "prompt_tokens": 8022,
+            "total_tokens": 8234
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 4734824448,
+              "system_available_bytes": 10000678912
+            },
+            "after": {
+              "provider_rss_bytes": 4734828544,
+              "system_available_bytes": 10053353472
+            },
+            "max_provider_rss_bytes": 4782862336,
+            "min_system_available_bytes": 9938432000,
+            "available_delta_bytes": 62246912,
+            "memory_guard_violation": false,
+            "sample_count": 11
+          },
+          "error": ""
+        },
+        {
+          "run_index": 4,
+          "warmup": false,
+          "wall_seconds": 15.325859,
+          "ttft_seconds": 2.746,
+          "provider_native_metrics": {},
+          "prompt_tokens": 8022,
+          "completion_tokens": 212,
+          "total_tokens": 8234,
+          "seconds_per_completion_token": 0.072292,
+          "model_used": "94f88326aa8ca67cd9fa9607d7af0227eff2d1e3",
+          "raw_output": "It seems like the transcription might have been cut off or incorrectly formatted at some points, but based on what's provided, it appears to be a dialogue between two speakers discussing various aspects related to machine learning models and their deployment processes. Let me summarize the key points from this conversation:\n\n1. **Deployment Risks**: Both speakers discuss risks associated with deploying machine learning models.\n2. **Benchmark Design**: They mention the importance of designing benchmarks for evaluating these models effectively.\n3. **Provider Startup**: The role of providers in managing model startups is also highlighted.\n4. **Memory Pressure**: Managing memory usage during model execution is another critical topic.\n5. **Model Quality**: Ensuring high-quality outputs from deployed models is emphasized.\n\nThe conversation revolves around ensuring that any new ML models are robust, reliable, and perform well under different conditions. Both speakers seem to prioritize clarity, repeatability, and verifiability when discussing potential issues and solutions.\n\nIf you need further analysis, specific recommendations, or additional insights into one of these topics, please let me know!",
+          "visible_output": "It seems like the transcription might have been cut off or incorrectly formatted at some points, but based on what's provided, it appears to be a dialogue between two speakers discussing various aspects related to machine learning models and their deployment processes. Let me summarize the key points from this conversation:\n\n1. **Deployment Risks**: Both speakers discuss risks associated with deploying machine learning models.\n2. **Benchmark Design**: They mention the importance of designing benchmarks for evaluating these models effectively.\n3. **Provider Startup**: The role of providers in managing model startups is also highlighted.\n4. **Memory Pressure**: Managing memory usage during model execution is another critical topic.\n5. **Model Quality**: Ensuring high-quality outputs from deployed models is emphasized.\n\nThe conversation revolves around ensuring that any new ML models are robust, reliable, and perform well under different conditions. Both speakers seem to prioritize clarity, repeatability, and verifiability when discussing potential issues and solutions.\n\nIf you need further analysis, specific recommendations, or additional insights into one of these topics, please let me know!",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 1209,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 14791.0,
+            "completion_tokens": 212,
+            "decoding_speed_tps": 17.517642175176423,
+            "prefill_duration_ttft": 2.746,
+            "prompt_tokens": 8022,
+            "total_tokens": 8234
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 4734828544,
+              "system_available_bytes": 10053279744
+            },
+            "after": {
+              "provider_rss_bytes": 4734869504,
+              "system_available_bytes": 10020438016
+            },
+            "max_provider_rss_bytes": 4782919680,
+            "min_system_available_bytes": 9991761920,
+            "available_delta_bytes": 61517824,
+            "memory_guard_violation": false,
+            "sample_count": 12
+          },
+          "error": ""
+        },
+        {
+          "run_index": 5,
+          "warmup": false,
+          "wall_seconds": 15.868844,
+          "ttft_seconds": 2.951,
+          "provider_native_metrics": {},
+          "prompt_tokens": 8022,
+          "completion_tokens": 212,
+          "total_tokens": 8234,
+          "seconds_per_completion_token": 0.074853,
+          "model_used": "94f88326aa8ca67cd9fa9607d7af0227eff2d1e3",
+          "raw_output": "It seems like the transcription might have been cut off or incorrectly formatted at some points, but based on what's provided, it appears to be a dialogue between two speakers discussing various aspects related to machine learning models and their deployment processes. Let me summarize the key points from this conversation:\n\n1. **Deployment Risks**: Both speakers discuss risks associated with deploying machine learning models.\n2. **Benchmark Design**: They mention the importance of designing benchmarks for evaluating these models effectively.\n3. **Provider Startup**: The role of providers in managing model startups is also highlighted.\n4. **Memory Pressure**: Managing memory usage during model execution is another critical topic.\n5. **Model Quality**: Ensuring high-quality outputs from deployed models is emphasized.\n\nThe conversation revolves around ensuring that any new ML models are robust, reliable, and perform well under different conditions. Both speakers seem to prioritize clarity, repeatability, and verifiability when discussing potential issues and solutions.\n\nIf you need further analysis, specific recommendations, or additional insights into one of these topics, please let me know!",
+          "visible_output": "It seems like the transcription might have been cut off or incorrectly formatted at some points, but based on what's provided, it appears to be a dialogue between two speakers discussing various aspects related to machine learning models and their deployment processes. Let me summarize the key points from this conversation:\n\n1. **Deployment Risks**: Both speakers discuss risks associated with deploying machine learning models.\n2. **Benchmark Design**: They mention the importance of designing benchmarks for evaluating these models effectively.\n3. **Provider Startup**: The role of providers in managing model startups is also highlighted.\n4. **Memory Pressure**: Managing memory usage during model execution is another critical topic.\n5. **Model Quality**: Ensuring high-quality outputs from deployed models is emphasized.\n\nThe conversation revolves around ensuring that any new ML models are robust, reliable, and perform well under different conditions. Both speakers seem to prioritize clarity, repeatability, and verifiability when discussing potential issues and solutions.\n\nIf you need further analysis, specific recommendations, or additional insights into one of these topics, please let me know!",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 1209,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 15331.0,
+            "completion_tokens": 212,
+            "decoding_speed_tps": 17.043618739903067,
+            "prefill_duration_ttft": 2.951,
+            "prompt_tokens": 8022,
+            "total_tokens": 8234
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 4734869504,
+              "system_available_bytes": 9983029248
+            },
+            "after": {
+              "provider_rss_bytes": 4734873600,
+              "system_available_bytes": 10016550912
+            },
+            "max_provider_rss_bytes": 4796870656,
+            "min_system_available_bytes": 9920638976,
+            "available_delta_bytes": 62390272,
+            "memory_guard_violation": false,
+            "sample_count": 12
+          },
+          "error": ""
+        },
+        {
+          "run_index": 6,
+          "warmup": false,
+          "wall_seconds": 14.705658,
+          "ttft_seconds": 2.717,
+          "provider_native_metrics": {},
+          "prompt_tokens": 8022,
+          "completion_tokens": 212,
+          "total_tokens": 8234,
+          "seconds_per_completion_token": 0.069366,
+          "model_used": "94f88326aa8ca67cd9fa9607d7af0227eff2d1e3",
+          "raw_output": "It seems like the transcription might have been cut off or incorrectly formatted at some points, but based on what's provided, it appears to be a dialogue between two speakers discussing various aspects related to machine learning models and their deployment processes. Let me summarize the key points from this conversation:\n\n1. **Deployment Risks**: Both speakers discuss risks associated with deploying machine learning models.\n2. **Benchmark Design**: They mention the importance of designing benchmarks for evaluating these models effectively.\n3. **Provider Startup**: The role of providers in managing model startups is also highlighted.\n4. **Memory Pressure**: Managing memory usage during model execution is another critical topic.\n5. **Model Quality**: Ensuring high-quality outputs from deployed models is emphasized.\n\nThe conversation revolves around ensuring that any new ML models are robust, reliable, and perform well under different conditions. Both speakers seem to prioritize clarity, repeatability, and verifiability when discussing potential issues and solutions.\n\nIf you need further analysis, specific recommendations, or additional insights into one of these topics, please let me know!",
+          "visible_output": "It seems like the transcription might have been cut off or incorrectly formatted at some points, but based on what's provided, it appears to be a dialogue between two speakers discussing various aspects related to machine learning models and their deployment processes. Let me summarize the key points from this conversation:\n\n1. **Deployment Risks**: Both speakers discuss risks associated with deploying machine learning models.\n2. **Benchmark Design**: They mention the importance of designing benchmarks for evaluating these models effectively.\n3. **Provider Startup**: The role of providers in managing model startups is also highlighted.\n4. **Memory Pressure**: Managing memory usage during model execution is another critical topic.\n5. **Model Quality**: Ensuring high-quality outputs from deployed models is emphasized.\n\nThe conversation revolves around ensuring that any new ML models are robust, reliable, and perform well under different conditions. Both speakers seem to prioritize clarity, repeatability, and verifiability when discussing potential issues and solutions.\n\nIf you need further analysis, specific recommendations, or additional insights into one of these topics, please let me know!",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 1209,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 14138.0,
+            "completion_tokens": 212,
+            "decoding_speed_tps": 18.47473951492864,
+            "prefill_duration_ttft": 2.717,
+            "prompt_tokens": 8022,
+            "total_tokens": 8234
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 4734873600,
+              "system_available_bytes": 10015248384
+            },
+            "after": {
+              "provider_rss_bytes": 4734877696,
+              "system_available_bytes": 10030567424
+            },
+            "max_provider_rss_bytes": 4782878720,
+            "min_system_available_bytes": 9952313344,
+            "available_delta_bytes": 62935040,
+            "memory_guard_violation": false,
+            "sample_count": 11
+          },
+          "error": ""
+        }
+      ]
+    }
+  ]
+}

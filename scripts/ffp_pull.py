@@ -16,6 +16,7 @@ import threading
 import time
 from collections.abc import Callable
 
+import ffp_provider_runtime
 from subprocess_util import NO_WINDOW
 
 log = logging.getLogger("ffp.pull")
@@ -45,9 +46,9 @@ def status() -> dict:
 
 
 def _default_runner(provider: str, model: str, no_window: int, on_line: Callable[[str], None]) -> int:
-    cli = "ollama" if str(provider).strip().lower() == "ollama" else "flm"
+    command = ffp_provider_runtime.pull_command(provider, model)
     proc = subprocess.Popen(
-        [cli, "pull", model],
+        command,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
@@ -97,10 +98,10 @@ def start_pull(model: str, no_window: int = NO_WINDOW, *, provider: str = "fastf
             if rc == 0:
                 _update(state="done", percent=100.0, message=f"{model} downloaded.", finished_at=time.time())
             else:
-                cli = "ollama" if str(provider).strip().lower() == "ollama" else "flm"
+                cli = ffp_provider_runtime.provider_cli(provider)
                 _update(state="error", error=f"{cli} pull exited with code {rc}", finished_at=time.time())
         except FileNotFoundError:
-            cli = "ollama" if str(provider).strip().lower() == "ollama" else "flm"
+            cli = ffp_provider_runtime.provider_cli(provider)
             log.warning("%s CLI not found in PATH while pulling %s", cli, model)
             _update(state="error", error=f"{cli} CLI not found in PATH", finished_at=time.time())
         except Exception as exc:

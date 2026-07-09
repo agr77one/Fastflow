@@ -1,0 +1,556 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-07-08T14:04:43",
+  "provider": "lemonade",
+  "base_url": "http://127.0.0.1:13305/api/v1",
+  "model": "Qwen2.5-3B-Instruct-NPU",
+  "quant": "ryzenai-llm-npu",
+  "purpose": "diagnose targeted retry and deterministic repair for the Qwen2.5 prompt_plan miss",
+  "source_artifact": "data\\benchmarks\\rerun_lemonade_qwen2.5-3b-instruct-npu_20260708.json",
+  "source_case": {
+    "case_id": "prompt_plan",
+    "system_prompt": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact shape — Markdown headers, JSON keys, etc.). Keep each section short. No meta-framing, no preamble. Base every constraint on what the user actually asked for — never invent requirements they did not state. Return only the prompt.",
+    "user_prompt": "create a rollout plan for switching providers with fallback and performance gates",
+    "max_tokens": 700,
+    "summary": {
+      "timed_runs": 5,
+      "pass_count": 0,
+      "pass_rate": 0.0,
+      "wall_seconds_median": 4.319399,
+      "wall_seconds_min": 4.185745,
+      "wall_seconds_max": 4.622163,
+      "seconds_per_completion_token_median": 0.075779,
+      "memory_guard_violations": 0
+    }
+  },
+  "deterministic_repair": {
+    "policy": "If visible output has </context> but no <context opening tag, replace the first </context> with <context> before scoring/routing.",
+    "summary": {
+      "timed_runs": 5,
+      "changed_count": 5,
+      "pass_count_after_repair": 5,
+      "pass_rate_after_repair": 1.0
+    },
+    "runs": [
+      {
+        "source_run_index": 2,
+        "source_wall_seconds": 4.622163,
+        "source_contract": {
+          "pass": false,
+          "reasons": [
+            "missing_context"
+          ],
+          "near_miss": true,
+          "visible_chars": 258,
+          "sections": {},
+          "think_stripped": false,
+          "unclosed_think": false
+        },
+        "changed": true,
+        "repaired_output": "<task> (rollout plan for provider switch) , <context> (provider change scenario), <constraints> (length under 10 sentences, output in markdown format), <output_format> (Markdown fenced code block with sections for stages, gate criteria, and fallback plans).",
+        "repaired_contract": {
+          "pass": true,
+          "reasons": [],
+          "near_miss": false,
+          "visible_chars": 257,
+          "sections": {
+            "task": 36,
+            "context": 27,
+            "constraints": 55,
+            "output_format": 89
+          },
+          "think_stripped": false,
+          "unclosed_think": false
+        }
+      },
+      {
+        "source_run_index": 3,
+        "source_wall_seconds": 4.369994,
+        "source_contract": {
+          "pass": false,
+          "reasons": [
+            "missing_context"
+          ],
+          "near_miss": true,
+          "visible_chars": 258,
+          "sections": {},
+          "think_stripped": false,
+          "unclosed_think": false
+        },
+        "changed": true,
+        "repaired_output": "<task> (rollout plan for provider switch) , <context> (provider change scenario), <constraints> (length under 10 sentences, output in markdown format), <output_format> (Markdown fenced code block with sections for stages, gate criteria, and fallback plans).",
+        "repaired_contract": {
+          "pass": true,
+          "reasons": [],
+          "near_miss": false,
+          "visible_chars": 257,
+          "sections": {
+            "task": 36,
+            "context": 27,
+            "constraints": 55,
+            "output_format": 89
+          },
+          "think_stripped": false,
+          "unclosed_think": false
+        }
+      },
+      {
+        "source_run_index": 4,
+        "source_wall_seconds": 4.185745,
+        "source_contract": {
+          "pass": false,
+          "reasons": [
+            "missing_context"
+          ],
+          "near_miss": true,
+          "visible_chars": 258,
+          "sections": {},
+          "think_stripped": false,
+          "unclosed_think": false
+        },
+        "changed": true,
+        "repaired_output": "<task> (rollout plan for provider switch) , <context> (provider change scenario), <constraints> (length under 10 sentences, output in markdown format), <output_format> (Markdown fenced code block with sections for stages, gate criteria, and fallback plans).",
+        "repaired_contract": {
+          "pass": true,
+          "reasons": [],
+          "near_miss": false,
+          "visible_chars": 257,
+          "sections": {
+            "task": 36,
+            "context": 27,
+            "constraints": 55,
+            "output_format": 89
+          },
+          "think_stripped": false,
+          "unclosed_think": false
+        }
+      },
+      {
+        "source_run_index": 5,
+        "source_wall_seconds": 4.319399,
+        "source_contract": {
+          "pass": false,
+          "reasons": [
+            "missing_context"
+          ],
+          "near_miss": true,
+          "visible_chars": 258,
+          "sections": {},
+          "think_stripped": false,
+          "unclosed_think": false
+        },
+        "changed": true,
+        "repaired_output": "<task> (rollout plan for provider switch) , <context> (provider change scenario), <constraints> (length under 10 sentences, output in markdown format), <output_format> (Markdown fenced code block with sections for stages, gate criteria, and fallback plans).",
+        "repaired_contract": {
+          "pass": true,
+          "reasons": [],
+          "near_miss": false,
+          "visible_chars": 257,
+          "sections": {
+            "task": 36,
+            "context": 27,
+            "constraints": 55,
+            "output_format": 89
+          },
+          "think_stripped": false,
+          "unclosed_think": false
+        }
+      },
+      {
+        "source_run_index": 6,
+        "source_wall_seconds": 4.187588,
+        "source_contract": {
+          "pass": false,
+          "reasons": [
+            "missing_context"
+          ],
+          "near_miss": true,
+          "visible_chars": 258,
+          "sections": {},
+          "think_stripped": false,
+          "unclosed_think": false
+        },
+        "changed": true,
+        "repaired_output": "<task> (rollout plan for provider switch) , <context> (provider change scenario), <constraints> (length under 10 sentences, output in markdown format), <output_format> (Markdown fenced code block with sections for stages, gate criteria, and fallback plans).",
+        "repaired_contract": {
+          "pass": true,
+          "reasons": [],
+          "near_miss": false,
+          "visible_chars": 257,
+          "sections": {
+            "task": 36,
+            "context": 27,
+            "constraints": 55,
+            "output_format": 89
+          },
+          "think_stripped": false,
+          "unclosed_think": false
+        }
+      }
+    ]
+  },
+  "strict_retry": {
+    "case_id": "prompt_plan_strict_retry",
+    "system_prompt": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact shape — Markdown headers, JSON keys, etc.). Keep each section short. No meta-framing, no preamble. Base every constraint on what the user actually asked for — never invent requirements they did not state. Return only the prompt.\n\nFailure correction for retry: the answer must contain the literal opening tags <task>, <context>, <constraints>, and <output_format>, in that exact order. Each required section must start with its opening tag. Do not use a closing tag such as </context> unless the matching opening tag has already appeared. Do not use Markdown headings or fenced code blocks.",
+    "user_prompt": "create a rollout plan for switching providers with fallback and performance gates",
+    "max_tokens": 700,
+    "summary": {
+      "timed_runs": 5,
+      "pass_count": 5,
+      "pass_rate": 1.0,
+      "wall_seconds_median": 11.009391,
+      "wall_seconds_min": 10.703615,
+      "wall_seconds_max": 11.253617,
+      "seconds_per_completion_token_median": 0.063638,
+      "memory_guard_violations": 0
+    },
+    "runs": [
+      {
+        "run_index": 1,
+        "warmup": true,
+        "wall_seconds": 11.79679,
+        "ttft_seconds": 0.975,
+        "provider_native_metrics": {},
+        "prompt_tokens": 202,
+        "completion_tokens": 173,
+        "total_tokens": 375,
+        "seconds_per_completion_token": 0.06819,
+        "model_used": "94f88326aa8ca67cd9fa9607d7af0227eff2d1e3",
+        "raw_output": "<task> Create a rollout plan for switching providers with fallbacks and performance gates </task>, <context> The company needs to switch from their current provider to a new provider while ensuring minimal disruption and maintaining service level agreements.</context>, <constraints> The response should be a markdown list itemizing steps including initial testing phase, gradual rollouts, monitoring during the transition, and rollback procedures if necessary.</constraints>, <output_format> - title: \"Rollout Plan\" \\-\\-\\- items:\\-\\-\\- 1\\. Initial Testing Phase\\-\\-\\- 2\\. Gradual Rollout Phases\\-\\-\\- 3\\. Performance Monitoring During Transition\\-\\-\\- 4\\. Fallback Procedures\\-\\-\\- 5\\. Retention of Current Provider's Services\\-\\-\\- 6\\. Post-Rollback Procedures</output_format>",
+        "visible_output": "<task> Create a rollout plan for switching providers with fallbacks and performance gates </task>, <context> The company needs to switch from their current provider to a new provider while ensuring minimal disruption and maintaining service level agreements.</context>, <constraints> The response should be a markdown list itemizing steps including initial testing phase, gradual rollouts, monitoring during the transition, and rollback procedures if necessary.</constraints>, <output_format> - title: \"Rollout Plan\" \\-\\-\\- items:\\-\\-\\- 1\\. Initial Testing Phase\\-\\-\\- 2\\. Gradual Rollout Phases\\-\\-\\- 3\\. Performance Monitoring During Transition\\-\\-\\- 4\\. Fallback Procedures\\-\\-\\- 5\\. Retention of Current Provider's Services\\-\\-\\- 6\\. Post-Rollback Procedures</output_format>",
+        "think_stripped": false,
+        "unclosed_think": false,
+        "contract": {
+          "pass": true,
+          "reasons": [],
+          "near_miss": false,
+          "visible_chars": 778,
+          "sections": {
+            "task": 84,
+            "context": 150,
+            "constraints": 178,
+            "output_format": 269
+          },
+          "think_stripped": false,
+          "unclosed_think": false
+        },
+        "usage": {
+          "completion_time_ms": 11152.0,
+          "completion_tokens": 173,
+          "decoding_speed_tps": 16.900854868821853,
+          "prefill_duration_ttft": 0.975,
+          "prompt_tokens": 202,
+          "total_tokens": 375
+        },
+        "memory": {
+          "before": {
+            "provider_rss_bytes": 2610171904,
+            "system_available_bytes": 11422797824
+          },
+          "after": {
+            "provider_rss_bytes": 3854073856,
+            "system_available_bytes": 10278146048
+          },
+          "max_provider_rss_bytes": 4038197248,
+          "min_system_available_bytes": 10012594176,
+          "available_delta_bytes": 1410203648,
+          "memory_guard_violation": false,
+          "sample_count": 9
+        },
+        "error": ""
+      },
+      {
+        "run_index": 2,
+        "warmup": false,
+        "wall_seconds": 11.009391,
+        "ttft_seconds": 0.592,
+        "provider_native_metrics": {},
+        "prompt_tokens": 202,
+        "completion_tokens": 173,
+        "total_tokens": 375,
+        "seconds_per_completion_token": 0.063638,
+        "model_used": "94f88326aa8ca67cd9fa9607d7af0227eff2d1e3",
+        "raw_output": "<task> Create a rollout plan for switching providers with fallbacks and performance gates </task>, <context> The company needs to switch from their current provider to a new provider while ensuring minimal disruption and maintaining service level agreements.</context>, <constraints> The response should be a markdown list itemizing steps including initial testing phase, gradual rollouts, monitoring during the transition, and rollback procedures if necessary.</constraints>, <output_format> - title: \"Rollout Plan\" \\-\\-\\- items:\\-\\-\\- 1\\. Initial Testing Phase\\-\\-\\- 2\\. Gradual Rollout Phases\\-\\-\\- 3\\. Performance Monitoring During Transition\\-\\-\\- 4\\. Fallback Procedures\\-\\-\\- 5\\. Retention of Current Provider's Services\\-\\-\\- 6\\. Post-Rollback Procedures</output_format>",
+        "visible_output": "<task> Create a rollout plan for switching providers with fallbacks and performance gates </task>, <context> The company needs to switch from their current provider to a new provider while ensuring minimal disruption and maintaining service level agreements.</context>, <constraints> The response should be a markdown list itemizing steps including initial testing phase, gradual rollouts, monitoring during the transition, and rollback procedures if necessary.</constraints>, <output_format> - title: \"Rollout Plan\" \\-\\-\\- items:\\-\\-\\- 1\\. Initial Testing Phase\\-\\-\\- 2\\. Gradual Rollout Phases\\-\\-\\- 3\\. Performance Monitoring During Transition\\-\\-\\- 4\\. Fallback Procedures\\-\\-\\- 5\\. Retention of Current Provider's Services\\-\\-\\- 6\\. Post-Rollback Procedures</output_format>",
+        "think_stripped": false,
+        "unclosed_think": false,
+        "contract": {
+          "pass": true,
+          "reasons": [],
+          "near_miss": false,
+          "visible_chars": 778,
+          "sections": {
+            "task": 84,
+            "context": 150,
+            "constraints": 178,
+            "output_format": 269
+          },
+          "think_stripped": false,
+          "unclosed_think": false
+        },
+        "usage": {
+          "completion_time_ms": 10421.0,
+          "completion_tokens": 173,
+          "decoding_speed_tps": 17.499236951877098,
+          "prefill_duration_ttft": 0.592,
+          "prompt_tokens": 202,
+          "total_tokens": 375
+        },
+        "memory": {
+          "before": {
+            "provider_rss_bytes": 3854073856,
+            "system_available_bytes": 10217705472
+          },
+          "after": {
+            "provider_rss_bytes": 3790475264,
+            "system_available_bytes": 10313424896
+          },
+          "max_provider_rss_bytes": 4099858432,
+          "min_system_available_bytes": 10006745088,
+          "available_delta_bytes": 210960384,
+          "memory_guard_violation": false,
+          "sample_count": 8
+        },
+        "error": ""
+      },
+      {
+        "run_index": 3,
+        "warmup": false,
+        "wall_seconds": 11.253617,
+        "ttft_seconds": 0.606,
+        "provider_native_metrics": {},
+        "prompt_tokens": 202,
+        "completion_tokens": 173,
+        "total_tokens": 375,
+        "seconds_per_completion_token": 0.06505,
+        "model_used": "94f88326aa8ca67cd9fa9607d7af0227eff2d1e3",
+        "raw_output": "<task> Create a rollout plan for switching providers with fallbacks and performance gates </task>, <context> The company needs to switch from their current provider to a new provider while ensuring minimal disruption and maintaining service level agreements.</context>, <constraints> The response should be a markdown list itemizing steps including initial testing phase, gradual rollouts, monitoring during the transition, and rollback procedures if necessary.</constraints>, <output_format> - title: \"Rollout Plan\" \\-\\-\\- items:\\-\\-\\- 1\\. Initial Testing Phase\\-\\-\\- 2\\. Gradual Rollout Phases\\-\\-\\- 3\\. Performance Monitoring During Transition\\-\\-\\- 4\\. Fallback Procedures\\-\\-\\- 5\\. Retention of Current Provider's Services\\-\\-\\- 6\\. Post-Rollback Procedures</output_format>",
+        "visible_output": "<task> Create a rollout plan for switching providers with fallbacks and performance gates </task>, <context> The company needs to switch from their current provider to a new provider while ensuring minimal disruption and maintaining service level agreements.</context>, <constraints> The response should be a markdown list itemizing steps including initial testing phase, gradual rollouts, monitoring during the transition, and rollback procedures if necessary.</constraints>, <output_format> - title: \"Rollout Plan\" \\-\\-\\- items:\\-\\-\\- 1\\. Initial Testing Phase\\-\\-\\- 2\\. Gradual Rollout Phases\\-\\-\\- 3\\. Performance Monitoring During Transition\\-\\-\\- 4\\. Fallback Procedures\\-\\-\\- 5\\. Retention of Current Provider's Services\\-\\-\\- 6\\. Post-Rollback Procedures</output_format>",
+        "think_stripped": false,
+        "unclosed_think": false,
+        "contract": {
+          "pass": true,
+          "reasons": [],
+          "near_miss": false,
+          "visible_chars": 778,
+          "sections": {
+            "task": 84,
+            "context": 150,
+            "constraints": 178,
+            "output_format": 269
+          },
+          "think_stripped": false,
+          "unclosed_think": false
+        },
+        "usage": {
+          "completion_time_ms": 10660.0,
+          "completion_tokens": 173,
+          "decoding_speed_tps": 17.107618858165903,
+          "prefill_duration_ttft": 0.606,
+          "prompt_tokens": 202,
+          "total_tokens": 375
+        },
+        "memory": {
+          "before": {
+            "provider_rss_bytes": 3790475264,
+            "system_available_bytes": 10320781312
+          },
+          "after": {
+            "provider_rss_bytes": 4041506816,
+            "system_available_bytes": 10119884800
+          },
+          "max_provider_rss_bytes": 4045524992,
+          "min_system_available_bytes": 9904775168,
+          "available_delta_bytes": 416006144,
+          "memory_guard_violation": false,
+          "sample_count": 8
+        },
+        "error": ""
+      },
+      {
+        "run_index": 4,
+        "warmup": false,
+        "wall_seconds": 10.837432,
+        "ttft_seconds": 0.531,
+        "provider_native_metrics": {},
+        "prompt_tokens": 202,
+        "completion_tokens": 173,
+        "total_tokens": 375,
+        "seconds_per_completion_token": 0.062644,
+        "model_used": "94f88326aa8ca67cd9fa9607d7af0227eff2d1e3",
+        "raw_output": "<task> Create a rollout plan for switching providers with fallbacks and performance gates </task>, <context> The company needs to switch from their current provider to a new provider while ensuring minimal disruption and maintaining service level agreements.</context>, <constraints> The response should be a markdown list itemizing steps including initial testing phase, gradual rollouts, monitoring during the transition, and rollback procedures if necessary.</constraints>, <output_format> - title: \"Rollout Plan\" \\-\\-\\- items:\\-\\-\\- 1\\. Initial Testing Phase\\-\\-\\- 2\\. Gradual Rollout Phases\\-\\-\\- 3\\. Performance Monitoring During Transition\\-\\-\\- 4\\. Fallback Procedures\\-\\-\\- 5\\. Retention of Current Provider's Services\\-\\-\\- 6\\. Post-Rollback Procedures</output_format>",
+        "visible_output": "<task> Create a rollout plan for switching providers with fallbacks and performance gates </task>, <context> The company needs to switch from their current provider to a new provider while ensuring minimal disruption and maintaining service level agreements.</context>, <constraints> The response should be a markdown list itemizing steps including initial testing phase, gradual rollouts, monitoring during the transition, and rollback procedures if necessary.</constraints>, <output_format> - title: \"Rollout Plan\" \\-\\-\\- items:\\-\\-\\- 1\\. Initial Testing Phase\\-\\-\\- 2\\. Gradual Rollout Phases\\-\\-\\- 3\\. Performance Monitoring During Transition\\-\\-\\- 4\\. Fallback Procedures\\-\\-\\- 5\\. Retention of Current Provider's Services\\-\\-\\- 6\\. Post-Rollback Procedures</output_format>",
+        "think_stripped": false,
+        "unclosed_think": false,
+        "contract": {
+          "pass": true,
+          "reasons": [],
+          "near_miss": false,
+          "visible_chars": 778,
+          "sections": {
+            "task": 84,
+            "context": 150,
+            "constraints": 178,
+            "output_format": 269
+          },
+          "think_stripped": false,
+          "unclosed_think": false
+        },
+        "usage": {
+          "completion_time_ms": 10270.0,
+          "completion_tokens": 173,
+          "decoding_speed_tps": 17.660950816305576,
+          "prefill_duration_ttft": 0.531,
+          "prompt_tokens": 202,
+          "total_tokens": 375
+        },
+        "memory": {
+          "before": {
+            "provider_rss_bytes": 4041506816,
+            "system_available_bytes": 10116259840
+          },
+          "after": {
+            "provider_rss_bytes": 4041756672,
+            "system_available_bytes": 10141773824
+          },
+          "max_provider_rss_bytes": 4045783040,
+          "min_system_available_bytes": 10077048832,
+          "available_delta_bytes": 39211008,
+          "memory_guard_violation": false,
+          "sample_count": 8
+        },
+        "error": ""
+      },
+      {
+        "run_index": 5,
+        "warmup": false,
+        "wall_seconds": 11.045633,
+        "ttft_seconds": 0.545,
+        "provider_native_metrics": {},
+        "prompt_tokens": 202,
+        "completion_tokens": 173,
+        "total_tokens": 375,
+        "seconds_per_completion_token": 0.063848,
+        "model_used": "94f88326aa8ca67cd9fa9607d7af0227eff2d1e3",
+        "raw_output": "<task> Create a rollout plan for switching providers with fallbacks and performance gates </task>, <context> The company needs to switch from their current provider to a new provider while ensuring minimal disruption and maintaining service level agreements.</context>, <constraints> The response should be a markdown list itemizing steps including initial testing phase, gradual rollouts, monitoring during the transition, and rollback procedures if necessary.</constraints>, <output_format> - title: \"Rollout Plan\" \\-\\-\\- items:\\-\\-\\- 1\\. Initial Testing Phase\\-\\-\\- 2\\. Gradual Rollout Phases\\-\\-\\- 3\\. Performance Monitoring During Transition\\-\\-\\- 4\\. Fallback Procedures\\-\\-\\- 5\\. Retention of Current Provider's Services\\-\\-\\- 6\\. Post-Rollback Procedures</output_format>",
+        "visible_output": "<task> Create a rollout plan for switching providers with fallbacks and performance gates </task>, <context> The company needs to switch from their current provider to a new provider while ensuring minimal disruption and maintaining service level agreements.</context>, <constraints> The response should be a markdown list itemizing steps including initial testing phase, gradual rollouts, monitoring during the transition, and rollback procedures if necessary.</constraints>, <output_format> - title: \"Rollout Plan\" \\-\\-\\- items:\\-\\-\\- 1\\. Initial Testing Phase\\-\\-\\- 2\\. Gradual Rollout Phases\\-\\-\\- 3\\. Performance Monitoring During Transition\\-\\-\\- 4\\. Fallback Procedures\\-\\-\\- 5\\. Retention of Current Provider's Services\\-\\-\\- 6\\. Post-Rollback Procedures</output_format>",
+        "think_stripped": false,
+        "unclosed_think": false,
+        "contract": {
+          "pass": true,
+          "reasons": [],
+          "near_miss": false,
+          "visible_chars": 778,
+          "sections": {
+            "task": 84,
+            "context": 150,
+            "constraints": 178,
+            "output_format": 269
+          },
+          "think_stripped": false,
+          "unclosed_think": false
+        },
+        "usage": {
+          "completion_time_ms": 10463.0,
+          "completion_tokens": 173,
+          "decoding_speed_tps": 17.342206089937488,
+          "prefill_duration_ttft": 0.545,
+          "prompt_tokens": 202,
+          "total_tokens": 375
+        },
+        "memory": {
+          "before": {
+            "provider_rss_bytes": 4041756672,
+            "system_available_bytes": 10088054784
+          },
+          "after": {
+            "provider_rss_bytes": 4041728000,
+            "system_available_bytes": 10144313344
+          },
+          "max_provider_rss_bytes": 4045778944,
+          "min_system_available_bytes": 10070224896,
+          "available_delta_bytes": 17829888,
+          "memory_guard_violation": false,
+          "sample_count": 8
+        },
+        "error": ""
+      },
+      {
+        "run_index": 6,
+        "warmup": false,
+        "wall_seconds": 10.703615,
+        "ttft_seconds": 0.532,
+        "provider_native_metrics": {},
+        "prompt_tokens": 202,
+        "completion_tokens": 173,
+        "total_tokens": 375,
+        "seconds_per_completion_token": 0.061871,
+        "model_used": "94f88326aa8ca67cd9fa9607d7af0227eff2d1e3",
+        "raw_output": "<task> Create a rollout plan for switching providers with fallbacks and performance gates </task>, <context> The company needs to switch from their current provider to a new provider while ensuring minimal disruption and maintaining service level agreements.</context>, <constraints> The response should be a markdown list itemizing steps including initial testing phase, gradual rollouts, monitoring during the transition, and rollback procedures if necessary.</constraints>, <output_format> - title: \"Rollout Plan\" \\-\\-\\- items:\\-\\-\\- 1\\. Initial Testing Phase\\-\\-\\- 2\\. Gradual Rollout Phases\\-\\-\\- 3\\. Performance Monitoring During Transition\\-\\-\\- 4\\. Fallback Procedures\\-\\-\\- 5\\. Retention of Current Provider's Services\\-\\-\\- 6\\. Post-Rollback Procedures</output_format>",
+        "visible_output": "<task> Create a rollout plan for switching providers with fallbacks and performance gates </task>, <context> The company needs to switch from their current provider to a new provider while ensuring minimal disruption and maintaining service level agreements.</context>, <constraints> The response should be a markdown list itemizing steps including initial testing phase, gradual rollouts, monitoring during the transition, and rollback procedures if necessary.</constraints>, <output_format> - title: \"Rollout Plan\" \\-\\-\\- items:\\-\\-\\- 1\\. Initial Testing Phase\\-\\-\\- 2\\. Gradual Rollout Phases\\-\\-\\- 3\\. Performance Monitoring During Transition\\-\\-\\- 4\\. Fallback Procedures\\-\\-\\- 5\\. Retention of Current Provider's Services\\-\\-\\- 6\\. Post-Rollback Procedures</output_format>",
+        "think_stripped": false,
+        "unclosed_think": false,
+        "contract": {
+          "pass": true,
+          "reasons": [],
+          "near_miss": false,
+          "visible_chars": 778,
+          "sections": {
+            "task": 84,
+            "context": 150,
+            "constraints": 178,
+            "output_format": 269
+          },
+          "think_stripped": false,
+          "unclosed_think": false
+        },
+        "usage": {
+          "completion_time_ms": 10124.0,
+          "completion_tokens": 173,
+          "decoding_speed_tps": 17.93160967472894,
+          "prefill_duration_ttft": 0.532,
+          "prompt_tokens": 202,
+          "total_tokens": 375
+        },
+        "memory": {
+          "before": {
+            "provider_rss_bytes": 4041728000,
+            "system_available_bytes": 10101555200
+          },
+          "after": {
+            "provider_rss_bytes": 4041809920,
+            "system_available_bytes": 10171453440
+          },
+          "max_provider_rss_bytes": 4045791232,
+          "min_system_available_bytes": 10113449984,
+          "available_delta_bytes": -11894784,
+          "memory_guard_violation": false,
+          "sample_count": 8
+        },
+        "error": ""
+      }
+    ]
+  },
+  "versions": {
+    "flm": {
+      "returncode": 0,
+      "stdout": "{ \"version\": \"0.9.43\" }",
+      "stderr": ""
+    },
+    "ollama": {
+      "returncode": 0,
+      "stdout": "ollama version is 0.30.7",
+      "stderr": ""
+    },
+    "lms": {
+      "returncode": 0,
+      "stdout": "CLI commit: 9902c3a",
+      "stderr": ""
+    },
+    "lemonade": {
+      "returncode": 0,
+      "stdout": "lemonade version 10.9.0",
+      "stderr": ""
+    }
+  }
+}

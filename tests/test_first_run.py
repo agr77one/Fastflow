@@ -42,14 +42,27 @@ def test_choose_starting_provider_prefers_available_ollama(monkeypatch, isolated
     assert choice == "ollama"
 
 
+def test_lemonade_first_run_choices_start_with_qwen25_npu(isolated_release_root):
+    del isolated_release_root
+    sys.modules.pop("first_run", None)
+    module = importlib.import_module("first_run")
+
+    assert module.DEFAULT_MODEL_CHOICES["lemonade"][0] == "Qwen2.5-3B-Instruct-NPU"
+    assert module.DEFAULT_MODEL_CHOICES["lemonade"].index("Qwen2.5-3B-Instruct-NPU") < module.DEFAULT_MODEL_CHOICES[
+        "lemonade"
+    ].index("Qwen3-4B-Hybrid")
+
+
 def test_fetch_models_for_ollama_returns_empty_when_unreachable(monkeypatch, isolated_release_root):
     del isolated_release_root
     sys.modules.pop("first_run", None)
     module = importlib.import_module("first_run")
+    import ffp_provider_runtime
+
     monkeypatch.setattr(
-        module,
-        "json_get",
-        lambda *args, **kwargs: (_ for _ in ()).throw(TimeoutError("offline")),
+        ffp_provider_runtime,
+        "list_models",
+        lambda *args, **kwargs: {"models": []},
     )
 
     assert module.fetch_models("ollama", "http://127.0.0.1:11434") == []

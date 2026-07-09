@@ -1,4 +1,4 @@
-"""Flowkey installer (Python-based, replaces install_release.ps1).
+"""Flowkey installer (Python-based, replaces legacy setup/install_release.*).
 
 Run after `pip install .` has placed the package on disk. Handles the parts
 pip can't:

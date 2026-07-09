@@ -1,0 +1,82 @@
+{
+  "models": [
+    {
+      "config": {
+        "measurement_runs": 1,
+        "memory_tracking": true,
+        "warmup_runs": 0
+      },
+      "model": "Qwen3-4B-Hybrid",
+      "results": [
+        {
+          "backend": "npu",
+          "backend_args": "",
+          "ctx_size": 4096,
+          "recipe": "ryzenai-llm",
+          "scenarios": [
+            {
+              "category": "chat",
+              "duration_ms": {
+                "max": 4381.6916,
+                "mean": 4381.6916,
+                "min": 4381.6916,
+                "p50": 4381.6916,
+                "p95": 4381.6916
+              },
+              "failed_runs": 0,
+              "input_tokens": 27,
+              "memory_peak_gb": 20.3,
+              "name": "chat-short",
+              "output_tokens": 20,
+              "tps": {
+                "max": 4.977731202515064,
+                "mean": 4.977731202515064,
+                "min": 4.977731202515064,
+                "p50": 4.977731202515064,
+                "p95": 4.977731202515064
+              },
+              "ttft_ms": {
+                "max": 544.0,
+                "mean": 544.0,
+                "min": 544.0,
+                "p50": 544.0,
+                "p95": 544.0
+              }
+            },
+            {
+              "category": "chat",
+              "duration_ms": {
+                "max": 28119.3938,
+                "mean": 28119.3938,
+                "min": 28119.3938,
+                "p50": 28119.3938,
+                "p95": 28119.3938
+              },
+              "failed_runs": 0,
+              "input_tokens": 44,
+              "memory_peak_gb": 19.6,
+              "name": "chat-long-output",
+              "output_tokens": 256,
+              "tps": {
+                "max": 9.26800901359308,
+                "mean": 9.26800901359308,
+                "min": 9.26800901359308,
+                "p50": 9.26800901359308,
+                "p95": 9.26800901359308
+              },
+              "ttft_ms": {
+                "max": 584.0,
+                "mean": 584.0,
+                "min": 584.0,
+                "p50": 584.0,
+                "p95": 584.0
+              }
+            }
+          ]
+        }
+      ],
+      "timestamp": "2026-07-07T19:52:51Z"
+    }
+  ],
+  "timestamp": "2026-07-07T19:49:55Z"
+}

@@ -45,7 +45,7 @@ ShowWindowsToast_Impl(title, message) {
 
 ShowToastViaDaemon_Impl(title, message) {
     body := '{"args":{"title":"' EscapeJson(title) '","message":"' EscapeJson(message) '"}}'
-    result := RunActionViaDaemon("notify", body)
+    result := RunActionViaDaemon_Impl("notify", body)
     return (result = "queued" || result = "no-op (empty message)")
 }
 

@@ -1,0 +1,1876 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-07-08T14:10:10",
+  "provider": "lmstudio",
+  "base_url": "http://127.0.0.1:1234",
+  "model": "qwen2.5-7b-instruct",
+  "quant": "Q4_K_M",
+  "purpose": "diagnose deterministic output repair for LM Studio Qwen2.5 7B prompt near-misses",
+  "source_artifact": "data\\benchmarks\\rerun_lmstudio_qwen2.5-7b-instruct_20260708.json",
+  "repair_policy": "Convert labeled Task/Context/Constraints/Output format sections into XML tags, preserving section text; convert empty fenced output-format markers into a textual fenced-code-block description.",
+  "summary": {
+    "timed_runs": 49,
+    "changed_count": 49,
+    "pass_count_after_repair": 49,
+    "pass_rate_after_repair": 1.0,
+    "source_prompt_pass_count": 0,
+    "source_prompt_pass_rate": 0.0,
+    "extra_model_calls": 0
+  },
+  "case_summary": {
+    "prompt_code": {
+      "timed_runs": 5,
+      "pass_count_after_repair": 5,
+      "pass_rate_after_repair": 1.0
+    },
+    "prompt_research": {
+      "timed_runs": 4,
+      "pass_count_after_repair": 4,
+      "pass_rate_after_repair": 1.0
+    },
+    "prompt_email": {
+      "timed_runs": 5,
+      "pass_count_after_repair": 5,
+      "pass_rate_after_repair": 1.0
+    },
+    "prompt_data": {
+      "timed_runs": 5,
+      "pass_count_after_repair": 5,
+      "pass_rate_after_repair": 1.0
+    },
+    "prompt_meeting": {
+      "timed_runs": 5,
+      "pass_count_after_repair": 5,
+      "pass_rate_after_repair": 1.0
+    },
+    "prompt_vague": {
+      "timed_runs": 5,
+      "pass_count_after_repair": 5,
+      "pass_rate_after_repair": 1.0
+    },
+    "prompt_ui": {
+      "timed_runs": 5,
+      "pass_count_after_repair": 5,
+      "pass_rate_after_repair": 1.0
+    },
+    "prompt_bug": {
+      "timed_runs": 5,
+      "pass_count_after_repair": 5,
+      "pass_rate_after_repair": 1.0
+    },
+    "prompt_plan": {
+      "timed_runs": 5,
+      "pass_count_after_repair": 5,
+      "pass_rate_after_repair": 1.0
+    },
+    "prompt_review": {
+      "timed_runs": 5,
+      "pass_count_after_repair": 5,
+      "pass_rate_after_repair": 1.0
+    }
+  },
+  "runs": [
+    {
+      "case_id": "prompt_code",
+      "source_run_index": 2,
+      "source_wall_seconds": 5.18046,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "markdown_fence",
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 329,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nBuild a Python CLI.\n</task>\n<context>\nThe CLI should scan a folder containing JSON files and report any invalid rows along with their line numbers.\n</context>\n<constraints>\n- Length: Keep the code concise but comprehensive.\n- Format: Provide the full script in a single code block.\n- Tone: Clear and instructional.\n</constraints>\n<output_format>\npython fenced code block\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 394,
+        "sections": {
+          "task": 19,
+          "context": 109,
+          "constraints": 141,
+          "output_format": 24
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_code",
+      "source_run_index": 3,
+      "source_wall_seconds": 5.225881,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "markdown_fence",
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 330,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nBuild a Python CLI.\n</task>\n<context>\nThe CLI should scan a folder containing JSON files and report any invalid rows along with their line numbers.\n</context>\n<constraints>\n- Length: Keep the code concise but comprehensive.\n- Format: Provide the full script in a single code block.\n- Tone: Clear and instructional.\n</constraints>\n<output_format>\npython fenced code block\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 394,
+        "sections": {
+          "task": 19,
+          "context": 109,
+          "constraints": 141,
+          "output_format": 24
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_code",
+      "source_run_index": 4,
+      "source_wall_seconds": 5.724206,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "markdown_fence",
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 375,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nBuild a Python CLI tool.\n</task>\n<context>\nThe tool will scan a folder containing JSON files and report any invalid rows along with their line numbers.\n</context>\n<constraints>\n- Length: Keep the code concise but comprehensive.\n- Format: Provide the full script in a single code block.\n- Tone: Clear and instructional.\n</constraints>\n<output_format>\n# Include the complete Python script here\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 415,
+        "sections": {
+          "task": 24,
+          "context": 108,
+          "constraints": 141,
+          "output_format": 41
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_code",
+      "source_run_index": 5,
+      "source_wall_seconds": 7.319981,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "markdown_fence",
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 492,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nBuild a Python CLI tool.\n</task>\n<context>\nThe tool will scan a folder containing JSON files, identify any invalid rows (based on JSON syntax), and report these along with their respective line numbers.\n</context>\n<constraints>\n- Length: Keep the code concise but comprehensive.\n- Format: Provide both the CLI tool implementation and an example usage command.\n- Tone: Clear and instructional.\n</constraints>\n<output_format>\n# Include necessary imports, function definitions, and a main block for the CLI tool\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 532,
+        "sections": {
+          "task": 24,
+          "context": 159,
+          "constraints": 164,
+          "output_format": 84
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_code",
+      "source_run_index": 6,
+      "source_wall_seconds": 5.213519,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "markdown_fence",
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 329,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nBuild a Python CLI.\n</task>\n<context>\nThe CLI should scan a folder containing JSON files and report any invalid rows along with their line numbers.\n</context>\n<constraints>\n- Length: Keep the code concise but comprehensive.\n- Format: Provide the full script in a single code block.\n- Tone: Clear and instructional.\n</constraints>\n<output_format>\npython fenced code block\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 394,
+        "sections": {
+          "task": 19,
+          "context": 109,
+          "constraints": 141,
+          "output_format": 24
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_research",
+      "source_run_index": 2,
+      "source_wall_seconds": 7.478737,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 480,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nCompare LM Studio Lemonade, Ollama, and FLM for a local AI desktop app.\n</task>\n<context>\nNone provided.\n</context>\n<constraints>\nProvide a comparison in a table format with three columns (LM Studio Lemonade, Ollama, FLM) and four rows (size, performance, ease of use, cost). Each cell should be 1-2 sentences long. Use technical language appropriate for AI developers.\n</constraints>\n<output_format>\n| Feature          | LM Studio Lemonade       | Ollama                        | FLM                          |\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 535,
+        "sections": {
+          "task": 71,
+          "context": 14,
+          "constraints": 239,
+          "output_format": 110
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_research",
+      "source_run_index": 3,
+      "source_wall_seconds": 4.776593,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 282,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nCompare LM Studio Lemonade, Ollama, and FLM for a local AI desktop app.\n</task>\n<context>\nNone provided.\n</context>\n<constraints>\nProvide a concise comparison in bullet points format, highlighting key tradeoffs. Limit to 100 words.\n</constraints>\n<output_format>\n- Bullet points listing comparisons and tradeoffs\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 336,
+        "sections": {
+          "task": 71,
+          "context": 14,
+          "constraints": 101,
+          "output_format": 49
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_research",
+      "source_run_index": 4,
+      "source_wall_seconds": 8.829256,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 595,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nCompare LM Studio Lemonade, Ollama, and FLM for a local AI desktop app.\n</task>\n<context>\nNone provided.\n</context>\n<constraints>\nProvide a comparison in a table format with three columns (features, pros, cons) and three rows (Lemonade, Ollama, FLM). Each section should be limited to 3-5 points. Use a neutral tone.\n</constraints>\n<output_format>\n| Features          | Lemonade       | Ollama        | FLM            |\n|-------------------|---------------|--------------|---------------|\n| Pros              |               |              |               |\n| Cons              |               |              |               |\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 650,
+        "sections": {
+          "task": 71,
+          "context": 14,
+          "constraints": 186,
+          "output_format": 278
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_research",
+      "source_run_index": 6,
+      "source_wall_seconds": 10.011005,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 295,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nCompare LM Studio Lemonade, Ollama, and FLM for a local AI desktop app.\n</task>\n<context>\nNone provided.\n</context>\n<constraints>\nProvide a concise comparison in bullet points format, highlighting key features and tradeoffs. Limit to 100 words.\n</constraints>\n<output_format>\n- Bullet points listing comparisons and tradeoffs\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 349,
+        "sections": {
+          "task": 71,
+          "context": 14,
+          "constraints": 114,
+          "output_format": 49
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_email",
+      "source_run_index": 2,
+      "source_wall_seconds": 4.100679,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 215,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nWrite a polite email to a vendor requesting missing API credentials and a timeline.\n</task>\n<context>\nNone provided.\n</context>\n<constraints>\n150-200 words, professional tone, clear request for information.\n</constraints>\n<output_format>\nMarkdown\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 270,
+        "sections": {
+          "task": 83,
+          "context": 14,
+          "constraints": 64,
+          "output_format": 8
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_email",
+      "source_run_index": 3,
+      "source_wall_seconds": 4.210581,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 209,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nWrite a polite email to a vendor requesting missing API credentials and a timeline.\n</task>\n<context>\nNone provided.\n</context>\n<constraints>\n150-200 words, formal tone, clear request for information.\n</constraints>\n<output_format>\nMarkdown\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 264,
+        "sections": {
+          "task": 83,
+          "context": 14,
+          "constraints": 58,
+          "output_format": 8
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_email",
+      "source_run_index": 4,
+      "source_wall_seconds": 3.843187,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 215,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nWrite a polite email to a vendor requesting missing API credentials and a timeline.\n</task>\n<context>\nNone provided.\n</context>\n<constraints>\n150-200 words, professional tone, clear request for information.\n</constraints>\n<output_format>\nMarkdown\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 270,
+        "sections": {
+          "task": 83,
+          "context": 14,
+          "constraints": 64,
+          "output_format": 8
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_email",
+      "source_run_index": 5,
+      "source_wall_seconds": 3.880069,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 215,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nWrite a polite email to a vendor requesting missing API credentials and a timeline.\n</task>\n<context>\nNone provided.\n</context>\n<constraints>\n150-200 words, professional tone, clear request for information.\n</constraints>\n<output_format>\nMarkdown\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 270,
+        "sections": {
+          "task": 83,
+          "context": 14,
+          "constraints": 64,
+          "output_format": 8
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_email",
+      "source_run_index": 6,
+      "source_wall_seconds": 3.749782,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 215,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nWrite a polite email to a vendor requesting missing API credentials and a timeline.\n</task>\n<context>\nNone provided.\n</context>\n<constraints>\n150-200 words, professional tone, clear request for information.\n</constraints>\n<output_format>\nMarkdown\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 270,
+        "sections": {
+          "task": 83,
+          "context": 14,
+          "constraints": 64,
+          "output_format": 8
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_data",
+      "source_run_index": 2,
+      "source_wall_seconds": 8.156527,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "markdown_fence",
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 499,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nAnalyze a CSV export of time logs to identify missing expected hours by person and date.\n</task>\n<context>\nThe CSV contains columns for Person, Date, and Hours Worked.\n</context>\n<constraints>\nProvide a summary report listing each person with dates where expected hours are missing. Format as a Markdown table. Length: 10-20 rows. Tone: Professional.\n</constraints>\n<output_format>\n| Person | Missing Dates       |\n|--------|---------------------|\n|        |                     |\n|        |                     |\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 537,
+        "sections": {
+          "task": 88,
+          "context": 60,
+          "constraints": 157,
+          "output_format": 131
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_data",
+      "source_run_index": 3,
+      "source_wall_seconds": 9.540259,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "markdown_fence",
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 450,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nAnalyze a CSV export of time logs to identify missing expected hours by person and date.\n</task>\n<context>\nThe CSV contains columns for \"Person\", \"Date\", and \"Hours Worked\".\n</context>\n<constraints>\nProvide a summary report listing each person with dates where expected hours are missing. Format as a Markdown table.\n</constraints>\n<output_format>\n| Person | Missing Dates |\n|--------|---------------|\n| John   | 2023-10-05    |\n| Jane   | 2023-10-06, 2023-10-10 |\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 488,
+        "sections": {
+          "task": 88,
+          "context": 66,
+          "constraints": 117,
+          "output_format": 116
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_data",
+      "source_run_index": 4,
+      "source_wall_seconds": 10.338969,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "markdown_fence",
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 471,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nAnalyze a CSV export of time logs to identify missing expected hours by person and date.\n</task>\n<context>\nThe CSV contains columns for Person, Date, and Hours Worked.\n</context>\n<constraints>\nProvide a summary report listing each person with dates where expected hours are missing. Format as a Markdown table. Length: 10-15 sentences.\n</constraints>\n<output_format>\n| Person | Missing Dates |\n|--------|---------------|\n| John   | 2023-10-02, 2023-10-04 |\n| Jane   | 2023-10-03      |\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 509,
+        "sections": {
+          "task": 88,
+          "context": 60,
+          "constraints": 142,
+          "output_format": 118
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_data",
+      "source_run_index": 5,
+      "source_wall_seconds": 9.729235,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "markdown_fence",
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 455,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nAnalyze a CSV export of time logs to identify missing expected hours by person and date.\n</task>\n<context>\nThe CSV contains columns for Person, Date, and Hours Worked.\n</context>\n<constraints>\nProvide a summary report listing each person with dates where expected hours are missing. Format the output as a Markdown table.\n</constraints>\n<output_format>\n| Person | Missing Dates |\n|--------|---------------|\n| John   | 2023-10-05    |\n| Jane   | 2023-10-06, 2023-10-10 |\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 493,
+        "sections": {
+          "task": 88,
+          "context": 60,
+          "constraints": 128,
+          "output_format": 116
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_data",
+      "source_run_index": 6,
+      "source_wall_seconds": 11.967606,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "markdown_fence",
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 455,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nAnalyze a CSV export of time logs to identify missing expected hours by person and date.\n</task>\n<context>\nThe CSV contains columns for Person, Date, and Hours Worked.\n</context>\n<constraints>\nProvide a summary report listing each person with dates where expected hours are missing. Format the output as a Markdown table.\n</constraints>\n<output_format>\n| Person | Missing Dates |\n|--------|---------------|\n| John   | 2023-10-05    |\n| Jane   | 2023-10-06, 2023-10-10 |\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 493,
+        "sections": {
+          "task": 88,
+          "context": 60,
+          "constraints": 128,
+          "output_format": 116
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_meeting",
+      "source_run_index": 2,
+      "source_wall_seconds": 10.485326,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 500,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nCreate a summary of key decisions, risks, and action items from a rough meeting transcript.\n</task>\n<context>\nThe transcript contains discussions, ideas, and conclusions from a meeting.\n</context>\n<constraints>\nSummarize in 300 words or less. Include separate sections for decisions, risks, and action items. Use bullet points for each category. Formal tone.\n</constraints>\n<output_format>\n- # Decisions\n- - [Decision 1]\n- - [Decision 2]\n- # Risks\n- - [Risk 1]\n- - [Risk 2]\n- # Action Items\n- - [Action Item 1]\n- - [Action Item 2]\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 554,
+        "sections": {
+          "task": 91,
+          "context": 75,
+          "constraints": 147,
+          "output_format": 140
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_meeting",
+      "source_run_index": 3,
+      "source_wall_seconds": 9.034266,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 438,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nCreate a summary of key decisions, risks, and action items from a rough meeting transcript.\n</task>\n<context>\nThe transcript contains discussions, ideas, and conclusions from a meeting.\n</context>\n<constraints>\nProvide a concise summary (1-2 paragraphs), list 3-5 key decisions, 2-4 identified risks, and 3-5 action items. Use bullet points for clarity.\n</constraints>\n<output_format>\n- Summary of the meeting\n  - Key Decisions:\n  - Identified Risks:\n  - Action Items:\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 492,
+        "sections": {
+          "task": 91,
+          "context": 75,
+          "constraints": 142,
+          "output_format": 83
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_meeting",
+      "source_run_index": 4,
+      "source_wall_seconds": 11.020615,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 521,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nCreate a summary of key decisions, risks, and action items from a rough meeting transcript.\n</task>\n<context>\nThe transcript contains discussions and deliberations from a previous meeting.\n</context>\n<constraints>\nSummarize in 300 words or less. Include sections for Decisions, Risks, and Action Items. Use bullet points for each section. Tone should be formal and concise.\n</constraints>\n<output_format>\n# Summary\n## Decisions\n- [Decision 1]\n- [Decision 2]\n...\n## Risks\n- [Risk 1]\n- [Risk 2]\n...\n## Action Items\n- [Action Item 1]\n- [Action Item 2]\n...\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 576,
+        "sections": {
+          "task": 91,
+          "context": 78,
+          "constraints": 159,
+          "output_format": 147
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_meeting",
+      "source_run_index": 5,
+      "source_wall_seconds": 11.042843,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 528,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nCreate a summary of key decisions, risks, and action items from a rough meeting transcript.\n</task>\n<context>\nThe transcript contains discussions and deliberations from a previous meeting.\n</context>\n<constraints>\nSummarize in 300 words or less. Include headings for \"Decisions,\" \"Risks,\" and \"Action Items.\" Use bullet points for each category. Tone should be formal and concise.\n</constraints>\n<output_format>\n# Summary\n## Decisions\n- [Decision 1]\n- [Decision 2]\n...\n## Risks\n- [Risk 1]\n- [Risk 2]\n...\n## Action Items\n- [Action Item 1]\n- [Action Item 2]\n...\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 583,
+        "sections": {
+          "task": 91,
+          "context": 78,
+          "constraints": 166,
+          "output_format": 147
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_meeting",
+      "source_run_index": 6,
+      "source_wall_seconds": 10.476793,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 496,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nCreate a summary of key decisions, risks, and action items from a rough meeting transcript.\n</task>\n<context>\nThe transcript contains discussions from a previous meeting.\n</context>\n<constraints>\nSummarize in 300 words or less. Include sections for Decisions, Risks, and Action Items. Use bullet points for each section. Tone is formal and concise.\n</constraints>\n<output_format>\n# Summary\n## Decisions\n- [Decision 1]\n- [Decision 2]\n...\n## Risks\n- [Risk 1]\n- [Risk 2]\n...\n## Action Items\n- [Action Item 1]\n- [Action Item 2]\n...\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 551,
+        "sections": {
+          "task": 91,
+          "context": 60,
+          "constraints": 152,
+          "output_format": 147
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_vague",
+      "source_run_index": 2,
+      "source_wall_seconds": 3.927286,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 223,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nImprove and clarify the following text for the team.\n</task>\n<context>\nThe original text was unclear or poorly structured.\n</context>\n<constraints>\n50-word limit, clear and concise, bullet points if necessary.\n</constraints>\n<output_format>\nBullet points\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 278,
+        "sections": {
+          "task": 52,
+          "context": 51,
+          "constraints": 61,
+          "output_format": 13
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_vague",
+      "source_run_index": 3,
+      "source_wall_seconds": 3.654971,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 192,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nImprove and clarify the following text for the team.\n</task>\n<context>\nThe original text was unclear or poorly structured.\n</context>\n<constraints>\n50-word limit, clear and concise.\n</constraints>\n<output_format>\nPlain text\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 247,
+        "sections": {
+          "task": 52,
+          "context": 51,
+          "constraints": 33,
+          "output_format": 10
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_vague",
+      "source_run_index": 4,
+      "source_wall_seconds": 3.542306,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 192,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nImprove and clarify the following text for the team.\n</task>\n<context>\nThe original text was unclear or poorly structured.\n</context>\n<constraints>\n50-word limit, clear and concise.\n</constraints>\n<output_format>\nPlain text\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 247,
+        "sections": {
+          "task": 52,
+          "context": 51,
+          "constraints": 33,
+          "output_format": 10
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_vague",
+      "source_run_index": 5,
+      "source_wall_seconds": 4.344998,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 234,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nImprove and clarify the following text for the team.\n</task>\n<context>\nThe original text was unclear or poorly structured.\n</context>\n<constraints>\n50-word limit, clear and concise, bullet points allowed.\n</constraints>\n<output_format>\nUnordered list with one item.\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 289,
+        "sections": {
+          "task": 52,
+          "context": 51,
+          "constraints": 56,
+          "output_format": 29
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_vague",
+      "source_run_index": 6,
+      "source_wall_seconds": 3.673648,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 192,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nImprove and clarify the following text for the team.\n</task>\n<context>\nThe original text was unclear or poorly structured.\n</context>\n<constraints>\n50-word limit, clear and concise.\n</constraints>\n<output_format>\nPlain text\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 247,
+        "sections": {
+          "task": 52,
+          "context": 51,
+          "constraints": 33,
+          "output_format": 10
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_ui",
+      "source_run_index": 2,
+      "source_wall_seconds": 6.765224,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 430,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nDesign a small dashboard for model benchmarks.\n</task>\n<context>\nThe dashboard should include filters for different providers and display failure states of models.\n</context>\n<constraints>\nInclude 3 provider filters, show at least 5 failure states, use a clean and minimalistic design, limit to 1000 characters including spaces and punctuation, provide options for sorting by date or frequency.\n</constraints>\n<output_format>\nMarkdown with a simple table layout\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 485,
+        "sections": {
+          "task": 46,
+          "context": 98,
+          "constraints": 205,
+          "output_format": 35
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_ui",
+      "source_run_index": 3,
+      "source_wall_seconds": 9.774795,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "markdown_fence",
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 502,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nDesign a small dashboard for model benchmarks.\n</task>\n<context>\nThe dashboard should allow filtering by provider and display failure states.\n</context>\n<constraints>\nInclude 3 filters (provider), show pass/fail status, use a bar chart for visual representation, keep the design simple, total dashboard height ≤ 500px, width ≤ 800px.\n</constraints>\n<output_format>\n# Dashboard Design\n\n## Filters\n- Provider A\n- Provider B\n- Provider C\n\n## Chart\n- Type: Bar Chart\n- X-axis: Model Benchmarks\n- Y-axis: Pass/Fail Status\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 540,
+        "sections": {
+          "task": 46,
+          "context": 76,
+          "constraints": 166,
+          "output_format": 151
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_ui",
+      "source_run_index": 4,
+      "source_wall_seconds": 7.026475,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 391,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nDesign a small dashboard for model benchmarks.\n</task>\n<context>\nThe dashboard should include filters for different providers and display failure states of models.\n</context>\n<constraints>\nInclude 3 provider filters, show at least 5 failure states, use a clean and minimalistic design, and keep the dashboard width to 600px.\n</constraints>\n<output_format>\nJSON with keys \"dashboardDesign\", \"filters\", and \"failureStates\".\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 445,
+        "sections": {
+          "task": 46,
+          "context": 98,
+          "constraints": 135,
+          "output_format": 65
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_ui",
+      "source_run_index": 5,
+      "source_wall_seconds": 6.65681,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 399,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nDesign a small dashboard for model benchmarks.\n</task>\n<context>\nThe dashboard should include filters for different providers and display failure states of models.\n</context>\n<constraints>\nInclude 3 provider filters, show at least 5 failure states, use a clean and minimalistic design, and keep the dashboard width to 600px or less.\n</constraints>\n<output_format>\nJSON with keys \"dashboardDesign\", \"filters\", and \"failureStates\".\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 453,
+        "sections": {
+          "task": 46,
+          "context": 98,
+          "constraints": 143,
+          "output_format": 65
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_ui",
+      "source_run_index": 6,
+      "source_wall_seconds": 6.382194,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 390,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nDesign a small dashboard for model benchmarks.\n</task>\n<context>\nThe dashboard should include filters for different providers and display failure states of models.\n</context>\n<constraints>\nInclude 3 provider filters, show at least 5 failure states, use a clean and minimalistic design, and keep the dashboard width under 600px.\n</constraints>\n<output_format>\nSketch or wireframe in Markdown with simple text descriptions.\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 445,
+        "sections": {
+          "task": 46,
+          "context": 98,
+          "constraints": 138,
+          "output_format": 62
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_bug",
+      "source_run_index": 2,
+      "source_wall_seconds": 7.618446,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 418,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nDebug why local server health checks pass but chat completions return 404 errors.\n</task>\n<context>\nThe local server is running, health checks are successful, but chat completions result in 404 errors.\n</context>\n<constraints>\nProvide a step-by-step troubleshooting guide. Include at least three potential causes and their solutions. Use bullet points for clarity. Length: Approximately 150-200 words.\n</constraints>\n<output_format>\n- Bullet points\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 472,
+        "sections": {
+          "task": 81,
+          "context": 101,
+          "constraints": 174,
+          "output_format": 15
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_bug",
+      "source_run_index": 3,
+      "source_wall_seconds": 7.933788,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 418,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nDebug why local server health checks pass but chat completions return 404 errors.\n</task>\n<context>\nLocal server is running, health checks are successful, but chat completions fail with HTTP 404 error.\n</context>\n<constraints>\nProvide a step-by-step troubleshooting guide. Include at least three potential causes and their solutions. Use bullet points for clarity. Length: Approximately 150-200 words.\n</constraints>\n<output_format>\n- Bullet points\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 472,
+        "sections": {
+          "task": 81,
+          "context": 101,
+          "constraints": 174,
+          "output_format": 15
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_bug",
+      "source_run_index": 4,
+      "source_wall_seconds": 7.48322,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 418,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nDebug why local server health checks pass but chat completions return 404 errors.\n</task>\n<context>\nLocal server is running, health checks are successful, but chat completions fail with HTTP 404 error.\n</context>\n<constraints>\nProvide a step-by-step troubleshooting guide. Include at least three potential causes and their solutions. Use bullet points for clarity. Length: Approximately 150-200 words.\n</constraints>\n<output_format>\n- Bullet points\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 472,
+        "sections": {
+          "task": 81,
+          "context": 101,
+          "constraints": 174,
+          "output_format": 15
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_bug",
+      "source_run_index": 5,
+      "source_wall_seconds": 7.113588,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 410,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nDebug why local server health checks pass but chat completions return 404 errors.\n</task>\n<context>\nThe local server is running, health checks are successful, but chat completions fail to load.\n</context>\n<constraints>\nProvide a step-by-step troubleshooting guide. Include at least three potential causes and their solutions. Use bullet points for clarity. Length: Approximately 150-200 words.\n</constraints>\n<output_format>\n- Bullet points\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 464,
+        "sections": {
+          "task": 81,
+          "context": 93,
+          "constraints": 174,
+          "output_format": 15
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_bug",
+      "source_run_index": 6,
+      "source_wall_seconds": 6.300003,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 366,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nDebug why local server health check passes but chat completions fail with 404.\n</task>\n<context>\nThe local server is running and responds correctly to a basic health check endpoint, but fails when attempting chat completions.\n</context>\n<constraints>\nProvide a concise explanation of the issue and potential solutions. Limit to 50 words.\n</constraints>\n<output_format>\nBrief summary in plain text.\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 421,
+        "sections": {
+          "task": 78,
+          "context": 128,
+          "constraints": 86,
+          "output_format": 28
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_plan",
+      "source_run_index": 2,
+      "source_wall_seconds": 10.363001,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "markdown_fence",
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 595,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nCreate a rollout plan for switching providers with fallback and performance gates.\n</task>\n<context>\nThe current system uses Provider A, and we need to switch to Provider B while ensuring smooth transition and maintaining service quality.\n</context>\n<constraints>\n- Plan should be 300-400 words.\n- Include sections: Introduction, Phases of Rollout, Fallback Mechanism, Performance Gates, Conclusion.\n- Use a formal tone.\n</constraints>\n<output_format>\n# Rollout Plan for Switching Providers\n\n## Introduction\n...\n\n## Phases of Rollout\n...\n\n## Fallback Mechanism\n...\n\n## Performance Gates\n...\n\n## Conclusion\n...\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 633,
+        "sections": {
+          "task": 82,
+          "context": 137,
+          "constraints": 156,
+          "output_format": 157
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_plan",
+      "source_run_index": 3,
+      "source_wall_seconds": 9.596886,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "markdown_fence",
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 572,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nCreate a rollout plan for switching providers with fallback and performance gates.\n</task>\n<context>\nThe current system uses Provider A, and we need to switch to Provider B while ensuring smooth transition and maintaining service quality.\n</context>\n<constraints>\n- Plan should be 300-400 words.\n- Include sections for preparation, execution, monitoring, and rollback.\n- Use a step-by-step format with clear headings.\n- Tone should be professional and detailed.\n</constraints>\n<output_format>\n# Rollout Plan for Switching Providers\n## Preparation\n## Execution\n## Monitoring\n## Rollback Strategy\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 618,
+        "sections": {
+          "task": 82,
+          "context": 137,
+          "constraints": 197,
+          "output_format": 101
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_plan",
+      "source_run_index": 4,
+      "source_wall_seconds": 10.751868,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "markdown_fence",
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 572,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nCreate a rollout plan for switching providers with fallback and performance gates.\n</task>\n<context>\nThe current system uses Provider A, and we need to switch to Provider B while ensuring smooth transition and maintaining service quality.\n</context>\n<constraints>\n- Plan should be 300-400 words.\n- Include sections for preparation, execution, monitoring, and rollback.\n- Use a step-by-step format with clear headings.\n- Tone should be professional and detailed.\n</constraints>\n<output_format>\n# Rollout Plan for Switching Providers\n## Preparation\n## Execution\n## Monitoring\n## Rollback Strategy\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 618,
+        "sections": {
+          "task": 82,
+          "context": 137,
+          "constraints": 197,
+          "output_format": 101
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_plan",
+      "source_run_index": 5,
+      "source_wall_seconds": 11.453699,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "markdown_fence",
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 627,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nCreate a rollout plan for switching providers with fallback and performance gates.\n</task>\n<context>\nThe current system uses Provider A, and we need to switch to Provider B while ensuring smooth transition and maintaining service quality.\n</context>\n<constraints>\n- Plan should be 300-400 words.\n- Include phases: preparation, implementation, monitoring, and rollback.\n- Use bullet points for each phase.\n- Tone: professional and clear.\n</constraints>\n<output_format>\n# Rollout Plan for Switching Providers\n\n## Preparation Phase\n- [ ]\n- [ ]\n\n## Implementation Phase\n- [ ]\n- [ ]\n\n## Monitoring Phase\n- [ ]\n- [ ]\n\n## Rollback Phase\n- [ ]\n- [ ]\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 665,
+        "sections": {
+          "task": 82,
+          "context": 137,
+          "constraints": 172,
+          "output_format": 173
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_plan",
+      "source_run_index": 6,
+      "source_wall_seconds": 11.342374,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "markdown_fence",
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 572,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nCreate a rollout plan for switching providers with fallback and performance gates.\n</task>\n<context>\nThe current system uses Provider A, and we need to switch to Provider B while ensuring smooth transition and maintaining service quality.\n</context>\n<constraints>\n- Plan should be 300-400 words.\n- Include sections for preparation, execution, monitoring, and rollback.\n- Use a step-by-step format with clear headings.\n- Tone should be professional and detailed.\n</constraints>\n<output_format>\n# Rollout Plan for Switching Providers\n## Preparation\n## Execution\n## Monitoring\n## Rollback Strategy\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 618,
+        "sections": {
+          "task": 82,
+          "context": 137,
+          "constraints": 197,
+          "output_format": 101
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_review",
+      "source_run_index": 2,
+      "source_wall_seconds": 2.671551,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 142,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nReview pull request for regressions and missing tests before release.\n</task>\n<context>\nNone provided.\n</context>\n<constraints>\nN/A\n</constraints>\n<output_format>\nPlain text\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 197,
+        "sections": {
+          "task": 69,
+          "context": 14,
+          "constraints": 3,
+          "output_format": 10
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_review",
+      "source_run_index": 3,
+      "source_wall_seconds": 2.991846,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 142,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nReview pull request for regressions and missing tests before release.\n</task>\n<context>\nNone provided.\n</context>\n<constraints>\nN/A\n</constraints>\n<output_format>\nPlain text\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 197,
+        "sections": {
+          "task": 69,
+          "context": 14,
+          "constraints": 3,
+          "output_format": 10
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_review",
+      "source_run_index": 4,
+      "source_wall_seconds": 2.780812,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 142,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nReview pull request for regressions and missing tests before release.\n</task>\n<context>\nNone provided.\n</context>\n<constraints>\nN/A\n</constraints>\n<output_format>\nPlain text\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 197,
+        "sections": {
+          "task": 69,
+          "context": 14,
+          "constraints": 3,
+          "output_format": 10
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_review",
+      "source_run_index": 5,
+      "source_wall_seconds": 3.238611,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 142,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nReview pull request for regressions and missing tests before release.\n</task>\n<context>\nNone provided.\n</context>\n<constraints>\nN/A\n</constraints>\n<output_format>\nPlain text\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 197,
+        "sections": {
+          "task": 69,
+          "context": 14,
+          "constraints": 3,
+          "output_format": 10
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    },
+    {
+      "case_id": "prompt_review",
+      "source_run_index": 6,
+      "source_wall_seconds": 2.845206,
+      "source_contract": {
+        "pass": false,
+        "reasons": [
+          "missing_constraints",
+          "missing_context",
+          "missing_output_format",
+          "missing_task"
+        ],
+        "near_miss": true,
+        "visible_chars": 142,
+        "sections": {},
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "changed": true,
+      "note": {},
+      "repaired_output": "<task>\nReview pull request for regressions and missing tests before release.\n</task>\n<context>\nNone provided.\n</context>\n<constraints>\nN/A\n</constraints>\n<output_format>\nPlain text\n</output_format>",
+      "repaired_contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 197,
+        "sections": {
+          "task": 69,
+          "context": 14,
+          "constraints": 3,
+          "output_format": 10
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      }
+    }
+  ],
+  "versions": {
+    "flm": {
+      "returncode": 0,
+      "stdout": "{ \"version\": \"0.9.43\" }",
+      "stderr": ""
+    },
+    "ollama": {
+      "returncode": 0,
+      "stdout": "Warning: could not connect to a running Ollama instance\nWarning: client version is 0.30.7",
+      "stderr": ""
+    },
+    "lms": {
+      "returncode": 0,
+      "stdout": "CLI commit: 9902c3a",
+      "stderr": ""
+    },
+    "lemonade": {
+      "returncode": 0,
+      "stdout": "lemonade version 10.9.0",
+      "stderr": ""
+    }
+  }
+}

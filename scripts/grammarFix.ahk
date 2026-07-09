@@ -154,7 +154,7 @@ PollDaemonMarkers() {
 ; the built-in defaults when the daemon is unreachable or returns nothing.
 RefreshModePrefixIds() {
     global modePrefixIds
-    raw := Trim(RunAction("mode_ids"), "`r`n`t ")
+    raw := Trim(RunAction_Impl("mode_ids"), "`r`n`t ")
     if (raw = "" || InStr(raw, "daemon") || InStr(raw, "not found"))
         return
     ids := []
@@ -399,19 +399,6 @@ IsStartupEnabled() {
     return IsStartupEnabled_Impl()
 }
 
-; --- Daemon-first dispatch (fast path) ----------------------------------------------
-; Tries the long-running Python daemon at 127.0.0.1:52650 first. Falls back to
-; the legacy subprocess path on any failure so the app keeps working when the
-; daemon is down or starting up.
-
-RunAction(action, body := "{}") {
-    return RunAction_Impl(action, body)
-}
-
-RunActionViaDaemon(action, body := "{}") {
-    return RunActionViaDaemon_Impl(action, body)
-}
-
 ; --- Daemon lifecycle ---------------------------------------------------------------
 
 EnsureDaemonRunning() {
@@ -494,7 +481,7 @@ CaptureNoteImpl() {
     body := '{"args":{"text":"' EscapeJson(captured)
         . '","source_app":"' EscapeJson(sourceApp)
         . '","url":""}}'
-    result := RunActionViaDaemon("save_note", body)
+    result := RunActionViaDaemon_Impl("save_note", body)
     if (result = "") {
         Notify("Flowkey", "📝 Note capture: daemon unavailable.")
         return
@@ -542,7 +529,7 @@ AskWithSelectionImpl() {
 
     body := '{"args":{"text":"' EscapeJson(captured)
         . '","source_app":"' EscapeJson(sourceApp) '"}}'
-    result := RunActionViaDaemon("chat_stage_selection", body)
+    result := RunActionViaDaemon_Impl("chat_stage_selection", body)
     if (result = "") {
         Notify("Flowkey", "Ask: daemon unavailable.")
         return
@@ -563,9 +550,8 @@ AskWithSelectionImpl() {
 ; ----------------------------------------------------------------------------
 ; Autostart (HKCU Run key). The dashboard checkbox is applied via
 ; ApplyAutostartFromForm() when the user clicks Save all settings.
-; The system-wide HKLM Run key set by the installer (optional task at install
-; time) is NOT touched here -- removing it requires admin and goes through
-; Add/Remove Programs.
+; Older Startup-folder shortcuts are migrated away below; packaged installs use
+; the same HKCU Run value, cleaned by uninstall.
 ; ----------------------------------------------------------------------------
 
 
@@ -579,10 +565,10 @@ MigrateLegacyStartupShortcut() {
     legacy := A_Startup "\\FastFlowPrompt.lnk"
     if !FileExist(legacy)
         return
-    raw := RunAction("get_autostart_state")
+    raw := RunAction_Impl("get_autostart_state")
     enabled := InStr(raw, '"enabled": true') || InStr(raw, '"enabled":true')
     if !enabled
-        RunAction("set_autostart", '{"args":{"enabled":true}}')
+        RunAction_Impl("set_autostart", '{"args":{"enabled":true}}')
     try FileDelete(legacy)
 }
 
@@ -724,14 +710,14 @@ GetFlmTimeoutMs() {
 }
 
 GetPerformanceMode() {
-    mode := Trim(StrLower(RunAction("performance")), "`r`n`t ")
+    mode := Trim(StrLower(RunAction_Impl("performance")), "`r`n`t ")
     if InStr(mode, "max")
         return "max"
     return "balanced"
 }
 
 GetHistoryTextMode() {
-    mode := Trim(StrLower(RunAction("history_text_status")), "`r`n`t ")
+    mode := Trim(StrLower(RunAction_Impl("history_text_status")), "`r`n`t ")
     if InStr(mode, "visible")
         return "visible"
     return "redacted"

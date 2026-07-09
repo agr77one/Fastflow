@@ -40,8 +40,11 @@
 #define AppPublisher  "Flowkey"
 #define AppURL        "https://github.com/agr77one/Fastflow"
 #define AppExeName    "Flowkey.exe"  ; symbolic — actual launchers below
-; Keep in lockstep with scripts\_version.py.
+; build.ps1 passes /DAppVersion from scripts\_version.py. Fallback keeps direct
+; `iscc installer.iss` usable during local debugging.
+#ifndef AppVersion
 #define AppVersion    "2.1.0"
+#endif
 
 [Setup]
 AppId={{8A4F1E6C-9B3D-4E62-9F7A-FASTFLOW140}}

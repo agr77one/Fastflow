@@ -71,6 +71,30 @@ def test_run_ollama_bench_handles_missing_counters():
     ]
 
 
+def test_run_openai_compat_bench_records_wall_time_and_usage():
+    calls: list = []
+
+    def fake_generate(base_url, payload):
+        calls.append((base_url, payload))
+        return {"usage": {"prompt_tokens": 123, "completion_tokens": 12}}
+
+    rows = ffp_benchmark.run_openai_compat_bench(
+        "m:3b",
+        "http://127.0.0.1:1234",
+        provider="lmstudio",
+        sizes=(64,),
+        iterations=2,
+        generate=fake_generate,
+    )
+
+    assert len(calls) == 3
+    assert calls[0][1]["max_tokens"] == 8
+    assert rows[0]["context"] == 123
+    assert rows[0]["prefill_tps"] is None
+    assert rows[0]["ttft_s"] is not None
+    assert rows[0]["decode_tps"] is not None
+
+
 def test_start_benchmark_ollama_writes_result_and_skips_serve_control(tmp_path):
     serve_calls: list = []
     out = ffp_benchmark.start_benchmark(

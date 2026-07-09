@@ -204,6 +204,7 @@ def _default_llm_call(messages: list[dict]) -> str:
     module globals so chat matches grammar/notes routing. Raises RuntimeError on
     transport/timeout/parse/empty-choices errors.
     """
+    import ffp_provider_runtime
     import grammar_fix
 
     base_url = str(getattr(grammar_fix, "FLM_BASE_URL", "http://127.0.0.1:52625") or "").rstrip("/")
@@ -223,7 +224,12 @@ def _default_llm_call(messages: list[dict]) -> str:
     headers = {"Content-Type": "application/json"}
     if bearer:
         headers["Authorization"] = f"Bearer {bearer}"
-    req = urllib.request.Request(base_url + "/v1/chat/completions", data=body, headers=headers, method="POST")
+    req = urllib.request.Request(
+        ffp_provider_runtime.openai_url(base_url, "chat/completions"),
+        data=body,
+        headers=headers,
+        method="POST",
+    )
     try:
         with urllib.request.urlopen(req, timeout=max(2, timeout)) as resp:
             payload = json.loads(resp.read().decode("utf-8", errors="replace"))

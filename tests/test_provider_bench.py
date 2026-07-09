@@ -135,3 +135,77 @@ def test_build_cases_includes_fixed_prompt_grammar_and_long_context_sets() -> No
         "longctx_4000",
         "longctx_8000",
     ]
+
+
+# ---------- long-context needle checks (truncation guard) ------------------------------
+# Regression: the July 8-9 rerun scored Lemonade Qwen2.5-3B-NPU "5/5 at 8k"
+# while the runtime silently kept only the last ~2-3k input tokens. The old
+# transcript was uniform filler, so a digest of the truncated tail was
+# indistinguishable from a digest of the whole. Needles at both ends make
+# silent truncation a scoring failure.
+
+
+def test_long_context_prompt_embeds_needles_at_both_ends() -> None:
+    prompt = provider_bench.long_context_prompt(1000)
+
+    open_pos = prompt.find(provider_bench.LONGCTX_OPEN_CODE)
+    close_pos = prompt.find(provider_bench.LONGCTX_CLOSE_CODE)
+    assert 0 < open_pos < 250, "opening code must sit at the very start of the transcript"
+    assert close_pos > len(prompt) - 250, "closing code must sit at the very end"
+    assert "[segment 1]" in prompt and "[segment 5]" in prompt  # position-stamped, not uniform
+
+
+def test_long_context_prompt_scales_with_target() -> None:
+    small = provider_bench.long_context_prompt(1000)
+    large = provider_bench.long_context_prompt(8000)
+
+    assert len(large) > len(small) * 5
+
+
+def test_longctx_contract_passes_when_both_codes_quoted() -> None:
+    output = (
+        "## Summary\nBudget code ZEBRA-7741 was approved; follow-up ticket OTTER-3305 "
+        "was assigned.\n## Decisions\n- proceed\n## Action items\n- follow up"
+    )
+
+    result = provider_bench.check_longctx_contract(output)
+
+    assert result["pass"] is True
+    assert result["start_needle_found"] is True
+    assert result["end_needle_found"] is True
+    assert result["truncation_suspected"] is False
+
+
+def test_longctx_contract_flags_keep_last_truncation() -> None:
+    # A runtime that dropped the transcript head can only quote the closing code.
+    output = (
+        "## Summary\nThe follow-up ticket code is OTTER-3305; no budget code was "
+        "mentioned.\n## Decisions\n- none\n## Action items\n- none"
+    )
+
+    result = provider_bench.check_longctx_contract(output)
+
+    assert result["pass"] is False
+    assert "start_needle_missing" in result["reasons"]
+    assert result["truncation_suspected"] is True
+
+
+def test_longctx_contract_fails_when_both_codes_missing() -> None:
+    result = provider_bench.check_longctx_contract("## Summary\nA fine meeting.\n")
+
+    assert result["pass"] is False
+    assert "start_needle_missing" in result["reasons"]
+    assert "end_needle_missing" in result["reasons"]
+    assert result["truncation_suspected"] is False  # not the truncation signature
+
+
+def test_score_case_dispatches_longctx_to_needle_checker() -> None:
+    case = provider_bench.BenchCase(
+        "longctx_1000", "longctx", provider_bench.LONGCTX_SYSTEM,
+        provider_bench.long_context_prompt(1000), 220,
+    )
+
+    result = provider_bench.score_case(case, "## Summary\nfilling text only\n")
+
+    assert "start_needle_found" in result
+    assert result["pass"] is False

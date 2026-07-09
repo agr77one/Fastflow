@@ -1,0 +1,1339 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-07-08T22:10:05.894884+00:00",
+  "updated_at": "2026-07-08T22:11:17.358372+00:00",
+  "purpose": "Clean app-level prompt repair validation through grammar_fix.call_flm after complete-prompt anti-echo fix",
+  "runs": [
+    {
+      "provider": "lmstudio",
+      "model": "qwen2.5-7b-instruct",
+      "base_url": "http://127.0.0.1:1234",
+      "case_id": "prompt_ui",
+      "run_index": 0,
+      "warmup": true,
+      "ok": true,
+      "elapsed_seconds_reported": 16.19,
+      "wall_seconds": 16.208,
+      "model_used": "qwen2.5-7b-instruct",
+      "strategy": "prompt_short",
+      "contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 801,
+        "sections": {
+          "task": 46,
+          "context": 76,
+          "constraints": 143,
+          "output_format": 435
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "repair_event_count": 1,
+      "repair_events": [
+        {
+          "before_contract": {
+            "pass": false,
+            "reasons": [
+              "markdown_fence",
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 758,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "after_contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 801,
+            "sections": {
+              "task": 46,
+              "context": 76,
+              "constraints": 143,
+              "output_format": 435
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "before_head": "Task: Design a small dashboard for model benchmarks.\nContext: The dashboard should allow filtering by provider and display failure states.\nConstraints: Include 3 filters (provider), show pass/fail status, use a bar chart for visualization, keep the design simple, total dashboard height ≤ 500px.\nOutput format:\n```json\n{\n\"dashboard\": {\n\"title\": \"Model Benchmarks\",\n\"filters\": [\n{\"label\": \"Provider A\", \"type\": \"select\"},\n{\"label\": \"Provider B\", \"type\": \"select\"},\n{\"label\": \"Provider C\", \"type\": \"select\"}\n],\n\"chart\": {\n\"type\": \"bar\",\n\"data\": {\n\"labels\": [\"Pass\", \"Fail\"],\n\"datasets\": [\n{\n\"label\": \"Benchmarks\",\n\"data\": [0, 0]\n}\n]\n}\n},\n\"description\": \"A simple dashboard to visualize model benchmark results with provider filters and failure states.\"\n}\n}\n```",
+          "after_head": "<task>\nDesign a small dashboard for model benchmarks.\n</task>\n<context>\nThe dashboard should allow filtering by provider and display failure states.\n</context>\n<constraints>\nInclude 3 filters (provider), show pass/fail status, use a bar chart for visualization, keep the design simple, total dashboard height ≤ 500px.\n</constraints>\n<output_format>\n{\n\"dashboard\": {\n\"title\": \"Model Benchmarks\",\n\"filters\": [\n{\"label\": \"Provider A\", \"type\": \"select\"},\n{\"label\": \"Provider B\", \"type\": \"select\"},\n{\"label\": \"Provider C\", \"type\": \"select\"}\n],\n\"chart\": {\n\"type\": \"bar\",\n\"data\": {\n\"labels\": [\"Pass\", \"Fail\"],\n\"datasets\": [\n{\n\"label\": \"Benchmarks\",\n\"data\": [0, 0]\n}\n]\n}\n},\n\"description\": \"A simple dashboard to visualize model benchmark results with provider filters and failure states.\"\n}\n}\n</output_format"
+        }
+      ],
+      "api_call_count": 1,
+      "strict_retry_used": false,
+      "api_calls": [
+        {
+          "model": "qwen2.5-7b-instruct",
+          "system_prompt_head": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact",
+          "user_content": "design a small dashboard for model benchmarks with provider filters and failure states",
+          "max_tokens": 700,
+          "timeout_seconds": 299
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 131,
+        "completion_tokens": 218
+      },
+      "output_head": "<task>\nDesign a small dashboard for model benchmarks.\n</task>\n<context>\nThe dashboard should allow filtering by provider and display failure states.\n</context>\n<constraints>\nInclude 3 filters (provider), show pass/fail status, use a bar chart for visualization, keep the design simple, total dashboard height ≤ 500px.\n</constraints>\n<output_format>\n{\n\"dashboard\": {\n\"title\": \"Model Benchmarks\",\n\"filters\": [\n{\"label\": \"Provider A\", \"type\": \"select\"},\n{\"label\": \"Provider B\", \"type\": \"select\"},\n{\"label\": \"Provider C\", \"type\": \"select\"}\n],\n\"chart\": {\n\"type\": \"bar\",\n\"data\": {\n\"labels\": [\"Pass\", \"Fail\"],\n\"datasets\": [\n{\n\"label\": \"Benchmarks\",\n\"data\": [0, 0]\n}\n]\n}\n},\n\"description\": \"A simple dashboard to visualize model benchmark results with provider filters and failure states.\"\n}\n}\n</output_format>"
+    },
+    {
+      "provider": "lmstudio",
+      "model": "qwen2.5-7b-instruct",
+      "base_url": "http://127.0.0.1:1234",
+      "case_id": "prompt_code",
+      "run_index": 1,
+      "warmup": false,
+      "ok": true,
+      "elapsed_seconds_reported": 5.94,
+      "wall_seconds": 5.946,
+      "model_used": "qwen2.5-7b-instruct",
+      "strategy": "prompt_short",
+      "contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 394,
+        "sections": {
+          "task": 19,
+          "context": 109,
+          "constraints": 141,
+          "output_format": 24
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "repair_event_count": 1,
+      "repair_events": [
+        {
+          "before_contract": {
+            "pass": false,
+            "reasons": [
+              "markdown_fence",
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 328,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "after_contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 394,
+            "sections": {
+              "task": 19,
+              "context": 109,
+              "constraints": 141,
+              "output_format": 24
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "before_head": "Task: Build a Python CLI.\nContext: The CLI should scan a folder containing JSON files and report any invalid rows along with their line numbers.\nConstraints:\n- Length: Keep the code concise but comprehensive.\n- Format: Provide the full script in a single code block.\n- Tone: Clear and instructional.\nOutput format:\n```python\n```",
+          "after_head": "<task>\nBuild a Python CLI.\n</task>\n<context>\nThe CLI should scan a folder containing JSON files and report any invalid rows along with their line numbers.\n</context>\n<constraints>\n- Length: Keep the code concise but comprehensive.\n- Format: Provide the full script in a single code block.\n- Tone: Clear and instructional.\n</constraints>\n<output_format>\npython fenced code block\n</output_format>"
+        }
+      ],
+      "api_call_count": 1,
+      "strict_retry_used": false,
+      "api_calls": [
+        {
+          "model": "qwen2.5-7b-instruct",
+          "system_prompt_head": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact",
+          "user_content": "build a python cli that scans a folder of json files and reports invalid rows with line numbers",
+          "max_tokens": 700,
+          "timeout_seconds": 299
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 136,
+        "completion_tokens": 71
+      },
+      "output_head": "<task>\nBuild a Python CLI.\n</task>\n<context>\nThe CLI should scan a folder containing JSON files and report any invalid rows along with their line numbers.\n</context>\n<constraints>\n- Length: Keep the code concise but comprehensive.\n- Format: Provide the full script in a single code block.\n- Tone: Clear and instructional.\n</constraints>\n<output_format>\npython fenced code block\n</output_format>"
+    },
+    {
+      "provider": "lmstudio",
+      "model": "qwen2.5-7b-instruct",
+      "base_url": "http://127.0.0.1:1234",
+      "case_id": "prompt_research",
+      "run_index": 2,
+      "warmup": false,
+      "ok": true,
+      "elapsed_seconds_reported": 9.88,
+      "wall_seconds": 9.9,
+      "model_used": "qwen2.5-7b-instruct",
+      "strategy": "prompt_short",
+      "contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 509,
+        "sections": {
+          "task": 71,
+          "context": 14,
+          "constraints": 186,
+          "output_format": 137
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "repair_event_count": 1,
+      "repair_events": [
+        {
+          "before_contract": {
+            "pass": false,
+            "reasons": [
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 454,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "after_contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 509,
+            "sections": {
+              "task": 71,
+              "context": 14,
+              "constraints": 186,
+              "output_format": 137
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "before_head": "Task: Compare LM Studio Lemonade, Ollama, and FLM for a local AI desktop app.\nContext: None provided.\nConstraints: Provide a comparison in a table format with three columns (features, pros, cons) and three rows (Lemonade, Ollama, FLM). Each section should be limited to 3-5 points. Use a neutral tone.\nOutput Format:\n| Features | Lemonade | Ollama | FLM |\n|-------------------|---------------|--------------|---------------|\n| Pros | | | |\n| Cons | | | |",
+          "after_head": "<task>\nCompare LM Studio Lemonade, Ollama, and FLM for a local AI desktop app.\n</task>\n<context>\nNone provided.\n</context>\n<constraints>\nProvide a comparison in a table format with three columns (features, pros, cons) and three rows (Lemonade, Ollama, FLM). Each section should be limited to 3-5 points. Use a neutral tone.\n</constraints>\n<output_format>\n| Features | Lemonade | Ollama | FLM |\n|-------------------|---------------|--------------|---------------|\n| Pros | | | |\n| Cons | | | |\n</output_format>"
+        }
+      ],
+      "api_call_count": 1,
+      "strict_retry_used": false,
+      "api_calls": [
+        {
+          "model": "qwen2.5-7b-instruct",
+          "system_prompt_head": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact",
+          "user_content": "compare LM Studio Lemonade Ollama and FLM for a local AI desktop app and show the tradeoffs",
+          "max_tokens": 700,
+          "timeout_seconds": 299
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 140,
+        "completion_tokens": 129
+      },
+      "output_head": "<task>\nCompare LM Studio Lemonade, Ollama, and FLM for a local AI desktop app.\n</task>\n<context>\nNone provided.\n</context>\n<constraints>\nProvide a comparison in a table format with three columns (features, pros, cons) and three rows (Lemonade, Ollama, FLM). Each section should be limited to 3-5 points. Use a neutral tone.\n</constraints>\n<output_format>\n| Features | Lemonade | Ollama | FLM |\n|-------------------|---------------|--------------|---------------|\n| Pros | | | |\n| Cons | | | |\n</output_format>"
+    },
+    {
+      "provider": "lmstudio",
+      "model": "qwen2.5-7b-instruct",
+      "base_url": "http://127.0.0.1:1234",
+      "case_id": "prompt_email",
+      "run_index": 3,
+      "warmup": false,
+      "ok": true,
+      "elapsed_seconds_reported": 4.41,
+      "wall_seconds": 4.418,
+      "model_used": "qwen2.5-7b-instruct",
+      "strategy": "prompt_short",
+      "contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 284,
+        "sections": {
+          "task": 83,
+          "context": 14,
+          "constraints": 64,
+          "output_format": 22
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "repair_event_count": 1,
+      "repair_events": [
+        {
+          "before_contract": {
+            "pass": false,
+            "reasons": [
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 229,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "after_contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 284,
+            "sections": {
+              "task": 83,
+              "context": 14,
+              "constraints": 64,
+              "output_format": 22
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "before_head": "Task: Write a polite email to a vendor requesting missing API credentials and a timeline.\nContext: None provided.\nConstraints: 150-200 words, professional tone, clear request for information.\nOutput format: Plain text email body.",
+          "after_head": "<task>\nWrite a polite email to a vendor requesting missing API credentials and a timeline.\n</task>\n<context>\nNone provided.\n</context>\n<constraints>\n150-200 words, professional tone, clear request for information.\n</constraints>\n<output_format>\nPlain text email body.\n</output_format>"
+        }
+      ],
+      "api_call_count": 1,
+      "strict_retry_used": false,
+      "api_calls": [
+        {
+          "model": "qwen2.5-7b-instruct",
+          "system_prompt_head": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact",
+          "user_content": "write a polite email to a vendor asking for missing API credentials and a timeline",
+          "max_tokens": 700,
+          "timeout_seconds": 299
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 133,
+        "completion_tokens": 51
+      },
+      "output_head": "<task>\nWrite a polite email to a vendor requesting missing API credentials and a timeline.\n</task>\n<context>\nNone provided.\n</context>\n<constraints>\n150-200 words, professional tone, clear request for information.\n</constraints>\n<output_format>\nPlain text email body.\n</output_format>"
+    },
+    {
+      "provider": "lmstudio",
+      "model": "qwen2.5-7b-instruct",
+      "base_url": "http://127.0.0.1:1234",
+      "case_id": "prompt_data",
+      "run_index": 4,
+      "warmup": false,
+      "ok": true,
+      "elapsed_seconds_reported": 10.15,
+      "wall_seconds": 10.149,
+      "model_used": "qwen2.5-7b-instruct",
+      "strategy": "prompt_short",
+      "contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 475,
+        "sections": {
+          "task": 88,
+          "context": 60,
+          "constraints": 117,
+          "output_format": 109
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "repair_event_count": 1,
+      "repair_events": [
+        {
+          "before_contract": {
+            "pass": false,
+            "reasons": [
+              "markdown_fence",
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 436,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "after_contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 475,
+            "sections": {
+              "task": 88,
+              "context": 60,
+              "constraints": 117,
+              "output_format": 109
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "before_head": "Task: Analyze a CSV export of time logs to identify missing expected hours by person and date.\nContext: The CSV contains columns for Person, Date, and Hours Worked.\nConstraints: Provide a summary report listing each person with dates where expected hours are missing. Format as a Markdown table.\nOutput format:\n```markdown\n| Person | Missing Dates |\n|--------|---------------|\n| John | 2023-10-05 |\n| Jane | 2023-10-06, 2023-10-12 |\n```",
+          "after_head": "<task>\nAnalyze a CSV export of time logs to identify missing expected hours by person and date.\n</task>\n<context>\nThe CSV contains columns for Person, Date, and Hours Worked.\n</context>\n<constraints>\nProvide a summary report listing each person with dates where expected hours are missing. Format as a Markdown table.\n</constraints>\n<output_format>\n| Person | Missing Dates |\n|--------|---------------|\n| John | 2023-10-05 |\n| Jane | 2023-10-06, 2023-10-12 |\n</output_format>"
+        }
+      ],
+      "api_call_count": 1,
+      "strict_retry_used": false,
+      "api_calls": [
+        {
+          "model": "qwen2.5-7b-instruct",
+          "system_prompt_head": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact",
+          "user_content": "analyze a CSV export of time logs and explain missing expected hours by person and date",
+          "max_tokens": 700,
+          "timeout_seconds": 299
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 134,
+        "completion_tokens": 124
+      },
+      "output_head": "<task>\nAnalyze a CSV export of time logs to identify missing expected hours by person and date.\n</task>\n<context>\nThe CSV contains columns for Person, Date, and Hours Worked.\n</context>\n<constraints>\nProvide a summary report listing each person with dates where expected hours are missing. Format as a Markdown table.\n</constraints>\n<output_format>\n| Person | Missing Dates |\n|--------|---------------|\n| John | 2023-10-05 |\n| Jane | 2023-10-06, 2023-10-12 |\n</output_format>"
+    },
+    {
+      "provider": "lmstudio",
+      "model": "qwen2.5-7b-instruct",
+      "base_url": "http://127.0.0.1:1234",
+      "case_id": "prompt_meeting",
+      "run_index": 5,
+      "warmup": false,
+      "ok": true,
+      "elapsed_seconds_reported": 7.29,
+      "wall_seconds": 7.291,
+      "model_used": "qwen2.5-7b-instruct",
+      "strategy": "prompt_short",
+      "contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 469,
+        "sections": {
+          "task": 91,
+          "context": 75,
+          "constraints": 162,
+          "output_format": 40
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "repair_event_count": 1,
+      "repair_events": [
+        {
+          "before_contract": {
+            "pass": false,
+            "reasons": [
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 414,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "after_contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 469,
+            "sections": {
+              "task": 91,
+              "context": 75,
+              "constraints": 162,
+              "output_format": 40
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "before_head": "Task: Create a summary of key decisions, risks, and action items from a rough meeting transcript.\nContext: The transcript contains discussions, ideas, and conclusions from a meeting.\nConstraints: Summarize in 300 words or less. Include separate sections for decisions, risks, and action items. Use bullet points for each category. Tone is formal and concise.\nOutput format:\n- # Decisions\n- # Risks\n- # Action Items",
+          "after_head": "<task>\nCreate a summary of key decisions, risks, and action items from a rough meeting transcript.\n</task>\n<context>\nThe transcript contains discussions, ideas, and conclusions from a meeting.\n</context>\n<constraints>\nSummarize in 300 words or less. Include separate sections for decisions, risks, and action items. Use bullet points for each category. Tone is formal and concise.\n</constraints>\n<output_format>\n- # Decisions\n- # Risks\n- # Action Items\n</output_format>"
+        }
+      ],
+      "api_call_count": 1,
+      "strict_retry_used": false,
+      "api_calls": [
+        {
+          "model": "qwen2.5-7b-instruct",
+          "system_prompt_head": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact",
+          "user_content": "turn a rough meeting transcript into summary decisions risks and action items",
+          "max_tokens": 700,
+          "timeout_seconds": 299
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 130,
+        "completion_tokens": 93
+      },
+      "output_head": "<task>\nCreate a summary of key decisions, risks, and action items from a rough meeting transcript.\n</task>\n<context>\nThe transcript contains discussions, ideas, and conclusions from a meeting.\n</context>\n<constraints>\nSummarize in 300 words or less. Include separate sections for decisions, risks, and action items. Use bullet points for each category. Tone is formal and concise.\n</constraints>\n<output_format>\n- # Decisions\n- # Risks\n- # Action Items\n</output_format>"
+    },
+    {
+      "provider": "lmstudio",
+      "model": "qwen2.5-7b-instruct",
+      "base_url": "http://127.0.0.1:1234",
+      "case_id": "prompt_vague",
+      "run_index": 6,
+      "warmup": false,
+      "ok": true,
+      "elapsed_seconds_reported": 4.12,
+      "wall_seconds": 4.124,
+      "model_used": "qwen2.5-7b-instruct",
+      "strategy": "prompt_short",
+      "contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 289,
+        "sections": {
+          "task": 52,
+          "context": 51,
+          "constraints": 56,
+          "output_format": 29
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "repair_event_count": 1,
+      "repair_events": [
+        {
+          "before_contract": {
+            "pass": false,
+            "reasons": [
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 234,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "after_contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 289,
+            "sections": {
+              "task": 52,
+              "context": 51,
+              "constraints": 56,
+              "output_format": 29
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "before_head": "Task: Improve and clarify the following text for the team.\nContext: The original text was unclear or poorly structured.\nConstraints: 50-word limit, clear and concise, bullet points allowed.\nOutput format: Unordered list with one item.",
+          "after_head": "<task>\nImprove and clarify the following text for the team.\n</task>\n<context>\nThe original text was unclear or poorly structured.\n</context>\n<constraints>\n50-word limit, clear and concise, bullet points allowed.\n</constraints>\n<output_format>\nUnordered list with one item.\n</output_format>"
+        }
+      ],
+      "api_call_count": 1,
+      "strict_retry_used": false,
+      "api_calls": [
+        {
+          "model": "qwen2.5-7b-instruct",
+          "system_prompt_head": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact",
+          "user_content": "make this better and more clear for the team",
+          "max_tokens": 700,
+          "timeout_seconds": 299
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 127,
+        "completion_tokens": 50
+      },
+      "output_head": "<task>\nImprove and clarify the following text for the team.\n</task>\n<context>\nThe original text was unclear or poorly structured.\n</context>\n<constraints>\n50-word limit, clear and concise, bullet points allowed.\n</constraints>\n<output_format>\nUnordered list with one item.\n</output_format>"
+    },
+    {
+      "provider": "lmstudio",
+      "model": "qwen2.5-7b-instruct",
+      "base_url": "http://127.0.0.1:1234",
+      "case_id": "prompt_ui",
+      "run_index": 7,
+      "warmup": false,
+      "ok": true,
+      "elapsed_seconds_reported": 17.89,
+      "wall_seconds": 17.898,
+      "model_used": "qwen2.5-7b-instruct",
+      "strategy": "prompt_short",
+      "contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 817,
+        "sections": {
+          "task": 46,
+          "context": 76,
+          "constraints": 161,
+          "output_format": 433
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "repair_event_count": 1,
+      "repair_events": [
+        {
+          "before_contract": {
+            "pass": false,
+            "reasons": [
+              "markdown_fence",
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 774,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "after_contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 817,
+            "sections": {
+              "task": 46,
+              "context": 76,
+              "constraints": 161,
+              "output_format": 433
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "before_head": "Task: Design a small dashboard for model benchmarks.\nContext: The dashboard should allow filtering by provider and display failure states.\nConstraints: Include 3 filters (provider), show pass/fail status, use a bar chart for visual representation, keep the design simple and clean, total dashboard height ≤ 500px.\nOutput format:\n```json\n{\n\"dashboard\": {\n\"title\": \"Model Benchmarks\",\n\"filters\": [\n{\"label\": \"Provider A\", \"type\": \"select\"},\n{\"label\": \"Provider B\", \"type\": \"select\"},\n{\"label\": \"Provider C\", \"type\": \"select\"}\n],\n\"chart\": {\n\"type\": \"bar\",\n\"data\": {\n\"labels\": [\"Pass\", \"Fail\"],\n\"datasets\": [\n{\n\"label\": \"Model Benchmarks\",\n\"data\": [0, 0],\n\"backgroundColor\": [\"#4caf50\", \"#f44336\"]\n}\n]\n},\n\"options\": {\n\"responsive\": true,\n\"maintainAspectRatio\": false\n}\n}\n}\n}\n```",
+          "after_head": "<task>\nDesign a small dashboard for model benchmarks.\n</task>\n<context>\nThe dashboard should allow filtering by provider and display failure states.\n</context>\n<constraints>\nInclude 3 filters (provider), show pass/fail status, use a bar chart for visual representation, keep the design simple and clean, total dashboard height ≤ 500px.\n</constraints>\n<output_format>\n{\n\"dashboard\": {\n\"title\": \"Model Benchmarks\",\n\"filters\": [\n{\"label\": \"Provider A\", \"type\": \"select\"},\n{\"label\": \"Provider B\", \"type\": \"select\"},\n{\"label\": \"Provider C\", \"type\": \"select\"}\n],\n\"chart\": {\n\"type\": \"bar\",\n\"data\": {\n\"labels\": [\"Pass\", \"Fail\"],\n\"datasets\": [\n{\n\"label\": \"Model Benchmarks\",\n\"data\": [0, 0],\n\"backgroundColor\": [\"#4caf50\", \"#f44336\"]\n}\n]\n},\n\"options\": {\n\"responsive\": true,\n\"maintainAspectRatio\": false\n}\n}\n}\n}"
+        }
+      ],
+      "api_call_count": 1,
+      "strict_retry_used": false,
+      "api_calls": [
+        {
+          "model": "qwen2.5-7b-instruct",
+          "system_prompt_head": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact",
+          "user_content": "design a small dashboard for model benchmarks with provider filters and failure states",
+          "max_tokens": 700,
+          "timeout_seconds": 299
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 131,
+        "completion_tokens": 241
+      },
+      "output_head": "<task>\nDesign a small dashboard for model benchmarks.\n</task>\n<context>\nThe dashboard should allow filtering by provider and display failure states.\n</context>\n<constraints>\nInclude 3 filters (provider), show pass/fail status, use a bar chart for visual representation, keep the design simple and clean, total dashboard height ≤ 500px.\n</constraints>\n<output_format>\n{\n\"dashboard\": {\n\"title\": \"Model Benchmarks\",\n\"filters\": [\n{\"label\": \"Provider A\", \"type\": \"select\"},\n{\"label\": \"Provider B\", \"type\": \"select\"},\n{\"label\": \"Provider C\", \"type\": \"select\"}\n],\n\"chart\": {\n\"type\": \"bar\",\n\"data\": {\n\"labels\": [\"Pass\", \"Fail\"],\n\"datasets\": [\n{\n\"label\": \"Model Benchmarks\",\n\"data\": [0, 0],\n\"backgroundColor\": [\"#4caf50\", \"#f44336\"]\n}\n]\n},\n\"options\": {\n\"responsive\": true,\n\"maintainAspectRatio\": false\n}\n}\n}\n}\n</output_format>"
+    },
+    {
+      "provider": "lmstudio",
+      "model": "qwen2.5-7b-instruct",
+      "base_url": "http://127.0.0.1:1234",
+      "case_id": "prompt_bug",
+      "run_index": 8,
+      "warmup": false,
+      "ok": true,
+      "elapsed_seconds_reported": 7.2,
+      "wall_seconds": 7.198,
+      "model_used": "qwen2.5-7b-instruct",
+      "strategy": "prompt_short",
+      "contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 464,
+        "sections": {
+          "task": 81,
+          "context": 93,
+          "constraints": 174,
+          "output_format": 15
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "repair_event_count": 1,
+      "repair_events": [
+        {
+          "before_contract": {
+            "pass": false,
+            "reasons": [
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 409,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "after_contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 464,
+            "sections": {
+              "task": 81,
+              "context": 93,
+              "constraints": 174,
+              "output_format": 15
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "before_head": "Task: Debug why local server health checks pass but chat completions return 404 errors.\nContext: The local server is running, health checks are successful, but chat completions fail to load.\nConstraints: Provide a step-by-step troubleshooting guide. Include at least three potential causes and their solutions. Use bullet points for clarity. Length: Approximately 150-200 words.\nOutput format:\n- Bullet points",
+          "after_head": "<task>\nDebug why local server health checks pass but chat completions return 404 errors.\n</task>\n<context>\nThe local server is running, health checks are successful, but chat completions fail to load.\n</context>\n<constraints>\nProvide a step-by-step troubleshooting guide. Include at least three potential causes and their solutions. Use bullet points for clarity. Length: Approximately 150-200 words.\n</constraints>\n<output_format>\n- Bullet points\n</output_format>"
+        }
+      ],
+      "api_call_count": 1,
+      "strict_retry_used": false,
+      "api_calls": [
+        {
+          "model": "qwen2.5-7b-instruct",
+          "system_prompt_head": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact",
+          "user_content": "debug why a local server health check passes but chat completions fail with 404",
+          "max_tokens": 700,
+          "timeout_seconds": 299
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 136,
+        "completion_tokens": 88
+      },
+      "output_head": "<task>\nDebug why local server health checks pass but chat completions return 404 errors.\n</task>\n<context>\nThe local server is running, health checks are successful, but chat completions fail to load.\n</context>\n<constraints>\nProvide a step-by-step troubleshooting guide. Include at least three potential causes and their solutions. Use bullet points for clarity. Length: Approximately 150-200 words.\n</constraints>\n<output_format>\n- Bullet points\n</output_format>"
+    },
+    {
+      "provider": "lmstudio",
+      "model": "qwen2.5-7b-instruct",
+      "base_url": "http://127.0.0.1:1234",
+      "case_id": "prompt_plan",
+      "run_index": 9,
+      "warmup": false,
+      "ok": true,
+      "elapsed_seconds_reported": 17.68,
+      "wall_seconds": 17.681,
+      "model_used": "qwen2.5-7b-instruct",
+      "strategy": "prompt_short",
+      "contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 1000,
+        "sections": {
+          "task": 82,
+          "context": 141,
+          "constraints": 184,
+          "output_format": 492
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "repair_event_count": 1,
+      "repair_events": [
+        {
+          "before_contract": {
+            "pass": false,
+            "reasons": [
+              "markdown_fence",
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 961,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "after_contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 1000,
+            "sections": {
+              "task": 82,
+              "context": 141,
+              "constraints": 184,
+              "output_format": 492
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "before_head": "Task: Create a rollout plan for switching providers with fallback and performance gates.\nContext: The current system uses Provider A, and we are planning to switch to Provider B with built-in fallback mechanisms and performance monitoring.\nConstraints: Provide the plan in a 500-word document. Use bullet points for each phase of the rollout. Include estimated timelines and responsible parties. Write in a clear, concise technical tone.\nOutput format:\n```markdown\n# Rollout Plan for Switching Providers\n\n## Phase 1: Preparation\n- [Task] Description\n- [Timeline]\n- [Responsible Party]\n\n## Phase 2: Initial Setup\n- [Task] Description\n- [Timeline]\n- [Responsible Party]\n\n## Phase 3: Parallel Testing\n- [Task] Description\n- [Timeline]\n- [Responsible Party]\n\n## Phase 4: Full Switch with Fallback\n- [Task",
+          "after_head": "<task>\nCreate a rollout plan for switching providers with fallback and performance gates.\n</task>\n<context>\nThe current system uses Provider A, and we are planning to switch to Provider B with built-in fallback mechanisms and performance monitoring.\n</context>\n<constraints>\nProvide the plan in a 500-word document. Use bullet points for each phase of the rollout. Include estimated timelines and responsible parties. Write in a clear, concise technical tone.\n</constraints>\n<output_format>\n# Rollout Plan for Switching Providers\n\n## Phase 1: Preparation\n- [Task] Description\n- [Timeline]\n- [Responsible Party]\n\n## Phase 2: Initial Setup\n- [Task] Description\n- [Timeline]\n- [Responsible Party]\n\n## Phase 3: Parallel Testing\n- [Task] Description\n- [Timeline]\n- [Responsible Party]\n\n## Phase 4: Full Sw"
+        }
+      ],
+      "api_call_count": 1,
+      "strict_retry_used": false,
+      "api_calls": [
+        {
+          "model": "qwen2.5-7b-instruct",
+          "system_prompt_head": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact",
+          "user_content": "create a rollout plan for switching providers with fallback and performance gates",
+          "max_tokens": 700,
+          "timeout_seconds": 299
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 130,
+        "completion_tokens": 224
+      },
+      "output_head": "<task>\nCreate a rollout plan for switching providers with fallback and performance gates.\n</task>\n<context>\nThe current system uses Provider A, and we are planning to switch to Provider B with built-in fallback mechanisms and performance monitoring.\n</context>\n<constraints>\nProvide the plan in a 500-word document. Use bullet points for each phase of the rollout. Include estimated timelines and responsible parties. Write in a clear, concise technical tone.\n</constraints>\n<output_format>\n# Rollout Plan for Switching Providers\n\n## Phase 1: Preparation\n- [Task] Description\n- [Timeline]\n- [Responsible Party]\n\n## Phase 2: Initial Setup\n- [Task] Description\n- [Timeline]\n- [Responsible Party]\n\n## Phase 3: Parallel Testing\n- [Task] Description\n- [Timeline]\n- [Responsible Party]\n\n## Phase 4: Full Switch with Fallback\n- [Task] Description\n- [Timeline]\n- [Responsible Party]\n\n## Phase 5: Performance Monitoring and Optimization\n- [Task] Description\n- [Timeline]\n- [Responsible Party]\n</output_format>"
+    },
+    {
+      "provider": "lmstudio",
+      "model": "qwen2.5-7b-instruct",
+      "base_url": "http://127.0.0.1:1234",
+      "case_id": "prompt_review",
+      "run_index": 10,
+      "warmup": false,
+      "ok": true,
+      "elapsed_seconds_reported": 2.98,
+      "wall_seconds": 2.983,
+      "model_used": "qwen2.5-7b-instruct",
+      "strategy": "prompt_short",
+      "contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 197,
+        "sections": {
+          "task": 69,
+          "context": 14,
+          "constraints": 3,
+          "output_format": 10
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "repair_event_count": 1,
+      "repair_events": [
+        {
+          "before_contract": {
+            "pass": false,
+            "reasons": [
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 142,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "after_contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 197,
+            "sections": {
+              "task": 69,
+              "context": 14,
+              "constraints": 3,
+              "output_format": 10
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "before_head": "Task: Review pull request for regressions and missing tests before release.\nContext: None provided.\nConstraints: N/A\nOutput format: Plain text",
+          "after_head": "<task>\nReview pull request for regressions and missing tests before release.\n</task>\n<context>\nNone provided.\n</context>\n<constraints>\nN/A\n</constraints>\n<output_format>\nPlain text\n</output_format>"
+        }
+      ],
+      "api_call_count": 1,
+      "strict_retry_used": false,
+      "api_calls": [
+        {
+          "model": "qwen2.5-7b-instruct",
+          "system_prompt_head": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact",
+          "user_content": "review this pull request for regressions and missing tests before release",
+          "max_tokens": 700,
+          "timeout_seconds": 299
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 130,
+        "completion_tokens": 30
+      },
+      "output_head": "<task>\nReview pull request for regressions and missing tests before release.\n</task>\n<context>\nNone provided.\n</context>\n<constraints>\nN/A\n</constraints>\n<output_format>\nPlain text\n</output_format>"
+    },
+    {
+      "provider": "lemonade",
+      "model": "Qwen2.5-3B-Instruct-NPU",
+      "base_url": "http://127.0.0.1:13305/api/v1",
+      "case_id": "prompt_plan",
+      "run_index": 0,
+      "warmup": true,
+      "ok": true,
+      "elapsed_seconds_reported": 4.09,
+      "wall_seconds": 4.098,
+      "model_used": "94f88326aa8ca67cd9fa9607d7af0227eff2d1e3",
+      "strategy": "prompt_short",
+      "contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 257,
+        "sections": {
+          "task": 36,
+          "context": 27,
+          "constraints": 55,
+          "output_format": 89
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "repair_event_count": 1,
+      "repair_events": [
+        {
+          "before_contract": {
+            "pass": false,
+            "reasons": [
+              "missing_context"
+            ],
+            "near_miss": true,
+            "visible_chars": 258,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "after_contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 257,
+            "sections": {
+              "task": 36,
+              "context": 27,
+              "constraints": 55,
+              "output_format": 89
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "before_head": "<task> (rollout plan for provider switch) , </context> (provider change scenario), <constraints> (length under 10 sentences, output in markdown format), <output_format> (Markdown fenced code block with sections for stages, gate criteria, and fallback plans).",
+          "after_head": "<task> (rollout plan for provider switch) , <context> (provider change scenario), <constraints> (length under 10 sentences, output in markdown format), <output_format> (Markdown fenced code block with sections for stages, gate criteria, and fallback plans)."
+        }
+      ],
+      "api_call_count": 1,
+      "strict_retry_used": false,
+      "api_calls": [
+        {
+          "model": "Qwen2.5-3B-Instruct-NPU",
+          "system_prompt_head": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact",
+          "user_content": "create a rollout plan for switching providers with fallback and performance gates",
+          "max_tokens": 700,
+          "timeout_seconds": 299
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 130,
+        "completion_tokens": 57
+      },
+      "output_head": "<task> (rollout plan for provider switch) , <context> (provider change scenario), <constraints> (length under 10 sentences, output in markdown format), <output_format> (Markdown fenced code block with sections for stages, gate criteria, and fallback plans)."
+    },
+    {
+      "provider": "lemonade",
+      "model": "Qwen2.5-3B-Instruct-NPU",
+      "base_url": "http://127.0.0.1:13305/api/v1",
+      "case_id": "prompt_plan",
+      "run_index": 1,
+      "warmup": false,
+      "ok": true,
+      "elapsed_seconds_reported": 4.09,
+      "wall_seconds": 4.101,
+      "model_used": "94f88326aa8ca67cd9fa9607d7af0227eff2d1e3",
+      "strategy": "prompt_short",
+      "contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 257,
+        "sections": {
+          "task": 36,
+          "context": 27,
+          "constraints": 55,
+          "output_format": 89
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "repair_event_count": 1,
+      "repair_events": [
+        {
+          "before_contract": {
+            "pass": false,
+            "reasons": [
+              "missing_context"
+            ],
+            "near_miss": true,
+            "visible_chars": 258,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "after_contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 257,
+            "sections": {
+              "task": 36,
+              "context": 27,
+              "constraints": 55,
+              "output_format": 89
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "before_head": "<task> (rollout plan for provider switch) , </context> (provider change scenario), <constraints> (length under 10 sentences, output in markdown format), <output_format> (Markdown fenced code block with sections for stages, gate criteria, and fallback plans).",
+          "after_head": "<task> (rollout plan for provider switch) , <context> (provider change scenario), <constraints> (length under 10 sentences, output in markdown format), <output_format> (Markdown fenced code block with sections for stages, gate criteria, and fallback plans)."
+        }
+      ],
+      "api_call_count": 1,
+      "strict_retry_used": false,
+      "api_calls": [
+        {
+          "model": "Qwen2.5-3B-Instruct-NPU",
+          "system_prompt_head": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact",
+          "user_content": "create a rollout plan for switching providers with fallback and performance gates",
+          "max_tokens": 700,
+          "timeout_seconds": 299
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 130,
+        "completion_tokens": 57
+      },
+      "output_head": "<task> (rollout plan for provider switch) , <context> (provider change scenario), <constraints> (length under 10 sentences, output in markdown format), <output_format> (Markdown fenced code block with sections for stages, gate criteria, and fallback plans)."
+    },
+    {
+      "provider": "lemonade",
+      "model": "Qwen2.5-3B-Instruct-NPU",
+      "base_url": "http://127.0.0.1:13305/api/v1",
+      "case_id": "prompt_plan",
+      "run_index": 2,
+      "warmup": false,
+      "ok": true,
+      "elapsed_seconds_reported": 3.61,
+      "wall_seconds": 3.629,
+      "model_used": "94f88326aa8ca67cd9fa9607d7af0227eff2d1e3",
+      "strategy": "prompt_short",
+      "contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 257,
+        "sections": {
+          "task": 36,
+          "context": 27,
+          "constraints": 55,
+          "output_format": 89
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "repair_event_count": 1,
+      "repair_events": [
+        {
+          "before_contract": {
+            "pass": false,
+            "reasons": [
+              "missing_context"
+            ],
+            "near_miss": true,
+            "visible_chars": 258,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "after_contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 257,
+            "sections": {
+              "task": 36,
+              "context": 27,
+              "constraints": 55,
+              "output_format": 89
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "before_head": "<task> (rollout plan for provider switch) , </context> (provider change scenario), <constraints> (length under 10 sentences, output in markdown format), <output_format> (Markdown fenced code block with sections for stages, gate criteria, and fallback plans).",
+          "after_head": "<task> (rollout plan for provider switch) , <context> (provider change scenario), <constraints> (length under 10 sentences, output in markdown format), <output_format> (Markdown fenced code block with sections for stages, gate criteria, and fallback plans)."
+        }
+      ],
+      "api_call_count": 1,
+      "strict_retry_used": false,
+      "api_calls": [
+        {
+          "model": "Qwen2.5-3B-Instruct-NPU",
+          "system_prompt_head": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact",
+          "user_content": "create a rollout plan for switching providers with fallback and performance gates",
+          "max_tokens": 700,
+          "timeout_seconds": 299
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 130,
+        "completion_tokens": 57
+      },
+      "output_head": "<task> (rollout plan for provider switch) , <context> (provider change scenario), <constraints> (length under 10 sentences, output in markdown format), <output_format> (Markdown fenced code block with sections for stages, gate criteria, and fallback plans)."
+    },
+    {
+      "provider": "lemonade",
+      "model": "Qwen2.5-3B-Instruct-NPU",
+      "base_url": "http://127.0.0.1:13305/api/v1",
+      "case_id": "prompt_plan",
+      "run_index": 3,
+      "warmup": false,
+      "ok": true,
+      "elapsed_seconds_reported": 3.79,
+      "wall_seconds": 3.806,
+      "model_used": "94f88326aa8ca67cd9fa9607d7af0227eff2d1e3",
+      "strategy": "prompt_short",
+      "contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 257,
+        "sections": {
+          "task": 36,
+          "context": 27,
+          "constraints": 55,
+          "output_format": 89
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "repair_event_count": 1,
+      "repair_events": [
+        {
+          "before_contract": {
+            "pass": false,
+            "reasons": [
+              "missing_context"
+            ],
+            "near_miss": true,
+            "visible_chars": 258,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "after_contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 257,
+            "sections": {
+              "task": 36,
+              "context": 27,
+              "constraints": 55,
+              "output_format": 89
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "before_head": "<task> (rollout plan for provider switch) , </context> (provider change scenario), <constraints> (length under 10 sentences, output in markdown format), <output_format> (Markdown fenced code block with sections for stages, gate criteria, and fallback plans).",
+          "after_head": "<task> (rollout plan for provider switch) , <context> (provider change scenario), <constraints> (length under 10 sentences, output in markdown format), <output_format> (Markdown fenced code block with sections for stages, gate criteria, and fallback plans)."
+        }
+      ],
+      "api_call_count": 1,
+      "strict_retry_used": false,
+      "api_calls": [
+        {
+          "model": "Qwen2.5-3B-Instruct-NPU",
+          "system_prompt_head": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact",
+          "user_content": "create a rollout plan for switching providers with fallback and performance gates",
+          "max_tokens": 700,
+          "timeout_seconds": 299
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 130,
+        "completion_tokens": 57
+      },
+      "output_head": "<task> (rollout plan for provider switch) , <context> (provider change scenario), <constraints> (length under 10 sentences, output in markdown format), <output_format> (Markdown fenced code block with sections for stages, gate criteria, and fallback plans)."
+    },
+    {
+      "provider": "lemonade",
+      "model": "Qwen2.5-3B-Instruct-NPU",
+      "base_url": "http://127.0.0.1:13305/api/v1",
+      "case_id": "prompt_plan",
+      "run_index": 4,
+      "warmup": false,
+      "ok": true,
+      "elapsed_seconds_reported": 3.61,
+      "wall_seconds": 3.637,
+      "model_used": "94f88326aa8ca67cd9fa9607d7af0227eff2d1e3",
+      "strategy": "prompt_short",
+      "contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 257,
+        "sections": {
+          "task": 36,
+          "context": 27,
+          "constraints": 55,
+          "output_format": 89
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "repair_event_count": 1,
+      "repair_events": [
+        {
+          "before_contract": {
+            "pass": false,
+            "reasons": [
+              "missing_context"
+            ],
+            "near_miss": true,
+            "visible_chars": 258,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "after_contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 257,
+            "sections": {
+              "task": 36,
+              "context": 27,
+              "constraints": 55,
+              "output_format": 89
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "before_head": "<task> (rollout plan for provider switch) , </context> (provider change scenario), <constraints> (length under 10 sentences, output in markdown format), <output_format> (Markdown fenced code block with sections for stages, gate criteria, and fallback plans).",
+          "after_head": "<task> (rollout plan for provider switch) , <context> (provider change scenario), <constraints> (length under 10 sentences, output in markdown format), <output_format> (Markdown fenced code block with sections for stages, gate criteria, and fallback plans)."
+        }
+      ],
+      "api_call_count": 1,
+      "strict_retry_used": false,
+      "api_calls": [
+        {
+          "model": "Qwen2.5-3B-Instruct-NPU",
+          "system_prompt_head": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact",
+          "user_content": "create a rollout plan for switching providers with fallback and performance gates",
+          "max_tokens": 700,
+          "timeout_seconds": 299
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 130,
+        "completion_tokens": 57
+      },
+      "output_head": "<task> (rollout plan for provider switch) , <context> (provider change scenario), <constraints> (length under 10 sentences, output in markdown format), <output_format> (Markdown fenced code block with sections for stages, gate criteria, and fallback plans)."
+    },
+    {
+      "provider": "lemonade",
+      "model": "Qwen2.5-3B-Instruct-NPU",
+      "base_url": "http://127.0.0.1:13305/api/v1",
+      "case_id": "prompt_plan",
+      "run_index": 5,
+      "warmup": false,
+      "ok": true,
+      "elapsed_seconds_reported": 3.68,
+      "wall_seconds": 3.682,
+      "model_used": "94f88326aa8ca67cd9fa9607d7af0227eff2d1e3",
+      "strategy": "prompt_short",
+      "contract": {
+        "pass": true,
+        "reasons": [],
+        "near_miss": false,
+        "visible_chars": 257,
+        "sections": {
+          "task": 36,
+          "context": 27,
+          "constraints": 55,
+          "output_format": 89
+        },
+        "think_stripped": false,
+        "unclosed_think": false
+      },
+      "repair_event_count": 1,
+      "repair_events": [
+        {
+          "before_contract": {
+            "pass": false,
+            "reasons": [
+              "missing_context"
+            ],
+            "near_miss": true,
+            "visible_chars": 258,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "after_contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 257,
+            "sections": {
+              "task": 36,
+              "context": 27,
+              "constraints": 55,
+              "output_format": 89
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "before_head": "<task> (rollout plan for provider switch) , </context> (provider change scenario), <constraints> (length under 10 sentences, output in markdown format), <output_format> (Markdown fenced code block with sections for stages, gate criteria, and fallback plans).",
+          "after_head": "<task> (rollout plan for provider switch) , <context> (provider change scenario), <constraints> (length under 10 sentences, output in markdown format), <output_format> (Markdown fenced code block with sections for stages, gate criteria, and fallback plans)."
+        }
+      ],
+      "api_call_count": 1,
+      "strict_retry_used": false,
+      "api_calls": [
+        {
+          "model": "Qwen2.5-3B-Instruct-NPU",
+          "system_prompt_head": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact",
+          "user_content": "create a rollout plan for switching providers with fallback and performance gates",
+          "max_tokens": 700,
+          "timeout_seconds": 299
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 130,
+        "completion_tokens": 57
+      },
+      "output_head": "<task> (rollout plan for provider switch) , <context> (provider change scenario), <constraints> (length under 10 sentences, output in markdown format), <output_format> (Markdown fenced code block with sections for stages, gate criteria, and fallback plans)."
+    }
+  ],
+  "summary": {
+    "lmstudio::qwen2.5-7b-instruct": {
+      "timed_runs": 10,
+      "ok": 10,
+      "pass": 10,
+      "repair_runs": 10,
+      "strict_retry_runs": 0,
+      "errors": 0
+    },
+    "lemonade::Qwen2.5-3B-Instruct-NPU": {
+      "timed_runs": 5,
+      "ok": 5,
+      "pass": 5,
+      "repair_runs": 5,
+      "strict_retry_runs": 0,
+      "errors": 0
+    }
+  }
+}

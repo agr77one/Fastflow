@@ -1,0 +1,3188 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-07-08T10:49:22",
+  "provider": "lemonade",
+  "base_url": "http://127.0.0.1:13305/api/v1",
+  "model": "Qwen2.5-7B-Instruct-NPU",
+  "quant": "ryzenai-llm-npu",
+  "bearer_present": true,
+  "tasks": [
+    "grammar",
+    "prompt"
+  ],
+  "runs": 2,
+  "warmup": 1,
+  "temperature": 0.1,
+  "disable_thinking": false,
+  "process_names": [
+    "LemonadeServer",
+    "lemonade",
+    "ryzenai-server",
+    "ryzenai_server"
+  ],
+  "versions": {
+    "flm": {
+      "returncode": 0,
+      "stdout": "{ \"version\": \"0.9.43\" }",
+      "stderr": ""
+    },
+    "ollama": {
+      "returncode": 0,
+      "stdout": "Warning: could not connect to a running Ollama instance\nWarning: client version is 0.30.7",
+      "stderr": ""
+    },
+    "lms": {
+      "returncode": 0,
+      "stdout": "CLI commit: 9902c3a",
+      "stderr": ""
+    },
+    "lemonade": {
+      "returncode": 0,
+      "stdout": "lemonade version 10.9.0",
+      "stderr": ""
+    }
+  },
+  "cases": [
+    {
+      "case_id": "subject_verb",
+      "task": "grammar",
+      "system_prompt": "Fix grammar, spelling, punctuation, capitalization, and obvious wording mistakes. Preserve the meaning and leave everything else exactly as written. Return only the corrected text, with no preamble and no notes.",
+      "user_prompt": "This are the notes from today and it need to be cleaned up before sending.",
+      "max_tokens": 160,
+      "summary": {
+        "timed_runs": 2,
+        "pass_count": 2,
+        "pass_rate": 1.0,
+        "wall_seconds_median": 3.335999,
+        "wall_seconds_min": 3.33284,
+        "wall_seconds_max": 3.339157,
+        "seconds_per_completion_token_median": 0.196235,
+        "memory_guard_violations": 0
+      },
+      "runs": [
+        {
+          "run_index": 1,
+          "warmup": true,
+          "wall_seconds": 4.940728,
+          "ttft_seconds": 2.323,
+          "provider_native_metrics": {},
+          "prompt_tokens": 68,
+          "completion_tokens": 17,
+          "total_tokens": 85,
+          "seconds_per_completion_token": 0.290631,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "These are the notes from today, and they need to be cleaned up before sending.",
+          "visible_output": "These are the notes from today, and they need to be cleaned up before sending.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 78,
+            "length_ratio": 1.054,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 4139.0,
+            "completion_tokens": 17,
+            "decoding_speed_tps": 8.810572687224669,
+            "prefill_duration_ttft": 2.323,
+            "prompt_tokens": 68,
+            "total_tokens": 85
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 4995059712,
+              "system_available_bytes": 6676275200
+            },
+            "after": {
+              "provider_rss_bytes": 6871638016,
+              "system_available_bytes": 5285695488
+            },
+            "max_provider_rss_bytes": 6871486464,
+            "min_system_available_bytes": 5257306112,
+            "available_delta_bytes": 1418969088,
+            "memory_guard_violation": false,
+            "sample_count": 3
+          },
+          "error": ""
+        },
+        {
+          "run_index": 2,
+          "warmup": false,
+          "wall_seconds": 3.339157,
+          "ttft_seconds": 1.088,
+          "provider_native_metrics": {},
+          "prompt_tokens": 68,
+          "completion_tokens": 17,
+          "total_tokens": 85,
+          "seconds_per_completion_token": 0.196421,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "These are the notes from today, and they need to be cleaned up before sending.",
+          "visible_output": "These are the notes from today, and they need to be cleaned up before sending.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 78,
+            "length_ratio": 1.054,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 2739.0,
+            "completion_tokens": 17,
+            "decoding_speed_tps": 9.691096305269534,
+            "prefill_duration_ttft": 1.088,
+            "prompt_tokens": 68,
+            "total_tokens": 85
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6871638016,
+              "system_available_bytes": 5269987328
+            },
+            "after": {
+              "provider_rss_bytes": 6871764992,
+              "system_available_bytes": 5303414784
+            },
+            "max_provider_rss_bytes": 6871945216,
+            "min_system_available_bytes": 5297184768,
+            "available_delta_bytes": -27197440,
+            "memory_guard_violation": false,
+            "sample_count": 2
+          },
+          "error": ""
+        },
+        {
+          "run_index": 3,
+          "warmup": false,
+          "wall_seconds": 3.33284,
+          "ttft_seconds": 1.01,
+          "provider_native_metrics": {},
+          "prompt_tokens": 68,
+          "completion_tokens": 17,
+          "total_tokens": 85,
+          "seconds_per_completion_token": 0.196049,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "These are the notes from today, and they need to be cleaned up before sending.",
+          "visible_output": "These are the notes from today, and they need to be cleaned up before sending.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 78,
+            "length_ratio": 1.054,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 2697.0,
+            "completion_tokens": 17,
+            "decoding_speed_tps": 9.48429164196799,
+            "prefill_duration_ttft": 1.01,
+            "prompt_tokens": 68,
+            "total_tokens": 85
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6871764992,
+              "system_available_bytes": 5267038208
+            },
+            "after": {
+              "provider_rss_bytes": 6863626240,
+              "system_available_bytes": 5304971264
+            },
+            "max_provider_rss_bytes": 6871965696,
+            "min_system_available_bytes": 5233221632,
+            "available_delta_bytes": 33816576,
+            "memory_guard_violation": false,
+            "sample_count": 2
+          },
+          "error": ""
+        }
+      ]
+    },
+    {
+      "case_id": "its_its",
+      "task": "grammar",
+      "system_prompt": "Fix grammar, spelling, punctuation, capitalization, and obvious wording mistakes. Preserve the meaning and leave everything else exactly as written. Return only the corrected text, with no preamble and no notes.",
+      "user_prompt": "Its important that the app keeps it's local history private.",
+      "max_tokens": 160,
+      "summary": {
+        "timed_runs": 2,
+        "pass_count": 2,
+        "pass_rate": 1.0,
+        "wall_seconds_median": 2.819898,
+        "wall_seconds_min": 2.681456,
+        "wall_seconds_max": 2.95834,
+        "seconds_per_completion_token_median": 0.234991,
+        "memory_guard_violations": 0
+      },
+      "runs": [
+        {
+          "run_index": 1,
+          "warmup": true,
+          "wall_seconds": 2.695364,
+          "ttft_seconds": 0.934,
+          "provider_native_metrics": {},
+          "prompt_tokens": 64,
+          "completion_tokens": 12,
+          "total_tokens": 76,
+          "seconds_per_completion_token": 0.224614,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "It is important that the app keeps its local history private.",
+          "visible_output": "It is important that the app keeps its local history private.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 61,
+            "length_ratio": 1.017,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 2081.0,
+            "completion_tokens": 12,
+            "decoding_speed_tps": 9.59023539668701,
+            "prefill_duration_ttft": 0.934,
+            "prompt_tokens": 64,
+            "total_tokens": 76
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6859497472,
+              "system_available_bytes": 5318979584
+            },
+            "after": {
+              "provider_rss_bytes": 6859919360,
+              "system_available_bytes": 5328834560
+            },
+            "max_provider_rss_bytes": 6869446656,
+            "min_system_available_bytes": 5312466944,
+            "available_delta_bytes": 6512640,
+            "memory_guard_violation": false,
+            "sample_count": 2
+          },
+          "error": ""
+        },
+        {
+          "run_index": 2,
+          "warmup": false,
+          "wall_seconds": 2.95834,
+          "ttft_seconds": 1.056,
+          "provider_native_metrics": {},
+          "prompt_tokens": 64,
+          "completion_tokens": 12,
+          "total_tokens": 76,
+          "seconds_per_completion_token": 0.246528,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "It is important that the app keeps its local history private.",
+          "visible_output": "It is important that the app keeps its local history private.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 61,
+            "length_ratio": 1.017,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 2354.0,
+            "completion_tokens": 12,
+            "decoding_speed_tps": 8.474576271186441,
+            "prefill_duration_ttft": 1.056,
+            "prompt_tokens": 64,
+            "total_tokens": 76
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6859919360,
+              "system_available_bytes": 5299863552
+            },
+            "after": {
+              "provider_rss_bytes": 6867038208,
+              "system_available_bytes": 5322608640
+            },
+            "max_provider_rss_bytes": 6869553152,
+            "min_system_available_bytes": 5254877184,
+            "available_delta_bytes": 44986368,
+            "memory_guard_violation": false,
+            "sample_count": 2
+          },
+          "error": ""
+        },
+        {
+          "run_index": 3,
+          "warmup": false,
+          "wall_seconds": 2.681456,
+          "ttft_seconds": 0.908,
+          "provider_native_metrics": {},
+          "prompt_tokens": 64,
+          "completion_tokens": 12,
+          "total_tokens": 76,
+          "seconds_per_completion_token": 0.223455,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "It is important that the app keeps its local history private.",
+          "visible_output": "It is important that the app keeps its local history private.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 61,
+            "length_ratio": 1.017,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 2090.0,
+            "completion_tokens": 12,
+            "decoding_speed_tps": 9.30626057529611,
+            "prefill_duration_ttft": 0.908,
+            "prompt_tokens": 64,
+            "total_tokens": 76
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6867038208,
+              "system_available_bytes": 5331320832
+            },
+            "after": {
+              "provider_rss_bytes": 6863552512,
+              "system_available_bytes": 5350043648
+            },
+            "max_provider_rss_bytes": 6867091456,
+            "min_system_available_bytes": 5333921792,
+            "available_delta_bytes": -2600960,
+            "memory_guard_violation": false,
+            "sample_count": 2
+          },
+          "error": ""
+        }
+      ]
+    },
+    {
+      "case_id": "run_on",
+      "task": "grammar",
+      "system_prompt": "Fix grammar, spelling, punctuation, capitalization, and obvious wording mistakes. Preserve the meaning and leave everything else exactly as written. Return only the corrected text, with no preamble and no notes.",
+      "user_prompt": "I pulled the model it started fine but the first response was very slow and I need the timing separated.",
+      "max_tokens": 160,
+      "summary": {
+        "timed_runs": 2,
+        "pass_count": 2,
+        "pass_rate": 1.0,
+        "wall_seconds_median": 4.176347,
+        "wall_seconds_min": 4.16336,
+        "wall_seconds_max": 4.189333,
+        "seconds_per_completion_token_median": 0.160629,
+        "memory_guard_violations": 0
+      },
+      "runs": [
+        {
+          "run_index": 1,
+          "warmup": true,
+          "wall_seconds": 4.273069,
+          "ttft_seconds": 1.019,
+          "provider_native_metrics": {},
+          "prompt_tokens": 73,
+          "completion_tokens": 26,
+          "total_tokens": 99,
+          "seconds_per_completion_token": 0.164349,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "I pulled out the model, and it started fine, but the first response was very slow. and I need the timing separated.",
+          "visible_output": "I pulled out the model, and it started fine, but the first response was very slow. and I need the timing separated.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 115,
+            "length_ratio": 1.106,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 3654.0,
+            "completion_tokens": 26,
+            "decoding_speed_tps": 9.487666034155598,
+            "prefill_duration_ttft": 1.019,
+            "prompt_tokens": 73,
+            "total_tokens": 99
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6863552512,
+              "system_available_bytes": 5303840768
+            },
+            "after": {
+              "provider_rss_bytes": 6920740864,
+              "system_available_bytes": 5280776192
+            },
+            "max_provider_rss_bytes": 6920822784,
+            "min_system_available_bytes": 5191712768,
+            "available_delta_bytes": 112128000,
+            "memory_guard_violation": false,
+            "sample_count": 3
+          },
+          "error": ""
+        },
+        {
+          "run_index": 2,
+          "warmup": false,
+          "wall_seconds": 4.16336,
+          "ttft_seconds": 0.972,
+          "provider_native_metrics": {},
+          "prompt_tokens": 73,
+          "completion_tokens": 26,
+          "total_tokens": 99,
+          "seconds_per_completion_token": 0.160129,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "I pulled out the model, and it started fine, but the first response was very slow. and I need the timing separated.",
+          "visible_output": "I pulled out the model, and it started fine, but the first response was very slow. and I need the timing separated.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 115,
+            "length_ratio": 1.106,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 3502.0,
+            "completion_tokens": 26,
+            "decoding_speed_tps": 9.881422924901187,
+            "prefill_duration_ttft": 0.972,
+            "prompt_tokens": 73,
+            "total_tokens": 99
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6920740864,
+              "system_available_bytes": 5267398656
+            },
+            "after": {
+              "provider_rss_bytes": 6919925760,
+              "system_available_bytes": 5274923008
+            },
+            "max_provider_rss_bytes": 6920781824,
+            "min_system_available_bytes": 5275779072,
+            "available_delta_bytes": -8380416,
+            "memory_guard_violation": false,
+            "sample_count": 3
+          },
+          "error": ""
+        },
+        {
+          "run_index": 3,
+          "warmup": false,
+          "wall_seconds": 4.189333,
+          "ttft_seconds": 0.985,
+          "provider_native_metrics": {},
+          "prompt_tokens": 73,
+          "completion_tokens": 26,
+          "total_tokens": 99,
+          "seconds_per_completion_token": 0.161128,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "I pulled out the model, and it started fine, but the first response was very slow. and I need the timing separated.",
+          "visible_output": "I pulled out the model, and it started fine, but the first response was very slow. and I need the timing separated.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 115,
+            "length_ratio": 1.106,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 3533.0,
+            "completion_tokens": 26,
+            "decoding_speed_tps": 9.811616954474097,
+            "prefill_duration_ttft": 0.985,
+            "prompt_tokens": 73,
+            "total_tokens": 99
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6919925760,
+              "system_available_bytes": 5267152896
+            },
+            "after": {
+              "provider_rss_bytes": 6897430528,
+              "system_available_bytes": 5280727040
+            },
+            "max_provider_rss_bytes": 6919983104,
+            "min_system_available_bytes": 5232132096,
+            "available_delta_bytes": 35020800,
+            "memory_guard_violation": false,
+            "sample_count": 3
+          },
+          "error": ""
+        }
+      ]
+    },
+    {
+      "case_id": "comma_splice",
+      "task": "grammar",
+      "system_prompt": "Fix grammar, spelling, punctuation, capitalization, and obvious wording mistakes. Preserve the meaning and leave everything else exactly as written. Return only the corrected text, with no preamble and no notes.",
+      "user_prompt": "The dashboard loaded, it did not show the provider status.",
+      "max_tokens": 160,
+      "summary": {
+        "timed_runs": 2,
+        "pass_count": 2,
+        "pass_rate": 1.0,
+        "wall_seconds_median": 3.097376,
+        "wall_seconds_min": 3.056976,
+        "wall_seconds_max": 3.137775,
+        "seconds_per_completion_token_median": 0.23826,
+        "memory_guard_violations": 0
+      },
+      "runs": [
+        {
+          "run_index": 1,
+          "warmup": true,
+          "wall_seconds": 2.805485,
+          "ttft_seconds": 0.935,
+          "provider_native_metrics": {},
+          "prompt_tokens": 64,
+          "completion_tokens": 13,
+          "total_tokens": 77,
+          "seconds_per_completion_token": 0.215807,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "The dashboard loaded, but it did not show the provider status.",
+          "visible_output": "The dashboard loaded, but it did not show the provider status.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 62,
+            "length_ratio": 1.069,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 2197.0,
+            "completion_tokens": 13,
+            "decoding_speed_tps": 9.508716323296355,
+            "prefill_duration_ttft": 0.935,
+            "prompt_tokens": 64,
+            "total_tokens": 77
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6897430528,
+              "system_available_bytes": 5270179840
+            },
+            "after": {
+              "provider_rss_bytes": 6897655808,
+              "system_available_bytes": 5293412352
+            },
+            "max_provider_rss_bytes": 6907191296,
+            "min_system_available_bytes": 5275648000,
+            "available_delta_bytes": -5468160,
+            "memory_guard_violation": false,
+            "sample_count": 2
+          },
+          "error": ""
+        },
+        {
+          "run_index": 2,
+          "warmup": false,
+          "wall_seconds": 3.056976,
+          "ttft_seconds": 0.919,
+          "provider_native_metrics": {},
+          "prompt_tokens": 64,
+          "completion_tokens": 13,
+          "total_tokens": 77,
+          "seconds_per_completion_token": 0.235152,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "The dashboard loaded, but it did not show the provider status.",
+          "visible_output": "The dashboard loaded, but it did not show the provider status.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 62,
+            "length_ratio": 1.069,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 2375.0,
+            "completion_tokens": 13,
+            "decoding_speed_tps": 8.241758241758243,
+            "prefill_duration_ttft": 0.919,
+            "prompt_tokens": 64,
+            "total_tokens": 77
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6897643520,
+              "system_available_bytes": 5275635712
+            },
+            "after": {
+              "provider_rss_bytes": 6868828160,
+              "system_available_bytes": 5291843584
+            },
+            "max_provider_rss_bytes": 6906912768,
+            "min_system_available_bytes": 5196271616,
+            "available_delta_bytes": 79364096,
+            "memory_guard_violation": false,
+            "sample_count": 2
+          },
+          "error": ""
+        },
+        {
+          "run_index": 3,
+          "warmup": false,
+          "wall_seconds": 3.137775,
+          "ttft_seconds": 0.983,
+          "provider_native_metrics": {},
+          "prompt_tokens": 64,
+          "completion_tokens": 13,
+          "total_tokens": 77,
+          "seconds_per_completion_token": 0.241367,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "The dashboard loaded, but it did not show the provider status.",
+          "visible_output": "The dashboard loaded, but it did not show the provider status.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 62,
+            "length_ratio": 1.069,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 2241.0,
+            "completion_tokens": 13,
+            "decoding_speed_tps": 9.538950715421304,
+            "prefill_duration_ttft": 0.983,
+            "prompt_tokens": 64,
+            "total_tokens": 77
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6868828160,
+              "system_available_bytes": 5218103296
+            },
+            "after": {
+              "provider_rss_bytes": 6868758528,
+              "system_available_bytes": 5267435520
+            },
+            "max_provider_rss_bytes": 6868828160,
+            "min_system_available_bytes": 5232283648,
+            "available_delta_bytes": -14180352,
+            "memory_guard_violation": false,
+            "sample_count": 2
+          },
+          "error": ""
+        }
+      ]
+    },
+    {
+      "case_id": "tense",
+      "task": "grammar",
+      "system_prompt": "Fix grammar, spelling, punctuation, capitalization, and obvious wording mistakes. Preserve the meaning and leave everything else exactly as written. Return only the corrected text, with no preamble and no notes.",
+      "user_prompt": "Yesterday I run the benchmark and it fail after the model was loaded.",
+      "max_tokens": 160,
+      "summary": {
+        "timed_runs": 2,
+        "pass_count": 2,
+        "pass_rate": 1.0,
+        "wall_seconds_median": 2.925441,
+        "wall_seconds_min": 2.857042,
+        "wall_seconds_max": 2.99384,
+        "seconds_per_completion_token_median": 0.20896,
+        "memory_guard_violations": 0
+      },
+      "runs": [
+        {
+          "run_index": 1,
+          "warmup": true,
+          "wall_seconds": 3.018406,
+          "ttft_seconds": 0.966,
+          "provider_native_metrics": {},
+          "prompt_tokens": 66,
+          "completion_tokens": 14,
+          "total_tokens": 80,
+          "seconds_per_completion_token": 0.2156,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "Yesterday I ran the benchmark and it failed after the model was loaded.",
+          "visible_output": "Yesterday I ran the benchmark and it failed after the model was loaded.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 71,
+            "length_ratio": 1.029,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 2383.0,
+            "completion_tokens": 14,
+            "decoding_speed_tps": 9.174311926605505,
+            "prefill_duration_ttft": 0.966,
+            "prompt_tokens": 66,
+            "total_tokens": 80
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6868561920,
+              "system_available_bytes": 5227352064
+            },
+            "after": {
+              "provider_rss_bytes": 6908817408,
+              "system_available_bytes": 5277405184
+            },
+            "max_provider_rss_bytes": 6908817408,
+            "min_system_available_bytes": 5186547712,
+            "available_delta_bytes": 40804352,
+            "memory_guard_violation": false,
+            "sample_count": 2
+          },
+          "error": ""
+        },
+        {
+          "run_index": 2,
+          "warmup": false,
+          "wall_seconds": 2.857042,
+          "ttft_seconds": 0.926,
+          "provider_native_metrics": {},
+          "prompt_tokens": 66,
+          "completion_tokens": 14,
+          "total_tokens": 80,
+          "seconds_per_completion_token": 0.204074,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "Yesterday I ran the benchmark and it failed after the model was loaded.",
+          "visible_output": "Yesterday I ran the benchmark and it failed after the model was loaded.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 71,
+            "length_ratio": 1.029,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 2258.0,
+            "completion_tokens": 14,
+            "decoding_speed_tps": 9.75975975975976,
+            "prefill_duration_ttft": 0.926,
+            "prompt_tokens": 66,
+            "total_tokens": 80
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6908817408,
+              "system_available_bytes": 5294272512
+            },
+            "after": {
+              "provider_rss_bytes": 6905794560,
+              "system_available_bytes": 5311979520
+            },
+            "max_provider_rss_bytes": 6908678144,
+            "min_system_available_bytes": 5298479104,
+            "available_delta_bytes": -4206592,
+            "memory_guard_violation": false,
+            "sample_count": 2
+          },
+          "error": ""
+        },
+        {
+          "run_index": 3,
+          "warmup": false,
+          "wall_seconds": 2.99384,
+          "ttft_seconds": 0.955,
+          "provider_native_metrics": {},
+          "prompt_tokens": 66,
+          "completion_tokens": 14,
+          "total_tokens": 80,
+          "seconds_per_completion_token": 0.213846,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "Yesterday I ran the benchmark and it failed after the model was loaded.",
+          "visible_output": "Yesterday I ran the benchmark and it failed after the model was loaded.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 71,
+            "length_ratio": 1.029,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 2359.0,
+            "completion_tokens": 14,
+            "decoding_speed_tps": 9.25925925925926,
+            "prefill_duration_ttft": 0.955,
+            "prompt_tokens": 66,
+            "total_tokens": 80
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6905794560,
+              "system_available_bytes": 5285527552
+            },
+            "after": {
+              "provider_rss_bytes": 6905794560,
+              "system_available_bytes": 5286154240
+            },
+            "max_provider_rss_bytes": 6905794560,
+            "min_system_available_bytes": 5195472896,
+            "available_delta_bytes": 90054656,
+            "memory_guard_violation": false,
+            "sample_count": 2
+          },
+          "error": ""
+        }
+      ]
+    },
+    {
+      "case_id": "typo",
+      "task": "grammar",
+      "system_prompt": "Fix grammar, spelling, punctuation, capitalization, and obvious wording mistakes. Preserve the meaning and leave everything else exactly as written. Return only the corrected text, with no preamble and no notes.",
+      "user_prompt": "Please fix the grammer but dont invent new requirments.",
+      "max_tokens": 160,
+      "summary": {
+        "timed_runs": 2,
+        "pass_count": 2,
+        "pass_rate": 1.0,
+        "wall_seconds_median": 2.641032,
+        "wall_seconds_min": 2.565595,
+        "wall_seconds_max": 2.716469,
+        "seconds_per_completion_token_median": 0.240094,
+        "memory_guard_violations": 0
+      },
+      "runs": [
+        {
+          "run_index": 1,
+          "warmup": true,
+          "wall_seconds": 2.560489,
+          "ttft_seconds": 0.915,
+          "provider_native_metrics": {},
+          "prompt_tokens": 65,
+          "completion_tokens": 11,
+          "total_tokens": 76,
+          "seconds_per_completion_token": 0.232772,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "Please fix the grammar but don't invent new requirements.",
+          "visible_output": "Please fix the grammar but don't invent new requirements.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 57,
+            "length_ratio": 1.036,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 1981.0,
+            "completion_tokens": 11,
+            "decoding_speed_tps": 9.380863039399625,
+            "prefill_duration_ttft": 0.915,
+            "prompt_tokens": 65,
+            "total_tokens": 76
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6905794560,
+              "system_available_bytes": 5289664512
+            },
+            "after": {
+              "provider_rss_bytes": 6905987072,
+              "system_available_bytes": 5294440448
+            },
+            "max_provider_rss_bytes": 6905974784,
+            "min_system_available_bytes": 5266489344,
+            "available_delta_bytes": 23175168,
+            "memory_guard_violation": false,
+            "sample_count": 2
+          },
+          "error": ""
+        },
+        {
+          "run_index": 2,
+          "warmup": false,
+          "wall_seconds": 2.716469,
+          "ttft_seconds": 0.949,
+          "provider_native_metrics": {},
+          "prompt_tokens": 65,
+          "completion_tokens": 11,
+          "total_tokens": 76,
+          "seconds_per_completion_token": 0.246952,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "Please fix the grammar but don't invent new requirements.",
+          "visible_output": "Please fix the grammar but don't invent new requirements.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 57,
+            "length_ratio": 1.036,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 2091.0,
+            "completion_tokens": 11,
+            "decoding_speed_tps": 8.756567425569177,
+            "prefill_duration_ttft": 0.949,
+            "prompt_tokens": 65,
+            "total_tokens": 76
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6905987072,
+              "system_available_bytes": 5256380416
+            },
+            "after": {
+              "provider_rss_bytes": 6905987072,
+              "system_available_bytes": 5278572544
+            },
+            "max_provider_rss_bytes": 6905987072,
+            "min_system_available_bytes": 5198737408,
+            "available_delta_bytes": 57643008,
+            "memory_guard_violation": false,
+            "sample_count": 2
+          },
+          "error": ""
+        },
+        {
+          "run_index": 3,
+          "warmup": false,
+          "wall_seconds": 2.565595,
+          "ttft_seconds": 0.918,
+          "provider_native_metrics": {},
+          "prompt_tokens": 65,
+          "completion_tokens": 11,
+          "total_tokens": 76,
+          "seconds_per_completion_token": 0.233236,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "Please fix the grammar but don't invent new requirements.",
+          "visible_output": "Please fix the grammar but don't invent new requirements.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 57,
+            "length_ratio": 1.036,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 1962.0,
+            "completion_tokens": 11,
+            "decoding_speed_tps": 9.578544061302681,
+            "prefill_duration_ttft": 0.918,
+            "prompt_tokens": 65,
+            "total_tokens": 76
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6905987072,
+              "system_available_bytes": 5278261248
+            },
+            "after": {
+              "provider_rss_bytes": 6905987072,
+              "system_available_bytes": 5277122560
+            },
+            "max_provider_rss_bytes": 6905987072,
+            "min_system_available_bytes": 5256155136,
+            "available_delta_bytes": 22106112,
+            "memory_guard_violation": false,
+            "sample_count": 2
+          },
+          "error": ""
+        }
+      ]
+    },
+    {
+      "case_id": "long_sentence",
+      "task": "grammar",
+      "system_prompt": "Fix grammar, spelling, punctuation, capitalization, and obvious wording mistakes. Preserve the meaning and leave everything else exactly as written. Return only the corrected text, with no preamble and no notes.",
+      "user_prompt": "The meeting digest feature should process long transcripts locally because some users will paste sensitive customer notes and they expect the app to preserve privacy while still producing useful summaries.",
+      "max_tokens": 160,
+      "summary": {
+        "timed_runs": 2,
+        "pass_count": 2,
+        "pass_rate": 1.0,
+        "wall_seconds_median": 4.649656,
+        "wall_seconds_min": 4.592157,
+        "wall_seconds_max": 4.707155,
+        "seconds_per_completion_token_median": 0.149989,
+        "memory_guard_violations": 0
+      },
+      "runs": [
+        {
+          "run_index": 1,
+          "warmup": true,
+          "wall_seconds": 4.67104,
+          "ttft_seconds": 0.992,
+          "provider_native_metrics": {},
+          "prompt_tokens": 83,
+          "completion_tokens": 31,
+          "total_tokens": 114,
+          "seconds_per_completion_token": 0.150679,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "The meeting digest feature processes full transcripts locally because some users will paste sensitive customer notes, and they expect the app to preserve privacy while still producing useful summaries.",
+          "visible_output": "The meeting digest feature processes full transcripts locally because some users will paste sensitive customer notes, and they expect the app to preserve privacy while still producing useful summaries.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 201,
+            "length_ratio": 0.98,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 4037.0,
+            "completion_tokens": 31,
+            "decoding_speed_tps": 9.852216748768473,
+            "prefill_duration_ttft": 0.992,
+            "prompt_tokens": 83,
+            "total_tokens": 114
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6905987072,
+              "system_available_bytes": 5244268544
+            },
+            "after": {
+              "provider_rss_bytes": 6948233216,
+              "system_available_bytes": 5230723072
+            },
+            "max_provider_rss_bytes": 6948966400,
+            "min_system_available_bytes": 5161062400,
+            "available_delta_bytes": 83206144,
+            "memory_guard_violation": false,
+            "sample_count": 3
+          },
+          "error": ""
+        },
+        {
+          "run_index": 2,
+          "warmup": false,
+          "wall_seconds": 4.707155,
+          "ttft_seconds": 0.955,
+          "provider_native_metrics": {},
+          "prompt_tokens": 83,
+          "completion_tokens": 31,
+          "total_tokens": 114,
+          "seconds_per_completion_token": 0.151844,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "The meeting digest feature processes full transcripts locally because some users will paste sensitive customer notes, and they expect the app to preserve privacy while still producing useful summaries.",
+          "visible_output": "The meeting digest feature processes full transcripts locally because some users will paste sensitive customer notes, and they expect the app to preserve privacy while still producing useful summaries.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 201,
+            "length_ratio": 0.98,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 4103.0,
+            "completion_tokens": 31,
+            "decoding_speed_tps": 9.529860228716645,
+            "prefill_duration_ttft": 0.955,
+            "prompt_tokens": 83,
+            "total_tokens": 114
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6948233216,
+              "system_available_bytes": 5222916096
+            },
+            "after": {
+              "provider_rss_bytes": 6931165184,
+              "system_available_bytes": 5205168128
+            },
+            "max_provider_rss_bytes": 6948233216,
+            "min_system_available_bytes": 5158137856,
+            "available_delta_bytes": 64778240,
+            "memory_guard_violation": false,
+            "sample_count": 3
+          },
+          "error": ""
+        },
+        {
+          "run_index": 3,
+          "warmup": false,
+          "wall_seconds": 4.592157,
+          "ttft_seconds": 0.942,
+          "provider_native_metrics": {},
+          "prompt_tokens": 83,
+          "completion_tokens": 31,
+          "total_tokens": 114,
+          "seconds_per_completion_token": 0.148134,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "The meeting digest feature processes full transcripts locally because some users will paste sensitive customer notes, and they expect the app to preserve privacy while still producing useful summaries.",
+          "visible_output": "The meeting digest feature processes full transcripts locally because some users will paste sensitive customer notes, and they expect the app to preserve privacy while still producing useful summaries.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 201,
+            "length_ratio": 0.98,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 3990.0,
+            "completion_tokens": 31,
+            "decoding_speed_tps": 9.84251968503937,
+            "prefill_duration_ttft": 0.942,
+            "prompt_tokens": 83,
+            "total_tokens": 114
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6931165184,
+              "system_available_bytes": 5179895808
+            },
+            "after": {
+              "provider_rss_bytes": 6879330304,
+              "system_available_bytes": 5267177472
+            },
+            "max_provider_rss_bytes": 6940831744,
+            "min_system_available_bytes": 5135425536,
+            "available_delta_bytes": 44470272,
+            "memory_guard_violation": false,
+            "sample_count": 3
+          },
+          "error": ""
+        }
+      ]
+    },
+    {
+      "case_id": "control",
+      "task": "grammar",
+      "system_prompt": "Fix grammar, spelling, punctuation, capitalization, and obvious wording mistakes. Preserve the meaning and leave everything else exactly as written. Return only the corrected text, with no preamble and no notes.",
+      "user_prompt": "The local provider returned a valid JSON response in under two seconds.",
+      "max_tokens": 160,
+      "summary": {
+        "timed_runs": 2,
+        "pass_count": 2,
+        "pass_rate": 1.0,
+        "wall_seconds_median": 2.819342,
+        "wall_seconds_min": 2.778734,
+        "wall_seconds_max": 2.859949,
+        "seconds_per_completion_token_median": 0.216872,
+        "memory_guard_violations": 0
+      },
+      "runs": [
+        {
+          "run_index": 1,
+          "warmup": true,
+          "wall_seconds": 2.718082,
+          "ttft_seconds": 0.919,
+          "provider_native_metrics": {},
+          "prompt_tokens": 65,
+          "completion_tokens": 13,
+          "total_tokens": 78,
+          "seconds_per_completion_token": 0.209083,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "The local provider returned a valid JSON response in under two seconds.",
+          "visible_output": "The local provider returned a valid JSON response in under two seconds.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 71,
+            "length_ratio": 1.0,
+            "control_similarity": 1.0,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 2146.0,
+            "completion_tokens": 13,
+            "decoding_speed_tps": 9.779951100244498,
+            "prefill_duration_ttft": 0.919,
+            "prompt_tokens": 65,
+            "total_tokens": 78
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6879330304,
+              "system_available_bytes": 5262852096
+            },
+            "after": {
+              "provider_rss_bytes": 6899728384,
+              "system_available_bytes": 5259468800
+            },
+            "max_provider_rss_bytes": 6899720192,
+            "min_system_available_bytes": 5239197696,
+            "available_delta_bytes": 23654400,
+            "memory_guard_violation": false,
+            "sample_count": 2
+          },
+          "error": ""
+        },
+        {
+          "run_index": 2,
+          "warmup": false,
+          "wall_seconds": 2.859949,
+          "ttft_seconds": 0.945,
+          "provider_native_metrics": {},
+          "prompt_tokens": 65,
+          "completion_tokens": 13,
+          "total_tokens": 78,
+          "seconds_per_completion_token": 0.219996,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "The local provider returned a valid JSON response in under two seconds.",
+          "visible_output": "The local provider returned a valid JSON response in under two seconds.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 71,
+            "length_ratio": 1.0,
+            "control_similarity": 1.0,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 2264.0,
+            "completion_tokens": 13,
+            "decoding_speed_tps": 9.097801364670206,
+            "prefill_duration_ttft": 0.945,
+            "prompt_tokens": 65,
+            "total_tokens": 78
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6899728384,
+              "system_available_bytes": 5212565504
+            },
+            "after": {
+              "provider_rss_bytes": 6899998720,
+              "system_available_bytes": 5215285248
+            },
+            "max_provider_rss_bytes": 6899998720,
+            "min_system_available_bytes": 5130407936,
+            "available_delta_bytes": 82157568,
+            "memory_guard_violation": false,
+            "sample_count": 2
+          },
+          "error": ""
+        },
+        {
+          "run_index": 3,
+          "warmup": false,
+          "wall_seconds": 2.778734,
+          "ttft_seconds": 0.93,
+          "provider_native_metrics": {},
+          "prompt_tokens": 65,
+          "completion_tokens": 13,
+          "total_tokens": 78,
+          "seconds_per_completion_token": 0.213749,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "The local provider returned a valid JSON response in under two seconds.",
+          "visible_output": "The local provider returned a valid JSON response in under two seconds.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 71,
+            "length_ratio": 1.0,
+            "control_similarity": 1.0,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 2177.0,
+            "completion_tokens": 13,
+            "decoding_speed_tps": 9.62309542902967,
+            "prefill_duration_ttft": 0.93,
+            "prompt_tokens": 65,
+            "total_tokens": 78
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6899998720,
+              "system_available_bytes": 5228785664
+            },
+            "after": {
+              "provider_rss_bytes": 6900002816,
+              "system_available_bytes": 5275119616
+            },
+            "max_provider_rss_bytes": 6900002816,
+            "min_system_available_bytes": 5221101568,
+            "available_delta_bytes": 7684096,
+            "memory_guard_violation": false,
+            "sample_count": 2
+          },
+          "error": ""
+        }
+      ]
+    },
+    {
+      "case_id": "prompt_code",
+      "task": "prompt",
+      "system_prompt": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact shape — Markdown headers, JSON keys, etc.). Keep each section short. No meta-framing, no preamble. Base every constraint on what the user actually asked for — never invent requirements they did not state. Return only the prompt.",
+      "user_prompt": "build a python cli that scans a folder of json files and reports invalid rows with line numbers",
+      "max_tokens": 700,
+      "summary": {
+        "timed_runs": 2,
+        "pass_count": 0,
+        "pass_rate": 0.0,
+        "wall_seconds_median": 11.908657,
+        "wall_seconds_min": 11.617999,
+        "wall_seconds_max": 12.199315,
+        "seconds_per_completion_token_median": 0.112346,
+        "memory_guard_violations": 0
+      },
+      "runs": [
+        {
+          "run_index": 1,
+          "warmup": true,
+          "wall_seconds": 12.262721,
+          "ttft_seconds": 1.12,
+          "provider_native_metrics": {},
+          "prompt_tokens": 136,
+          "completion_tokens": 106,
+          "total_tokens": 242,
+          "seconds_per_completion_token": 0.115686,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "Task: Build a Python CLI  \nContext: The CLI should scan a specified folder of JSON files and report any invalid rows along with their line number.  \nConstraints: The output should be in JSON format, including the file's filename, line number, and description of the issue. Limit to 1 50 lines per file.  \nOutput Format: \n```json\n{\n  \"filename\": \"<file_name>\",\n  \"line_number\": <line_number>,\n  \"error_message\": \"<description_of_the_issue>\"\n}\n```",
+          "visible_output": "Task: Build a Python CLI  \nContext: The CLI should scan a specified folder of JSON files and report any invalid rows along with their line number.  \nConstraints: The output should be in JSON format, including the file's filename, line number, and description of the issue. Limit to 1 50 lines per file.  \nOutput Format: \n```json\n{\n  \"filename\": \"<file_name>\",\n  \"line_number\": <line_number>,\n  \"error_message\": \"<description_of_the_issue>\"\n}\n```",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": false,
+            "reasons": [
+              "markdown_fence",
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 445,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 11668.0,
+            "completion_tokens": 106,
+            "decoding_speed_tps": 9.954493742889648,
+            "prefill_duration_ttft": 1.12,
+            "prompt_tokens": 136,
+            "total_tokens": 242
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6900002816,
+              "system_available_bytes": 5245407232
+            },
+            "after": {
+              "provider_rss_bytes": 6794379264,
+              "system_available_bytes": 5623857152
+            },
+            "max_provider_rss_bytes": 7021953024,
+            "min_system_available_bytes": 5089681408,
+            "available_delta_bytes": 155725824,
+            "memory_guard_violation": false,
+            "sample_count": 9
+          },
+          "error": ""
+        },
+        {
+          "run_index": 2,
+          "warmup": false,
+          "wall_seconds": 12.199315,
+          "ttft_seconds": 1.018,
+          "provider_native_metrics": {},
+          "prompt_tokens": 136,
+          "completion_tokens": 106,
+          "total_tokens": 242,
+          "seconds_per_completion_token": 0.115088,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "Task: Build a Python CLI  \nContext: The CLI should scan a specified folder of JSON files and report any invalid rows along with their line number.  \nConstraints: The output should be in JSON format, including the file's filename, line number, and description of the issue. Limit to 1 50 lines per file.  \nOutput Format: \n```json\n{\n  \"filename\": \"<file_name>\",\n  \"line_number\": <line_number>,\n  \"error_message\": \"<description_of_the_issue>\"\n}\n```",
+          "visible_output": "Task: Build a Python CLI  \nContext: The CLI should scan a specified folder of JSON files and report any invalid rows along with their line number.  \nConstraints: The output should be in JSON format, including the file's filename, line number, and description of the issue. Limit to 1 50 lines per file.  \nOutput Format: \n```json\n{\n  \"filename\": \"<file_name>\",\n  \"line_number\": <line_number>,\n  \"error_message\": \"<description_of_the_issue>\"\n}\n```",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": false,
+            "reasons": [
+              "markdown_fence",
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 445,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 11363.0,
+            "completion_tokens": 106,
+            "decoding_speed_tps": 10.14983083615273,
+            "prefill_duration_ttft": 1.018,
+            "prompt_tokens": 136,
+            "total_tokens": 242
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6794379264,
+              "system_available_bytes": 5587910656
+            },
+            "after": {
+              "provider_rss_bytes": 6964920320,
+              "system_available_bytes": 5467529216
+            },
+            "max_provider_rss_bytes": 6975598592,
+            "min_system_available_bytes": 5373632512,
+            "available_delta_bytes": 214278144,
+            "memory_guard_violation": false,
+            "sample_count": 9
+          },
+          "error": ""
+        },
+        {
+          "run_index": 3,
+          "warmup": false,
+          "wall_seconds": 11.617999,
+          "ttft_seconds": 0.98,
+          "provider_native_metrics": {},
+          "prompt_tokens": 136,
+          "completion_tokens": 106,
+          "total_tokens": 242,
+          "seconds_per_completion_token": 0.109604,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "Task: Build a Python CLI  \nContext: The CLI should scan a specified folder of JSON files and report any invalid rows along with their line number.  \nConstraints: The output should be in JSON format, including the file's filename, line number, and description of the issue. Limit to 1 50 lines per file.  \nOutput Format: \n```json\n{\n  \"filename\": \"<file_name>\",\n  \"line_number\": <line_number>,\n  \"error_message\": \"<description_of_the_issue>\"\n}\n```",
+          "visible_output": "Task: Build a Python CLI  \nContext: The CLI should scan a specified folder of JSON files and report any invalid rows along with their line number.  \nConstraints: The output should be in JSON format, including the file's filename, line number, and description of the issue. Limit to 1 50 lines per file.  \nOutput Format: \n```json\n{\n  \"filename\": \"<file_name>\",\n  \"line_number\": <line_number>,\n  \"error_message\": \"<description_of_the_issue>\"\n}\n```",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": false,
+            "reasons": [
+              "markdown_fence",
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 445,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 11033.0,
+            "completion_tokens": 106,
+            "decoding_speed_tps": 10.444643390032825,
+            "prefill_duration_ttft": 0.98,
+            "prompt_tokens": 136,
+            "total_tokens": 242
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6964920320,
+              "system_available_bytes": 5444763648
+            },
+            "after": {
+              "provider_rss_bytes": 6964924416,
+              "system_available_bytes": 5470695424
+            },
+            "max_provider_rss_bytes": 6975500288,
+            "min_system_available_bytes": 5353877504,
+            "available_delta_bytes": 90886144,
+            "memory_guard_violation": false,
+            "sample_count": 8
+          },
+          "error": ""
+        }
+      ]
+    },
+    {
+      "case_id": "prompt_research",
+      "task": "prompt",
+      "system_prompt": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact shape — Markdown headers, JSON keys, etc.). Keep each section short. No meta-framing, no preamble. Base every constraint on what the user actually asked for — never invent requirements they did not state. Return only the prompt.",
+      "user_prompt": "compare LM Studio Lemonade Ollama and FLM for a local AI desktop app and show the tradeoffs",
+      "max_tokens": 700,
+      "summary": {
+        "timed_runs": 2,
+        "pass_count": 0,
+        "pass_rate": 0.0,
+        "wall_seconds_median": 8.231736,
+        "wall_seconds_min": 8.207525,
+        "wall_seconds_max": 8.255947,
+        "seconds_per_completion_token_median": 0.121055,
+        "memory_guard_violations": 0
+      },
+      "runs": [
+        {
+          "run_index": 1,
+          "warmup": true,
+          "wall_seconds": 8.334805,
+          "ttft_seconds": 1.068,
+          "provider_native_metrics": {},
+          "prompt_tokens": 140,
+          "completion_tokens": 68,
+          "total_tokens": 208,
+          "seconds_per_completion_token": 0.122571,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "Task: Compare LM Studio, Lemonade Ollala, and FLM for a local AI desktop app  \nContext: These are AI models or will be compared based on their suitability for a local AI desktop application. Output_format: \n- A bullet-point list comparing the three models in terms of pros and cons suitable for an AI desktop app",
+          "visible_output": "Task: Compare LM Studio, Lemonade Ollala, and FLM for a local AI desktop app  \nContext: These are AI models or will be compared based on their suitability for a local AI desktop application. Output_format: \n- A bullet-point list comparing the three models in terms of pros and cons suitable for an AI desktop app",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": false,
+            "reasons": [
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 312,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 7723.0,
+            "completion_tokens": 68,
+            "decoding_speed_tps": 10.06761833208114,
+            "prefill_duration_ttft": 1.068,
+            "prompt_tokens": 140,
+            "total_tokens": 208
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6964924416,
+              "system_available_bytes": 5431103488
+            },
+            "after": {
+              "provider_rss_bytes": 6796623872,
+              "system_available_bytes": 5635096576
+            },
+            "max_provider_rss_bytes": 7098109952,
+            "min_system_available_bytes": 5275758592,
+            "available_delta_bytes": 155344896,
+            "memory_guard_violation": false,
+            "sample_count": 6
+          },
+          "error": ""
+        },
+        {
+          "run_index": 2,
+          "warmup": false,
+          "wall_seconds": 8.207525,
+          "ttft_seconds": 1.067,
+          "provider_native_metrics": {},
+          "prompt_tokens": 140,
+          "completion_tokens": 68,
+          "total_tokens": 208,
+          "seconds_per_completion_token": 0.120699,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "Task: Compare LM Studio, Lemonade Ollala, and FLM for a local AI desktop app  \nContext: These are AI models or will be compared based on their suitability for a local AI desktop application. Output_format: \n- A bullet-point list comparing the three models in terms of pros and cons suitable for an AI desktop app",
+          "visible_output": "Task: Compare LM Studio, Lemonade Ollala, and FLM for a local AI desktop app  \nContext: These are AI models or will be compared based on their suitability for a local AI desktop application. Output_format: \n- A bullet-point list comparing the three models in terms of pros and cons suitable for an AI desktop app",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": false,
+            "reasons": [
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 312,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 7629.0,
+            "completion_tokens": 68,
+            "decoding_speed_tps": 10.21030173727522,
+            "prefill_duration_ttft": 1.067,
+            "prompt_tokens": 140,
+            "total_tokens": 208
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6796623872,
+              "system_available_bytes": 5609803776
+            },
+            "after": {
+              "provider_rss_bytes": 6970253312,
+              "system_available_bytes": 5485035520
+            },
+            "max_provider_rss_bytes": 6981062656,
+            "min_system_available_bytes": 5377417216,
+            "available_delta_bytes": 232386560,
+            "memory_guard_violation": false,
+            "sample_count": 6
+          },
+          "error": ""
+        },
+        {
+          "run_index": 3,
+          "warmup": false,
+          "wall_seconds": 8.255947,
+          "ttft_seconds": 1.026,
+          "provider_native_metrics": {},
+          "prompt_tokens": 140,
+          "completion_tokens": 68,
+          "total_tokens": 208,
+          "seconds_per_completion_token": 0.121411,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "Task: Compare LM Studio, Lemonade Ollala, and FLM for a local AI desktop app  \nContext: These are AI models or will be compared based on their suitability for a local AI desktop application. Output_format: \n- A bullet-point list comparing the three models in terms of pros and cons suitable for an AI desktop app",
+          "visible_output": "Task: Compare LM Studio, Lemonade Ollala, and FLM for a local AI desktop app  \nContext: These are AI models or will be compared based on their suitability for a local AI desktop application. Output_format: \n- A bullet-point list comparing the three models in terms of pros and cons suitable for an AI desktop app",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": false,
+            "reasons": [
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 312,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 7639.0,
+            "completion_tokens": 68,
+            "decoding_speed_tps": 10.13155905035536,
+            "prefill_duration_ttft": 1.026,
+            "prompt_tokens": 140,
+            "total_tokens": 208
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6970253312,
+              "system_available_bytes": 5449232384
+            },
+            "after": {
+              "provider_rss_bytes": 6970654720,
+              "system_available_bytes": 5492404224
+            },
+            "max_provider_rss_bytes": 6981218304,
+            "min_system_available_bytes": 5411151872,
+            "available_delta_bytes": 38080512,
+            "memory_guard_violation": false,
+            "sample_count": 6
+          },
+          "error": ""
+        }
+      ]
+    },
+    {
+      "case_id": "prompt_email",
+      "task": "prompt",
+      "system_prompt": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact shape — Markdown headers, JSON keys, etc.). Keep each section short. No meta-framing, no preamble. Base every constraint on what the user actually asked for — never invent requirements they did not state. Return only the prompt.",
+      "user_prompt": "write a polite email to a vendor asking for missing API credentials and a timeline",
+      "max_tokens": 700,
+      "summary": {
+        "timed_runs": 2,
+        "pass_count": 0,
+        "pass_rate": 0.0,
+        "wall_seconds_median": 6.330452,
+        "wall_seconds_min": 6.110965,
+        "wall_seconds_max": 6.54994,
+        "seconds_per_completion_token_median": 0.13469,
+        "memory_guard_violations": 0
+      },
+      "runs": [
+        {
+          "run_index": 1,
+          "warmup": true,
+          "wall_seconds": 6.152929,
+          "ttft_seconds": 1.0,
+          "provider_native_metrics": {},
+          "prompt_tokens": 133,
+          "completion_tokens": 47,
+          "total_tokens": 180,
+          "seconds_per_completion_token": 0.130913,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "Task: Write a polite email to a vendor asking for missing API credentials and a timeline.\nContext: The email is should be professional and concise.Constraints: 1 sentence, no bullet points or. Output format in plain text without.",
+          "visible_output": "Task: Write a polite email to a vendor asking for missing API credentials and a timeline.\nContext: The email is should be professional and concise.Constraints: 1 sentence, no bullet points or. Output format in plain text without.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": false,
+            "reasons": [
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 229,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 5544.0,
+            "completion_tokens": 47,
+            "decoding_speed_tps": 10.12323943661972,
+            "prefill_duration_ttft": 1.0,
+            "prompt_tokens": 133,
+            "total_tokens": 180
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6970654720,
+              "system_available_bytes": 5457518592
+            },
+            "after": {
+              "provider_rss_bytes": 6981447680,
+              "system_available_bytes": 5466128384
+            },
+            "max_provider_rss_bytes": 6981406720,
+            "min_system_available_bytes": 5374001152,
+            "available_delta_bytes": 83517440,
+            "memory_guard_violation": false,
+            "sample_count": 4
+          },
+          "error": ""
+        },
+        {
+          "run_index": 2,
+          "warmup": false,
+          "wall_seconds": 6.110965,
+          "ttft_seconds": 1.017,
+          "provider_native_metrics": {},
+          "prompt_tokens": 133,
+          "completion_tokens": 47,
+          "total_tokens": 180,
+          "seconds_per_completion_token": 0.130021,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "Task: Write a polite email to a vendor asking for missing API credentials and a timeline.\nContext: The email is should be professional and concise.Constraints: 1 sentence, no bullet points or. Output format in plain text without.",
+          "visible_output": "Task: Write a polite email to a vendor asking for missing API credentials and a timeline.\nContext: The email is should be professional and concise.Constraints: 1 sentence, no bullet points or. Output format in plain text without.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": false,
+            "reasons": [
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 229,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 5464.0,
+            "completion_tokens": 47,
+            "decoding_speed_tps": 10.344052170002248,
+            "prefill_duration_ttft": 1.017,
+            "prompt_tokens": 133,
+            "total_tokens": 180
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6971412480,
+              "system_available_bytes": 5468667904
+            },
+            "after": {
+              "provider_rss_bytes": 6981451776,
+              "system_available_bytes": 5478584320
+            },
+            "max_provider_rss_bytes": 6981697536,
+            "min_system_available_bytes": 5392822272,
+            "available_delta_bytes": 75845632,
+            "memory_guard_violation": false,
+            "sample_count": 4
+          },
+          "error": ""
+        },
+        {
+          "run_index": 3,
+          "warmup": false,
+          "wall_seconds": 6.54994,
+          "ttft_seconds": 1.013,
+          "provider_native_metrics": {},
+          "prompt_tokens": 133,
+          "completion_tokens": 47,
+          "total_tokens": 180,
+          "seconds_per_completion_token": 0.13936,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "Task: Write a polite email to a vendor asking for missing API credentials and a timeline.\nContext: The email is should be professional and concise.Constraints: 1 sentence, no bullet points or. Output format in plain text without.",
+          "visible_output": "Task: Write a polite email to a vendor asking for missing API credentials and a timeline.\nContext: The email is should be professional and concise.Constraints: 1 sentence, no bullet points or. Output format in plain text without.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": false,
+            "reasons": [
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 229,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 5957.0,
+            "completion_tokens": 47,
+            "decoding_speed_tps": 9.3042071197411,
+            "prefill_duration_ttft": 1.013,
+            "prompt_tokens": 133,
+            "total_tokens": 180
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6971416576,
+              "system_available_bytes": 5465579520
+            },
+            "after": {
+              "provider_rss_bytes": 6971400192,
+              "system_available_bytes": 5437788160
+            },
+            "max_provider_rss_bytes": 6981664768,
+            "min_system_available_bytes": 5415899136,
+            "available_delta_bytes": 49680384,
+            "memory_guard_violation": false,
+            "sample_count": 4
+          },
+          "error": ""
+        }
+      ]
+    },
+    {
+      "case_id": "prompt_data",
+      "task": "prompt",
+      "system_prompt": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact shape — Markdown headers, JSON keys, etc.). Keep each section short. No meta-framing, no preamble. Base every constraint on what the user actually asked for — never invent requirements they did not state. Return only the prompt.",
+      "user_prompt": "analyze a CSV export of time logs and explain missing expected hours by person and date",
+      "max_tokens": 700,
+      "summary": {
+        "timed_runs": 2,
+        "pass_count": 0,
+        "pass_rate": 0.0,
+        "wall_seconds_median": 10.210434,
+        "wall_seconds_min": 10.154095,
+        "wall_seconds_max": 10.266774,
+        "seconds_per_completion_token_median": 0.113449,
+        "memory_guard_violations": 0
+      },
+      "runs": [
+        {
+          "run_index": 1,
+          "warmup": true,
+          "wall_seconds": 10.175044,
+          "ttft_seconds": 0.998,
+          "provider_native_metrics": {},
+          "prompt_tokens": 134,
+          "completion_tokens": 90,
+          "total_tokens": 224,
+          "seconds_per_completion_token": 0.113056,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "Task: Analyze a CSV export of time logs to identify missing or expected hours by person.\nContext: The CSV contains time log entries with columns for employee name, start time, end time, and total worked. Constraints: Deliver a list for each person showing detailing the difference between logged and expected hours in a clear table format. Output format: Markdown table for each person including their name, total worked, and the calculated difference between expected and logged hours",
+          "visible_output": "Task: Analyze a CSV export of time logs to identify missing or expected hours by person.\nContext: The CSV contains time log entries with columns for employee name, start time, end time, and total worked. Constraints: Deliver a list for each person showing detailing the difference between logged and expected hours in a clear table format. Output format: Markdown table for each person including their name, total worked, and the calculated difference between expected and logged hours",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": false,
+            "reasons": [
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 485,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 9562.0,
+            "completion_tokens": 90,
+            "decoding_speed_tps": 10.392340028024288,
+            "prefill_duration_ttft": 0.998,
+            "prompt_tokens": 134,
+            "total_tokens": 224
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6971400192,
+              "system_available_bytes": 5420834816
+            },
+            "after": {
+              "provider_rss_bytes": 6971400192,
+              "system_available_bytes": 5531082752
+            },
+            "max_provider_rss_bytes": 6981898240,
+            "min_system_available_bytes": 5360586752,
+            "available_delta_bytes": 60248064,
+            "memory_guard_violation": false,
+            "sample_count": 7
+          },
+          "error": ""
+        },
+        {
+          "run_index": 2,
+          "warmup": false,
+          "wall_seconds": 10.154095,
+          "ttft_seconds": 1.01,
+          "provider_native_metrics": {},
+          "prompt_tokens": 134,
+          "completion_tokens": 90,
+          "total_tokens": 224,
+          "seconds_per_completion_token": 0.112823,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "Task: Analyze a CSV export of time logs to identify missing or expected hours by person.\nContext: The CSV contains time log entries with columns for employee name, start time, end time, and total worked. Constraints: Deliver a list for each person showing detailing the difference between logged and expected hours in a clear table format. Output format: Markdown table for each person including their name, total worked, and the calculated difference between expected and logged hours",
+          "visible_output": "Task: Analyze a CSV export of time logs to identify missing or expected hours by person.\nContext: The CSV contains time log entries with columns for employee name, start time, end time, and total worked. Constraints: Deliver a list for each person showing detailing the difference between logged and expected hours in a clear table format. Output format: Markdown table for each person including their name, total worked, and the calculated difference between expected and logged hours",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": false,
+            "reasons": [
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 485,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 9535.0,
+            "completion_tokens": 90,
+            "decoding_speed_tps": 10.439882697947214,
+            "prefill_duration_ttft": 1.01,
+            "prompt_tokens": 134,
+            "total_tokens": 224
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6971400192,
+              "system_available_bytes": 5482659840
+            },
+            "after": {
+              "provider_rss_bytes": 6971400192,
+              "system_available_bytes": 5519024128
+            },
+            "max_provider_rss_bytes": 6981939200,
+            "min_system_available_bytes": 5421527040,
+            "available_delta_bytes": 61132800,
+            "memory_guard_violation": false,
+            "sample_count": 7
+          },
+          "error": ""
+        },
+        {
+          "run_index": 3,
+          "warmup": false,
+          "wall_seconds": 10.266774,
+          "ttft_seconds": 1.034,
+          "provider_native_metrics": {},
+          "prompt_tokens": 134,
+          "completion_tokens": 90,
+          "total_tokens": 224,
+          "seconds_per_completion_token": 0.114075,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "Task: Analyze a CSV export of time logs to identify missing or expected hours by person.\nContext: The CSV contains time log entries with columns for employee name, start time, end time, and total worked. Constraints: Deliver a list for each person showing detailing the difference between logged and expected hours in a clear table format. Output format: Markdown table for each person including their name, total worked, and the calculated difference between expected and logged hours",
+          "visible_output": "Task: Analyze a CSV export of time logs to identify missing or expected hours by person.\nContext: The CSV contains time log entries with columns for employee name, start time, end time, and total worked. Constraints: Deliver a list for each person showing detailing the difference between logged and expected hours in a clear table format. Output format: Markdown table for each person including their name, total worked, and the calculated difference between expected and logged hours",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": false,
+            "reasons": [
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 485,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 9683.0,
+            "completion_tokens": 90,
+            "decoding_speed_tps": 10.290206960342237,
+            "prefill_duration_ttft": 1.034,
+            "prompt_tokens": 134,
+            "total_tokens": 224
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6971400192,
+              "system_available_bytes": 5497282560
+            },
+            "after": {
+              "provider_rss_bytes": 6971420672,
+              "system_available_bytes": 5540384768
+            },
+            "max_provider_rss_bytes": 6981939200,
+            "min_system_available_bytes": 5437079552,
+            "available_delta_bytes": 60203008,
+            "memory_guard_violation": false,
+            "sample_count": 7
+          },
+          "error": ""
+        }
+      ]
+    },
+    {
+      "case_id": "prompt_meeting",
+      "task": "prompt",
+      "system_prompt": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact shape — Markdown headers, JSON keys, etc.). Keep each section short. No meta-framing, no preamble. Base every constraint on what the user actually asked for — never invent requirements they did not state. Return only the prompt.",
+      "user_prompt": "turn a rough meeting transcript into summary decisions risks and action items",
+      "max_tokens": 700,
+      "summary": {
+        "timed_runs": 2,
+        "pass_count": 0,
+        "pass_rate": 0.0,
+        "wall_seconds_median": 14.643249,
+        "wall_seconds_min": 14.418322,
+        "wall_seconds_max": 14.868175,
+        "seconds_per_completion_token_median": 0.109278,
+        "memory_guard_violations": 0
+      },
+      "runs": [
+        {
+          "run_index": 1,
+          "warmup": true,
+          "wall_seconds": 14.496942,
+          "ttft_seconds": 1.015,
+          "provider_native_metrics": {},
+          "prompt_tokens": 130,
+          "completion_tokens": 134,
+          "total_tokens": 264,
+          "seconds_per_completion_token": 0.108186,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "Task: Turn a rough meeting transcript into summary decisions, risks, and action items  \nContext: The transcript contains notes from a recent meeting with various comments, discussions, and conclusions.  \nConstraints: Provide a 300-word summary in bullet points. Include key decisions made, list of identified risks, and actionable items. Use bullet points for clarity. Tonal note: Be concise and objective-oriented.  \nOutput format: Bullet-pointed summary including key decisions, risks, and action items, formatted in plain text without: [ * Decision: [[brief description] ] Risks: - [Risk 1: [ [ Action Items: - [Action Item ",
+          "visible_output": "Task: Turn a rough meeting transcript into summary decisions, risks, and action items  \nContext: The transcript contains notes from a recent meeting with various comments, discussions, and conclusions.  \nConstraints: Provide a 300-word summary in bullet points. Include key decisions made, list of identified risks, and actionable items. Use bullet points for clarity. Tonal note: Be concise and objective-oriented.  \nOutput format: Bullet-pointed summary including key decisions, risks, and action items, formatted in plain text without: [ * Decision: [[brief description] ] Risks: - [Risk 1: [ [ Action Items: - [Action Item",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": false,
+            "reasons": [
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 626,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 13900.0,
+            "completion_tokens": 134,
+            "decoding_speed_tps": 10.322079937912301,
+            "prefill_duration_ttft": 1.015,
+            "prompt_tokens": 130,
+            "total_tokens": 264
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6971420672,
+              "system_available_bytes": 5512667136
+            },
+            "after": {
+              "provider_rss_bytes": 6972116992,
+              "system_available_bytes": 5587918848
+            },
+            "max_provider_rss_bytes": 6982320128,
+            "min_system_available_bytes": 5453144064,
+            "available_delta_bytes": 59523072,
+            "memory_guard_violation": false,
+            "sample_count": 10
+          },
+          "error": ""
+        },
+        {
+          "run_index": 2,
+          "warmup": false,
+          "wall_seconds": 14.868175,
+          "ttft_seconds": 0.998,
+          "provider_native_metrics": {},
+          "prompt_tokens": 130,
+          "completion_tokens": 134,
+          "total_tokens": 264,
+          "seconds_per_completion_token": 0.110957,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "Task: Turn a rough meeting transcript into summary decisions, risks, and action items  \nContext: The transcript contains notes from a recent meeting with various comments, discussions, and conclusions.  \nConstraints: Provide a 300-word summary in bullet points. Include key decisions made, list of identified risks, and actionable items. Use bullet points for clarity. Tonal note: Be concise and objective-oriented.  \nOutput format: Bullet-pointed summary including key decisions, risks, and action items, formatted in plain text without: [ * Decision: [[brief description] ] Risks: - [Risk 1: [ [ Action Items: - [Action Item ",
+          "visible_output": "Task: Turn a rough meeting transcript into summary decisions, risks, and action items  \nContext: The transcript contains notes from a recent meeting with various comments, discussions, and conclusions.  \nConstraints: Provide a 300-word summary in bullet points. Include key decisions made, list of identified risks, and actionable items. Use bullet points for clarity. Tonal note: Be concise and objective-oriented.  \nOutput format: Bullet-pointed summary including key decisions, risks, and action items, formatted in plain text without: [ * Decision: [[brief description] ] Risks: - [Risk 1: [ [ Action Items: - [Action Item",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": false,
+            "reasons": [
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 626,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 14235.0,
+            "completion_tokens": 134,
+            "decoding_speed_tps": 10.047593865679534,
+            "prefill_duration_ttft": 0.998,
+            "prompt_tokens": 130,
+            "total_tokens": 264
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6972116992,
+              "system_available_bytes": 5537734656
+            },
+            "after": {
+              "provider_rss_bytes": 6972178432,
+              "system_available_bytes": 5455351808
+            },
+            "max_provider_rss_bytes": 6982651904,
+            "min_system_available_bytes": 5403951104,
+            "available_delta_bytes": 133783552,
+            "memory_guard_violation": false,
+            "sample_count": 10
+          },
+          "error": ""
+        },
+        {
+          "run_index": 3,
+          "warmup": false,
+          "wall_seconds": 14.418322,
+          "ttft_seconds": 1.048,
+          "provider_native_metrics": {},
+          "prompt_tokens": 130,
+          "completion_tokens": 134,
+          "total_tokens": 264,
+          "seconds_per_completion_token": 0.107599,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "Task: Turn a rough meeting transcript into summary decisions, risks, and action items  \nContext: The transcript contains notes from a recent meeting with various comments, discussions, and conclusions.  \nConstraints: Provide a 300-word summary in bullet points. Include key decisions made, list of identified risks, and actionable items. Use bullet points for clarity. Tonal note: Be concise and objective-oriented.  \nOutput format: Bullet-pointed summary including key decisions, risks, and action items, formatted in plain text without: [ * Decision: [[brief description] ] Risks: - [Risk 1: [ [ Action Items: - [Action Item ",
+          "visible_output": "Task: Turn a rough meeting transcript into summary decisions, risks, and action items  \nContext: The transcript contains notes from a recent meeting with various comments, discussions, and conclusions.  \nConstraints: Provide a 300-word summary in bullet points. Include key decisions made, list of identified risks, and actionable items. Use bullet points for clarity. Tonal note: Be concise and objective-oriented.  \nOutput format: Bullet-pointed summary including key decisions, risks, and action items, formatted in plain text without: [ * Decision: [[brief description] ] Risks: - [Risk 1: [ [ Action Items: - [Action Item",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": false,
+            "reasons": [
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 626,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 13800.0,
+            "completion_tokens": 134,
+            "decoding_speed_tps": 10.429736511919698,
+            "prefill_duration_ttft": 1.048,
+            "prompt_tokens": 130,
+            "total_tokens": 264
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6972178432,
+              "system_available_bytes": 5433950208
+            },
+            "after": {
+              "provider_rss_bytes": 6972178432,
+              "system_available_bytes": 5534486528
+            },
+            "max_provider_rss_bytes": 6982733824,
+            "min_system_available_bytes": 5396242432,
+            "available_delta_bytes": 37707776,
+            "memory_guard_violation": false,
+            "sample_count": 10
+          },
+          "error": ""
+        }
+      ]
+    },
+    {
+      "case_id": "prompt_vague",
+      "task": "prompt",
+      "system_prompt": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact shape — Markdown headers, JSON keys, etc.). Keep each section short. No meta-framing, no preamble. Base every constraint on what the user actually asked for — never invent requirements they did not state. Return only the prompt.",
+      "user_prompt": "make this better and more clear for the team",
+      "max_tokens": 700,
+      "summary": {
+        "timed_runs": 2,
+        "pass_count": 0,
+        "pass_rate": 0.0,
+        "wall_seconds_median": 6.659055,
+        "wall_seconds_min": 6.632938,
+        "wall_seconds_max": 6.685172,
+        "seconds_per_completion_token_median": 0.125642,
+        "memory_guard_violations": 0
+      },
+      "runs": [
+        {
+          "run_index": 1,
+          "warmup": true,
+          "wall_seconds": 6.733178,
+          "ttft_seconds": 0.982,
+          "provider_native_metrics": {},
+          "prompt_tokens": 127,
+          "completion_tokens": 53,
+          "total_tokens": 180,
+          "seconds_per_completion_token": 0.127041,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "Task: Improve and clarify the following message for the team  \nContext: No specific context provided other than the need to make it clearer for the team. Constraints: 1vable within 20 words, clear and concise. Output format: Use bullet points for clarity",
+          "visible_output": "Task: Improve and clarify the following message for the team  \nContext: No specific context provided other than the need to make it clearer for the team. Constraints: 1vable within 20 words, clear and concise. Output format: Use bullet points for clarity",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": false,
+            "reasons": [
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 254,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 6149.0,
+            "completion_tokens": 53,
+            "decoding_speed_tps": 10.063866847300174,
+            "prefill_duration_ttft": 0.982,
+            "prompt_tokens": 127,
+            "total_tokens": 180
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6972178432,
+              "system_available_bytes": 5501255680
+            },
+            "after": {
+              "provider_rss_bytes": 6972977152,
+              "system_available_bytes": 5539840000
+            },
+            "max_provider_rss_bytes": 6982721536,
+            "min_system_available_bytes": 5416206336,
+            "available_delta_bytes": 85049344,
+            "memory_guard_violation": false,
+            "sample_count": 5
+          },
+          "error": ""
+        },
+        {
+          "run_index": 2,
+          "warmup": false,
+          "wall_seconds": 6.632938,
+          "ttft_seconds": 0.937,
+          "provider_native_metrics": {},
+          "prompt_tokens": 127,
+          "completion_tokens": 53,
+          "total_tokens": 180,
+          "seconds_per_completion_token": 0.12515,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "Task: Improve and clarify the following message for the team  \nContext: No specific context provided other than the need to make it clearer for the team. Constraints: 1vable within 20 words, clear and concise. Output format: Use bullet points for clarity",
+          "visible_output": "Task: Improve and clarify the following message for the team  \nContext: No specific context provided other than the need to make it clearer for the team. Constraints: 1vable within 20 words, clear and concise. Output format: Use bullet points for clarity",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": false,
+            "reasons": [
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 254,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 6022.0,
+            "completion_tokens": 53,
+            "decoding_speed_tps": 10.226155358898723,
+            "prefill_duration_ttft": 0.937,
+            "prompt_tokens": 127,
+            "total_tokens": 180
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6972977152,
+              "system_available_bytes": 5508722688
+            },
+            "after": {
+              "provider_rss_bytes": 6973005824,
+              "system_available_bytes": 5545799680
+            },
+            "max_provider_rss_bytes": 6983004160,
+            "min_system_available_bytes": 5439279104,
+            "available_delta_bytes": 69443584,
+            "memory_guard_violation": false,
+            "sample_count": 5
+          },
+          "error": ""
+        },
+        {
+          "run_index": 3,
+          "warmup": false,
+          "wall_seconds": 6.685172,
+          "ttft_seconds": 0.949,
+          "provider_native_metrics": {},
+          "prompt_tokens": 127,
+          "completion_tokens": 53,
+          "total_tokens": 180,
+          "seconds_per_completion_token": 0.126135,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "Task: Improve and clarify the following message for the team  \nContext: No specific context provided other than the need to make it clearer for the team. Constraints: 1vable within 20 words, clear and concise. Output format: Use bullet points for clarity",
+          "visible_output": "Task: Improve and clarify the following message for the team  \nContext: No specific context provided other than the need to make it clearer for the team. Constraints: 1vable within 20 words, clear and concise. Output format: Use bullet points for clarity",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": false,
+            "reasons": [
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 254,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 6050.0,
+            "completion_tokens": 53,
+            "decoding_speed_tps": 10.194079592236816,
+            "prefill_duration_ttft": 0.949,
+            "prompt_tokens": 127,
+            "total_tokens": 180
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6973005824,
+              "system_available_bytes": 5520138240
+            },
+            "after": {
+              "provider_rss_bytes": 6973014016,
+              "system_available_bytes": 5540786176
+            },
+            "max_provider_rss_bytes": 6983061504,
+            "min_system_available_bytes": 5430693888,
+            "available_delta_bytes": 89444352,
+            "memory_guard_violation": false,
+            "sample_count": 5
+          },
+          "error": ""
+        }
+      ]
+    },
+    {
+      "case_id": "prompt_ui",
+      "task": "prompt",
+      "system_prompt": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact shape — Markdown headers, JSON keys, etc.). Keep each section short. No meta-framing, no preamble. Base every constraint on what the user actually asked for — never invent requirements they did not state. Return only the prompt.",
+      "user_prompt": "design a small dashboard for model benchmarks with provider filters and failure states",
+      "max_tokens": 700,
+      "summary": {
+        "timed_runs": 2,
+        "pass_count": 0,
+        "pass_rate": 0.0,
+        "wall_seconds_median": 6.670475,
+        "wall_seconds_min": 6.668484,
+        "wall_seconds_max": 6.672466,
+        "seconds_per_completion_token_median": 0.130794,
+        "memory_guard_violations": 0
+      },
+      "runs": [
+        {
+          "run_index": 1,
+          "warmup": true,
+          "wall_seconds": 6.681411,
+          "ttft_seconds": 0.986,
+          "provider_native_metrics": {},
+          "prompt_tokens": 131,
+          "completion_tokens": 51,
+          "total_tokens": 182,
+          "seconds_per_completion_token": 0.131008,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "Task: Design a small dashboard for model benchmarks  \nContext: The dashboard will include provider filters and failure states  \nConstraints: 300 characters maximum, use-based layout, clear and concise  \nOutput Format: \nMarkdown with header for \"Dashboard Specifications\"",
+          "visible_output": "Task: Design a small dashboard for model benchmarks  \nContext: The dashboard will include provider filters and failure states  \nConstraints: 300 characters maximum, use-based layout, clear and concise  \nOutput Format: \nMarkdown with header for \"Dashboard Specifications\"",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": false,
+            "reasons": [
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 270,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 5929.0,
+            "completion_tokens": 51,
+            "decoding_speed_tps": 10.115314586283635,
+            "prefill_duration_ttft": 0.986,
+            "prompt_tokens": 131,
+            "total_tokens": 182
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6973014016,
+              "system_available_bytes": 5508194304
+            },
+            "after": {
+              "provider_rss_bytes": 6973267968,
+              "system_available_bytes": 5528682496
+            },
+            "max_provider_rss_bytes": 6983417856,
+            "min_system_available_bytes": 5434052608,
+            "available_delta_bytes": 74141696,
+            "memory_guard_violation": false,
+            "sample_count": 5
+          },
+          "error": ""
+        },
+        {
+          "run_index": 2,
+          "warmup": false,
+          "wall_seconds": 6.668484,
+          "ttft_seconds": 1.064,
+          "provider_native_metrics": {},
+          "prompt_tokens": 131,
+          "completion_tokens": 51,
+          "total_tokens": 182,
+          "seconds_per_completion_token": 0.130755,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "Task: Design a small dashboard for model benchmarks  \nContext: The dashboard will include provider filters and failure states  \nConstraints: 300 characters maximum, use-based layout, clear and concise  \nOutput Format: \nMarkdown with header for \"Dashboard Specifications\"",
+          "visible_output": "Task: Design a small dashboard for model benchmarks  \nContext: The dashboard will include provider filters and failure states  \nConstraints: 300 characters maximum, use-based layout, clear and concise  \nOutput Format: \nMarkdown with header for \"Dashboard Specifications\"",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": false,
+            "reasons": [
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 270,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 6072.0,
+            "completion_tokens": 51,
+            "decoding_speed_tps": 9.984025559105431,
+            "prefill_duration_ttft": 1.064,
+            "prompt_tokens": 131,
+            "total_tokens": 182
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6973267968,
+              "system_available_bytes": 5488087040
+            },
+            "after": {
+              "provider_rss_bytes": 6973251584,
+              "system_available_bytes": 5506854912
+            },
+            "max_provider_rss_bytes": 6983544832,
+            "min_system_available_bytes": 5403910144,
+            "available_delta_bytes": 84176896,
+            "memory_guard_violation": false,
+            "sample_count": 5
+          },
+          "error": ""
+        },
+        {
+          "run_index": 3,
+          "warmup": false,
+          "wall_seconds": 6.672466,
+          "ttft_seconds": 1.036,
+          "provider_native_metrics": {},
+          "prompt_tokens": 131,
+          "completion_tokens": 51,
+          "total_tokens": 182,
+          "seconds_per_completion_token": 0.130833,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "Task: Design a small dashboard for model benchmarks  \nContext: The dashboard will include provider filters and failure states  \nConstraints: 300 characters maximum, use-based layout, clear and concise  \nOutput Format: \nMarkdown with header for \"Dashboard Specifications\"",
+          "visible_output": "Task: Design a small dashboard for model benchmarks  \nContext: The dashboard will include provider filters and failure states  \nConstraints: 300 characters maximum, use-based layout, clear and concise  \nOutput Format: \nMarkdown with header for \"Dashboard Specifications\"",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": false,
+            "reasons": [
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 270,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 6050.0,
+            "completion_tokens": 51,
+            "decoding_speed_tps": 9.97207818109294,
+            "prefill_duration_ttft": 1.036,
+            "prompt_tokens": 131,
+            "total_tokens": 182
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6973251584,
+              "system_available_bytes": 5483757568
+            },
+            "after": {
+              "provider_rss_bytes": 6973292544,
+              "system_available_bytes": 5537464320
+            },
+            "max_provider_rss_bytes": 6983565312,
+            "min_system_available_bytes": 5433651200,
+            "available_delta_bytes": 50106368,
+            "memory_guard_violation": false,
+            "sample_count": 5
+          },
+          "error": ""
+        }
+      ]
+    },
+    {
+      "case_id": "prompt_bug",
+      "task": "prompt",
+      "system_prompt": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact shape — Markdown headers, JSON keys, etc.). Keep each section short. No meta-framing, no preamble. Base every constraint on what the user actually asked for — never invent requirements they did not state. Return only the prompt.",
+      "user_prompt": "debug why a local server health check passes but chat completions fail with 404",
+      "max_tokens": 700,
+      "summary": {
+        "timed_runs": 2,
+        "pass_count": 0,
+        "pass_rate": 0.0,
+        "wall_seconds_median": 6.84704,
+        "wall_seconds_min": 6.844499,
+        "wall_seconds_max": 6.849581,
+        "seconds_per_completion_token_median": 0.126797,
+        "memory_guard_violations": 0
+      },
+      "runs": [
+        {
+          "run_index": 1,
+          "warmup": true,
+          "wall_seconds": 7.552807,
+          "ttft_seconds": 1.07,
+          "provider_native_metrics": {},
+          "prompt_tokens": 136,
+          "completion_tokens": 54,
+          "total_tokens": 190,
+          "seconds_per_completion_token": 0.139867,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "Task: Debug why local server health checks pass, but chat completions return a 404 error  \nContext: Local server is can passing health checks but works when: chat completions failing with a 404 error. Constraints: None output_format: Markdown",
+          "visible_output": "Task: Debug why local server health checks pass, but chat completions return a 404 error  \nContext: Local server is can passing health checks but works when: chat completions failing with a 404 error. Constraints: None output_format: Markdown",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": false,
+            "reasons": [
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 242,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 6899.0,
+            "completion_tokens": 54,
+            "decoding_speed_tps": 9.092468691027621,
+            "prefill_duration_ttft": 1.07,
+            "prompt_tokens": 136,
+            "total_tokens": 190
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6973292544,
+              "system_available_bytes": 5497438208
+            },
+            "after": {
+              "provider_rss_bytes": 6973177856,
+              "system_available_bytes": 5437939712
+            },
+            "max_provider_rss_bytes": 6983716864,
+            "min_system_available_bytes": 5390127104,
+            "available_delta_bytes": 107311104,
+            "memory_guard_violation": false,
+            "sample_count": 5
+          },
+          "error": ""
+        },
+        {
+          "run_index": 2,
+          "warmup": false,
+          "wall_seconds": 6.844499,
+          "ttft_seconds": 1.041,
+          "provider_native_metrics": {},
+          "prompt_tokens": 136,
+          "completion_tokens": 54,
+          "total_tokens": 190,
+          "seconds_per_completion_token": 0.12675,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "Task: Debug why local server health checks pass, but chat completions return a 404 error  \nContext: Local server is can passing health checks but works when: chat completions failing with a 404 error. Constraints: None output_format: Markdown",
+          "visible_output": "Task: Debug why local server health checks pass, but chat completions return a 404 error  \nContext: Local server is can passing health checks but works when: chat completions failing with a 404 error. Constraints: None output_format: Markdown",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": false,
+            "reasons": [
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 242,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 6266.0,
+            "completion_tokens": 54,
+            "decoding_speed_tps": 10.14354066985646,
+            "prefill_duration_ttft": 1.041,
+            "prompt_tokens": 136,
+            "total_tokens": 190
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6973177856,
+              "system_available_bytes": 5412634624
+            },
+            "after": {
+              "provider_rss_bytes": 6973607936,
+              "system_available_bytes": 5509722112
+            },
+            "max_provider_rss_bytes": 6983643136,
+            "min_system_available_bytes": 5350457344,
+            "available_delta_bytes": 62177280,
+            "memory_guard_violation": false,
+            "sample_count": 5
+          },
+          "error": ""
+        },
+        {
+          "run_index": 3,
+          "warmup": false,
+          "wall_seconds": 6.849581,
+          "ttft_seconds": 1.032,
+          "provider_native_metrics": {},
+          "prompt_tokens": 136,
+          "completion_tokens": 54,
+          "total_tokens": 190,
+          "seconds_per_completion_token": 0.126844,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "Task: Debug why local server health checks pass, but chat completions return a 404 error  \nContext: Local server is can passing health checks but works when: chat completions failing with a 404 error. Constraints: None output_format: Markdown",
+          "visible_output": "Task: Debug why local server health checks pass, but chat completions return a 404 error  \nContext: Local server is can passing health checks but works when: chat completions failing with a 404 error. Constraints: None output_format: Markdown",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": false,
+            "reasons": [
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 242,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 6246.0,
+            "completion_tokens": 54,
+            "decoding_speed_tps": 10.16494054468738,
+            "prefill_duration_ttft": 1.032,
+            "prompt_tokens": 136,
+            "total_tokens": 190
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6973607936,
+              "system_available_bytes": 5470769152
+            },
+            "after": {
+              "provider_rss_bytes": 6973665280,
+              "system_available_bytes": 5359329280
+            },
+            "max_provider_rss_bytes": 6983942144,
+            "min_system_available_bytes": 5358538752,
+            "available_delta_bytes": 112230400,
+            "memory_guard_violation": false,
+            "sample_count": 5
+          },
+          "error": ""
+        }
+      ]
+    },
+    {
+      "case_id": "prompt_plan",
+      "task": "prompt",
+      "system_prompt": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact shape — Markdown headers, JSON keys, etc.). Keep each section short. No meta-framing, no preamble. Base every constraint on what the user actually asked for — never invent requirements they did not state. Return only the prompt.",
+      "user_prompt": "create a rollout plan for switching providers with fallback and performance gates",
+      "max_tokens": 700,
+      "summary": {
+        "timed_runs": 2,
+        "pass_count": 0,
+        "pass_rate": 0.0,
+        "wall_seconds_median": 9.94864,
+        "wall_seconds_min": 9.934288,
+        "wall_seconds_max": 9.962993,
+        "seconds_per_completion_token_median": 0.114352,
+        "memory_guard_violations": 0
+      },
+      "runs": [
+        {
+          "run_index": 1,
+          "warmup": true,
+          "wall_seconds": 10.447582,
+          "ttft_seconds": 1.064,
+          "provider_native_metrics": {},
+          "prompt_tokens": 130,
+          "completion_tokens": 87,
+          "total_tokens": 217,
+          "seconds_per_completion_token": 0.120087,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "Task: Create a rollout plan for switching providers, including fallback and performance gates  \nContext: The plan should detail the process of moving from one provider to another, incorporating failover mechanisms and performance monitoring. \nConstraints: The output should be in a clear, step-by-step format using bullet points. Length is not specified but aim for comprehensiveness. Use a professional and concise tone. Output format will be in a numbered list format.",
+          "visible_output": "Task: Create a rollout plan for switching providers, including fallback and performance gates  \nContext: The plan should detail the process of moving from one provider to another, incorporating failover mechanisms and performance monitoring. \nConstraints: The output should be in a clear, step-by-step format using bullet points. Length is not specified but aim for comprehensiveness. Use a professional and concise tone. Output format will be in a numbered list format.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": false,
+            "reasons": [
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 470,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 9828.0,
+            "completion_tokens": 87,
+            "decoding_speed_tps": 9.812870835235053,
+            "prefill_duration_ttft": 1.064,
+            "prompt_tokens": 130,
+            "total_tokens": 217
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6973665280,
+              "system_available_bytes": 5328642048
+            },
+            "after": {
+              "provider_rss_bytes": 6939078656,
+              "system_available_bytes": 6150434816
+            },
+            "max_provider_rss_bytes": 6984060928,
+            "min_system_available_bytes": 5271900160,
+            "available_delta_bytes": 56741888,
+            "memory_guard_violation": false,
+            "sample_count": 7
+          },
+          "error": ""
+        },
+        {
+          "run_index": 2,
+          "warmup": false,
+          "wall_seconds": 9.934288,
+          "ttft_seconds": 1.048,
+          "provider_native_metrics": {},
+          "prompt_tokens": 130,
+          "completion_tokens": 87,
+          "total_tokens": 217,
+          "seconds_per_completion_token": 0.114187,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "Task: Create a rollout plan for switching providers, including fallback and performance gates  \nContext: The plan should detail the process of moving from one provider to another, incorporating failover mechanisms and performance monitoring. \nConstraints: The output should be in a clear, step-by-step format using bullet points. Length is not specified but aim for comprehensiveness. Use a professional and concise tone. Output format will be in a numbered list format.",
+          "visible_output": "Task: Create a rollout plan for switching providers, including fallback and performance gates  \nContext: The plan should detail the process of moving from one provider to another, incorporating failover mechanisms and performance monitoring. \nConstraints: The output should be in a clear, step-by-step format using bullet points. Length is not specified but aim for comprehensiveness. Use a professional and concise tone. Output format will be in a numbered list format.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": false,
+            "reasons": [
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 470,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 9356.0,
+            "completion_tokens": 87,
+            "decoding_speed_tps": 10.351468464130958,
+            "prefill_duration_ttft": 1.048,
+            "prompt_tokens": 130,
+            "total_tokens": 217
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6939078656,
+              "system_available_bytes": 6117916672
+            },
+            "after": {
+              "provider_rss_bytes": 6940880896,
+              "system_available_bytes": 6120898560
+            },
+            "max_provider_rss_bytes": 6951399424,
+            "min_system_available_bytes": 6002245632,
+            "available_delta_bytes": 115671040,
+            "memory_guard_violation": false,
+            "sample_count": 7
+          },
+          "error": ""
+        },
+        {
+          "run_index": 3,
+          "warmup": false,
+          "wall_seconds": 9.962993,
+          "ttft_seconds": 1.012,
+          "provider_native_metrics": {},
+          "prompt_tokens": 130,
+          "completion_tokens": 87,
+          "total_tokens": 217,
+          "seconds_per_completion_token": 0.114517,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "Task: Create a rollout plan for switching providers, including fallback and performance gates  \nContext: The plan should detail the process of moving from one provider to another, incorporating failover mechanisms and performance monitoring. \nConstraints: The output should be in a clear, step-by-step format using bullet points. Length is not specified but aim for comprehensiveness. Use a professional and concise tone. Output format will be in a numbered list format.",
+          "visible_output": "Task: Create a rollout plan for switching providers, including fallback and performance gates  \nContext: The plan should detail the process of moving from one provider to another, incorporating failover mechanisms and performance monitoring. \nConstraints: The output should be in a clear, step-by-step format using bullet points. Length is not specified but aim for comprehensiveness. Use a professional and concise tone. Output format will be in a numbered list format.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": false,
+            "reasons": [
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 470,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 9367.0,
+            "completion_tokens": 87,
+            "decoding_speed_tps": 10.293237582286055,
+            "prefill_duration_ttft": 1.012,
+            "prompt_tokens": 130,
+            "total_tokens": 217
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6940880896,
+              "system_available_bytes": 6086434816
+            },
+            "after": {
+              "provider_rss_bytes": 6940897280,
+              "system_available_bytes": 6110343168
+            },
+            "max_provider_rss_bytes": 6951469056,
+            "min_system_available_bytes": 6014853120,
+            "available_delta_bytes": 71581696,
+            "memory_guard_violation": false,
+            "sample_count": 7
+          },
+          "error": ""
+        }
+      ]
+    },
+    {
+      "case_id": "prompt_review",
+      "task": "prompt",
+      "system_prompt": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact shape — Markdown headers, JSON keys, etc.). Keep each section short. No meta-framing, no preamble. Base every constraint on what the user actually asked for — never invent requirements they did not state. Return only the prompt.",
+      "user_prompt": "review this pull request for regressions and missing tests before release",
+      "max_tokens": 700,
+      "summary": {
+        "timed_runs": 2,
+        "pass_count": 0,
+        "pass_rate": 0.0,
+        "wall_seconds_median": 7.541106,
+        "wall_seconds_min": 7.356433,
+        "wall_seconds_max": 7.725778,
+        "seconds_per_completion_token_median": 0.125685,
+        "memory_guard_violations": 0
+      },
+      "runs": [
+        {
+          "run_index": 1,
+          "warmup": true,
+          "wall_seconds": 7.40656,
+          "ttft_seconds": 1.011,
+          "provider_native_metrics": {},
+          "prompt_tokens": 130,
+          "completion_tokens": 60,
+          "total_tokens": 190,
+          "seconds_per_completion_token": 0.123443,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "Task: Review this pull request for regressions and missing tests  \nContext: The pull request is contains code changes for a new release. \nConstraints: 1 a list of specific issues found, including any regressions and missing tests. Deliver in bullet points. Output format: Bullet points listing issues found",
+          "visible_output": "Task: Review this pull request for regressions and missing tests  \nContext: The pull request is contains code changes for a new release. \nConstraints: 1 a list of specific issues found, including any regressions and missing tests. Deliver in bullet points. Output format: Bullet points listing issues found",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": false,
+            "reasons": [
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 306,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 6793.0,
+            "completion_tokens": 60,
+            "decoding_speed_tps": 10.204081632653061,
+            "prefill_duration_ttft": 1.011,
+            "prompt_tokens": 130,
+            "total_tokens": 190
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6940897280,
+              "system_available_bytes": 6071087104
+            },
+            "after": {
+              "provider_rss_bytes": 6941085696,
+              "system_available_bytes": 6117777408
+            },
+            "max_provider_rss_bytes": 6951657472,
+            "min_system_available_bytes": 6025424896,
+            "available_delta_bytes": 45662208,
+            "memory_guard_violation": false,
+            "sample_count": 5
+          },
+          "error": ""
+        },
+        {
+          "run_index": 2,
+          "warmup": false,
+          "wall_seconds": 7.725778,
+          "ttft_seconds": 1.022,
+          "provider_native_metrics": {},
+          "prompt_tokens": 130,
+          "completion_tokens": 60,
+          "total_tokens": 190,
+          "seconds_per_completion_token": 0.128763,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "Task: Review this pull request for regressions and missing tests  \nContext: The pull request is contains code changes for a new release. \nConstraints: 1 a list of specific issues found, including any regressions and missing tests. Deliver in bullet points. Output format: Bullet points listing issues found",
+          "visible_output": "Task: Review this pull request for regressions and missing tests  \nContext: The pull request is contains code changes for a new release. \nConstraints: 1 a list of specific issues found, including any regressions and missing tests. Deliver in bullet points. Output format: Bullet points listing issues found",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": false,
+            "reasons": [
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 306,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 7135.0,
+            "completion_tokens": 60,
+            "decoding_speed_tps": 9.651562244397185,
+            "prefill_duration_ttft": 1.022,
+            "prompt_tokens": 130,
+            "total_tokens": 190
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6941085696,
+              "system_available_bytes": 6075674624
+            },
+            "after": {
+              "provider_rss_bytes": 6941261824,
+              "system_available_bytes": 6018228224
+            },
+            "max_provider_rss_bytes": 6951645184,
+            "min_system_available_bytes": 5955268608,
+            "available_delta_bytes": 120406016,
+            "memory_guard_violation": false,
+            "sample_count": 5
+          },
+          "error": ""
+        },
+        {
+          "run_index": 3,
+          "warmup": false,
+          "wall_seconds": 7.356433,
+          "ttft_seconds": 0.993,
+          "provider_native_metrics": {},
+          "prompt_tokens": 130,
+          "completion_tokens": 60,
+          "total_tokens": 190,
+          "seconds_per_completion_token": 0.122607,
+          "model_used": "b97a4fa0f25fcb6c557a6210114d4181fee7c363",
+          "raw_output": "Task: Review this pull request for regressions and missing tests  \nContext: The pull request is contains code changes for a new release. \nConstraints: 1 a list of specific issues found, including any regressions and missing tests. Deliver in bullet points. Output format: Bullet points listing issues found",
+          "visible_output": "Task: Review this pull request for regressions and missing tests  \nContext: The pull request is contains code changes for a new release. \nConstraints: 1 a list of specific issues found, including any regressions and missing tests. Deliver in bullet points. Output format: Bullet points listing issues found",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": false,
+            "reasons": [
+              "missing_constraints",
+              "missing_context",
+              "missing_output_format",
+              "missing_task"
+            ],
+            "near_miss": true,
+            "visible_chars": 306,
+            "sections": {},
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 6737.0,
+            "completion_tokens": 60,
+            "decoding_speed_tps": 10.27158774373259,
+            "prefill_duration_ttft": 0.993,
+            "prompt_tokens": 130,
+            "total_tokens": 190
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6941261824,
+              "system_available_bytes": 5997301760
+            },
+            "after": {
+              "provider_rss_bytes": 6941298688,
+              "system_available_bytes": 6069456896
+            },
+            "max_provider_rss_bytes": 6951792640,
+            "min_system_available_bytes": 5943844864,
+            "available_delta_bytes": 53456896,
+            "memory_guard_violation": false,
+            "sample_count": 5
+          },
+          "error": ""
+        }
+      ]
+    }
+  ]
+}

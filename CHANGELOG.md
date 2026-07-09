@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Fixed
+
+- **Meeting batch no longer retries content-less meetings forever.** A meeting Quill has neither minutes nor a transcript for (aborted/duplicate stub recordings) used to re-queue and re-fail on every batch run, so "Run batch now" and the after-hours scheduler kept reporting errors. Such meetings are now marked skipped (`data/meeting_skips.jsonl`) and excluded from future queues — but only when the meeting is older than 2 days, so a just-ended meeting whose transcript is still syncing keeps retrying. LLM/provider failures are never skip-marked and still retry. The batch result now reports a `skipped` count, and per-meeting error reasons remain in `logs/daemon.log`.
+- **Skipped meetings are now inspectable and clearable.** The dashboard shows active skipped Quill stubs, and `meeting_skips_list` / `meeting_skip_clear` let the daemon list or clear skip markers when Quill content appears later.
+- **Audit cleanup:** removed retired install shims, stale chat-popup config/window defaults, old `Ctrl+Shift+T` fallbacks, unused AHK dispatch wrappers, and the unused daemon process helper. Installer bootstrap output names now derive from `scripts/_version.py`.
+- **Dev checks:** added `check.ps1` to run `ruff`, `pytest`, and `node --check scripts/ui/web/app.js` with bundled Codex runtime fallbacks.
+
 ## 2.1.0
 
 **Meetings, on your own time.** Flowkey can now read your local Quill meetings and answer questions about them on the local model — and an after-hours scheduler pre-computes each meeting's digest (summary / goals / action items) during your idle window, so daytime reads are instant.

@@ -34,7 +34,7 @@ from tkinter import messagebox, scrolledtext, ttk
 import ffp_config
 import ffp_provider_status
 import paths as _paths
-from loopback_http import daemon_headers, json_get, json_post
+from loopback_http import daemon_headers, json_post
 
 log = logging.getLogger("ffp.first_run")
 
@@ -51,16 +51,25 @@ DONE_MARKER = _paths.MARKER_FIRST_RUN_DONE
 DAEMON_URL = "http://127.0.0.1:52650"
 DEFAULT_FLM_URL = "http://127.0.0.1:52625"
 DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434"
+PROVIDER_ORDER = ["fastflowlm", "ollama", "lmstudio", "lemonade"]
+PROVIDER_LABELS = {
+    "fastflowlm": "FastFlowLM",
+    "ollama": "Ollama",
+    "lmstudio": "LM Studio",
+    "lemonade": "Lemonade",
+}
 
 # Default models surface up-front; user can refresh to see what the provider has locally.
 DEFAULT_MODEL_CHOICES = {
     "fastflowlm": ["qwen3.5:4b", "nanbeige4.1:3b", "phi4:14b"],
     "ollama": ["llama3.2:3b", "qwen2.5:3b", "gemma3:4b"],
+    "lmstudio": ["qwen2.5-3b-instruct", "qwen2.5-7b-instruct", "llama-3.1-8b-instruct"],
+    "lemonade": ["Qwen2.5-3B-Instruct-NPU", "Llama-3.2-3B-Instruct-Hybrid", "Qwen3-4B-Hybrid"],
 }
 
 HOTKEY_FIELDS = [
     ("grammar_fix",   "Grammar fix",            "^+g"),
-    ("open_chat",     "Open chat popup",        "^+t"),
+    ("open_chat",     "Open Chat tab",          "^!c"),
     ("capture_note",  "Capture note",           "^!n"),
     ("ask_chat",      "Ask in chat (selection)","^+a"),
 ]
@@ -107,8 +116,9 @@ def choose_starting_provider(cfg: dict) -> str:
     active = providers.get(configured) or {}
     if active.get("available"):
         return configured
-    if (providers.get("ollama") or {}).get("available"):
-        return "ollama"
+    for fallback in ("ollama", "lmstudio", "lemonade"):
+        if (providers.get(fallback) or {}).get("available"):
+            return fallback
     return configured if configured in ffp_provider_status.PROVIDERS else "fastflowlm"
 
 
@@ -150,7 +160,7 @@ def detect_local_providers(active_provider: str, base_url: str) -> tuple[bool, s
     status = ffp_provider_status.providers_status(active_provider, base_url)
     providers = status.get("providers") or {}
     lines: list[str] = []
-    for key in ("ollama", "fastflowlm"):
+    for key in PROVIDER_ORDER:
         item = providers.get(key) or {}
         installed = "installed" if item.get("installed") else "not on PATH"
         reachable = "API reachable" if item.get("reachable") else "API not reachable"
@@ -164,24 +174,11 @@ def detect_local_providers(active_provider: str, base_url: str) -> tuple[bool, s
 def fetch_models(provider: str, base_url: str) -> list[str]:
     """Ask the local provider for the installed model list. Returns [] on failure."""
     provider = str(provider or "fastflowlm").strip().lower()
-    if provider == "ollama":
-        try:
-            payload = json_get(base_url.rstrip("/") + "/api/tags", timeout=3.0)
-        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError):
-            return []
-        models = payload.get("models") or []
-        return [str((m or {}).get("name") or "") for m in models if (m or {}).get("name")]
-
     try:
-        payload = json_get(
-            base_url.rstrip("/") + "/v1/models",
-            headers={"Authorization": "Bearer flm"},
-            timeout=3.0,
-        )
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError):
+        import ffp_provider_runtime
+        return list(ffp_provider_runtime.list_models(provider, "installed", "", 0, base_url).get("models") or [])
+    except Exception:
         return []
-    data = payload.get("data") or []
-    return [str((m or {}).get("id") or "") for m in data if (m or {}).get("id")]
 
 
 def start_provider_via_daemon() -> tuple[bool, str]:
@@ -280,11 +277,11 @@ class WizardApp:
         starting_provider = choose_starting_provider(self.cfg)
         base_url, default_model, auth_bearer = _provider_defaults(starting_provider)
         llm = _llm_cfg(self.cfg)
-        if starting_provider == "ollama":
-            llm["provider"] = "ollama"
-            llm["base_url"] = str(llm.get("base_url") or DEFAULT_OLLAMA_URL)
+        if starting_provider != "fastflowlm":
+            llm["provider"] = starting_provider
+            llm["base_url"] = str(llm.get("base_url") or base_url)
             llm["model"] = str(llm.get("model") or default_model)
-            llm["auth_bearer"] = str(llm.get("auth_bearer") or "ollama")
+            llm["auth_bearer"] = str(llm.get("auth_bearer", auth_bearer))
             llm["timeout_seconds"] = int(llm.get("timeout_seconds") or 120)
             llm["auto_start"] = False
         else:
@@ -458,7 +455,7 @@ class WizardApp:
         provider_combo = ttk.Combobox(
             provider_row,
             textvariable=self.var_provider,
-            values=["ollama", "fastflowlm"],
+            values=PROVIDER_ORDER,
             state="readonly",
         )
         provider_combo.pack(side="left", fill="x", expand=True)
@@ -502,7 +499,7 @@ class WizardApp:
 
     def on_start_provider(self) -> None:
         provider = self.var_provider.get().strip().lower()
-        label = "Ollama" if provider == "ollama" else "FastFlowLM"
+        label = PROVIDER_LABELS.get(provider, provider)
         self.model_status.configure(text=f"Starting {label}...", foreground="#666")
         self.root.update_idletasks()
 
@@ -538,21 +535,22 @@ class WizardApp:
             self.model_status.configure(text="Enter a model name first.", foreground="#a8201a")
             return
         provider = self.var_provider.get().strip().lower()
-        cli = "ollama" if provider == "ollama" else "flm"
-        self._append_log(f"$ {cli} pull {model}\n")
+        import ffp_provider_runtime
+        command = ffp_provider_runtime.pull_command(provider, model)
+        self._append_log("$ " + " ".join(command) + "\n")
         self.model_status.configure(text=f"Pulling {model} — this can take a few minutes...",
                                     foreground="#666")
 
         def worker() -> None:
             try:
                 proc = subprocess.Popen(
-                    [cli, "pull", model],
+                    command,
                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
                     creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
                 )
                 self._pull_proc = proc
             except FileNotFoundError:
-                self.root.after(0, lambda: self._append_log(f"ERROR: {cli}.exe not on PATH.\n"))
+                self.root.after(0, lambda: self._append_log(f"ERROR: {command[0]} not found.\n"))
                 return
             assert proc.stdout is not None
             pull_timeout_s = 3600
@@ -663,7 +661,7 @@ class WizardApp:
                   text=("Flowkey is ready. Hotkeys are live globally.\n\n"
                         "Try one of these now:\n"
                         f"  • {HOTKEY_FIELDS[0][2]} — grammar-fix selected text\n"
-                        f"  • {HOTKEY_FIELDS[1][2]} — open the chat popup\n"
+                        f"  • {HOTKEY_FIELDS[1][2]} — open the Chat tab\n"
                         f"  • {HOTKEY_FIELDS[2][2]} — capture the selection as a note\n"
                         f"  • {HOTKEY_FIELDS[3][2]} — ask in chat with the selection attached\n\n"
                         "Right-click the tray icon for the dashboard, diagnostics, and settings.")
@@ -740,7 +738,7 @@ class WizardApp:
         llm["base_url"] = self.cfg["flm_base_url"]
         llm["model"] = model
         llm["auth_bearer"] = auth_bearer
-        llm["timeout_seconds"] = 120 if provider == "ollama" else int(llm.get("timeout_seconds") or 60)
+        llm["timeout_seconds"] = 120 if provider != "fastflowlm" else int(llm.get("timeout_seconds") or 60)
         llm["auto_start"] = provider == "fastflowlm"
         self.cfg["flm_model"] = model
         self.cfg["flm_timeout_seconds"] = int(llm["timeout_seconds"])

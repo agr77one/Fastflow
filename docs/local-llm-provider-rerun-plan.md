@@ -1,8 +1,19 @@
 # Local LLM Provider Benchmark — Proper Rerun Plan
 
 Date: 2026-07-07
-Status: JULY 9 SECOND-DAY BATCH EXECUTED — Qwen2.5 replace-FLM gate passed
+Status: JULY 9 TRUNCATION AUDIT — replace-FLM gate long-context clauses INVALIDATED; outcome is ROUTING, not replacement
 Supersedes the methodology of: `docs/local-llm-provider-poc-readme.md` (POC of 2026-07-07)
+Superseded-for-long-context-by: `docs/lemonade-npu-only-bench-plan.md` (truncation-safe Matrix C rerun)
+
+> **July 9 correction.** The "replace-FLM gate passed" result below was
+> invalidated for the meetings/long-context workload. A needle-in-haystack probe
+> proved Lemonade `Qwen2.5-3B-Instruct-NPU` silently truncates input to roughly
+> the last 2-3k tokens while still reporting the full `prompt_tokens` count; the
+> uniform-filler transcript made the truncation invisible to the quality
+> checker. Short-task results (grammar `40/40`, prompt `45/50`) still stand.
+> Details: see the "July 9 Truncation Audit" section in
+> `docs/local-llm-provider-benchmark-readme.md`. The harness has been fixed
+> (needles at both transcript ends, `check_longctx_contract`).
 
 ## Execution Tracker
 
@@ -62,10 +73,13 @@ Completed in the July 8 batch:
   `second_day_lemonade_qwen3-4b-hybrid_no-think_20260709.json`,
   `second_day_lemonade_qwen2.5-3b-instruct-npu_gate_20260709.json`, and
   `second_day_lemonade_qwen2.5-3b-instruct-npu_gate_20260709.md`.
-- Qwen2.5 replace-FLM gate passed: `40/40` grammar, `45/50` prompt,
-  `15/15` calibrated long-context, all required long-context sizes present, and
-  zero memory-guard violations. Optional Qwen3 short rerun also passed
+- Qwen2.5 replace-FLM gate passed AS EVALUATED: `40/40` grammar, `45/50`
+  prompt, `15/15` calibrated long-context, all required long-context sizes
+  present, zero memory-guard violations. Optional Qwen3 short rerun also passed
   informational gates: `40/40` grammar and `50/50` prompt.
+  **INVALIDATED July 9:** the `15/15` long-context and required-sizes clauses
+  scored truncated input (see the correction note at the top). Grammar/prompt
+  clauses stand; the long-context clauses are void.
 
 Not complete yet:
 
@@ -222,6 +236,14 @@ as the incumbent: synthetic meeting-transcript prompts at **~1k, ~4k, ~8k tokens
 asking for a ~150-token digest. Measure TTFT and total wall time. If a runtime
 caps context below 8k (some NPU builds cap at 2k/4k — record the cap), that's a
 disqualifying fact for the meetings workload, not a footnote.
+
+> **July 9 correction — this matrix's original run was invalid.** The transcript
+> was uniform repeated filler, so a runtime that silently truncated the input
+> still "passed". Do NOT re-run Matrix C from this doc — use the truncation-safe
+> procedure in `docs/lemonade-npu-only-bench-plan.md`: needles planted at both
+> transcript ends and a checker that fails when either needle is not quoted.
+> A flat TTFT across 4k→8k is the fingerprint of silent truncation; real prefill
+> always scales with input length.
 
 ## Method (fixes for every POC flaw)
 

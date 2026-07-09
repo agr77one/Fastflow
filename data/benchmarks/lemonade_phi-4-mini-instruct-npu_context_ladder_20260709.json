@@ -1,0 +1,738 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-07-09T09:55:37",
+  "provider": "lemonade",
+  "base_url": "http://127.0.0.1:13305/api/v1",
+  "model": "Phi-4-mini-instruct-NPU",
+  "quant": "ryzenai-llm-npu",
+  "sizes": [
+    1000,
+    1500,
+    2000,
+    2500,
+    3000,
+    4000,
+    6000,
+    8000
+  ],
+  "temperature": 0.0,
+  "max_tokens": 40,
+  "versions": {
+    "lemonade": {
+      "command": [
+        "C:\\Users\\ArseniyGrechenkov\\AppData\\Local\\lemonade_server\\bin\\lemonade.exe",
+        "--version"
+      ],
+      "returncode": 0,
+      "stdout": "lemonade version 10.9.0",
+      "stderr": ""
+    },
+    "lemonade_backends": {
+      "command": [
+        "C:\\Users\\ArseniyGrechenkov\\AppData\\Local\\lemonade_server\\bin\\lemonade.exe",
+        "backends",
+        "--all"
+      ],
+      "returncode": 0,
+      "stdout": "Recipe              Backend     Status          Message/Version                               Action\n----------------------------------------------------------------------------------------------------------------------------------------------------\nflm                 npu         installable     -                                              lemonade backends install flm:npu\nkokoro              cpu         installable     Backend is supported but not installed.        lemonade backends install kokoro:cpu\n                    metal       unsupported     Requires macOS                                 -\nllamacpp            cpu         installable     Backend is supported but not installed.        lemonade backends install llamacpp:cpu\n                    cuda        unsupported     Unsupported GPU                                -\n                    metal       unsupported     Requires macOS                                 -\n                    rocm        installable     Backend is supported but not installed.        lemonade backends install llamacpp:rocm\n                    system      unsupported     Requires Linux                                 -\n                    vulkan      installable     Backend is supported but not installed.        lemonade backends install llamacpp:vulkan\nmoonshine           cpu         installable     Backend is supported but not installed.        lemonade backends install moonshine:cpu\nryzenai-llm         npu         installed       v1.7.0                                         -\nsd-cpp              cpu         installable     Backend is supported but not installed.        lemonade backends install sd-cpp:cpu\n                    cuda        unsupported     Requires Linux                                 -\n                    metal       unsupported     Requires macOS                                 -\n                    rocm        installable     Backend is supported but not installed.        lemonade backends install sd-cpp:rocm\n                    vulkan      installable     Backend is supported but not installed.        lemonade backends install sd-cpp:vulkan\nvllm                rocm        unsupported     Requires Linux                                 -\nwhispercpp          cpu         installable     Backend is supported but not installed.        lemonade backends install whispercpp:cpu\n                    metal       unsupported     Requires macOS                                 -\n                    npu         installable     Backend is supported but not installed.        lemonade backends install whispercpp:npu\n                    rocm        unsupported     Unsupported GPU: gfx1152                       -\n                    vulkan      installable     Backend is supported but not installed.        lemonade backends install whispercpp:vulkan\n----------------------------------------------------------------------------------------------------------------------------------------------------",
+      "stderr": ""
+    }
+  },
+  "summary": {
+    "largest_start_needle_found": 1500,
+    "first_start_needle_lost": 2000,
+    "end_needle_failures": [],
+    "meets_8k_start_needle_gate": false,
+    "flat_ttft_suspected": true
+  },
+  "results": [
+    {
+      "size": 1000,
+      "position": "start",
+      "code": "ZEBRA-1000-START",
+      "submitted_prompt_chars": 5383,
+      "reported_prompt_tokens": 1155,
+      "completion_tokens": 8,
+      "total_tokens": 1163,
+      "wall_seconds": 4.475583,
+      "ttft_seconds": 3.101,
+      "decoding_speed_tps": 9.358288770053475,
+      "prefill_duration_ttft": 3.101,
+      "found": true,
+      "raw_output": "ZEBRA-1000-START",
+      "visible_output": "ZEBRA-1000-START",
+      "think_stripped": false,
+      "unclosed_think": false,
+      "model_used": "bd0bd27173088207d1734ba80d47d8bd4a162761",
+      "usage": {
+        "completion_time_ms": 3849.0,
+        "completion_tokens": 8,
+        "decoding_speed_tps": 9.358288770053475,
+        "prefill_duration_ttft": 3.101,
+        "prompt_tokens": 1155,
+        "total_tokens": 1163
+      },
+      "memory": {
+        "before": {
+          "provider_rss_bytes": 5600145408,
+          "system_available_bytes": 9746157568
+        },
+        "after": {
+          "provider_rss_bytes": 7723528192,
+          "system_available_bytes": 7330156544
+        },
+        "max_provider_rss_bytes": 7724539904,
+        "min_system_available_bytes": 7315079168,
+        "available_delta_bytes": 2431078400,
+        "memory_guard_violation": false,
+        "sample_count": 3
+      },
+      "error": ""
+    },
+    {
+      "size": 1500,
+      "position": "start",
+      "code": "ZEBRA-1500-START",
+      "submitted_prompt_chars": 8008,
+      "reported_prompt_tokens": 1702,
+      "completion_tokens": 8,
+      "total_tokens": 1710,
+      "wall_seconds": 4.772833,
+      "ttft_seconds": 3.373,
+      "decoding_speed_tps": 9.957325746799432,
+      "prefill_duration_ttft": 3.373,
+      "found": true,
+      "raw_output": "ZEBRA-1500-START",
+      "visible_output": "ZEBRA-1500-START",
+      "think_stripped": false,
+      "unclosed_think": false,
+      "model_used": "bd0bd27173088207d1734ba80d47d8bd4a162761",
+      "usage": {
+        "completion_time_ms": 4076.0,
+        "completion_tokens": 8,
+        "decoding_speed_tps": 9.957325746799432,
+        "prefill_duration_ttft": 3.373,
+        "prompt_tokens": 1702,
+        "total_tokens": 1710
+      },
+      "memory": {
+        "before": {
+          "provider_rss_bytes": 7723528192,
+          "system_available_bytes": 7328616448
+        },
+        "after": {
+          "provider_rss_bytes": 7665377280,
+          "system_available_bytes": 7639658496
+        },
+        "max_provider_rss_bytes": 8406716416,
+        "min_system_available_bytes": 6906081280,
+        "available_delta_bytes": 422535168,
+        "memory_guard_violation": false,
+        "sample_count": 4
+      },
+      "error": ""
+    },
+    {
+      "size": 2000,
+      "position": "start",
+      "code": "ZEBRA-2000-START",
+      "submitted_prompt_chars": 10633,
+      "reported_prompt_tokens": 2252,
+      "completion_tokens": 5,
+      "total_tokens": 2257,
+      "wall_seconds": 4.516173,
+      "ttft_seconds": 3.533,
+      "decoding_speed_tps": 9.029345372460497,
+      "prefill_duration_ttft": 3.533,
+      "found": false,
+      "raw_output": "<|retrieve|>",
+      "visible_output": "<|retrieve|>",
+      "think_stripped": false,
+      "unclosed_think": false,
+      "model_used": "bd0bd27173088207d1734ba80d47d8bd4a162761",
+      "usage": {
+        "completion_time_ms": 3976.0,
+        "completion_tokens": 5,
+        "decoding_speed_tps": 9.029345372460497,
+        "prefill_duration_ttft": 3.533,
+        "prompt_tokens": 2252,
+        "total_tokens": 2257
+      },
+      "memory": {
+        "before": {
+          "provider_rss_bytes": 7665377280,
+          "system_available_bytes": 7642206208
+        },
+        "after": {
+          "provider_rss_bytes": 7947862016,
+          "system_available_bytes": 7385567232
+        },
+        "max_provider_rss_bytes": 8839909376,
+        "min_system_available_bytes": 6492995584,
+        "available_delta_bytes": 1149210624,
+        "memory_guard_violation": false,
+        "sample_count": 3
+      },
+      "error": ""
+    },
+    {
+      "size": 2500,
+      "position": "start",
+      "code": "ZEBRA-2500-START",
+      "submitted_prompt_chars": 13258,
+      "reported_prompt_tokens": 2793,
+      "completion_tokens": 7,
+      "total_tokens": 2800,
+      "wall_seconds": 4.351057,
+      "ttft_seconds": 3.131,
+      "decoding_speed_tps": 9.16030534351145,
+      "prefill_duration_ttft": 3.131,
+      "found": false,
+      "raw_output": "<|retrieval_code|>",
+      "visible_output": "<|retrieval_code|>",
+      "think_stripped": false,
+      "unclosed_think": false,
+      "model_used": "bd0bd27173088207d1734ba80d47d8bd4a162761",
+      "usage": {
+        "completion_time_ms": 3786.0,
+        "completion_tokens": 7,
+        "decoding_speed_tps": 9.16030534351145,
+        "prefill_duration_ttft": 3.131,
+        "prompt_tokens": 2793,
+        "total_tokens": 2800
+      },
+      "memory": {
+        "before": {
+          "provider_rss_bytes": 7947862016,
+          "system_available_bytes": 7326433280
+        },
+        "after": {
+          "provider_rss_bytes": 7948296192,
+          "system_available_bytes": 7356637184
+        },
+        "max_provider_rss_bytes": 8029229056,
+        "min_system_available_bytes": 7200301056,
+        "available_delta_bytes": 126132224,
+        "memory_guard_violation": false,
+        "sample_count": 3
+      },
+      "error": ""
+    },
+    {
+      "size": 3000,
+      "position": "start",
+      "code": "ZEBRA-3000-START",
+      "submitted_prompt_chars": 15883,
+      "reported_prompt_tokens": 3336,
+      "completion_tokens": 7,
+      "total_tokens": 3343,
+      "wall_seconds": 4.18644,
+      "ttft_seconds": 3.063,
+      "decoding_speed_tps": 9.983361064891847,
+      "prefill_duration_ttft": 3.063,
+      "found": false,
+      "raw_output": "<|retrieval_code|>",
+      "visible_output": "<|retrieval_code|>",
+      "think_stripped": false,
+      "unclosed_think": false,
+      "model_used": "bd0bd27173088207d1734ba80d47d8bd4a162761",
+      "usage": {
+        "completion_time_ms": 3664.0,
+        "completion_tokens": 7,
+        "decoding_speed_tps": 9.983361064891847,
+        "prefill_duration_ttft": 3.063,
+        "prompt_tokens": 3336,
+        "total_tokens": 3343
+      },
+      "memory": {
+        "before": {
+          "provider_rss_bytes": 7948296192,
+          "system_available_bytes": 7350796288
+        },
+        "after": {
+          "provider_rss_bytes": 7948648448,
+          "system_available_bytes": 7341985792
+        },
+        "max_provider_rss_bytes": 8029597696,
+        "min_system_available_bytes": 7265198080,
+        "available_delta_bytes": 85598208,
+        "memory_guard_violation": false,
+        "sample_count": 3
+      },
+      "error": ""
+    },
+    {
+      "size": 4000,
+      "position": "start",
+      "code": "ZEBRA-4000-START",
+      "submitted_prompt_chars": 21133,
+      "reported_prompt_tokens": 4422,
+      "completion_tokens": 7,
+      "total_tokens": 4429,
+      "wall_seconds": 4.368027,
+      "ttft_seconds": 3.146,
+      "decoding_speed_tps": 10.273972602739727,
+      "prefill_duration_ttft": 3.146,
+      "found": false,
+      "raw_output": "<|retrieve_transcript|>",
+      "visible_output": "<|retrieve_transcript|>",
+      "think_stripped": false,
+      "unclosed_think": false,
+      "model_used": "bd0bd27173088207d1734ba80d47d8bd4a162761",
+      "usage": {
+        "completion_time_ms": 3730.0,
+        "completion_tokens": 7,
+        "decoding_speed_tps": 10.273972602739727,
+        "prefill_duration_ttft": 3.146,
+        "prompt_tokens": 4422,
+        "total_tokens": 4429
+      },
+      "memory": {
+        "before": {
+          "provider_rss_bytes": 7948648448,
+          "system_available_bytes": 7283298304
+        },
+        "after": {
+          "provider_rss_bytes": 7949328384,
+          "system_available_bytes": 7384604672
+        },
+        "max_provider_rss_bytes": 8286552064,
+        "min_system_available_bytes": 7149879296,
+        "available_delta_bytes": 133419008,
+        "memory_guard_violation": false,
+        "sample_count": 3
+      },
+      "error": ""
+    },
+    {
+      "size": 6000,
+      "position": "start",
+      "code": "ZEBRA-6000-START",
+      "submitted_prompt_chars": 31633,
+      "reported_prompt_tokens": 6594,
+      "completion_tokens": 5,
+      "total_tokens": 6599,
+      "wall_seconds": 4.104706,
+      "ttft_seconds": 3.036,
+      "decoding_speed_tps": 8.620689655172413,
+      "prefill_duration_ttft": 3.036,
+      "found": false,
+      "raw_output": "<|retrieve|>",
+      "visible_output": "<|retrieve|>",
+      "think_stripped": false,
+      "unclosed_think": false,
+      "model_used": "bd0bd27173088207d1734ba80d47d8bd4a162761",
+      "usage": {
+        "completion_time_ms": 3500.0,
+        "completion_tokens": 5,
+        "decoding_speed_tps": 8.620689655172413,
+        "prefill_duration_ttft": 3.036,
+        "prompt_tokens": 6594,
+        "total_tokens": 6599
+      },
+      "memory": {
+        "before": {
+          "provider_rss_bytes": 7949328384,
+          "system_available_bytes": 7389073408
+        },
+        "after": {
+          "provider_rss_bytes": 7950356480,
+          "system_available_bytes": 7313293312
+        },
+        "max_provider_rss_bytes": 8031432704,
+        "min_system_available_bytes": 7305609216,
+        "available_delta_bytes": 83464192,
+        "memory_guard_violation": false,
+        "sample_count": 3
+      },
+      "error": ""
+    },
+    {
+      "size": 8000,
+      "position": "start",
+      "code": "ZEBRA-8000-START",
+      "submitted_prompt_chars": 42133,
+      "reported_prompt_tokens": 8763,
+      "completion_tokens": 7,
+      "total_tokens": 8770,
+      "wall_seconds": 4.564901,
+      "ttft_seconds": 3.356,
+      "decoding_speed_tps": 9.819967266775778,
+      "prefill_duration_ttft": 3.356,
+      "found": false,
+      "raw_output": "<|retrieval_code|>",
+      "visible_output": "<|retrieval_code|>",
+      "think_stripped": false,
+      "unclosed_think": false,
+      "model_used": "bd0bd27173088207d1734ba80d47d8bd4a162761",
+      "usage": {
+        "completion_time_ms": 3967.0,
+        "completion_tokens": 7,
+        "decoding_speed_tps": 9.819967266775778,
+        "prefill_duration_ttft": 3.356,
+        "prompt_tokens": 8763,
+        "total_tokens": 8770
+      },
+      "memory": {
+        "before": {
+          "provider_rss_bytes": 7950356480,
+          "system_available_bytes": 7306182656
+        },
+        "after": {
+          "provider_rss_bytes": 7951622144,
+          "system_available_bytes": 7335620608
+        },
+        "max_provider_rss_bytes": 8032579584,
+        "min_system_available_bytes": 7187902464,
+        "available_delta_bytes": 118280192,
+        "memory_guard_violation": false,
+        "sample_count": 3
+      },
+      "error": ""
+    },
+    {
+      "size": 1000,
+      "position": "end",
+      "code": "ZEBRA-1000-END",
+      "submitted_prompt_chars": 5381,
+      "reported_prompt_tokens": 1154,
+      "completion_tokens": 7,
+      "total_tokens": 1161,
+      "wall_seconds": 3.124329,
+      "ttft_seconds": 1.947,
+      "decoding_speed_tps": 10.380622837370243,
+      "prefill_duration_ttft": 1.947,
+      "found": true,
+      "raw_output": "ZEBRA-1000-END",
+      "visible_output": "ZEBRA-1000-END",
+      "think_stripped": false,
+      "unclosed_think": false,
+      "model_used": "bd0bd27173088207d1734ba80d47d8bd4a162761",
+      "usage": {
+        "completion_time_ms": 2525.0,
+        "completion_tokens": 7,
+        "decoding_speed_tps": 10.380622837370243,
+        "prefill_duration_ttft": 1.947,
+        "prompt_tokens": 1154,
+        "total_tokens": 1161
+      },
+      "memory": {
+        "before": {
+          "provider_rss_bytes": 7951622144,
+          "system_available_bytes": 7340855296
+        },
+        "after": {
+          "provider_rss_bytes": 8474079232,
+          "system_available_bytes": 6834536448
+        },
+        "max_provider_rss_bytes": 8474071040,
+        "min_system_available_bytes": 6835965952,
+        "available_delta_bytes": 504889344,
+        "memory_guard_violation": false,
+        "sample_count": 2
+      },
+      "error": ""
+    },
+    {
+      "size": 1500,
+      "position": "end",
+      "code": "ZEBRA-1500-END",
+      "submitted_prompt_chars": 8006,
+      "reported_prompt_tokens": 1702,
+      "completion_tokens": 7,
+      "total_tokens": 1709,
+      "wall_seconds": 4.133599,
+      "ttft_seconds": 2.836,
+      "decoding_speed_tps": 8.75912408759124,
+      "prefill_duration_ttft": 2.836,
+      "found": true,
+      "raw_output": "ZEBRA-1500-END",
+      "visible_output": "ZEBRA-1500-END",
+      "think_stripped": false,
+      "unclosed_think": false,
+      "model_used": "bd0bd27173088207d1734ba80d47d8bd4a162761",
+      "usage": {
+        "completion_time_ms": 3521.0,
+        "completion_tokens": 7,
+        "decoding_speed_tps": 8.75912408759124,
+        "prefill_duration_ttft": 2.836,
+        "prompt_tokens": 1702,
+        "total_tokens": 1709
+      },
+      "memory": {
+        "before": {
+          "provider_rss_bytes": 8474079232,
+          "system_available_bytes": 6795317248
+        },
+        "after": {
+          "provider_rss_bytes": 8710246400,
+          "system_available_bytes": 6625677312
+        },
+        "max_provider_rss_bytes": 8710246400,
+        "min_system_available_bytes": 6625779712,
+        "available_delta_bytes": 169537536,
+        "memory_guard_violation": false,
+        "sample_count": 3
+      },
+      "error": ""
+    },
+    {
+      "size": 2000,
+      "position": "end",
+      "code": "ZEBRA-2000-END",
+      "submitted_prompt_chars": 10631,
+      "reported_prompt_tokens": 2251,
+      "completion_tokens": 7,
+      "total_tokens": 2258,
+      "wall_seconds": 4.288119,
+      "ttft_seconds": 3.107,
+      "decoding_speed_tps": 10.067114093959733,
+      "prefill_duration_ttft": 3.107,
+      "found": true,
+      "raw_output": "ZEBRA-2000-END",
+      "visible_output": "ZEBRA-2000-END",
+      "think_stripped": false,
+      "unclosed_think": false,
+      "model_used": "bd0bd27173088207d1734ba80d47d8bd4a162761",
+      "usage": {
+        "completion_time_ms": 3703.0,
+        "completion_tokens": 7,
+        "decoding_speed_tps": 10.067114093959733,
+        "prefill_duration_ttft": 3.107,
+        "prompt_tokens": 2251,
+        "total_tokens": 2258
+      },
+      "memory": {
+        "before": {
+          "provider_rss_bytes": 8710246400,
+          "system_available_bytes": 6622257152
+        },
+        "after": {
+          "provider_rss_bytes": 7951646720,
+          "system_available_bytes": 7359004672
+        },
+        "max_provider_rss_bytes": 8773431296,
+        "min_system_available_bytes": 6557945856,
+        "available_delta_bytes": 64311296,
+        "memory_guard_violation": false,
+        "sample_count": 3
+      },
+      "error": ""
+    },
+    {
+      "size": 2500,
+      "position": "end",
+      "code": "ZEBRA-2500-END",
+      "submitted_prompt_chars": 13256,
+      "reported_prompt_tokens": 2793,
+      "completion_tokens": 7,
+      "total_tokens": 2800,
+      "wall_seconds": 4.230037,
+      "ttft_seconds": 2.987,
+      "decoding_speed_tps": 9.646302250803858,
+      "prefill_duration_ttft": 2.987,
+      "found": true,
+      "raw_output": "ZEBRA-2500-END",
+      "visible_output": "ZEBRA-2500-END",
+      "think_stripped": false,
+      "unclosed_think": false,
+      "model_used": "bd0bd27173088207d1734ba80d47d8bd4a162761",
+      "usage": {
+        "completion_time_ms": 3609.0,
+        "completion_tokens": 7,
+        "decoding_speed_tps": 9.646302250803858,
+        "prefill_duration_ttft": 2.987,
+        "prompt_tokens": 2793,
+        "total_tokens": 2800
+      },
+      "memory": {
+        "before": {
+          "provider_rss_bytes": 7951646720,
+          "system_available_bytes": 7299760128
+        },
+        "after": {
+          "provider_rss_bytes": 8843771904,
+          "system_available_bytes": 6437101568
+        },
+        "max_provider_rss_bytes": 8843763712,
+        "min_system_available_bytes": 6427475968,
+        "available_delta_bytes": 872284160,
+        "memory_guard_violation": false,
+        "sample_count": 3
+      },
+      "error": ""
+    },
+    {
+      "size": 3000,
+      "position": "end",
+      "code": "ZEBRA-3000-END",
+      "submitted_prompt_chars": 15881,
+      "reported_prompt_tokens": 3336,
+      "completion_tokens": 7,
+      "total_tokens": 3343,
+      "wall_seconds": 4.252882,
+      "ttft_seconds": 3.045,
+      "decoding_speed_tps": 9.448818897637794,
+      "prefill_duration_ttft": 3.045,
+      "found": true,
+      "raw_output": "ZEBRA-3000-END",
+      "visible_output": "ZEBRA-3000-END",
+      "think_stripped": false,
+      "unclosed_think": false,
+      "model_used": "bd0bd27173088207d1734ba80d47d8bd4a162761",
+      "usage": {
+        "completion_time_ms": 3680.0,
+        "completion_tokens": 7,
+        "decoding_speed_tps": 9.448818897637794,
+        "prefill_duration_ttft": 3.045,
+        "prompt_tokens": 3336,
+        "total_tokens": 3343
+      },
+      "memory": {
+        "before": {
+          "provider_rss_bytes": 8843771904,
+          "system_available_bytes": 6425567232
+        },
+        "after": {
+          "provider_rss_bytes": 8843747328,
+          "system_available_bytes": 6414483456
+        },
+        "max_provider_rss_bytes": 8843739136,
+        "min_system_available_bytes": 6394064896,
+        "available_delta_bytes": 31502336,
+        "memory_guard_violation": false,
+        "sample_count": 3
+      },
+      "error": ""
+    },
+    {
+      "size": 4000,
+      "position": "end",
+      "code": "ZEBRA-4000-END",
+      "submitted_prompt_chars": 21131,
+      "reported_prompt_tokens": 4422,
+      "completion_tokens": 7,
+      "total_tokens": 4429,
+      "wall_seconds": 4.382169,
+      "ttft_seconds": 3.146,
+      "decoding_speed_tps": 9.538950715421304,
+      "prefill_duration_ttft": 3.146,
+      "found": true,
+      "raw_output": "ZEBRA-4000-END",
+      "visible_output": "ZEBRA-4000-END",
+      "think_stripped": false,
+      "unclosed_think": false,
+      "model_used": "bd0bd27173088207d1734ba80d47d8bd4a162761",
+      "usage": {
+        "completion_time_ms": 3775.0,
+        "completion_tokens": 7,
+        "decoding_speed_tps": 9.538950715421304,
+        "prefill_duration_ttft": 3.146,
+        "prompt_tokens": 4422,
+        "total_tokens": 4429
+      },
+      "memory": {
+        "before": {
+          "provider_rss_bytes": 8843747328,
+          "system_available_bytes": 6354751488
+        },
+        "after": {
+          "provider_rss_bytes": 8843776000,
+          "system_available_bytes": 6478168064
+        },
+        "max_provider_rss_bytes": 8843767808,
+        "min_system_available_bytes": 6487646208,
+        "available_delta_bytes": -132894720,
+        "memory_guard_violation": false,
+        "sample_count": 3
+      },
+      "error": ""
+    },
+    {
+      "size": 6000,
+      "position": "end",
+      "code": "ZEBRA-6000-END",
+      "submitted_prompt_chars": 31631,
+      "reported_prompt_tokens": 6594,
+      "completion_tokens": 7,
+      "total_tokens": 6601,
+      "wall_seconds": 4.300755,
+      "ttft_seconds": 3.087,
+      "decoding_speed_tps": 9.11854103343465,
+      "prefill_duration_ttft": 3.087,
+      "found": true,
+      "raw_output": "ZEBRA-6000-END",
+      "visible_output": "ZEBRA-6000-END",
+      "think_stripped": false,
+      "unclosed_think": false,
+      "model_used": "bd0bd27173088207d1734ba80d47d8bd4a162761",
+      "usage": {
+        "completion_time_ms": 3745.0,
+        "completion_tokens": 7,
+        "decoding_speed_tps": 9.11854103343465,
+        "prefill_duration_ttft": 3.087,
+        "prompt_tokens": 6594,
+        "total_tokens": 6601
+      },
+      "memory": {
+        "before": {
+          "provider_rss_bytes": 8843776000,
+          "system_available_bytes": 6406029312
+        },
+        "after": {
+          "provider_rss_bytes": 8843833344,
+          "system_available_bytes": 6479937536
+        },
+        "max_provider_rss_bytes": 8843825152,
+        "min_system_available_bytes": 6489788416,
+        "available_delta_bytes": -83759104,
+        "memory_guard_violation": false,
+        "sample_count": 3
+      },
+      "error": ""
+    },
+    {
+      "size": 8000,
+      "position": "end",
+      "code": "ZEBRA-8000-END",
+      "submitted_prompt_chars": 42131,
+      "reported_prompt_tokens": 8763,
+      "completion_tokens": 7,
+      "total_tokens": 8770,
+      "wall_seconds": 4.220244,
+      "ttft_seconds": 3.045,
+      "decoding_speed_tps": 9.67741935483871,
+      "prefill_duration_ttft": 3.045,
+      "found": true,
+      "raw_output": "ZEBRA-8000-END",
+      "visible_output": "ZEBRA-8000-END",
+      "think_stripped": false,
+      "unclosed_think": false,
+      "model_used": "bd0bd27173088207d1734ba80d47d8bd4a162761",
+      "usage": {
+        "completion_time_ms": 3665.0,
+        "completion_tokens": 7,
+        "decoding_speed_tps": 9.67741935483871,
+        "prefill_duration_ttft": 3.045,
+        "prompt_tokens": 8763,
+        "total_tokens": 8770
+      },
+      "memory": {
+        "before": {
+          "provider_rss_bytes": 8843833344,
+          "system_available_bytes": 6493876224
+        },
+        "after": {
+          "provider_rss_bytes": 8843952128,
+          "system_available_bytes": 6460776448
+        },
+        "max_provider_rss_bytes": 8843943936,
+        "min_system_available_bytes": 6461079552,
+        "available_delta_bytes": 32796672,
+        "memory_guard_violation": false,
+        "sample_count": 3
+      },
+      "error": ""
+    }
+  ]
+}

@@ -8,6 +8,36 @@
     "timeout_seconds": 30,
     "auto_start": true
   },
+  "providers": {
+    "fastflowlm": {
+      "base_url": "http://127.0.0.1:52625",
+      "model": "qwen3.5:4b",
+      "auth_bearer": "flm",
+      "timeout_seconds": 60,
+      "auto_start": true
+    },
+    "ollama": {
+      "base_url": "http://127.0.0.1:11434",
+      "model": "llama3.2:3b",
+      "auth_bearer": "ollama",
+      "timeout_seconds": 120,
+      "auto_start": false
+    },
+    "lmstudio": {
+      "base_url": "http://127.0.0.1:1234",
+      "model": "qwen2.5-3b-instruct",
+      "auth_bearer": "",
+      "timeout_seconds": 120,
+      "auto_start": false
+    },
+    "lemonade": {
+      "base_url": "http://127.0.0.1:13305",
+      "model": "Qwen2.5-3B-Instruct-NPU",
+      "auth_bearer": "lemonade",
+      "timeout_seconds": 120,
+      "auto_start": false
+    }
+  },
   "flm_base_url": "http://127.0.0.1:52625",
   "flm_model": "qwen3.5:4b",
   "flm_timeout_seconds": 30,
@@ -87,14 +117,7 @@
     "temperature": 0.3,
     "max_tokens": 1024,
     "context_window_turns": 12,
-    "system_prompt": "You are a concise, helpful local assistant. Answer in Markdown. Keep replies short unless asked to elaborate.",
-    "window": {
-      "title": "Local LLM Chat",
-      "width": 520,
-      "height": 560,
-      "topmost": true,
-      "single_instance_port": 52640
-    }
+    "system_prompt": "You are a concise, helpful local assistant. Answer in Markdown. Keep replies short unless asked to elaborate."
   },
   "modes": {
     "grammar": {

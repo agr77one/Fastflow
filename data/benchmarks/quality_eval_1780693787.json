@@ -1,0 +1,1253 @@
+{
+  "run_at": "2026-06-05T17:05:19",
+  "speed_source": {
+    "gemma4-it:e4b": {
+      "timestamp": "2026-06-03T16:24:43",
+      "rows": [
+        {
+          "context": 1.0,
+          "ttft_s": 2.79313,
+          "prefill_tps": 351.11,
+          "decode_tps": 12.25,
+          "raw": [
+            "1",
+            "2.793130",
+            "0.100341",
+            "2.588247",
+            "2.941953",
+            "351.11",
+            "12.97",
+            "332.92",
+            "378.54",
+            "12.25",
+            "0.34",
+            "11.51",
+            "12.69"
+          ]
+        },
+        {
+          "context": 2.0,
+          "ttft_s": 4.443133,
+          "prefill_tps": 438.98,
+          "decode_tps": 11.83,
+          "raw": [
+            "2",
+            "4.443133",
+            "0.140051",
+            "4.168066",
+            "4.614860",
+            "438.98",
+            "14.14",
+            "422.22",
+            "467.48",
+            "11.83",
+            "0.44",
+            "10.70",
+            "12.17"
+          ]
+        },
+        {
+          "context": 4.0,
+          "ttft_s": 7.257507,
+          "prefill_tps": 536.4,
+          "decode_tps": 11.39,
+          "raw": [
+            "4",
+            "7.257507",
+            "0.296311",
+            "6.751601",
+            "7.632455",
+            "536.40",
+            "22.44",
+            "509.04",
+            "575.65",
+            "11.39",
+            "0.12",
+            "11.25",
+            "11.56"
+          ]
+        },
+        {
+          "context": 8.0,
+          "ttft_s": 13.77805,
+          "prefill_tps": 565.14,
+          "decode_tps": 10.39,
+          "raw": [
+            "8",
+            "13.778050",
+            "0.801803",
+            "12.821285",
+            "14.896051",
+            "565.14",
+            "32.74",
+            "520.88",
+            "605.23",
+            "10.39",
+            "0.20",
+            "9.87",
+            "10.55"
+          ]
+        },
+        {
+          "context": 16.0,
+          "ttft_s": 28.213831,
+          "prefill_tps": 551.09,
+          "decode_tps": 8.87,
+          "raw": [
+            "16",
+            "28.213831",
+            "1.400040",
+            "26.655188",
+            "30.084419",
+            "551.09",
+            "27.29",
+            "515.52",
+            "581.84",
+            "8.87",
+            "0.09",
+            "8.65",
+            "8.92"
+          ]
+        },
+        {
+          "context": 32.0,
+          "ttft_s": 64.997147,
+          "prefill_tps": 478.0,
+          "decode_tps": 6.85,
+          "raw": [
+            "32",
+            "64.997147",
+            "2.862766",
+            "61.614601",
+            "68.456879",
+            "478.00",
+            "21.05",
+            "453.00",
+            "503.20",
+            "6.85",
+            "0.02",
+            "6.82",
+            "6.89"
+          ]
+        }
+      ],
+      "file": "C:\\Users\\ArseniyGrechenkov\\Downloads\\transfer\\transfer\\FastFlowPrompt_Local_Setup\\release\\data\\benchmarks\\gemma4-it-e4b_1780518283.json"
+    },
+    "nanbeige4.1:3b": {
+      "timestamp": "2026-06-03T17:00:38",
+      "rows": [
+        {
+          "context": 1.0,
+          "ttft_s": 1.784497,
+          "prefill_tps": 561.02,
+          "decode_tps": 22.8,
+          "raw": [
+            "1",
+            "1.784497",
+            "0.008854",
+            "1.771067",
+            "1.795918",
+            "561.02",
+            "2.79",
+            "557.45",
+            "565.32",
+            "22.80",
+            "0.06",
+            "22.72",
+            "22.89"
+          ]
+        },
+        {
+          "context": 2.0,
+          "ttft_s": 3.060991,
+          "prefill_tps": 644.03,
+          "decode_tps": 21.71,
+          "raw": [
+            "2",
+            "3.060991",
+            "0.035558",
+            "3.031160",
+            "3.152742",
+            "644.03",
+            "7.39",
+            "624.96",
+            "650.20",
+            "21.71",
+            "0.14",
+            "21.46",
+            "21.84"
+          ]
+        },
+        {
+          "context": 4.0,
+          "ttft_s": 6.089104,
+          "prefill_tps": 641.89,
+          "decode_tps": 20.0,
+          "raw": [
+            "4",
+            "6.089104",
+            "0.074438",
+            "5.986976",
+            "6.228543",
+            "641.89",
+            "7.82",
+            "627.40",
+            "652.72",
+            "20.00",
+            "0.05",
+            "19.93",
+            "20.08"
+          ]
+        },
+        {
+          "context": 8.0,
+          "ttft_s": 13.387642,
+          "prefill_tps": 581.27,
+          "decode_tps": 17.04,
+          "raw": [
+            "8",
+            "13.387642",
+            "0.030065",
+            "13.346700",
+            "13.437003",
+            "581.27",
+            "1.31",
+            "579.15",
+            "583.05",
+            "17.04",
+            "0.06",
+            "16.93",
+            "17.12"
+          ]
+        },
+        {
+          "context": 16.0,
+          "ttft_s": 34.021706,
+          "prefill_tps": 456.45,
+          "decode_tps": 12.94,
+          "raw": [
+            "16",
+            "34.021706",
+            "0.167881",
+            "33.811234",
+            "34.392052",
+            "456.45",
+            "2.25",
+            "451.47",
+            "459.29",
+            "12.94",
+            "0.27",
+            "12.47",
+            "13.13"
+          ]
+        },
+        {
+          "context": 32.0,
+          "ttft_s": 101.137085,
+          "prefill_tps": 306.74,
+          "decode_tps": 8.92,
+          "raw": [
+            "32",
+            "101.137085",
+            "0.631904",
+            "100.541878",
+            "102.493927",
+            "306.74",
+            "1.90",
+            "302.69",
+            "308.55",
+            "8.92",
+            "0.09",
+            "8.69",
+            "8.99"
+          ]
+        }
+      ],
+      "file": "C:\\Users\\ArseniyGrechenkov\\Downloads\\transfer\\transfer\\FastFlowPrompt_Local_Setup\\release\\data\\benchmarks\\nanbeige4-1-3b_1780520438.json"
+    },
+    "qwen3.5:4b": {
+      "timestamp": "2026-06-03T12:18:23",
+      "rows": [
+        {
+          "context": 1.0,
+          "ttft_s": 3.186803,
+          "prefill_tps": 307.64,
+          "decode_tps": 13.75,
+          "raw": [
+            "1",
+            "3.186803",
+            "0.132372",
+            "3.067345",
+            "3.438104",
+            "307.64",
+            "12.25",
+            "284.64",
+            "319.18",
+            "13.75",
+            "0.02",
+            "13.72",
+            "13.80"
+          ]
+        },
+        {
+          "context": 2.0,
+          "ttft_s": 5.286461,
+          "prefill_tps": 368.54,
+          "decode_tps": 13.5,
+          "raw": [
+            "2",
+            "5.286461",
+            "0.131107",
+            "5.166234",
+            "5.621389",
+            "368.54",
+            "8.57",
+            "346.78",
+            "376.89",
+            "13.50",
+            "0.06",
+            "13.36",
+            "13.53"
+          ]
+        },
+        {
+          "context": 4.0,
+          "ttft_s": 9.563234,
+          "prefill_tps": 406.28,
+          "decode_tps": 13.08,
+          "raw": [
+            "4",
+            "9.563234",
+            "0.276642",
+            "9.353463",
+            "10.280507",
+            "406.28",
+            "11.14",
+            "377.52",
+            "415.17",
+            "13.08",
+            "0.02",
+            "13.05",
+            "13.10"
+          ]
+        },
+        {
+          "context": 8.0,
+          "ttft_s": 18.31863,
+          "prefill_tps": 423.67,
+          "decode_tps": 12.15,
+          "raw": [
+            "8",
+            "18.318630",
+            "0.649755",
+            "17.862839",
+            "19.967455",
+            "423.67",
+            "14.10",
+            "388.17",
+            "433.94",
+            "12.15",
+            "0.31",
+            "11.33",
+            "12.32"
+          ]
+        },
+        {
+          "context": 16.0,
+          "ttft_s": 36.763248,
+          "prefill_tps": 421.71,
+          "decode_tps": 10.75,
+          "raw": [
+            "16",
+            "36.763248",
+            "0.949248",
+            "36.191433",
+            "39.242710",
+            "421.71",
+            "10.33",
+            "394.77",
+            "428.13",
+            "10.75",
+            "0.34",
+            "9.86",
+            "10.94"
+          ]
+        },
+        {
+          "context": 32.0,
+          "ttft_s": 78.712563,
+          "prefill_tps": 393.63,
+          "decode_tps": 8.93,
+          "raw": [
+            "32",
+            "78.712563",
+            "1.363611",
+            "77.828613",
+            "82.228661",
+            "393.63",
+            "6.58",
+            "376.70",
+            "397.99",
+            "8.93",
+            "0.05",
+            "8.79",
+            "8.97"
+          ]
+        }
+      ],
+      "file": "C:\\Users\\ArseniyGrechenkov\\Downloads\\transfer\\transfer\\FastFlowPrompt_Local_Setup\\release\\data\\benchmarks\\qwen3-5-4b_1780503503.json"
+    }
+  },
+  "models": {
+    "gemma4-it:e4b": [
+      {
+        "mode": "grammar",
+        "id": "grammar_short",
+        "elapsed_s": 3.721,
+        "usage": {
+          "prompt_tokens": 71,
+          "completion_tokens": 22,
+          "total_tokens": 93,
+          "kv_token_occupancy_rate_percentage": 0.2838134765625,
+          "load_duration": 6e-07,
+          "prefill_duration_ttft": 1.72115392,
+          "decoding_duration": 1.820429,
+          "prefill_speed_tps": 41.251394878152446,
+          "decoding_speed_tps": 12.085063465809434
+        },
+        "model_used": "gemma4-it:e4b",
+        "input": "i has a meeting tomorow with teh finance team, can you send me the numbers before 3pm? :)",
+        "output": "I have a meeting tomorrow with the finance team. Can you send me the numbers before 3 PM? :)",
+        "quality": {
+          "score": 9,
+          "max": 10,
+          "checks": [
+            [
+              "has I have",
+              true
+            ],
+            [
+              "has tomorrow",
+              true
+            ],
+            [
+              "has the finance team",
+              true
+            ],
+            [
+              "has before 3pm",
+              false
+            ],
+            [
+              "has :)",
+              true
+            ],
+            [
+              "avoids teh",
+              true
+            ],
+            [
+              "avoids tomorow",
+              true
+            ],
+            [
+              "avoids i has",
+              true
+            ],
+            [
+              "no preamble",
+              true
+            ],
+            [
+              "bounded length",
+              true
+            ]
+          ]
+        }
+      },
+      {
+        "mode": "grammar",
+        "id": "grammar_preserve",
+        "elapsed_s": 5.146,
+        "usage": {
+          "prompt_tokens": 76,
+          "completion_tokens": 31,
+          "total_tokens": 107,
+          "kv_token_occupancy_rate_percentage": 0.3265380859375,
+          "load_duration": 8e-07,
+          "prefill_duration_ttft": 1.698319744,
+          "decoding_duration": 3.216557,
+          "prefill_speed_tps": 44.75011273259978,
+          "decoding_speed_tps": 9.637634277894033
+        },
+        "model_used": "gemma4-it:e4b",
+        "input": "FastFlowPrompt dont send data outside local machine, it run on AMD Ryzen AI NPU and use qwen3.5:4b.",
+        "output": "FastFlowPrompt does not send data outside the local machine; it runs on AMD Ryzen AI NPU and uses Qwen3.5:4b.",
+        "quality": {
+          "score": 8,
+          "max": 8,
+          "checks": [
+            [
+              "has FastFlowPrompt",
+              true
+            ],
+            [
+              "has local machine",
+              true
+            ],
+            [
+              "has AMD Ryzen AI NPU",
+              true
+            ],
+            [
+              "has qwen3.5:4b",
+              true
+            ],
+            [
+              "avoids dont ",
+              true
+            ],
+            [
+              "avoids  it run ",
+              true
+            ],
+            [
+              "no preamble",
+              true
+            ],
+            [
+              "bounded length",
+              true
+            ]
+          ]
+        }
+      },
+      {
+        "mode": "prompt",
+        "id": "prompt_product",
+        "elapsed_s": 19.907,
+        "usage": {
+          "prompt_tokens": 135,
+          "completion_tokens": 193,
+          "total_tokens": 328,
+          "kv_token_occupancy_rate_percentage": 1.0009765625,
+          "load_duration": 7e-07,
+          "prefill_duration_ttft": 1.793093376,
+          "decoding_duration": 17.53804,
+          "prefill_speed_tps": 75.28888445349988,
+          "decoding_speed_tps": 11.00465046265147
+        },
+        "model_used": "gemma4-it:e4b",
+        "input": "make prompt for claude: build a windows hotkey app that fixes grammar with local llm only, no cloud, include tests and installer notes",
+        "output": "<task>Develop a complete specification and implementation plan for a Windows hotkey application that performs real-time grammar correction using only a locally hosted LLM.</task>\n<context>The application must function as a system-wide hotkey listener, intercepting text input to apply grammar fixes. All processing, including the LLM inference, must occur entirely on the user's local machine without external cloud API calls.</context>\n<constraints>The plan must include detailed unit and integration tests for core functionality (hotkey capture, LLM invocation success/failure). It must also provide clear installation instructions suitable for a non-technical end-user. The tone should be highly technical and prescriptive.</constraints>\n<output_format>Markdown document with the following structure: `# Project Overview`, `## Technical Specification`, `### Local LLM Integration Details`, `## Testing Strategy (Unit/Integration)`, `## Installation & Usage Notes`</output_format>",
+        "quality": {
+          "score": 13,
+          "max": 14,
+          "checks": [
+            [
+              "has <task>",
+              true
+            ],
+            [
+              "has <context>",
+              true
+            ],
+            [
+              "has <constraints>",
+              true
+            ],
+            [
+              "has <output_format>",
+              true
+            ],
+            [
+              "has Windows",
+              true
+            ],
+            [
+              "has hotkey",
+              true
+            ],
+            [
+              "has local",
+              true
+            ],
+            [
+              "has tests",
+              true
+            ],
+            [
+              "has installer",
+              false
+            ],
+            [
+              "avoids Act as",
+              true
+            ],
+            [
+              "avoids Here is",
+              true
+            ],
+            [
+              "avoids I can",
+              true
+            ],
+            [
+              "no preamble",
+              true
+            ],
+            [
+              "bounded length",
+              true
+            ]
+          ]
+        }
+      },
+      {
+        "mode": "prompt",
+        "id": "prompt_debug",
+        "elapsed_s": 13.382,
+        "usage": {
+          "prompt_tokens": 135,
+          "completion_tokens": 146,
+          "total_tokens": 281,
+          "kv_token_occupancy_rate_percentage": 0.8575439453125,
+          "load_duration": 6e-07,
+          "prefill_duration_ttft": 1.516873088,
+          "decoding_duration": 11.422017,
+          "prefill_speed_tps": 88.99887608791171,
+          "decoding_speed_tps": 12.782330826508137
+        },
+        "model_used": "gemma4-it:e4b",
+        "input": "prompt: debug why flm serve is slow at 32k context, compare gemma nanbeige qwen, output a table and recommendation",
+        "output": "<task>Debug the performance bottleneck of `flm serve` when operating with a 32k context window and compare its speed against Gemma, Nanbeige, and Qwen.</task>\n<context>The user is experiencing slow response times from `flm serve` specifically when using a 32k context size. The comparison should involve three specific models: Gemma, Nanbeige, and Qwen.</context>\n<constraints>Output must include a comparative table detailing performance metrics (e.g., latency/throughput) for all four models under the specified conditions. The tone must be technical and analytical.</constraints>\n<output_format>Markdown table followed by a concise recommendation section.</output_format>",
+        "quality": {
+          "score": 15,
+          "max": 15,
+          "checks": [
+            [
+              "has <task>",
+              true
+            ],
+            [
+              "has <context>",
+              true
+            ],
+            [
+              "has <constraints>",
+              true
+            ],
+            [
+              "has <output_format>",
+              true
+            ],
+            [
+              "has 32k",
+              true
+            ],
+            [
+              "has gemma",
+              true
+            ],
+            [
+              "has nanbeige",
+              true
+            ],
+            [
+              "has qwen",
+              true
+            ],
+            [
+              "has table",
+              true
+            ],
+            [
+              "has recommendation",
+              true
+            ],
+            [
+              "avoids Act as",
+              true
+            ],
+            [
+              "avoids Here is",
+              true
+            ],
+            [
+              "avoids I can",
+              true
+            ],
+            [
+              "no preamble",
+              true
+            ],
+            [
+              "bounded length",
+              true
+            ]
+          ]
+        }
+      }
+    ],
+    "nanbeige4.1:3b": [
+      {
+        "mode": "grammar",
+        "id": "grammar_short",
+        "elapsed_s": 12.941,
+        "usage": {
+          "prompt_tokens": 73,
+          "completion_tokens": 220,
+          "total_tokens": 293,
+          "kv_token_occupancy_rate_percentage": 3.57666015625,
+          "load_duration": 9e-07,
+          "prefill_duration_ttft": 1.208603136,
+          "decoding_duration": 11.413196,
+          "prefill_speed_tps": 60.40030662306671,
+          "decoding_speed_tps": 19.275932876295126
+        },
+        "model_used": "nanbeige4.1:3b",
+        "input": "i has a meeting tomorow with teh finance team, can you send me the numbers before 3pm? :)",
+        "output": "We are given a query that has several grammatical, spelling, punctuation, capitalization, and wording mistakes. The task is to correct these while preserving the meaning and keeping the emoji/smiley exactly as written when possible.\n\nOriginal query: \n\"i has a meeting tomorow with teh finance team, can you send me the numbers before 3pm? :)\"\n\nLet's break down the issues:\n\n1. **Capitalization**: \n   - The first word \"i\" should be capitalized to \"I\" because it's the start of a sentence.\n   - \"meeting\" is not at the beginning of a sentence but the sentence starts with \"i\", so we fix the first letter.\n   - \"tomorow\" is misspelled; it should be \"tomorrow\".\n   - \"teh\" is a common misspelling of \"the\"; should be \"the\".\n   - \"finance\" is likely intended as \"finance team\", but note: the original says \"teh finance team\", so",
+        "quality": {
+          "score": 4,
+          "max": 10,
+          "checks": [
+            [
+              "has I have",
+              false
+            ],
+            [
+              "has tomorrow",
+              true
+            ],
+            [
+              "has the finance team",
+              false
+            ],
+            [
+              "has before 3pm",
+              true
+            ],
+            [
+              "has :)",
+              true
+            ],
+            [
+              "avoids teh",
+              false
+            ],
+            [
+              "avoids tomorow",
+              false
+            ],
+            [
+              "avoids i has",
+              false
+            ],
+            [
+              "no preamble",
+              true
+            ],
+            [
+              "bounded length",
+              false
+            ]
+          ]
+        }
+      },
+      {
+        "mode": "grammar",
+        "id": "grammar_preserve",
+        "elapsed_s": 13.766,
+        "usage": {
+          "prompt_tokens": 78,
+          "completion_tokens": 220,
+          "total_tokens": 298,
+          "kv_token_occupancy_rate_percentage": 3.6376953125,
+          "load_duration": 6e-07,
+          "prefill_duration_ttft": 1.186658688,
+          "decoding_duration": 11.882058,
+          "prefill_speed_tps": 65.73077902582213,
+          "decoding_speed_tps": 18.51531106816681
+        },
+        "model_used": "nanbeige4.1:3b",
+        "input": "FastFlowPrompt dont send data outside local machine, it run on AMD Ryzen AI NPU and use qwen3.5:4b.",
+        "output": "We are given a query that seems to be a command or a note about FastFlowPrompt. The user is asking to correct grammar, spelling, punctuation, capitalization, and wording mistakes. They also mention preserving meaning and keeping emoji/smiley characters exactly as written when possible. However, note that the query itself is not a question but a statement. The user says: \"FastFlowPrompt dont send data outside local machine, it run on AMD Ryzen AI NPU and use qwen3.5:4b.\"\n\nFirst, I need to understand what the user is asking. It appears that the user is providing a note or a specification about FastFlowPrompt. The task is to correct the grammar, etc., in this text.\n\nLet me break down the original text:\n\"FastFlowPrompt dont send data outside local machine, it run on AMD Ryzen AI NPU and use qwen3.5:4b.\"\n\nObservations:\n1. \"dont\" should be \"don't\" (contraction for \"do not\").\n2.",
+        "quality": {
+          "score": 5,
+          "max": 8,
+          "checks": [
+            [
+              "has FastFlowPrompt",
+              true
+            ],
+            [
+              "has local machine",
+              true
+            ],
+            [
+              "has AMD Ryzen AI NPU",
+              true
+            ],
+            [
+              "has qwen3.5:4b",
+              true
+            ],
+            [
+              "avoids dont ",
+              false
+            ],
+            [
+              "avoids  it run ",
+              false
+            ],
+            [
+              "no preamble",
+              true
+            ],
+            [
+              "bounded length",
+              false
+            ]
+          ]
+        }
+      },
+      {
+        "mode": "prompt",
+        "id": "prompt_product",
+        "elapsed_s": 54.055,
+        "usage": {
+          "prompt_tokens": 135,
+          "completion_tokens": 900,
+          "total_tokens": 1035,
+          "kv_token_occupancy_rate_percentage": 12.63427734375,
+          "load_duration": 6e-07,
+          "prefill_duration_ttft": 1.195869056,
+          "decoding_duration": 51.3448,
+          "prefill_speed_tps": 112.88861378481893,
+          "decoding_speed_tps": 17.528552063694864
+        },
+        "model_used": "nanbeige4.1:3b",
+        "input": "make prompt for claude: build a windows hotkey app that fixes grammar with local llm only, no cloud, include tests and installer notes",
+        "output": "We are asked: \"make prompt for claude: build a windows hotkey app that fixes grammar with local llm only, no cloud, include tests and installer notes\"\n\nBut note: the user is asking us to \"make prompt for claude\". However, the context of the problem is that we are to generate a prompt that would be used to instruct Claude (or similar AI) to build a Windows hotkey app that fixes grammar with a local LLM. However, the user's request is a bit ambiguous.\n\nWait: The user says: \"make prompt for claude: build a windows hotkey app that fixes grammar with local llm only, no cloud, include tests and installer notes\"\n\nI think the user is asking us to generate a prompt that they can use to instruct Claude (or an AI) to build such an app. But the way it's phrased: \"make prompt for claude\" might mean: \"Create a prompt that you (the AI) would use to ask Claude to build this app\". However, the user is likely asking us to generate the actual code or specification for the app? But the instruction says: \"Return only the prompt.\" and the structure is about the prompt we are creating.\n\nWait, let me read the initial instruction again: \"You are an AI that is asked to generate a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact shape - Markdown headers, JSON keys, etc.). Keep each section short. No meta-framing, no preamble. Preserve intent and emoji. Return only the prompt.\"\n\nSo the user is asking us to generate a prompt that is ready for Claude. But the user's query is: \"make prompt for claude: build a windows hotkey app that fixes grammar with local llm only, no cloud, include tests and installer notes\"\n\nTherefore, we are to generate a prompt that would be used to instruct Claude to build the described app. However, note: the prompt we are generating is the instruction for Claude. So we need to structure the prompt we are creating as per the given structure.\n\nBut wait: the user says \"make prompt for claude\", meaning we are to create a prompt that the user can use to get Claude to do the task. However, the task described is complex: build a Windows hotkey app that fixes grammar with local LLM only, no cloud, include tests and installer notes.\n\nSo, we need to generate a prompt that is well-structured for Claude. The prompt should have:\n- <task>: one primary deliverable, one sentence.\n- <context>: background facts only, no instructions.\n- <constraints>: concrete + testable: length, format, tone.\n- <output_format>: exact shape.\n\nBut note: the prompt we are generating is the instruction for Claude. So we are to write a prompt that, when given to Claude, will cause Claude to generate the desired output (the app, tests, installer notes). However, the user is asking us to \"make prompt for claude\", meaning we are to output the prompt that we would use to instruct Claude.\n\nBut wait: the initial instruction says: \"You are an AI that is asked to generate a Claude-ready prompt.\" So we are in a scenario where we are to generate a prompt that is ready for Claude to use. The user's query is the task we are to use to generate that prompt.\n\nHowever, the user's query is: \"make prompt for claude: build a windows hotkey app that fixes grammar with local llm only, no cloud, include tests and installer notes\"\n\nSo, we are to generate a prompt that instructs Claude to build the described app. But the prompt we generate must follow the structure: <task>, <context>, <constraints>, <output_format>.\n\nBut note: the prompt we are generating is the entire instruction for Claude. So we need to write a prompt that has these sections.\n\nLet me break down:\n\nWe are to create a prompt that will be used with Claude. The prompt should be structured",
+        "quality": {
+          "score": 13,
+          "max": 14,
+          "checks": [
+            [
+              "has <task>",
+              true
+            ],
+            [
+              "has <context>",
+              true
+            ],
+            [
+              "has <constraints>",
+              true
+            ],
+            [
+              "has <output_format>",
+              true
+            ],
+            [
+              "has Windows",
+              true
+            ],
+            [
+              "has hotkey",
+              true
+            ],
+            [
+              "has local",
+              true
+            ],
+            [
+              "has tests",
+              true
+            ],
+            [
+              "has installer",
+              true
+            ],
+            [
+              "avoids Act as",
+              true
+            ],
+            [
+              "avoids Here is",
+              true
+            ],
+            [
+              "avoids I can",
+              true
+            ],
+            [
+              "no preamble",
+              true
+            ],
+            [
+              "bounded length",
+              false
+            ]
+          ]
+        }
+      },
+      {
+        "mode": "prompt",
+        "id": "prompt_debug",
+        "elapsed_s": 54.139,
+        "usage": {
+          "prompt_tokens": 136,
+          "completion_tokens": 900,
+          "total_tokens": 1036,
+          "kv_token_occupancy_rate_percentage": 12.646484375,
+          "load_duration": 6e-07,
+          "prefill_duration_ttft": 1.148687488,
+          "decoding_duration": 51.341616,
+          "prefill_speed_tps": 118.39599666641446,
+          "decoding_speed_tps": 17.529639113813637
+        },
+        "model_used": "nanbeige4.1:3b",
+        "input": "prompt: debug why flm serve is slow at 32k context, compare gemma nanbeige qwen, output a table and recommendation",
+        "output": "We are given a user query that is a bit messy: \"debug why flm serve is slow at 32k context, compare gemma nanbeige qwen, output a table and recommendation\"\n\nFirst, I need to understand what the user is asking for. The query seems to have several parts:\n1. Debug why \"flm serve\" is slow at 32k context.\n2. Compare \"gemma nanbeige qwen\" (which might be a typo or misnomer; likely referring to models like Gemma, Nanbeige, and Qwen? Or perhaps a specific model named \"Gemma Nanbeige Qwen\"?).\n3. Output a table and recommendation.\n\nHowever, note that the user says: \"prompt: debug why flm serve is slow at 32k context, compare gemma nanbeige qwen, output a table and recommendation\"\n\nThis appears to be the user providing a prompt that they want me to use as a base for generating a Claude-ready prompt. But wait, the instruction says: \"The user text as a Claude-ready prompt\". So the user is giving me a text that they want me to format into a Claude-ready prompt.\n\nBut then the user says: \"prompt: ...\" meaning that the text they are providing is the prompt they want me to restructure.\n\nLet me read the initial instruction again: \"debug why flm serve is slow at 32k context, compare gemma nanbeige qwen, output a table and recommendation\"\n\nAnd the task is: \"The user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact shape - Markdown headers, JSON keys, etc.). Keep each section short. No meta-framing, no preamble. Preserve intent and emoji. Return only the prompt.\"\n\nSo, I am to take the user's query and convert it into a well-structured Claude-ready prompt. The user's query is the raw input that I need to format.\n\nBut note: the user's query is: \"debug why flm serve is slow at 32k context, compare gemma nanbeige qwen, output a table and recommendation\"\n\nThis seems to be the task they want me to generate a prompt for. However, the instruction says: \"Return only the prompt.\" meaning that I should output the formatted prompt.\n\nWait, the entire context is: \n\"You are an AI. The user has given me a text that is a prompt they want me to format as a Claude-ready prompt. The text to format is: 'debug why flm serve is slow at 32k context, compare gemma nanbeige qwen, output a table and recommendation'\"\n\nBut then the instruction says: \"Structure: <task> ... etc.\"\n\nSo, I need to create a new prompt that is structured appropriately, based on the user's intent.\n\nLet me break down the user's intent:\n\n1. \"debug why flm serve is slow at 32k context\": \n   - \"flm serve\" might be a typo. Common possibilities: \n        - \"Flame Serve\"? \n        - \"Flash Serve\"? \n        - \"FLOM\" (a framework?) \n        - Or perhaps \"Flm\" is a specific service or model? \n        - Alternatively, it could be \"Flame\" as in the model? But the user wrote \"flm serve\".\n   - Given the context of \"32k context\", it might be related to a language model serving.\n   - Since the user mentions \"debug\", we are to investigate reasons for slowness when using a 32k context.\n\n2. \"compare gemma nanbeige qwen\": \n   - This seems to be a list of model names: Gemma, Nanbeige, Qwen. \n   - But note: \"gemma nanbeige qwen\" might be intended as three separate models:",
+        "quality": {
+          "score": 14,
+          "max": 15,
+          "checks": [
+            [
+              "has <task>",
+              true
+            ],
+            [
+              "has <context>",
+              true
+            ],
+            [
+              "has <constraints>",
+              true
+            ],
+            [
+              "has <output_format>",
+              true
+            ],
+            [
+              "has 32k",
+              true
+            ],
+            [
+              "has gemma",
+              true
+            ],
+            [
+              "has nanbeige",
+              true
+            ],
+            [
+              "has qwen",
+              true
+            ],
+            [
+              "has table",
+              true
+            ],
+            [
+              "has recommendation",
+              true
+            ],
+            [
+              "avoids Act as",
+              true
+            ],
+            [
+              "avoids Here is",
+              true
+            ],
+            [
+              "avoids I can",
+              true
+            ],
+            [
+              "no preamble",
+              true
+            ],
+            [
+              "bounded length",
+              false
+            ]
+          ]
+        }
+      }
+    ],
+    "qwen3.5:4b": [
+      {
+        "mode": "grammar",
+        "id": "grammar_short",
+        "elapsed_s": 4.19,
+        "usage": {
+          "prompt_tokens": 71,
+          "completion_tokens": 23,
+          "total_tokens": 94,
+          "kv_token_occupancy_rate_percentage": 0.286865234375,
+          "load_duration": 9e-07,
+          "prefill_duration_ttft": 1.484305152,
+          "decoding_duration": 2.402943,
+          "prefill_speed_tps": 47.83382979189444,
+          "decoding_speed_tps": 9.571596163537796
+        },
+        "model_used": "qwen3.5:4b",
+        "input": "i has a meeting tomorow with teh finance team, can you send me the numbers before 3pm? :)",
+        "output": "I have a meeting tomorrow with the finance team; can you send me the numbers before 3 PM? :)",
+        "quality": {
+          "score": 9,
+          "max": 10,
+          "checks": [
+            [
+              "has I have",
+              true
+            ],
+            [
+              "has tomorrow",
+              true
+            ],
+            [
+              "has the finance team",
+              true
+            ],
+            [
+              "has before 3pm",
+              false
+            ],
+            [
+              "has :)",
+              true
+            ],
+            [
+              "avoids teh",
+              true
+            ],
+            [
+              "avoids tomorow",
+              true
+            ],
+            [
+              "avoids i has",
+              true
+            ],
+            [
+              "no preamble",
+              true
+            ],
+            [
+              "bounded length",
+              true
+            ]
+          ]
+        }
+      },
+      {
+        "mode": "grammar",
+        "id": "grammar_preserve",
+        "elapsed_s": 5.259,
+        "usage": {
+          "prompt_tokens": 76,
+          "completion_tokens": 33,
+          "total_tokens": 109,
+          "kv_token_occupancy_rate_percentage": 0.3326416015625,
+          "load_duration": 1.1e-06,
+          "prefill_duration_ttft": 1.487711616,
+          "decoding_duration": 3.400216,
+          "prefill_speed_tps": 51.08516945262596,
+          "decoding_speed_tps": 9.705265783114955
+        },
+        "model_used": "qwen3.5:4b",
+        "input": "FastFlowPrompt dont send data outside local machine, it run on AMD Ryzen AI NPU and use qwen3.5:4b.",
+        "output": "FastFlowPrompt does not send data outside the local machine; it runs on an AMD Ryzen AI NPU and uses Qwen3.5:4B.",
+        "quality": {
+          "score": 8,
+          "max": 8,
+          "checks": [
+            [
+              "has FastFlowPrompt",
+              true
+            ],
+            [
+              "has local machine",
+              true
+            ],
+            [
+              "has AMD Ryzen AI NPU",
+              true
+            ],
+            [
+              "has qwen3.5:4b",
+              true
+            ],
+            [
+              "avoids dont ",
+              true
+            ],
+            [
+              "avoids  it run ",
+              true
+            ],
+            [
+              "no preamble",
+              true
+            ],
+            [
+              "bounded length",
+              true
+            ]
+          ]
+        }
+      },
+      {
+        "mode": "prompt",
+        "id": "prompt_product",
+        "elapsed_s": 24.289,
+        "usage": {},
+        "model_used": "qwen3.5:4b",
+        "input": "make prompt for claude: build a windows hotkey app that fixes grammar with local llm only, no cloud, include tests and installer notes",
+        "output": "",
+        "quality": {
+          "score": 5,
+          "max": 14,
+          "checks": [
+            [
+              "has <task>",
+              false
+            ],
+            [
+              "has <context>",
+              false
+            ],
+            [
+              "has <constraints>",
+              false
+            ],
+            [
+              "has <output_format>",
+              false
+            ],
+            [
+              "has Windows",
+              false
+            ],
+            [
+              "has hotkey",
+              false
+            ],
+            [
+              "has local",
+              false
+            ],
+            [
+              "has tests",
+              false
+            ],
+            [
+              "has installer",
+              false
+            ],
+            [
+              "avoids Act as",
+              true
+            ],
+            [
+              "avoids Here is",
+              true
+            ],
+            [
+              "avoids I can",
+              true
+            ],
+            [
+              "no preamble",
+              true
+            ],
+            [
+              "bounded length",
+              true
+            ]
+          ]
+        }
+      },
+      {
+        "mode": "prompt",
+        "id": "prompt_debug",
+        "elapsed_s": 0.003,
+        "usage": {},
+        "model_used": "qwen3.5:4b",
+        "input": "prompt: debug why flm serve is slow at 32k context, compare gemma nanbeige qwen, output a table and recommendation",
+        "output": "",
+        "quality": {
+          "score": 5,
+          "max": 15,
+          "checks": [
+            [
+              "has <task>",
+              false
+            ],
+            [
+              "has <context>",
+              false
+            ],
+            [
+              "has <constraints>",
+              false
+            ],
+            [
+              "has <output_format>",
+              false
+            ],
+            [
+              "has 32k",
+              false
+            ],
+            [
+              "has gemma",
+              false
+            ],
+            [
+              "has nanbeige",
+              false
+            ],
+            [
+              "has qwen",
+              false
+            ],
+            [
+              "has table",
+              false
+            ],
+            [
+              "has recommendation",
+              false
+            ],
+            [
+              "avoids Act as",
+              true
+            ],
+            [
+              "avoids Here is",
+              true
+            ],
+            [
+              "avoids I can",
+              true
+            ],
+            [
+              "no preamble",
+              true
+            ],
+            [
+              "bounded length",
+              true
+            ]
+          ]
+        }
+      }
+    ]
+  }
+}

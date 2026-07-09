@@ -32,13 +32,23 @@ if str(SCRIPTS) not in sys.path:
 import ffp_config  # noqa: E402
 import ffp_provider_runtime  # noqa: E402
 
-
 PROMPT_SYSTEM = ffp_config.CLAUDE_PROMPT_SYSTEM_PROMPT
 GRAMMAR_SYSTEM = ffp_config.DEFAULT_CONFIG["modes"]["grammar"]["system_prompt"]
+# The long-context digest must quote a code planted at the START and one at the
+# END of the transcript. A runtime that silently truncates the input (the July 9
+# audit caught Lemonade Qwen2.5-3B-NPU keeping only the last ~2-3k tokens while
+# reporting prompt_tokens=8022) can then never pass: with keep-last truncation
+# the start code is unrecoverable, and the start/end flags in the contract
+# result distinguish truncation (end found, start missing) from plain
+# instruction-following failure (both missing).
+LONGCTX_OPEN_CODE = "ZEBRA-7741"
+LONGCTX_CLOSE_CODE = "OTTER-3305"
 LONGCTX_SYSTEM = (
     "Summarize the meeting transcript into a concise digest. Return Markdown "
-    "with exactly three sections: Summary, Decisions, Action items. Keep the "
-    "total answer near 150 tokens."
+    "with exactly three sections: Summary, Decisions, Action items. The Summary "
+    "section must quote both the budget code stated at the start of the "
+    "transcript and the follow-up ticket code stated at the end of the "
+    "transcript, exactly as written. Keep the total answer near 150 tokens."
 )
 
 PROMPT_CASES = [
@@ -204,12 +214,53 @@ def check_grammar_contract(input_text: str, output_text: str, *, case_id: str) -
     }
 
 
+_LONGCTX_TOPICS = [
+    "rollout risk and the staged deployment calendar",
+    "benchmark design and evidence quality",
+    "provider startup behavior and crash recovery",
+    "memory pressure on the 24 GB test machine",
+    "model quality gates for grammar and prompt modes",
+    "NPU scheduling conflicts between local providers",
+    "meeting digest latency targets for the evening batch",
+    "installer size and first-run provider detection",
+]
+
+
 def long_context_prompt(target_tokens: int) -> str:
+    """Position-stamped synthetic transcript with needles at both ends.
+
+    Deliberately NOT uniform filler: each segment is numbered and topic-varied,
+    the opening note carries LONGCTX_OPEN_CODE and the closing note carries
+    LONGCTX_CLOSE_CODE, so silent input truncation is detectable by the
+    contract check instead of producing an indistinguishable digest.
+    """
     target_chars = max(500, int(target_tokens * 5.25))
-    repeated = (FILLER * ((target_chars // len(FILLER)) + 2))[:target_chars]
+    opening = (
+        "Recorded opening note: the budget code approved at the start of this "
+        f"meeting is {LONGCTX_OPEN_CODE}.\n"
+    )
+    closing = (
+        "\nRecorded closing note: the follow-up ticket code assigned at the end "
+        f"of this meeting is {LONGCTX_CLOSE_CODE}."
+    )
+    body_budget = max(200, target_chars - len(opening) - len(closing))
+    segments: list[str] = []
+    used = 0
+    index = 0
+    while used < body_budget:
+        topic = _LONGCTX_TOPICS[index % len(_LONGCTX_TOPICS)]
+        speaker = "A" if index % 2 == 0 else "B"
+        seg = (
+            f"[segment {index + 1}] Speaker {speaker} discussed {topic}. "
+            "Speaker C asked for exact numbers, repeatable commands, and a decision owner. "
+        )
+        segments.append(seg)
+        used += len(seg)
+        index += 1
+    body = "".join(segments)[:body_budget]
     return (
         "Meeting transcript follows. Produce the requested digest.\n\n"
-        f"{repeated}\n\nEnd of transcript."
+        f"{opening}{body}{closing}\n\nEnd of transcript."
     )
 
 
@@ -297,7 +348,7 @@ class MemorySampler:
             self.samples.append(self._sample())
             self.stop_event.wait(self.interval_s)
 
-    def __enter__(self) -> "MemorySampler":
+    def __enter__(self) -> MemorySampler:
         self.before = self._sample()
         self.thread.start()
         return self
@@ -417,11 +468,49 @@ def ttft_from_usage(usage: dict[str, Any]) -> float | None:
     return None
 
 
+def check_longctx_contract(text: str) -> dict[str, Any]:
+    """Pass requires visible output plus BOTH planted codes.
+
+    start_needle_found=False with end_needle_found=True is the signature of
+    keep-last input truncation; both False means the model saw the codes but
+    failed to quote them (instruction-following failure, still a fail).
+    """
+    visible, had_think, unclosed = strip_thinking(text)
+    reasons: list[str] = []
+    ok = True
+    if not visible:
+        ok = False
+        reasons.append("empty_output")
+    start_needle = LONGCTX_OPEN_CODE in visible
+    end_needle = LONGCTX_CLOSE_CODE in visible
+    if not start_needle:
+        ok = False
+        reasons.append("start_needle_missing")
+    if not end_needle:
+        ok = False
+        reasons.append("end_needle_missing")
+    if had_think or unclosed:
+        ok = False
+        reasons.append("think_residue")
+    return {
+        "pass": ok,
+        "reasons": sorted(set(reasons)),
+        "visible_chars": len(visible),
+        "start_needle_found": start_needle,
+        "end_needle_found": end_needle,
+        "truncation_suspected": bool(end_needle and not start_needle),
+        "think_stripped": had_think,
+        "unclosed_think": unclosed,
+    }
+
+
 def score_case(case: BenchCase, raw_output: str) -> dict[str, Any]:
     if case.task == "prompt":
         return check_prompt_contract(raw_output)
     if case.task == "grammar":
         return check_grammar_contract(case.user_prompt, raw_output, case_id=case.case_id)
+    if case.task == "longctx":
+        return check_longctx_contract(raw_output)
     visible, had_think, unclosed = strip_thinking(raw_output)
     return {
         "pass": bool(visible),

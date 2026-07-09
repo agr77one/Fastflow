@@ -288,6 +288,8 @@
           <select id="cfg-provider">
             <option value="fastflowlm">FastFlowLM (AMD NPU)</option>
             <option value="ollama">Ollama (CPU/GPU)</option>
+            <option value="lmstudio">LM Studio (Vulkan/GPU)</option>
+            <option value="lemonade">Lemonade (AMD GPU/NPU)</option>
           </select>
         </div>
         <p class="muted small" id="provider-note" hidden></p>
@@ -413,6 +415,10 @@
         <div class="card-actions">
           <button class="btn" id="mtg-run-now">Run batch now</button>
           <span class="muted small" id="mtg-run-status"></span>
+        </div>
+        <div class="card-actions">
+          <button class="btn btn-sm" id="mtg-clear-skips">Clear skipped meetings</button>
+          <span class="muted small" id="mtg-skip-status">Checking skips...</span>
         </div>
       </div>
       <div class="card-actions card-wide">

@@ -16,7 +16,7 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - LLM: FastFlowLM NPU @ `:52625` | Ollama @ `:11434`, OpenAI-compat `POST /v1/chat/completions`
 - dashboard: daemon-served `scripts/ui/web/{index.html,app.js,styles.css}`, CSP `default-src 'self'`
 - paths: `scripts/paths.py` → USER_ROOT/{config,data,logs}; `_version.py` = version src of truth
-- version: `2.1.0` merged to `main`, tag/installer/Release NOT yet cut; public `2.0.0`; repo `agr77one/Fastflow`
+- version: `2.1.0` released (tag `v2.1.0` on `7835d4b`, installer on GitHub Release); repo `agr77one/Fastflow`
 - run tree = `flowkey-pub2` (worktree, branch `live`=origin/main). old `FastFlowPrompt_Local_Setup`=1.5.0 stale.
 
 ## §I interfaces
@@ -30,7 +30,8 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - action: `quill_search_meetings {query,limit}` → `{meetings:[{id,title,date,duration,participants,url}]}`
 - action: `meeting_overview` → `{enabled,reachable,today:{count,minutes},week:{count,minutes}}`
 - action: `meeting_process {meeting_id,title,date,url}` → digest rec (writes `meeting_digests.jsonl`)
-- action: `meeting_batch_run {max_per_run?}` → `{ok,processed,queued,errors}`; `meeting_batch_status` → status
+- action: `meeting_batch_run {max_per_run?}` → `{ok,processed,queued,errors,skipped}`; `meeting_batch_status` → `{running,last_*,total_digests,total_skips}`
+- action: `meeting_skips_list` → `{skips:[{meeting_id,title,date,reason,skipped_at}],count}`; `meeting_skip_clear {meeting_id?}` → `{ok,removed,remaining}`
 - action: `meeting_digest_get {meeting_id}` → `{found,digest_md,...}`; `meeting_digests_list` → `{digests,count}`
 - action: `meeting_ask {meeting_id,question}` → `{ok,answer,source,seconds}`
 - action: `meeting_actions_list {range:week|month}` → `{range,items:[{id,text,owner,status,...}],counts}`
@@ -38,10 +39,10 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - action: `meeting_week_summary {week_offset}` → `{ok,week_label,meeting_count,summary}`
 - mcp: Quill @ `http://127.0.0.1:19532/mcp` — Streamable-HTTP, SSE `data:`, `Mcp-Session-Id` header; init→notifications/initialized→tools/call
 - cmd: `flm serve <model> --pmode turbo --host 127.0.0.1 --port 52625`
-- data: `data/{meeting_digests,meeting_action_status,notifications,chat_threads}.jsonl`
+- data: `data/{meeting_digests,meeting_action_status,meeting_skips,notifications,chat_threads}.jsonl`
 - autostart: HKCU Run `FastFlowPrompt` → bundled `AutoHotkey64.exe` + `grammarFix.ahk`; `FlowkeyGitSync` → `sync.ps1`
 - sched: Windows task `FlowkeyGitSync` daily 12:00 → `sync.ps1` (ff-only pull, guarded)
-- ACTIONS count = 73
+- ACTIONS count = 76
 
 ## §V invariants
 
@@ -67,6 +68,8 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - V20: change gates ! pass: `ruff check scripts tests`, `pytest`, `node --check scripts/ui/web/app.js`, AHK parse-check (PowerShell `/ErrorStdOut`)
 - V21: local data (config/data/logs/vendor/certs) ∈ `.gitignore` ∴ pull moves code only, never user data
 - V22: `sync.ps1` ∃ uncommitted tracked changes → skip pull (⊥ clobber un-pushed WIP)
+- V23: meeting `NoContentError` & age ≥ 2d → skip-marker (`meeting_skips.jsonl`) ∴ ⊥ re-queue ever; age < 2d → retry (Quill transcript may still sync); non-content errors ⊥ skip-mark. batch errors → `daemon.log` only (⊥ UI panel, per user)
+- V24: skip store observable+recoverable: `meeting_skips_list` shows active markers; `meeting_skip_clear` drops marker(s); successful digest → drop marker
 
 ## §T tasks
 
@@ -80,18 +83,20 @@ T5|x|overview meeting hours + action-item board + weekly review|V15,V16
 T6|x|git autosync: `sync.ps1` + daily task + autostart→flowkey-pub2|V21,V22
 T7|~|2.1.0 release held on `release/v2.1.0` → land after user test|V18,V19
 T8|.|installer clean-VM smoke test|—
-T9|.|[AUDIT] dead-code: unused daemon helper + 2 AHK wrappers + stale chat-popup config key + obsolete settings ref in test fixture + deprecated install shims|—
+T9|x|[AUDIT] dead-code: unused daemon helper + 2 AHK wrappers + stale chat-popup config key + obsolete settings ref in test fixture + deprecated install shims|V20
 T10|x|[AUDIT-P1] autostart: unify 3 divergent Run keys (daemon/src-installer/pkg-installer) → single HKCU entry|V20,B6
-T11|.|[AUDIT] old open_chat default `^+t` still appears in first-run + web config fallback → replace with `^!c`|B5
-T12|.|[AUDIT] first-run seed thinner than DEFAULT_CONFIG schema → add seed-vs-schema drift guard (compare keys on first-run copy)|—
-T13|.|[AUDIT] installer bootstrap wrapper hardcodes old installer filename → derive from `_version.py`|V18
+T11|x|[AUDIT] old open_chat default `^+t` still appears in first-run + web config fallback → replace with `^!c`|B5,V20
+T12|x|[AUDIT] first-run seed thinner than DEFAULT_CONFIG schema → add seed-vs-schema drift guard (compare keys on first-run copy)|V20
+T13|x|[AUDIT] installer bootstrap wrapper hardcodes old installer filename → derive from `_version.py`|V18,V20
 T14|.|[AUDIT] quality-gate gaps: installer policy drift, autostart reg-name drift, bootstrap output name, README/dashboard tab count|V20
 T15|.|[DOCS] dashboard docs: 7 tabs listed, live = 8 (add Benchmark)|—
 T16|x|[DOCS] autostart docs conflict: main says no machine-wide entry; installer docs+impl still describe it → align on HKCU-only|B6
 T17|.|[DOCS] installer layout: build script says flattened, installer.md still shows nested layout|—
 T18|.|[DOCS] provider roadmap marks selector/status UX incomplete → update to reflect it exists|—
-T19|.|[DOCS] first-run wizard text: "chat popup" + retired hotkey → update to current|B5
+T19|x|[DOCS] first-run wizard text: "chat popup" + retired hotkey → update to current|B5
 T20|.|[DOCS] daemon log location stale in docs → update to current path|—
+T21|x|meeting skip store inspect+clear (`meeting_skips_list`,`meeting_skip_clear`) + dashboard status|V23,V24
+T22|x|root `check.ps1` gate runner (`ruff`,`pytest`,`node --check`) w/ bundled runtime fallback|V20
 ```
 
 ## §B bugs
@@ -104,4 +109,5 @@ B3|2026-06|autostart → stale tree / empty `flowkey-public`|repoint HKCU Run �
 B4|2026-06|install launch: AHK called `.py`, shipped only `.exe`|flatten bundle to {app} + AHK→exe bridge (PR #19)
 B5|2026-06|`Ctrl+Shift+T` open_chat collided w/ browser reopen-tab|default → `^!c`; tray label = configured hotkey
 B6|2026-07|3 divergent autostart Run keys: daemon HKCU\Run\FastFlowPrompt, `install.ps1` HKCU\Run\Flowkey (different name!), `installer.iss` optional HKLM\Run\Flowkey → toggle blind to other 2, could double-launch|unify on HKCU\Run\FastFlowPrompt everywhere; drop installer.iss HKLM task; uninstall now cleans the HKCU value; guarded by `test_installer_autostart.py`
+B7|2026-07|"Run batch now" → "0 of 5, 5 errors" ∀ run: 5 Quill stub recordings (0-11min, ⊥ minutes ⊥ transcript) re-queued forever ∵ idempotency = digest_exists only|typed `NoContentError` → skip store `meeting_skips.jsonl` (age ≥ 2d guard) + `skipped` count in result; queue checks digest ∧ skip; reasons stay in daemon.log|V23
 ```

@@ -1,0 +1,135 @@
+{
+  "model": "gemma4-it:e4b",
+  "flm_version": "0.9.43",
+  "timestamp": "2026-06-03T16:24:43",
+  "csv_file": "C:\\Users\\ArseniyGrechenkov\\Downloads\\transfer\\transfer\\FastFlowPrompt_Local_Setup\\release\\data\\benchmarks\\run_gemma4-it-e4b_1780517082\\bench_gemma4-it_e4b_20260603_AMD_Ryzen_AI_7_PRO_350_w__Radeon_860M.csv",
+  "rows": [
+    {
+      "context": 1.0,
+      "ttft_s": 2.79313,
+      "prefill_tps": 351.11,
+      "decode_tps": 12.25,
+      "raw": [
+        "1",
+        "2.793130",
+        "0.100341",
+        "2.588247",
+        "2.941953",
+        "351.11",
+        "12.97",
+        "332.92",
+        "378.54",
+        "12.25",
+        "0.34",
+        "11.51",
+        "12.69"
+      ]
+    },
+    {
+      "context": 2.0,
+      "ttft_s": 4.443133,
+      "prefill_tps": 438.98,
+      "decode_tps": 11.83,
+      "raw": [
+        "2",
+        "4.443133",
+        "0.140051",
+        "4.168066",
+        "4.614860",
+        "438.98",
+        "14.14",
+        "422.22",
+        "467.48",
+        "11.83",
+        "0.44",
+        "10.70",
+        "12.17"
+      ]
+    },
+    {
+      "context": 4.0,
+      "ttft_s": 7.257507,
+      "prefill_tps": 536.4,
+      "decode_tps": 11.39,
+      "raw": [
+        "4",
+        "7.257507",
+        "0.296311",
+        "6.751601",
+        "7.632455",
+        "536.40",
+        "22.44",
+        "509.04",
+        "575.65",
+        "11.39",
+        "0.12",
+        "11.25",
+        "11.56"
+      ]
+    },
+    {
+      "context": 8.0,
+      "ttft_s": 13.77805,
+      "prefill_tps": 565.14,
+      "decode_tps": 10.39,
+      "raw": [
+        "8",
+        "13.778050",
+        "0.801803",
+        "12.821285",
+        "14.896051",
+        "565.14",
+        "32.74",
+        "520.88",
+        "605.23",
+        "10.39",
+        "0.20",
+        "9.87",
+        "10.55"
+      ]
+    },
+    {
+      "context": 16.0,
+      "ttft_s": 28.213831,
+      "prefill_tps": 551.09,
+      "decode_tps": 8.87,
+      "raw": [
+        "16",
+        "28.213831",
+        "1.400040",
+        "26.655188",
+        "30.084419",
+        "551.09",
+        "27.29",
+        "515.52",
+        "581.84",
+        "8.87",
+        "0.09",
+        "8.65",
+        "8.92"
+      ]
+    },
+    {
+      "context": 32.0,
+      "ttft_s": 64.997147,
+      "prefill_tps": 478.0,
+      "decode_tps": 6.85,
+      "raw": [
+        "32",
+        "64.997147",
+        "2.862766",
+        "61.614601",
+        "68.456879",
+        "478.00",
+        "21.05",
+        "453.00",
+        "503.20",
+        "6.85",
+        "0.02",
+        "6.82",
+        "6.89"
+      ]
+    }
+  ],
+  "stdout_tail": "ellent story:\n\n**Epilogue (Continued):**\n\n...It no\n\u001b[31m[FLM]  Checkpointing context, current context length: 3913\u001b[0m\n[FLM]  \tTTFT: 7.40986s, Prefill Speed: 524.547 tokens/s, Decoding Speed: 11.2475 tokens/s\n[FLM]  Starting benchmark for 2k and iteration 8...\n\u001b[31m[FLM]  Checkpointing context, current context length: 1945\u001b[0m\n\n[FLM]  Model RAW Output: \nHere are a few ways to complete the Epilogue, depending on the tone and direction you want for the story:\n\n## Option 1: Focusing on Ori'\n\u001b[31m[FLM]  Checkpointing context, current context length: 1977\u001b[0m\n[FLM]  \tTTFT: 4.47143s, Prefill Speed: 435.776 tokens/s, Decoding Speed: 11.8379 tokens/s\n[FLM]  Starting benchmark for 1k and iteration 8...\n\u001b[31m[FLM]  Checkpointing context, current context length: 977\u001b[0m\n\n[FLM]  Model RAW Output: \nHere are a few ways to continue the Epilogue, depending on the tone you wish to strike (Hopeful/Epic, Measured/Practical, or Mysterious/Int\n\u001b[31m[FLM]  Checkpointing context, current context length: 1009\u001b[0m\n[FLM]  \tTTFT: 2.84281s, Prefill Speed: 344.507 tokens/s, Decoding Speed: 12.2231 tokens/s\n[FLM]  === Benchmark Results ===\n\n Context Length |              TTFT (s) |      Prefill Speed (tok/s) |     Decoding Speed (tok/s)\n----------------------------------------------------------------------------------------------------\n             1k |       2.793 ±   0.100 |         351.11 ±     12.97 |       12.25 ±      0.34\n             2k |       4.443 ±   0.140 |         438.98 ±     14.14 |       11.83 ±      0.44\n             4k |       7.258 ±   0.296 |         536.40 ±     22.44 |       11.39 ±      0.12\n             8k |      13.778 ±   0.802 |         565.14 ±     32.74 |       10.39 ±      0.20\n            16k |      28.214 ±   1.400 |         551.09 ±     27.29 |        8.87 ±      0.09\n            32k |      64.997 ±   2.863 |         478.00 ±     21.05 |        6.85 ±      0.02\n----------------------------------------------------------------------------------------------------\n\n"
+}

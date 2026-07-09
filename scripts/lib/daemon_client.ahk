@@ -283,7 +283,7 @@ ShutdownFlowkeyChildren_Impl(ExitReason := "", ExitCode := "") {
         return
     flowkeyShutdownDone := true
 
-    try RunAction("shutdown")
+    try RunAction_Impl("shutdown")
     Sleep 400
     KillFlowkeyPythonProcesses_Impl()
 }

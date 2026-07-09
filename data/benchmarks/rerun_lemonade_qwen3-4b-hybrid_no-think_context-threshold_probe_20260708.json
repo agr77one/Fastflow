@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-07-08T17:43:21.648725+00:00",
+  "provider": "lemonade",
+  "base_url": "http://127.0.0.1:13305/api/v1",
+  "model": "Qwen3-4B-Hybrid",
+  "quant": "ryzenai-llm-hybrid",
+  "purpose": "diagnose the long-context empty visible output threshold with thinking disabled",
+  "request": {
+    "temperature": 0.1,
+    "max_tokens": 80,
+    "stream": false,
+    "disable_thinking": true,
+    "system_prompt_suffix": "/no_think"
+  },
+  "results": [
+    {
+      "target_prompt_tokens": 1800,
+      "ok": true,
+      "wall_seconds": 17.898,
+      "prompt_tokens": 1856,
+      "completion_tokens": 80,
+      "ttft_seconds": 5.33,
+      "content_length": 447,
+      "content_head": "\n\n# Meeting Digest\n\n## Summary  \nThe meeting centered on technical challenges including rollout risk, benchmark design, provider startup, memory pressure, and m"
+    },
+    {
+      "target_prompt_tokens": 2000,
+      "ok": true,
+      "wall_seconds": 17.556,
+      "prompt_tokens": 2055,
+      "completion_tokens": 80,
+      "ttft_seconds": 5.382,
+      "content_length": 414,
+      "content_head": "\n\n# Meeting Digest\n\n## Summary  \nThe meeting focused on rollout risks, benchmark design, provider startup, memory pressure, and model quality. Speaker B repeate"
+    },
+    {
+      "target_prompt_tokens": 2200,
+      "ok": true,
+      "wall_seconds": 17.337,
+      "prompt_tokens": 2255,
+      "completion_tokens": 80,
+      "ttft_seconds": 5.366,
+      "content_length": 0,
+      "content_head": ""
+    },
+    {
+      "target_prompt_tokens": 2400,
+      "ok": true,
+      "wall_seconds": 17.761,
+      "prompt_tokens": 2453,
+      "completion_tokens": 80,
+      "ttft_seconds": 5.564,
+      "content_length": 0,
+      "content_head": ""
+    },
+    {
+      "target_prompt_tokens": 2600,
+      "ok": true,
+      "wall_seconds": 17.286,
+      "prompt_tokens": 2652,
+      "completion_tokens": 80,
+      "ttft_seconds": 5.175,
+      "content_length": 0,
+      "content_head": ""
+    },
+    {
+      "target_prompt_tokens": 2800,
+      "ok": true,
+      "wall_seconds": 20.254,
+      "prompt_tokens": 2851,
+      "completion_tokens": 80,
+      "ttft_seconds": 5.129,
+      "content_length": 0,
+      "content_head": ""
+    },
+    {
+      "target_prompt_tokens": 3000,
+      "ok": true,
+      "wall_seconds": 28.911,
+      "prompt_tokens": 3052,
+      "completion_tokens": 80,
+      "ttft_seconds": 7.799,
+      "content_length": 0,
+      "content_head": ""
+    }
+  ]
+}

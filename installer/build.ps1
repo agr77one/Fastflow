@@ -202,7 +202,7 @@ if (-not $SkipInno) {
         "Compiling installer.iss..."
         Push-Location $releaseRoot
         try {
-            & $iscc.Source (Join-Path $installerDir "installer.iss")
+            & $iscc.Source "/DAppVersion=$version" (Join-Path $installerDir "installer.iss")
             if ($LASTEXITCODE -ne 0) { throw "iscc failed (exit $LASTEXITCODE)" }
         } finally {
             Pop-Location

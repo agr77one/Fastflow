@@ -9,7 +9,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-
 PROMPT_MIN_RATE = 0.90
 GRAMMAR_MIN_RATE = 0.875
 LONGCTX_MIN_RATE = 1.00

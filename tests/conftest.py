@@ -40,7 +40,6 @@ def fresh_modules(isolated_release_root: Path):
         "notes",
         "install",
         "first_run",
-        "settings_gui",
     ]:
         sys.modules.pop(name, None)
 

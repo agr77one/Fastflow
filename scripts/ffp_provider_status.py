@@ -11,6 +11,7 @@ from __future__ import annotations
 import shutil
 import socket
 from dataclasses import dataclass
+from pathlib import Path
 
 
 @dataclass(frozen=True)
@@ -24,6 +25,28 @@ class ProviderSpec:
     can_autostart: bool
     can_benchmark: bool
     has_update_check: bool
+
+
+def _bundled_cli_path(cli: str) -> str:
+    """Return provider CLI path, including common app-bundled Windows installs."""
+    found = shutil.which(cli)
+    if found:
+        return found
+    if cli == "lms":
+        candidates = [
+            Path.home() / ".lmstudio" / "bin" / "lms.exe",
+            Path.home() / "AppData" / "Local" / "Programs" / "LM Studio" / "resources" / "app" / ".webpack" / "lms.exe",
+        ]
+    elif cli == "lemonade":
+        candidates = [
+            Path.home() / "AppData" / "Local" / "lemonade_server" / "bin" / "lemonade.exe",
+        ]
+    else:
+        candidates = []
+    for path in candidates:
+        if path.exists():
+            return str(path)
+    return ""
 
 
 PROVIDERS: dict[str, ProviderSpec] = {
@@ -46,7 +69,29 @@ PROVIDERS: dict[str, ProviderSpec] = {
         default_model="llama3.2:3b",
         auth_bearer="ollama",
         can_autostart=False,
-        can_benchmark=False,
+        can_benchmark=True,
+        has_update_check=False,
+    ),
+    "lmstudio": ProviderSpec(
+        key="lmstudio",
+        label="LM Studio",
+        cli="lms",
+        base_url="http://127.0.0.1:1234",
+        default_model="qwen2.5-3b-instruct",
+        auth_bearer="",
+        can_autostart=True,
+        can_benchmark=True,
+        has_update_check=False,
+    ),
+    "lemonade": ProviderSpec(
+        key="lemonade",
+        label="Lemonade",
+        cli="lemonade",
+        base_url="http://127.0.0.1:13305",
+        default_model="Qwen2.5-3B-Instruct-NPU",
+        auth_bearer="lemonade",
+        can_autostart=True,
+        can_benchmark=True,
         has_update_check=False,
     ),
 }
@@ -81,7 +126,7 @@ def provider_status(provider: str, *, base_url: str = "") -> dict:
     key = str(provider or "").strip().lower()
     spec = PROVIDERS.get(key) or PROVIDERS["fastflowlm"]
     effective_url = str(base_url or spec.base_url).strip().rstrip("/")
-    cli_path = shutil.which(spec.cli) or ""
+    cli_path = _bundled_cli_path(spec.cli)
     installed = bool(cli_path)
     reachable = is_reachable(effective_url)
     return {

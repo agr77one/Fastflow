@@ -97,12 +97,20 @@ const TONE_LABELS = { formal: "🎩 Formal", casual: "👕 Casual", friendly: "�
 // The daemon resolves the *effective* provider (configured one, with fallback
 // when it's unavailable). The dropdown edits the *configured* provider; the
 // status table shows both. Capability gating hides FLM-only controls (runtime
-// update check, performance modes, benchmark) when Ollama is selected.
+// update check, performance modes) when another provider is selected.
 
-const PROVIDER_LABELS = { fastflowlm: "FastFlowLM", ollama: "Ollama" };
+const PROVIDER_ORDER = ["fastflowlm", "ollama", "lmstudio", "lemonade"];
+const PROVIDER_LABELS = {
+  fastflowlm: "FastFlowLM",
+  ollama: "Ollama",
+  lmstudio: "LM Studio",
+  lemonade: "Lemonade",
+};
 const PROVIDER_DEFAULTS = {
   fastflowlm: { base_url: "http://127.0.0.1:52625", timeout_seconds: 60 },
   ollama: { base_url: "http://127.0.0.1:11434", timeout_seconds: 120 },
+  lmstudio: { base_url: "http://127.0.0.1:1234", timeout_seconds: 120 },
+  lemonade: { base_url: "http://127.0.0.1:13305", timeout_seconds: 120 },
 };
 
 // Filled by loadConfig() from the config snapshot.
@@ -119,7 +127,8 @@ function providerProfile(key) {
 
 function renderProviderStatus(status) {
   const rows = [];
-  for (const key of ["fastflowlm", "ollama"]) {
+  const providers = (status || {}).providers || {};
+  for (const key of PROVIDER_ORDER.filter((name) => providers[name])) {
     const st = ((status || {}).providers || {})[key] || {};
     const marks = [];
     marks.push(st.installed ? "installed ✓" : "not installed");
@@ -135,12 +144,24 @@ function renderProviderStatus(status) {
 function applyProviderCaps() {
   const sel = $("cfg-provider").value || "fastflowlm";
   const isFlm = sel === "fastflowlm";
+  const caps = ((((providerState.status || {}).providers || {})[sel] || {}).capabilities) || {};
   $("flm-runtime-block").hidden = !isFlm;
   document.querySelectorAll('input[name="perf"]').forEach((r) => (r.disabled = !isFlm));
   $("perf-note").hidden = isFlm;
   $("models-title").textContent = `Installed models — ${PROVIDER_LABELS[sel]}`;
+  $("provider-start").disabled = caps.server_control === false;
+  $("pull-btn").disabled = caps.model_management === false;
   $("pull-hint").hidden = isFlm;
-  $("pull-name").placeholder = isFlm ? "model name, e.g. qwen3.5:4b" : "model name, e.g. llama3.2:3b";
+  if (sel === "lmstudio") {
+    $("pull-name").placeholder = "model key or HF GGUF URL";
+    $("pull-hint").textContent = "LM Studio downloads GGUF models with lms get, for example qwen2.5-7b-instruct or a Hugging Face GGUF URL.";
+  } else if (sel === "lemonade") {
+    $("pull-name").placeholder = "model name, e.g. Qwen2.5-3B-Instruct-NPU";
+    $("pull-hint").textContent = "Lemonade uses curated model names such as Qwen2.5-3B-Instruct-NPU, Llama-3.2-3B-Instruct-Hybrid, or Qwen3-4B-Hybrid.";
+  } else {
+    $("pull-name").placeholder = isFlm ? "model name, e.g. qwen3.5:4b" : "model name, e.g. llama3.2:3b";
+    $("pull-hint").textContent = "Any name from the Ollama library works - e.g. mistral:7b, qwen2.5:0.5b.";
+  }
   const note = $("provider-note");
   if (sel !== providerState.configured) {
     note.textContent = `Switching to ${PROVIDER_LABELS[sel]} — click "Save all settings" to apply.`;
@@ -632,7 +653,7 @@ async function loadConfig() {
     populateCustomModes(cfg.modes);
     const hk = cfg.hotkeys || {};
     $("hk-in-grammar").value = hk.grammar_fix || "^+g";
-    $("hk-in-chat").value = hk.open_chat || "^+t";
+    $("hk-in-chat").value = hk.open_chat || "^!c";
     $("hk-in-note").value = hk.capture_note || "^!n";
     $("hk-in-ask").value = hk.ask_chat || "^+a";
     const llm = cfg.llm || {};
@@ -967,6 +988,9 @@ async function loadBenchmark() {
   if (benchProvider === "ollama") {
     setText("bench-desc", "Benchmark a model with timed generations against the running Ollama server — three prompt sizes × two passes, using Ollama's native prefill/decode metrics.");
     setText("bench-warn", "Takes ~1–3 minutes on CPU. The server keeps running, but responses will be slow during the run.");
+  } else if (benchProvider === "lmstudio" || benchProvider === "lemonade") {
+    setText("bench-desc", `Benchmark a model with timed chat completions against ${PROVIDER_LABELS[benchProvider]} — three prompt sizes x two passes. Prefill counters are unavailable, so response wall time is recorded.`);
+    setText("bench-warn", "Takes ~1-5 minutes depending on model size. The server keeps running, but responses will be slow during the run.");
   } else {
     setText("bench-desc", "Benchmark a model with FastFlowLM's flm bench — sweeps 1k–32k context × 8 iterations and records time-to-first-token, prefill speed, and decode speed.");
     setText("bench-warn", "⚠ Takes ~10–20 min and fully saturates the NPU. The server is stopped for the run, so hotkeys will be unresponsive. Best run when idle.");
@@ -1013,14 +1037,16 @@ async function runBenchmark() {
     return;
   }
   const msg = benchProvider === "ollama"
-    ? `Benchmark '${model}'?\n\nThis runs timed generations against Ollama for ~1–3 minutes. The server keeps serving, but responses will be slow during the run.`
-    : `Benchmark '${model}'?\n\nThis runs flm bench for ~10–20 minutes, stops the server, and saturates the NPU. Hotkeys will be unresponsive until it finishes.`;
+    ? `Benchmark '${model}'?\n\nThis runs timed generations against Ollama for ~1-3 minutes. The server keeps serving, but responses will be slow during the run.`
+    : (benchProvider === "lmstudio" || benchProvider === "lemonade")
+      ? `Benchmark '${model}'?\n\nThis runs timed chat completions against ${PROVIDER_LABELS[benchProvider]} for ~1-5 minutes. The server keeps serving, but responses will be slow during the run.`
+      : `Benchmark '${model}'?\n\nThis runs flm bench for ~10-20 minutes, stops the server, and saturates the NPU. Hotkeys will be unresponsive until it finishes.`;
   if (!(await confirmDialog(msg, "Run benchmark"))) return;
   try {
     await action("bench_start", { model });
-    setText("bench-status", benchProvider === "ollama"
-      ? `⏳ Benchmark started for ${model} — this takes a few minutes…`
-      : `⏳ Benchmark started for ${model} — this takes 10–20 min…`);
+    setText("bench-status", benchProvider === "fastflowlm"
+      ? `⏳ Benchmark started for ${model} — this takes 10-20 min…`
+      : `⏳ Benchmark started for ${model} — this takes a few minutes…`);
     clearInterval(benchTimer);
     benchTimer = setInterval(() => pollBench(false), 4000);
   } catch (e) {
@@ -1221,6 +1247,7 @@ async function loadMeetings() {
     digestIds = new Set();
   }
   searchMeetings();
+  refreshMeetingSkipStatus();
   loadActionItems();
 }
 
@@ -1340,6 +1367,7 @@ async function processMeetingNow() {
     $("mtg-process-status").textContent = `done · ${r.source} · ${r.seconds}s`;
     _showQuality(r.quality);
     digestIds.add(currentMeeting.id);
+    refreshMeetingSkipStatus();
   } catch (e) {
     $("mtg-process-status").textContent = `⚠ ${e.message}`;
   }
@@ -1357,6 +1385,7 @@ async function redigestMeeting() {
     $("mtg-process-status").textContent = `strict · ${r.source} · ${r.seconds}s`;
     _showQuality(r.quality);
     digestIds.add(currentMeeting.id);
+    refreshMeetingSkipStatus();
   } catch (e) {
     $("mtg-process-status").textContent = `⚠ ${e.message}`;
   }
@@ -1417,6 +1446,38 @@ function meetingsPatch() {
   };
 }
 
+async function refreshMeetingSkipStatus() {
+  const st = $("mtg-skip-status");
+  const btn = $("mtg-clear-skips");
+  try {
+    const r = await action("meeting_skips_list");
+    const skips = r.skips || [];
+    const n = Number(r.count || skips.length || 0);
+    btn.disabled = n === 0;
+    if (!n) {
+      st.textContent = "No skipped meetings.";
+      return;
+    }
+    const names = skips.slice(0, 3).map((s) => s.title || s.meeting_id).join(", ");
+    st.textContent = `${n} skipped content-less meeting${n === 1 ? "" : "s"}: ${names}${n > 3 ? ", ..." : ""}`;
+  } catch (e) {
+    btn.disabled = true;
+    st.textContent = `Skipped-meeting status unavailable: ${e.message}`;
+  }
+}
+
+async function clearMeetingSkips() {
+  const st = $("mtg-skip-status");
+  st.textContent = "Clearing skipped meetings...";
+  try {
+    const r = await action("meeting_skip_clear", {});
+    st.textContent = r.ok ? `cleared ${r.removed || 0} skipped meeting marker${r.removed === 1 ? "" : "s"}` : `⚠ ${r.error || "failed"}`;
+    await refreshMeetingSkipStatus();
+  } catch (e) {
+    st.textContent = `⚠ ${e.message}`;
+  }
+}
+
 async function runBatchNow() {
   const s = $("mtg-run-status");
   // Persist the current settings first (incl. the Enable toggle) so "Run now"
@@ -1432,8 +1493,11 @@ async function runBatchNow() {
   try {
     const r = await action("meeting_batch_run", {});
     s.textContent = r.ok
-      ? `processed ${r.processed} of ${r.queued} queued${r.errors && r.errors.length ? `, ${r.errors.length} errors` : ""}`
+      ? `processed ${r.processed} of ${r.queued} queued`
+        + (r.skipped ? `, ${r.skipped} skipped (no content)` : "")
+        + (r.errors && r.errors.length ? `, ${r.errors.length} errors (details in logs/daemon.log)` : "")
       : `⚠ ${r.error}`;
+    refreshMeetingSkipStatus();
   } catch (e) {
     s.textContent = `⚠ ${e.message}`;
   }
@@ -1594,6 +1658,7 @@ document.addEventListener("DOMContentLoaded", () => {
   $("mtg-ask-btn").addEventListener("click", askMeeting);
   $("mtg-ask-input").addEventListener("keydown", (e) => { if (e.key === "Enter") askMeeting(); });
   $("mtg-run-now").addEventListener("click", runBatchNow);
+  $("mtg-clear-skips").addEventListener("click", clearMeetingSkips);
   document.querySelectorAll('input[name="mtg-range"]').forEach((r) => r.addEventListener("change", loadActionItems));
   $("mtg-week-gen").addEventListener("click", generateWeekSummary);
   $("config-save").addEventListener("click", saveConfig);

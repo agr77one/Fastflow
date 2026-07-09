@@ -54,6 +54,20 @@ DEFAULT_CONFIG = {
             "timeout_seconds": 120,
             "auto_start": False,
         },
+        "lmstudio": {
+            "base_url": "http://127.0.0.1:1234",
+            "model": "qwen2.5-3b-instruct",
+            "auth_bearer": "",
+            "timeout_seconds": 120,
+            "auto_start": False,
+        },
+        "lemonade": {
+            "base_url": "http://127.0.0.1:13305",
+            "model": "Qwen2.5-3B-Instruct-NPU",
+            "auth_bearer": "lemonade",
+            "timeout_seconds": 120,
+            "auto_start": False,
+        },
     },
     "flm_base_url": "http://127.0.0.1:52625",
     "flm_model": "qwen3.5:4b",
@@ -107,6 +121,35 @@ DEFAULT_CONFIG = {
             "max_per_run": 10,
         },
     },
+    "hotkeys": {
+        "grammar_fix": "^+g",
+        "open_chat": "^!c",
+        "capture_note": "^!n",
+        "ask_chat": "^+a",
+    },
+    "notes": {
+        "vault_dir": "%USERPROFILE%\\Documents\\FastFlowPrompt Notes",
+        "categories": [
+            "work/technical",
+            "work/managerial",
+            "work/career",
+            "research",
+            "personal",
+            "ideas",
+        ],
+        "fetch_timeout_seconds": 8,
+        "max_extracted_chars": 2000,
+        "low_confidence_to_inbox": True,
+        "generate_title": True,
+        "generate_summary": True,
+    },
+    "chat": {
+        "request_timeout_seconds": 240,
+        "temperature": 0.3,
+        "max_tokens": 1024,
+        "context_window_turns": 12,
+        "system_prompt": "You are a concise, helpful local assistant. Answer in Markdown. Keep replies short unless asked to elaborate.",
+    },
     "modes": {
         "grammar": {
             "label": "Grammar fix",
@@ -142,6 +185,8 @@ DEFAULT_CONFIG = {
         },
     },
 }
+
+KNOWN_PROVIDERS = frozenset((DEFAULT_CONFIG.get("providers") or {}).keys())
 
 
 def load_config(config_path: Path) -> dict:
@@ -231,7 +276,7 @@ def normalize_llm_config(cfg: dict, *, prefer_legacy: bool = False) -> dict:
         cfg["llm"] = llm
 
     provider = str(llm.get("provider") or "fastflowlm").strip().lower()
-    if provider not in {"fastflowlm", "ollama"}:
+    if provider not in KNOWN_PROVIDERS:
         provider = "fastflowlm"
     llm["provider"] = provider
 
@@ -240,34 +285,41 @@ def normalize_llm_config(cfg: dict, *, prefer_legacy: bool = False) -> dict:
     if not isinstance(profiles, dict):
         profiles = {}
         cfg["providers"] = profiles
-    for key, defaults in (DEFAULT_CONFIG.get("providers") or {}).items():
-        prof = profiles.get(key)
-        if not isinstance(prof, dict):
-            prof = {}
-            profiles[key] = prof
-        deep_merge(prof, copy.deepcopy(defaults))
-        other_key = "ollama" if key == "fastflowlm" else "fastflowlm"
-        other_defaults = copy.deepcopy((DEFAULT_CONFIG.get("providers") or {}).get(other_key) or {})
-        if (
-            str(prof.get("auth_bearer") or "").strip() == str(other_defaults.get("auth_bearer") or "").strip()
-            and str(prof.get("base_url") or "").strip().rstrip("/") == str(other_defaults.get("base_url") or "").strip().rstrip("/")
-            and str(prof.get("model") or "").strip() == str(other_defaults.get("model") or "").strip()
-        ):
-            profiles[key] = copy.deepcopy(defaults)
-            prof = profiles[key]
+
+    defaults_by_provider = DEFAULT_CONFIG.get("providers") or {}
+
+    def _matches_defaults(candidate: dict, defaults: dict) -> bool:
+        return (
+            str(candidate.get("auth_bearer") or "").strip() == str(defaults.get("auth_bearer") or "").strip()
+            and str(candidate.get("base_url") or "").strip().rstrip("/") == str(defaults.get("base_url") or "").strip().rstrip("/")
+            and str(candidate.get("model") or "").strip() == str(defaults.get("model") or "").strip()
+        )
+
+    for key, defaults in defaults_by_provider.items():
+        raw_prof = profiles.get(key)
+        if not isinstance(raw_prof, dict):
+            raw_prof = {}
+        crossed_profile = any(
+            other_key != key and _matches_defaults(raw_prof, other_defaults)
+            for other_key, other_defaults in defaults_by_provider.items()
+        )
+        filled = copy.deepcopy(defaults)
+        if not crossed_profile:
+            deep_merge(filled, raw_prof)
+        profiles[key] = filled
 
     active_profile = profiles[provider]
-    opposite_defaults = copy.deepcopy((DEFAULT_CONFIG.get("providers") or {}).get("ollama" if provider == "fastflowlm" else "fastflowlm") or {})
+    active_defaults = copy.deepcopy(defaults_by_provider.get(provider) or {})
+    crossed_llm_payload = any(
+        other_key != provider and _matches_defaults(llm, other_defaults)
+        for other_key, other_defaults in defaults_by_provider.items()
+    )
+    active_default_auth = str(active_defaults.get("auth_bearer") or "").strip().lower()
     legacy_crossed_profile = (
         not had_profiles
-        and str(llm.get("provider") or "").strip().lower() in {"fastflowlm", "ollama"}
+        and str(llm.get("provider") or "").strip().lower() in KNOWN_PROVIDERS
         and str(llm.get("auth_bearer") or "").strip().lower()
-        not in {"", "flm" if provider == "fastflowlm" else "ollama"}
-    )
-    crossed_llm_payload = (
-        str(llm.get("auth_bearer") or "").strip() == str(opposite_defaults.get("auth_bearer") or "").strip()
-        and str(llm.get("base_url") or "").strip().rstrip("/") == str(opposite_defaults.get("base_url") or "").strip().rstrip("/")
-        and str(llm.get("model") or "").strip() == str(opposite_defaults.get("model") or "").strip()
+        not in {"", active_default_auth}
     )
     if prefer_legacy:
         active_profile["base_url"] = cfg.get("flm_base_url") or active_profile["base_url"]
@@ -275,9 +327,9 @@ def normalize_llm_config(cfg: dict, *, prefer_legacy: bool = False) -> dict:
         active_profile["timeout_seconds"] = cfg.get("flm_timeout_seconds") or active_profile["timeout_seconds"]
         server = cfg.get("server") if isinstance(cfg.get("server"), dict) else {}
         active_profile["auto_start"] = bool(server.get("auto_start", active_profile.get("auto_start", True)))
-        active_profile["auth_bearer"] = "flm" if provider == "fastflowlm" else "ollama"
+        active_profile["auth_bearer"] = active_defaults.get("auth_bearer", "")
     elif legacy_crossed_profile:
-        active_profile["auth_bearer"] = "flm" if provider == "fastflowlm" else "ollama"
+        active_profile["auth_bearer"] = active_defaults.get("auth_bearer", "")
     elif not crossed_llm_payload:
         if llm.get("base_url") not in (None, ""):
             active_profile["base_url"] = llm.get("base_url")
@@ -295,8 +347,8 @@ def normalize_llm_config(cfg: dict, *, prefer_legacy: bool = False) -> dict:
     try:
         active_profile["timeout_seconds"] = int(active_profile["timeout_seconds"])
     except (TypeError, ValueError):
-        active_profile["timeout_seconds"] = int((DEFAULT_CONFIG.get("providers") or {}).get(provider, {}).get("timeout_seconds") or DEFAULT_CONFIG["llm"]["timeout_seconds"])
-    active_profile["auth_bearer"] = str(active_profile.get("auth_bearer") or ("flm" if provider == "fastflowlm" else "ollama")).strip()
+        active_profile["timeout_seconds"] = int(active_defaults.get("timeout_seconds") or DEFAULT_CONFIG["llm"]["timeout_seconds"])
+    active_profile["auth_bearer"] = str(active_profile.get("auth_bearer", active_defaults.get("auth_bearer", ""))).strip()
     active_profile["auto_start"] = bool(active_profile.get("auto_start"))
 
     llm["base_url"] = active_profile["base_url"]
@@ -530,7 +582,8 @@ def filter_config_patch(patch: dict) -> dict:
         elif key == "providers" and isinstance(value, dict):
             filtered_profiles = {}
             for provider_key, provider_value in value.items():
-                if provider_key not in {"fastflowlm", "ollama"} or not isinstance(provider_value, dict):
+                provider_key = str(provider_key or "").strip().lower()
+                if provider_key not in KNOWN_PROVIDERS or not isinstance(provider_value, dict):
                     continue
                 filtered_provider = {}
                 for provider_field, provider_field_value in provider_value.items():

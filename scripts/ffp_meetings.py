@@ -36,6 +36,7 @@ log = logging.getLogger("ffp.meetings")
 
 DIGESTS_PATH = _paths.MEETING_DIGESTS_FILE
 ACTION_STATUS_PATH = _paths.MEETING_ACTION_STATUS_FILE
+SKIPS_PATH = _paths.MEETING_SKIPS_FILE
 VALID_ACTION_STATUSES = ("pending", "accepted", "rejected")
 
 DEFAULTS = {
@@ -59,7 +60,17 @@ _TEMPERATURE = 0.2
 
 _batch_lock = threading.Lock()   # only one batch run at a time
 _io_lock = threading.Lock()      # serialize digest-file read-modify-write
-_status: dict = {"running": False, "last_run_at": "", "last_processed": 0, "last_errors": 0, "last_reason": ""}
+_status: dict = {"running": False, "last_run_at": "", "last_processed": 0, "last_errors": 0,
+                 "last_skipped": 0, "last_reason": ""}
+
+# A meeting younger than this may still be waiting on Quill's transcription —
+# keep retrying it. Older with no content = a stub recording that will never
+# have anything to digest, so it gets a permanent skip marker.
+_SKIP_MIN_AGE_DAYS = 2
+
+
+class NoContentError(RuntimeError):
+    """Quill has neither minutes nor a transcript for this meeting."""
 
 
 # ---------- time helpers (mirror ffp_notifications) -----------------------------------
@@ -171,6 +182,7 @@ def save_digest(rec: dict) -> None:
                 for d in digests:
                     f.write(json.dumps(d, ensure_ascii=False) + "\n")
             tmp.replace(DIGESTS_PATH)
+            _drop_skip_records(str(rec.get("meeting_id") or ""))
         except OSError as exc:
             log.warning("save_digest failed: %s", exc)
 
@@ -192,6 +204,146 @@ def list_digests() -> dict:
         for d in load_digests()
     ]
     return {"digests": rows, "count": len(rows)}
+
+
+# ---------- skip store ------------------------------------------------------------------
+# Meetings Quill has no content for (aborted/duplicate recordings). Without a
+# marker they re-queue and re-fail on every batch run forever, since idempotency
+# only checks digest_exists. Append-only jsonl; a later successful digest simply
+# takes precedence (the queue checks digests first).
+
+def _read_skip_records() -> list[dict]:
+    if not SKIPS_PATH.exists():
+        return []
+    records: list[dict] = []
+    try:
+        with SKIPS_PATH.open("r", encoding="utf-8", errors="replace") as f:
+            for raw in f:
+                raw = raw.strip()
+                if not raw:
+                    continue
+                try:
+                    row = json.loads(raw)
+                except Exception:
+                    continue
+                mid = row.get("meeting_id")
+                if not mid:
+                    continue
+                records.append({
+                    "meeting_id": str(mid),
+                    "title": str(row.get("title") or ""),
+                    "date": str(row.get("date") or ""),
+                    "reason": str(row.get("reason") or "no_content"),
+                    "skipped_at": str(row.get("skipped_at") or ""),
+                })
+    except OSError as exc:
+        log.warning("load_skips failed: %s", exc)
+        return []
+    return records
+
+
+def _write_skip_records(records: list[dict]) -> None:
+    if not records:
+        try:
+            SKIPS_PATH.unlink()
+        except FileNotFoundError:
+            pass
+        return
+    SKIPS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    tmp = SKIPS_PATH.with_suffix(".jsonl.tmp")
+    with tmp.open("w", encoding="utf-8") as f:
+        for rec in records:
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    tmp.replace(SKIPS_PATH)
+
+
+def _drop_skip_records(meeting_id: str | None = None) -> int:
+    records = _read_skip_records()
+    if not records:
+        return 0
+    mid = str(meeting_id or "").strip()
+    kept = [] if not mid else [r for r in records if r.get("meeting_id") != mid]
+    removed = len(records) - len(kept)
+    if removed:
+        _write_skip_records(kept)
+    return removed
+
+
+def load_skips() -> set[str]:
+    return {r["meeting_id"] for r in _read_skip_records() if r.get("meeting_id")}
+
+
+def list_skips() -> dict:
+    latest: dict[str, dict] = {}
+    digested = {str(d.get("meeting_id") or "") for d in load_digests() if d.get("meeting_id")}
+    for row in _read_skip_records():
+        mid = row["meeting_id"]
+        if mid in digested:
+            continue
+        prev = latest.get(mid)
+        if prev is None or row["skipped_at"] >= prev["skipped_at"]:
+            latest[mid] = row
+    rows = sorted(latest.values(), key=lambda r: str(r.get("skipped_at") or ""), reverse=True)
+    return {"skips": rows, "count": len(rows)}
+
+
+def skip_exists(meeting_id: str) -> bool:
+    return str(meeting_id or "") in load_skips()
+
+
+def save_skip(meeting: dict, reason: str = "no_content") -> None:
+    mid = str(meeting.get("id") or "")
+    if not mid:
+        return
+    rec = {
+        "meeting_id": mid,
+        "title": meeting.get("title") or "",
+        "date": meeting.get("date") or "",
+        "reason": reason,
+        "skipped_at": _now_iso(),
+    }
+    with _io_lock:
+        try:
+            if mid in load_skips():
+                return
+            SKIPS_PATH.parent.mkdir(parents=True, exist_ok=True)
+            with SKIPS_PATH.open("a", encoding="utf-8") as f:
+                f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+        except OSError as exc:
+            log.warning("save_skip failed: %s", exc)
+
+
+def clear_skip(meeting_id: str | None = None) -> dict:
+    target = str(meeting_id or "").strip()
+    if target in ("", "*", "all"):
+        target = ""
+    with _io_lock:
+        try:
+            removed = _drop_skip_records(target or None)
+            remaining = len(load_skips())
+        except OSError as exc:
+            log.warning("clear_skip failed: %s", exc)
+            return {"ok": False, "error": str(exc), "removed": 0, "remaining": len(load_skips())}
+    return {"ok": True, "removed": removed, "remaining": remaining}
+
+
+def _older_than_days(date_iso: object, days: int, *, now: datetime.datetime | None = None) -> bool:
+    """True when the meeting date is at least `days` old. Unparseable/missing
+    dates count as old — otherwise an undatable stub would retry forever."""
+    try:
+        dt = datetime.datetime.fromisoformat(str(date_iso).replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return True
+    ref = now
+    if ref is None:
+        ref = datetime.datetime.now(dt.tzinfo) if dt.tzinfo else datetime.datetime.now()
+    elif dt.tzinfo is not None and ref.tzinfo is None:
+        ref = ref.replace(tzinfo=dt.tzinfo)
+    elif dt.tzinfo is None and ref.tzinfo is not None:
+        ref = ref.astimezone().replace(tzinfo=None)
+    elif dt.tzinfo is not None and ref.tzinfo is not None:
+        ref = ref.astimezone(dt.tzinfo)
+    return (ref - dt) >= datetime.timedelta(days=days)
 
 
 # ---------- LLM + content -------------------------------------------------------------
@@ -288,7 +440,7 @@ def process_meeting(meeting: dict, cfg: dict, *, client=None, llm_call=None, str
     c = client or ffp_quill.QuillClient(str(mcfg.get("mcp_url") or ffp_quill.DEFAULT_MCP_URL))
     content, source = _fetch_content(mid, mcfg, c)
     if not content:
-        raise RuntimeError("no minutes or transcript available for meeting")
+        raise NoContentError("no minutes or transcript available for meeting")
     call = _resolve_llm_call(llm_call)
     t0 = time.time()
     digest_md = str(call(_digest_prompt(meeting.get("title") or "", meeting.get("date") or "", content, strict=strict)) or "").strip()
@@ -330,6 +482,7 @@ def run_batch(cfg: dict, *, llm_call=None, client=None, max_per_run=None, reason
 
         todo: list[dict] = []
         seen: set[str] = set()
+        skips = load_skips()
         offset = 0
         while len(todo) < cap and offset <= 120:
             page = ffp_quill.list_recent_meetings(limit=30, offset=offset, client=c)
@@ -339,32 +492,42 @@ def run_batch(cfg: dict, *, llm_call=None, client=None, max_per_run=None, reason
                 mid = mt.get("id")
                 if mid and mid not in seen:
                     seen.add(mid)
-                    if not digest_exists(mid):
+                    if not digest_exists(mid) and mid not in skips:
                         todo.append(mt)
                         if len(todo) >= cap:
                             break
             offset += 30
 
-        processed, errors = 0, []
+        processed, skipped, errors = 0, 0, []
         for mt in todo:
             try:
                 save_digest(process_meeting(mt, cfg, client=c, llm_call=llm_call))
                 processed += 1
+            except NoContentError as exc:
+                if _older_than_days(mt.get("date"), _SKIP_MIN_AGE_DAYS):
+                    save_skip(mt)
+                    skipped += 1
+                    log.info("meeting %s (%s) has no content in Quill; marked skipped — won't re-queue",
+                             mt.get("id"), mt.get("title"))
+                else:
+                    log.warning("digest failed for %s: %s (recent meeting — will retry next run)",
+                                mt.get("id"), exc)
+                    errors.append({"meeting_id": mt.get("id"), "error": str(exc)})
             except Exception as exc:
                 log.warning("digest failed for %s: %s", mt.get("id"), exc)
                 errors.append({"meeting_id": mt.get("id"), "error": str(exc)})
         _status.update({
             "last_run_at": _now_iso(), "last_processed": processed,
-            "last_errors": len(errors), "last_reason": reason,
+            "last_errors": len(errors), "last_skipped": skipped, "last_reason": reason,
         })
-        return {"ok": True, "processed": processed, "errors": errors, "queued": len(todo)}
+        return {"ok": True, "processed": processed, "errors": errors, "queued": len(todo), "skipped": skipped}
     finally:
         _status["running"] = False
         _batch_lock.release()
 
 
 def batch_status() -> dict:
-    return {**_status, "total_digests": len(load_digests())}
+    return {**_status, "total_digests": len(load_digests()), "total_skips": list_skips()["count"]}
 
 
 # ---------- on-demand Q&A about one meeting -------------------------------------------

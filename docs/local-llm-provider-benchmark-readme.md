@@ -7,14 +7,18 @@ drop FastFlowLM (FLM) and use Ollama, LM Studio, or Lemonade on the AMD NPU
 instead. It includes setup steps, exact benchmark commands, artifacts, measured
 results, anomalies, and the current decision.
 
-## Decision
+## Decision (corrected by the July 9 truncation audit)
 
-Do not drop FLM in favor of Ollama.
+Do not drop FLM. The outcome is the rerun plan's ROUTING gate, not replacement.
 
-Lemonade `Qwen2.5-3B-Instruct-NPU` has now passed the defined second-day
-replace-FLM gate on this AMD NPU machine. It is the recommended replacement
-route to promote next, with FLM kept as a fallback during product rollout and
-smoke testing.
+The July 9 "replace-FLM gate PASS" for Lemonade `Qwen2.5-3B-Instruct-NPU` was
+subsequently INVALIDATED for the long-context/meetings workload: a direct
+needle probe proved the runtime silently truncates input to roughly the last
+2-3k tokens while still reporting the full `prompt_tokens` count (see "July 9
+Truncation Audit" below). Its short-task results (grammar `40/40`, prompt
+`45/50`, both days) remain valid — it is an approved candidate for
+grammar/prompt routing only. FLM remains the only tested runtime that actually
+processes an 8k-token meeting transcript on this machine.
 
 The corrected rerun shows:
 
@@ -22,17 +26,24 @@ The corrected rerun shows:
   prompt/grammar quality and the long-context meeting workload in the same
   session: `49/50` prompt passes, `40/40` grammar passes, and `5/5` at roughly
   8k prompt tokens.
-- Lemonade `Qwen2.5-3B-Instruct-NPU` is the first serious replacement route:
-  `40/40` grammar, `45/50` prompt XML, and much faster calibrated
-  8k TTFT than the FLM incumbent. Its July 9 second-day rerun passed the
-  replace-FLM gate: `40/40` grammar, `45/50` prompt XML, `15/15` calibrated
-  long-context, all required long-context sizes present, and zero memory-guard
-  violations. Its one consistent prompt miss is narrow: `prompt_plan` is
-  recoverable with deterministic tag repair or a stricter retry prompt.
+- Lemonade `Qwen2.5-3B-Instruct-NPU` is a strong SHORT-TASK candidate:
+  `40/40` grammar and `45/50` prompt XML on both July 8 and July 9. Its
+  "much faster calibrated 8k TTFT" and `15/15` long-context passes were
+  artifacts of silent keep-last input truncation (~2-3k effective window)
+  that the uniform-filler transcript could not detect — the July 9 needle
+  probe invalidated the long-context clauses of the gate. Its one consistent
+  prompt miss is narrow: `prompt_plan` is recoverable with deterministic tag
+  repair or a stricter retry prompt.
 - Lemonade `Qwen3-4B-Hybrid`, retested with thinking disabled, is now a strong
   short prompt-mode candidate: `40/40` grammar and `50/50` prompt XML. It is not
   a global replacement because its long-context route returns empty visible
   output after roughly 2.1k prompt tokens.
+- The Lemonade NPU-only rerun with FLM fully stopped confirmed the same
+  effective-context problem across all four tested Lemonade models:
+  `Qwen2.5-3B-Instruct-NPU`, `Qwen3-4B-Hybrid`,
+  `Qwen2.5-7B-Instruct-NPU`, and `Phi-4-mini-instruct-NPU` all retrieved the
+  start needle at 1.5k target tokens and lost it at 2k. Reloading with
+  `--ctx-size 8192` did not improve any row.
 - Ollama `llama3.2:3b` is a useful small CPU fallback. It is faster than FLM for
   grammar, but it scored `0/50` on prompt XML.
 - The completed Llama Matrix A rows did not change the routing decision:
@@ -46,23 +57,75 @@ The corrected rerun shows:
 - Lemonade NPU works, but Qwen2.5 7B, Phi-4-mini, and Mistral 7B missed the
   quick-quality promotion gate under the current Flowkey prompts.
 
-Practical recommendation:
+Practical recommendation (corrected):
 
-- Promote Lemonade `Qwen2.5-3B-Instruct-NPU` as the next AMD NPU replacement
-  route for FLM, with FLM retained as a fallback until the config/default
-  switch is smoke-tested end to end.
-- Treat Lemonade `Qwen2.5-3B-Instruct-NPU` as the leading replacement route.
-  The deterministic repair path for its known
-  `prompt_plan` miss is implemented, unit-tested, and validated through the app
-  path.
+- Keep FLM as the production default and the ONLY meetings/long-context route.
+- Offer Lemonade `Qwen2.5-3B-Instruct-NPU` as an opt-in short-task route
+  (grammar/prompt). The deterministic repair path for its known `prompt_plan`
+  miss is implemented, unit-tested, and validated through the app path.
+- Any provider switch must enforce NPU exclusivity: FLM serving concurrently
+  hard-fails Lemonade inference (HTTP 500, wedged until model reload).
 - Treat Lemonade `Qwen3-4B-Hybrid` as a short-task-only candidate, pending a
   long-context fix or a workload-specific route that excludes meetings.
 - Keep `ollama` wired as a portable CPU fallback.
 - Keep `lmstudio` wired as an experimental fast local provider. LM Studio
   Qwen2.5 7B can be a supported opt-in prompt route, but not a default or
   automatic replacement.
-- Keep `lemonade` wired as the AMD NPU replacement path, but keep Qwen3 out of
-  meeting/long-context routing until its visible-output failure is fixed.
+- Keep `lemonade` wired as the AMD NPU short-task path, but keep every tested
+  Lemonade model out of meeting/long-context routing until a future runtime or
+  model configuration proves 8k start-needle retrieval.
+
+## July 9 Truncation Audit
+
+A post-gate audit caught the long-context result before it reached the product.
+
+The tell was in the artifacts themselves: on BOTH days, growing the prompt from
+`4042` to `8022` tokens cost zero additional prefill (TTFT ~2.83s for every 4k
+AND 8k run), while FLM's TTFT scaled honestly (3.9s → 11.4s → 22.7s). Real
+prefill is never free, so a live needle-in-haystack probe was run against
+`Qwen2.5-3B-Instruct-NPU` (unique code planted in the transcript, model asked
+to retrieve it):
+
+| Probe | Server prompt tokens | Needle found |
+|---|---:|---|
+| needle at START, ~1k tokens | 1003 | yes |
+| needle at START, ~3.5k tokens | 3353 | **no** |
+| needle at START, ~8k tokens | 7583 | **no** |
+| needle at END, ~8k tokens | 7583 | yes |
+
+That is keep-last input truncation with an effective window of roughly 2-3k
+tokens, while `usage.prompt_tokens` still reports the full submitted count.
+The benchmark's synthetic transcript was uniform repeated filler, so a digest
+of the surviving tail was indistinguishable from a digest of the whole — the
+quality checker was structurally blind to truncation, and "5/5 at 8k" passed.
+
+Consequences:
+
+- The `qwen25_longctx_quality` and `qwen25_longctx_sizes` gate clauses are
+  INVALID; per the rerun plan's own rule (a context cap below 8k disqualifies
+  the meetings workload), Lemonade Qwen2.5-3B-NPU is not meetings-eligible.
+- The initial audit showed the same ~2-3k effective-context limitation in the
+  first two Lemonade models: Qwen3-4B-Hybrid fails loudly (empty output past
+  ~2.1k), and Qwen2.5-3B-NPU fails silently (truncation). The NPU-only ladder
+  later expanded this to all four tested Lemonade models.
+- Short-task results are unaffected (those prompts fit the window easily).
+
+Side finding — NPU exclusivity: with `flm serve` running, every Lemonade
+inference failed HTTP 500 (`RyzenAI DynamicDispatch ... Failed to submit`) and
+the backend stayed wedged after FLM stopped, recovering only after a model
+unload+reload. FLM and Lemonade cannot serve concurrently on this NPU.
+
+Fixes landed with this audit:
+
+- Probe artifact:
+  `data/benchmarks/context_truncation_probe_lemonade_qwen2.5-3b-instruct-npu_20260709.json`
+- Harness: `tools/provider_bench.py` now plants `ZEBRA-7741` at the transcript
+  start and `OTTER-3305` at the end; `check_longctx_contract` requires both to
+  be quoted and reports `truncation_suspected` (end found, start missing).
+  Silent truncation is now a scoring failure. Unit-tested.
+- Follow-up plan: `docs/lemonade-npu-only-bench-plan.md` (Lemonade-only
+  isolation benching with FLM verified off, context-window ladder, and
+  context-limit investigation).
 
 ## Why Bigger Models Were Tested
 
@@ -97,10 +160,11 @@ rerun confirmed this:
 - Lemonade Mistral 7B NPU quick cell: `0/20` prompt XML passes.
 - FLM `qwen3.5:4b`: `49/50` prompt XML passes.
 
-So bigger did not reliably solve the contract problem. The best all-around
-candidate remains the 3B Lemonade NPU Qwen2.5 model because it also passed the
-8k meeting sweep. The best short prompt-only candidate is Qwen3 4B Hybrid with
-thinking disabled.
+So bigger did not reliably solve the contract problem. The best short all-around
+candidate remains the 3B Lemonade NPU Qwen2.5 model. It does not replace FLM
+for meetings because the NPU-only needle ladder later proved a sub-2k effective
+start-of-input ceiling. The best short prompt-only candidate is Qwen3 4B Hybrid
+with thinking disabled.
 
 ## Ollama And The NPU
 
@@ -180,6 +244,7 @@ Key provider implementation files:
 New reproducible benchmark harness:
 
 - `tools/provider_bench.py`
+- `tools/lemonade_context_ladder.py`
 - `tests/test_provider_bench.py`
 
 Prompt-mode output repair is now implemented in:
@@ -198,13 +263,13 @@ Harness validation:
 
 ```powershell
 python -m pytest tests\test_provider_bench.py -q
-python -m py_compile tools\provider_bench.py
+python -m py_compile tools\provider_bench.py tools\lemonade_context_ladder.py
 ```
 
 Result:
 
 ```text
-9 passed
+15 passed
 ```
 
 Current app-path prompt-repair validation:
@@ -353,12 +418,12 @@ Lemonade downloaded before/at rerun:
 
 | Model | Size GB | Notes |
 |---|---:|---|
-| `Qwen2.5-3B-Instruct-NPU` | 4.10 | Matrix A and calibrated long-context tested |
-| `Qwen2.5-7B-Instruct-NPU` | 8.22 | July 8 quick quality tested; failed prompt gate |
-| `Phi-4-mini-instruct-NPU` | 5.21 | July 8 quick quality tested; failed quick gate |
+| `Qwen2.5-3B-Instruct-NPU` | 4.10 | Matrix A short-task tested; old calibrated long-context later invalidated; NPU-only ladder loses start at 2k |
+| `Qwen2.5-7B-Instruct-NPU` | 8.22 | July 8 quick quality tested; failed prompt gate; NPU-only ladder loses start at 2k |
+| `Phi-4-mini-instruct-NPU` | 5.21 | July 8 quick quality tested; failed quick gate; NPU-only ladder loses start at 2k |
 | `Llama-3.2-1B-Instruct-NPU` | 1.96 | exact Matrix A NPU cell tested after catalog re-check |
 | `Llama-3.2-1B-Instruct-Hybrid` | 1.89 | full Matrix A substitution tested before exact `-NPU` cell was pulled |
-| `Qwen3-4B-Hybrid` | 5.17 | retested with thinking disabled; short mode passed, long-context failed |
+| `Qwen3-4B-Hybrid` | 5.17 | retested with thinking disabled; short mode passed; NPU-only ladder loses start at 2k and end control fails at 2k+ |
 | `Mistral-7B-Instruct-v0.3-NPU` | 8.09 | July 8 quick quality tested; failed prompt gate |
 | `CodeLlama-7b-Instruct-hf-NPU` | 7.03 | downloaded, excluded from headline |
 | `DeepSeek-R1-Distill-Qwen-7B-NPU` | 8.26 | downloaded, reasoning model, excluded |
@@ -371,8 +436,9 @@ Still not run from the rerun plan:
   skipped for this batch after the Llama matrix failures and RAM-risk review
 
 No longer pending: second-day reproducibility for Lemonade
-`Qwen2.5-3B-Instruct-NPU` completed on 2026-07-09 and passed the replace-FLM
-gate.
+`Qwen2.5-3B-Instruct-NPU` completed on 2026-07-09. The old evaluator marked the
+replace-FLM gate as passed, but the July 9 truncation audit and NPU-only ladder
+voided the long-context clauses. Treat the old gate artifact as historical.
 
 ## July 8 Corrected Rerun Artifacts
 
@@ -413,14 +479,19 @@ gate.
 | Artifact | Status | Notes |
 |---|---|---|
 | `data/benchmarks/second_day_lemonade_qwen2.5-3b-instruct-npu_20260709.json` | valid | second-day Qwen2.5 short grammar/prompt rerun |
-| `data/benchmarks/second_day_lemonade_qwen2.5-3b-instruct-npu_longctx_calibrated_20260709.json` | valid | second-day Qwen2.5 calibrated long-context rerun |
+| `data/benchmarks/second_day_lemonade_qwen2.5-3b-instruct-npu_longctx_calibrated_20260709.json` | old-harness result, longctx invalid | second-day Qwen2.5 calibrated long-context rerun; later proved truncated |
 | `data/benchmarks/second_day_lemonade_qwen3-4b-hybrid_no-think_20260709.json` | informational | second-day Qwen3 short grammar/prompt rerun with thinking disabled |
-| `data/benchmarks/second_day_lemonade_qwen2.5-3b-instruct-npu_gate_20260709.json` | gate record | Qwen2.5 replace-FLM gate passed |
-| `data/benchmarks/second_day_lemonade_qwen2.5-3b-instruct-npu_gate_20260709.md` | gate report | Markdown rendering of the gate result |
+| `data/benchmarks/second_day_lemonade_qwen2.5-3b-instruct-npu_gate_20260709.json` | superseded gate record | Old evaluator marked Qwen2.5 replace-FLM gate passed; longctx clauses later voided |
+| `data/benchmarks/second_day_lemonade_qwen2.5-3b-instruct-npu_gate_20260709.md` | superseded gate report | Markdown rendering of the old gate result |
 
-## July 9 Second-Day Gate Result
+## July 9 Second-Day Gate Result (longctx clauses later INVALIDATED)
 
-Qwen2.5 replace-FLM gate: **PASS**.
+Qwen2.5 replace-FLM gate: **PASS as evaluated** — superseded by the July 9
+Truncation Audit: the `qwen25_longctx_quality` and `qwen25_longctx_sizes` rows
+passed on truncated input and are void. Note also that the evaluator never
+checked the rerun plan's two speed-vs-FLM clauses (grammar ≤ FLM same day;
+8k TTFT ≤ 1.5× FLM); the grammar-speed clause happens to hold on July 8 data,
+the 8k TTFT clause is moot.
 
 | Gate | Scope | Result | Observed | Required |
 |---|---|---|---|---|
@@ -441,6 +512,194 @@ Full cells used 1 warmup plus 5 timed runs per case.
 | Lemonade | `Qwen2.5-3B-Instruct-NPU` | NPU | longctx | 15/15 | 14.823 | 2.704 | 18.0708 | 1489.9 | 212.0 | 4042 | 4561 | no | none |
 | Lemonade | `Qwen3-4B-Hybrid` | NPU+iGPU hybrid, thinking disabled | grammar | 40/40 | 3.101 | 0.517 | 8.5276 | 136.0 | 17.5 | 68 | 5987 | no | none |
 | Lemonade | `Qwen3-4B-Hybrid` | NPU+iGPU hybrid, thinking disabled | prompt | 50/50 | 13.516 | 0.774 | 9.0875 | 175.9 | 111.5 | 135 | 6102 | no | none |
+
+## July 9 Lemonade NPU-Only Rerun
+
+This is the execution of `docs/lemonade-npu-only-bench-plan.md`. It answers the
+specific replacement question under the strict condition that FLM is fully off:
+no `flm` process, port `52625` closed, Flowkey daemon stopped so it cannot
+respawn FLM, and exactly one Lemonade model loaded at a time.
+
+Result: no tested Lemonade model is meetings-eligible. Every model lost the
+start-of-input needle at the 2k target. Reloading with `--ctx-size 8192` did not
+raise the ceiling. Because Phase 1/2 never reached the 8k start-needle gate,
+Phase 3 long-context and short-task reruns were correctly skipped by the plan.
+
+### NPU-Only Controls
+
+| Check | Observed result |
+|---|---|
+| Flowkey AutoHotkey/daemon stopped | yes |
+| FLM process count | `0` before measurements and between models |
+| FLM port `52625` | closed / `False` before measurements and between models |
+| LM Studio server | stopped |
+| Lemonade server | running on `13305`, version `10.9.0` |
+| Lemonade loaded models before each model | none, then one model loaded |
+| Lemonade loaded models after the run | none |
+| Lemonade backend | `ryzenai-llm:npu v1.7.0` installed |
+| Memory guard | no violation in any ladder artifact |
+
+### NPU-Only Commands
+
+Preflight and isolation:
+
+```powershell
+# Stop Flowkey so it cannot respawn FLM.
+Get-CimInstance Win32_Process |
+  Where-Object { $_.Name -match 'AutoHotkey|pythonw' -and $_.CommandLine -match 'grammarFix|ffp_daemon' } |
+  ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+
+# Stop FLM and verify it is gone.
+Get-CimInstance Win32_Process |
+  Where-Object { $_.Name -match '^flm' } |
+  ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+
+Get-CimInstance Win32_Process |
+  Where-Object { $_.Name -match '^flm' } |
+  Select-Object ProcessId,Name
+
+(Test-NetConnection 127.0.0.1 -Port 52625 -WarningAction SilentlyContinue).TcpTestSucceeded
+
+# Stop other provider services.
+& "$env:USERPROFILE\.lmstudio\bin\lms.exe" unload --all
+& "$env:USERPROFILE\.lmstudio\bin\lms.exe" server stop
+ollama stop qwen2.5:3b
+ollama stop llama3.2:3b
+ollama stop llama3.2:1b
+
+# Reset Lemonade and record backend state.
+& "$env:LOCALAPPDATA\lemonade_server\bin\lemonade.exe" unload all
+& "$env:LOCALAPPDATA\lemonade_server\bin\lemonade.exe" status
+& "$env:LOCALAPPDATA\lemonade_server\bin\lemonade.exe" --version
+& "$env:LOCALAPPDATA\lemonade_server\bin\lemonade.exe" backends --all
+```
+
+Phase 1 default-context ladder, repeated for each model:
+
+```powershell
+& "$env:LOCALAPPDATA\lemonade_server\bin\lemonade.exe" unload all
+& "$env:LOCALAPPDATA\lemonade_server\bin\lemonade.exe" load <MODEL>
+
+python tools\lemonade_context_ladder.py `
+  --model <MODEL> `
+  --quant <ryzenai-llm-npu-or-ryzenai-llm-hybrid> `
+  --timeout 300 `
+  --out data\benchmarks\lemonade_<model>_context_ladder_20260709.json
+
+& "$env:LOCALAPPDATA\lemonade_server\bin\lemonade.exe" unload all
+```
+
+Models run in Phase 1:
+
+```powershell
+Qwen2.5-3B-Instruct-NPU
+Qwen3-4B-Hybrid
+Qwen2.5-7B-Instruct-NPU
+Phi-4-mini-instruct-NPU
+```
+
+Phase 2 context-remedy investigation:
+
+```powershell
+& "$env:LOCALAPPDATA\lemonade_server\bin\lemonade.exe" load --help
+```
+
+The only relevant option exposed was:
+
+```text
+--ctx-size SIZE [-1]        Context size for the model
+```
+
+Then each model was reloaded with `--ctx-size 8192` and the same ladder was
+rerun:
+
+```powershell
+& "$env:LOCALAPPDATA\lemonade_server\bin\lemonade.exe" unload all
+& "$env:LOCALAPPDATA\lemonade_server\bin\lemonade.exe" load --ctx-size 8192 <MODEL>
+
+python tools\lemonade_context_ladder.py `
+  --model <MODEL> `
+  --quant <ryzenai-llm-npu-or-ryzenai-llm-hybrid> `
+  --timeout 300 `
+  --out data\benchmarks\lemonade_<model>_context_ladder_ctx8192_20260709.json
+
+& "$env:LOCALAPPDATA\lemonade_server\bin\lemonade.exe" unload all
+```
+
+No same-weight `-Hybrid` variants were already downloaded for Qwen2.5 3B,
+Qwen2.5 7B, or Phi-4-mini, so the plan's "reuse already-downloaded; do not
+re-pull unless missing" rule left those Hybrid checks skipped. The already
+downloaded `Qwen3-4B-Hybrid` was tested.
+
+Phase 3 was skipped:
+
+```text
+Reason: no Phase 1 or Phase 2 row reached the 8k start-needle gate.
+```
+
+### Phase 1 Default Ladder Summary
+
+| Model | Runtime | Largest start needle found | First start needle lost | End-control failures | 8k start gate | TTFT fingerprint | Max RSS GiB | Min available MB | Meetings verdict |
+|---|---|---:|---:|---|---|---|---:|---:|---|
+| `Qwen2.5-3B-Instruct-NPU` | NPU | 1500 | 2000 | none | fail | flat after 2k | 5.51 | 8698 | no - silent keep-last truncation |
+| `Qwen3-4B-Hybrid` | NPU+iGPU hybrid | 1500 | 2000 | 2000, 2500, 3000, 4000, 6000, 8000 | fail | flat after 2k | 6.91 | 7480 | no - loud empty-output failure |
+| `Qwen2.5-7B-Instruct-NPU` | NPU | 1500 | 2000 | 1000, 1500, 2500, 4000, 6000, 8000 | fail | flat after 2k | 8.36 | 6066 | no - loses start and unreliable end retrieval |
+| `Phi-4-mini-instruct-NPU` | NPU | 1500 | 2000 | none | fail | flat after 2k | 8.24 | 6098 | no - silent keep-last truncation |
+
+### Phase 1 Default Ladder Detail
+
+| Model | Position | Found sizes | Lost sizes | 8k reported prompt tokens | 8k TTFT s |
+|---|---|---|---|---:|---:|
+| `Qwen2.5-3B-Instruct-NPU` | start | 1000, 1500 | 2000, 2500, 3000, 4000, 6000, 8000 | 9447 | 2.728 |
+| `Qwen2.5-3B-Instruct-NPU` | end | 1000, 1500, 2000, 2500, 3000, 4000, 6000, 8000 | none | 9447 | 2.870 |
+| `Qwen3-4B-Hybrid` | start | 1000, 1500 | 2000, 2500, 3000, 4000, 6000, 8000 | 9450 | 5.742 |
+| `Qwen3-4B-Hybrid` | end | 1000, 1500 | 2000, 2500, 3000, 4000, 6000, 8000 | 9450 | 5.586 |
+| `Qwen2.5-7B-Instruct-NPU` | start | 1000, 1500 | 2000, 2500, 3000, 4000, 6000, 8000 | 9447 | 4.577 |
+| `Qwen2.5-7B-Instruct-NPU` | end | 2000, 3000 | 1000, 1500, 2500, 4000, 6000, 8000 | 9447 | 4.661 |
+| `Phi-4-mini-instruct-NPU` | start | 1000, 1500 | 2000, 2500, 3000, 4000, 6000, 8000 | 8763 | 3.356 |
+| `Phi-4-mini-instruct-NPU` | end | 1000, 1500, 2000, 2500, 3000, 4000, 6000, 8000 | none | 8763 | 3.045 |
+
+The critical fingerprint is not only "needle missing." It is needle missing
+while Lemonade still reports thousands of submitted `prompt_tokens` and TTFT
+stays nearly flat from 2k through 8k. That is the same truncation pattern found
+in the original audit.
+
+### Phase 2 `--ctx-size 8192` Ladder Summary
+
+| Model | Largest start needle found | First start needle lost | End-control failures | 8k start gate | 8k start TTFT s | 8k end TTFT s | Outcome |
+|---|---:|---:|---|---|---:|---:|---|
+| `Qwen2.5-3B-Instruct-NPU` | 1500 | 2000 | none | fail | 3.008 | 2.948 | no improvement |
+| `Qwen3-4B-Hybrid` | 1500 | 2000 | 2000, 2500, 3000, 4000, 6000, 8000 | fail | 5.653 | 5.632 | no improvement |
+| `Qwen2.5-7B-Instruct-NPU` | 1500 | 2000 | 1000, 1500, 2500, 4000, 6000, 8000 | fail | 4.989 | 4.599 | no improvement |
+| `Phi-4-mini-instruct-NPU` | 1500 | 2000 | none | fail | 3.091 | 3.096 | no improvement |
+
+### NPU-Only Artifact Index
+
+| Artifact | Status | Notes |
+|---|---|---|
+| `tools/lemonade_context_ladder.py` | harness | standalone start/end needle ladder used for Phase 1 and Phase 2 |
+| `data/benchmarks/lemonade_qwen2.5-3b-instruct-npu_context_ladder_20260709.json` | valid failure | default load; first start loss at 2k |
+| `data/benchmarks/lemonade_qwen3-4b-hybrid_context_ladder_20260709.json` | valid failure | default load; first start loss at 2k, end control fails at 2k+ |
+| `data/benchmarks/lemonade_qwen2.5-7b-instruct-npu_context_ladder_20260709.json` | valid failure | default load; first start loss at 2k, noisy end retrieval |
+| `data/benchmarks/lemonade_phi-4-mini-instruct-npu_context_ladder_20260709.json` | valid failure | default load; first start loss at 2k |
+| `data/benchmarks/lemonade_qwen2.5-3b-instruct-npu_context_ladder_ctx8192_20260709.json` | valid failure | `--ctx-size 8192`; unchanged |
+| `data/benchmarks/lemonade_qwen3-4b-hybrid_context_ladder_ctx8192_20260709.json` | valid failure | `--ctx-size 8192`; unchanged |
+| `data/benchmarks/lemonade_qwen2.5-7b-instruct-npu_context_ladder_ctx8192_20260709.json` | valid failure | `--ctx-size 8192`; unchanged |
+| `data/benchmarks/lemonade_phi-4-mini-instruct-npu_context_ladder_ctx8192_20260709.json` | valid failure | `--ctx-size 8192`; unchanged |
+
+### NPU-Only Decision Gates
+
+| Model | Meetings gate | Short-task evidence | Final role |
+|---|---|---|---|
+| `Qwen2.5-3B-Instruct-NPU` | fail: 8k start needle not retrieved | July 8 and July 9 short runs both `40/40` grammar, `45/50` prompt | opt-in grammar/prompt only |
+| `Qwen3-4B-Hybrid` | fail: 8k start needle not retrieved; end control fails at 2k+ | July 8 and July 9 short runs both `40/40` grammar, `50/50` prompt with thinking disabled | opt-in prompt/grammar experiment only |
+| `Qwen2.5-7B-Instruct-NPU` | fail: 8k start needle not retrieved | July 8 quick run `16/16` grammar, `0/20` prompt | no current Flowkey route |
+| `Phi-4-mini-instruct-NPU` | fail: 8k start needle not retrieved | July 8 quick run `8/16` grammar, `14/20` prompt | no current Flowkey route |
+
+NPU-only conclusion: Lemonade is not faster or smaller in a way that permits
+dropping FLM for meetings. It can be faster for some short tasks, but all tested
+Lemonade meeting candidates have a sub-2k effective start-of-input ceiling on
+this machine. FLM remains the only measured meetings route.
 
 ## July 8 Full Rerun Summary
 
@@ -602,21 +861,27 @@ counts near 1k/4k/8k.
 | FLM | `qwen3.5:4b` | 4047 | 5/5 | 29.435 | 26.510 | 33.655 | 11.367 | 0.1498 | 193 | 7889 | 4188 | no |
 | FLM | `qwen3.5:4b` | 8027 | 5/5 | 42.170 | 39.011 | 44.091 | 22.697 | 0.2130 | 207 | 7901 | 3669 | no |
 
-Long-context gate:
+Long-context gate (CORRECTED July 9 — see Truncation Audit):
 
-- Lemonade Qwen2.5 3B NPU clears the 8k TTFT gate against FLM by a wide margin:
-  `2.831s` vs FLM `22.697s`.
+- INVALID: the apparent 8k TTFT win for Lemonade Qwen2.5 3B NPU (`2.831s` vs
+  FLM `22.697s`) compared ~2-3k tokens of real prefill against FLM's honest 8k.
+  The identical 4k/8k TTFT across both days' artifacts was the tell — prefill
+  is never free.
 - Lemonade Qwen3 4B Hybrid did not clear the meetings workload despite good
   short-mode quality: the 4k and 8k cells returned empty scored output.
 - The Qwen3 Hybrid failure is not a harness scoring artifact. A direct Lemonade
   API threshold probe returned visible content at `2055` prompt tokens and empty
   `message.content` from `2255` prompt tokens onward while still reporting
   nonzero completion tokens.
-- No context cap was hit for Lemonade Qwen2.5 3B NPU or FLM at roughly 8k
-  prompt tokens.
+- CORRECTED: a context cap WAS hit for Lemonade Qwen2.5 3B NPU — silently. The
+  July 9 needle probe shows keep-last truncation from roughly 3.3k prompt
+  tokens onward. FLM showed honest TTFT scaling through 8k. Both Lemonade
+  models on this machine have a ~2-3k effective-context limit: Qwen3 fails
+  loudly (empty output), Qwen2.5 fails silently (truncation).
 - No memory guard fired for the calibrated long-context cells.
-- The replacement decision still remains gated on second-day reproducibility and
-  product hardening of the validated `prompt_plan` repair/retry policy.
+- Per the rerun plan's own rule (a context cap below 8k is disqualifying for
+  the meetings workload), Lemonade Qwen2.5 3B NPU is DISQUALIFIED for meetings
+  as configured; the routing gate applies instead of replacement.
 
 Qwen3 Hybrid threshold probe:
 
@@ -1522,25 +1787,28 @@ Current quality gates:
 
 FLM, Lemonade Qwen2.5 3B, and Lemonade Qwen3 4B Hybrid passed the short prompt
 quality threshold. Every Llama 3.2 cell failed prompt XML at `0/50`, including
-the small `llama3.2:3b` baseline. Lemonade Qwen2.5 3B is the only non-FLM
-candidate that also passed the calibrated 8k long-context workload. LM Studio
-7B is the most interesting non-NPU near miss because it produced repairable
-Markdown-style structure in all timed prompt runs, but the current contract
-checker correctly rejects it.
+the small `llama3.2:3b` baseline. No non-FLM model currently passes the
+meetings/long-context gate: the apparent Lemonade Qwen2.5 3B 8k pass was
+invalidated by the NPU-only needle ladder. LM Studio 7B is the most interesting
+non-NPU near miss because it produced repairable Markdown-style structure in
+all timed prompt runs, but the current contract checker correctly rejects it.
 
-## Current Routing Recommendation
+## Current Routing Recommendation (corrected July 9)
 
 Production:
 
-- `prompt`: promote Lemonade Qwen2.5 as the gate-passed AMD NPU replacement
-  route for FLM. Qwen3 has the cleaner short prompt score, but Qwen2.5 has the
-  better all-workload profile and a validated recovery path for its
-  `prompt_plan` miss.
-- `meeting/long-context`: Lemonade Qwen2.5 passed the calibrated 1k/4k/8k
-  second-day sweep. Do not route meetings to Qwen3 Hybrid until the empty 4k/8k
-  output failure is fixed.
-- `grammar`: Lemonade Qwen2.5 is the leading candidate; it passed `40/40` and was
-  faster than both FLM Qwen2.5 and FLM Qwen3.5.
+- `prompt`: FLM stays the default. Lemonade Qwen2.5-3B-NPU is an approved
+  OPT-IN short prompt route (`45/50`, with a validated `prompt_plan` repair),
+  not a replacement.
+- `meeting/long-context`: FLM only. Lemonade Qwen2.5-3B-NPU is disqualified —
+  the July 9 needle probe proved silent keep-last truncation to ~2-3k tokens.
+  Qwen3-4B-Hybrid is also disqualified (loud empty output past ~2.1k). FLM is
+  the only tested runtime that honestly processes an 8k transcript here.
+- `grammar`: Lemonade Qwen2.5-3B-NPU is an approved opt-in route; it passed
+  `40/40` and was faster than both FLM Qwen2.5 and FLM Qwen3.5. FLM remains the
+  safe default.
+- Provider switching must enforce NPU exclusivity (stop FLM when Lemonade
+  serves, and vice versa) — concurrent serving hard-fails Lemonade.
 
 Experimental:
 
@@ -1554,8 +1822,10 @@ Experimental:
   through the app route. Supported only as an opt-in experimental prompt route;
   do not make it the default or automatic route because it is non-NPU and has not
   been second-day rerun as a production route.
-- `lemonade Qwen2.5-3B-Instruct-NPU`: gate-passed replacement route. The known
-  prompt-plan repair is implemented, unit-tested, and app-route validated.
+- `lemonade Qwen2.5-3B-Instruct-NPU`: approved opt-in SHORT-TASK route
+  (grammar/prompt), NOT a meetings route — silently truncates long input to
+  ~2-3k tokens (July 9 needle probe). The known prompt-plan repair is
+  implemented, unit-tested, and app-route validated.
 - `lemonade Qwen3-4B-Hybrid`: strong short prompt candidate with thinking
   disabled and a passed informational second-day short rerun; exclude from
   meetings for now.
@@ -1566,16 +1836,24 @@ Experimental:
 - `lemonade Mistral-7B-Instruct-v0.3-NPU`: do not continue for prompt mode under
   current prompt; it failed quick quality.
 
-## Remaining Work
+## Follow-Up Work
 
-The planned second-day benchmark batch is complete. Remaining product work:
+The second-day batch and the Lemonade NPU-only ladder are complete. Remaining
+work is product wiring and future-provider investigation, not more evidence for
+the current replacement decision:
 
-1. Promote Lemonade `Qwen2.5-3B-Instruct-NPU` through the app default/config
-   path and smoke-test the installed Flowkey route.
-2. Track or fix Qwen3 Hybrid's visible-output failure above roughly 2.1k prompt
-   tokens before using it for meetings.
-3. Keep LM Studio Qwen2.5 7B opt-in only unless a future second-day route test
+1. Wire Lemonade `Qwen2.5-3B-Instruct-NPU` as an opt-in SHORT-TASK route only
+   (grammar/prompt), never meetings, and enforce NPU exclusivity in the switch.
+2. Keep FLM as the production default and sole meetings route until a future
+   Lemonade runtime/model demonstrably quotes both transcript needles at 8k on
+   this machine.
+3. Track Lemonade context-limit fixes: retest only after a Lemonade/RyzenAI
+   update, a recipe change, or a downloaded same-weight Hybrid variant that
+   plausibly changes the context ceiling.
+4. Keep LM Studio Qwen2.5 7B opt-in only unless a future second-day route test
    and product decision promotes it.
+5. Delete or archive loser Lemonade models after product routing is decided if
+   disk pressure matters.
 
 Second-day batch command used:
 
@@ -1642,28 +1920,32 @@ Start-Process `
   -WindowStyle Hidden
 ```
 
-## Bottom Line
+## Bottom Line (corrected July 9)
 
-Dropping FLM for Ollama does not make sense.
+Dropping FLM does not make sense. The outcome is per-workload routing, not
+replacement.
 
-Replacing FLM with Lemonade `Qwen2.5-3B-Instruct-NPU` on this AMD NPU machine
-now makes sense as the next product route. It passes the headline short-task
-quality threshold, beats FLM on calibrated 8k TTFT, stays inside the memory
-guard, and passed the July 9 second-session reproducibility gate. The
-implemented `prompt_plan` repair path has also passed a clean app-level provider
-run.
+Lemonade `Qwen2.5-3B-Instruct-NPU` earned an opt-in SHORT-TASK role: it passes
+the short quality thresholds (`40/40` grammar, `45/50` prompt), is faster than
+FLM on grammar, stays inside the memory guard, and reproduced across sessions.
+But its apparent long-context win was an artifact — the July 9 needle probe
+proved silent keep-last truncation to ~2-3k tokens while it reported full
+`prompt_tokens`. Per the plan's own rule that disqualifies a sub-8k context cap,
+it is NOT a meetings route.
 
-Lemonade `Qwen3-4B-Hybrid` with thinking disabled is the best short prompt-mode
-score so far (`50/50`), but it is not a global replacement because direct API
-probing shows visible long-context output fails between `2055` and `2255` prompt
-tokens.
+Lemonade `Qwen3-4B-Hybrid` (thinking disabled) has the best short prompt score
+(`50/50`) but fails long context loudly (empty output past ~2.1k). The NPU-only
+ladder extended that finding: all four tested Lemonade models lose the
+start-of-input needle at the 2k target on this machine, including after
+`--ctx-size 8192`.
 
-The Llama Matrix A rerun answers the "why not just Llama 3.2 3B?" question:
-Llama 3.2 was small and sometimes fast, and the exact Lemonade 1B NPU cell was
-also light, but every tested provider/model row failed prompt XML (`0/50`), so
-it is not a Flowkey prompt-mode replacement.
+The Llama Matrix A rerun answers "why not just Llama 3.2 3B?": every tested
+Llama provider/model row failed prompt XML (`0/50`), so it is not a Flowkey
+prompt-mode route.
 
-The correct near-term path is to promote Lemonade Qwen2.5 through the Flowkey
-default/config route, keep FLM as a fallback while that switch is smoke-tested,
-keep Ollama as a portable CPU fallback, keep LM Studio opt-in, and fix Qwen3
-long-context output before using Qwen3 for meetings.
+Near-term path: keep FLM as the default and the ONLY meetings/long-context
+route; offer Lemonade Qwen2.5-3B-NPU as an opt-in grammar/prompt route with the
+`prompt_plan` repair and NPU-exclusive switching; keep Ollama as a portable CPU
+fallback and LM Studio as an opt-in fast prompt route. Before any Lemonade model
+is considered for meetings, it must quote both transcript needles at 8k under
+the corrected harness. See `docs/lemonade-npu-only-bench-plan.md`.

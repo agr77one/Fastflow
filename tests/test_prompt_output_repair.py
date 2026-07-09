@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import ffp_llm_client as llm
 
-
 PROMPT_TAGS = ("task", "context", "constraints", "output_format")
 
 

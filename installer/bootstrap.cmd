@@ -15,13 +15,18 @@
 
 cd /d "%~dp0"
 
+set "APP_VERSION="
+for /f "tokens=2 delims== " %%V in ('findstr /C:"__version__" "%~dp0..\scripts\_version.py"') do set "APP_VERSION=%%~V"
+set "APP_VERSION=%APP_VERSION:"=%"
+if not defined APP_VERSION set "APP_VERSION=<version>"
+
 echo.
 echo === Flowkey installer build ===
 echo.
 echo This will:
 echo   1. Install Python, Inno Setup, and pyinstaller if missing (via winget)
 echo   2. Download AutoHotkey v2 and the FastFlowLM installer
-echo   3. Build out\Flowkey-Setup-1.6.0.exe (~50 MB)
+echo   3. Build out\Flowkey-Setup-%APP_VERSION%.exe (~50 MB)
 echo.
 echo First run can take 5-10 minutes. Re-runs are much faster.
 echo.
@@ -37,7 +42,7 @@ if "%EXITCODE%"=="0" (
     echo The installer is at:
     echo   %~dp0..\out\
     echo.
-    echo Look for Flowkey-Setup-1.6.0.exe and double-click it
+    echo Look for Flowkey-Setup-%APP_VERSION%.exe and double-click it
     echo to install the app.
 ) else (
     echo === BUILD FAILED (exit %EXITCODE%) ===

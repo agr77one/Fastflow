@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-07-09T19:05:00",
+  "provider": "lemonade",
+  "base_url": "http://127.0.0.1:13305/api/v1",
+  "model": "Qwen2.5-3B-Instruct-NPU",
+  "quant": "ryzenai-llm-npu",
+  "lemonade_server_version": "10.9.0",
+  "purpose": "needle-in-haystack probe: does the runtime actually process the full submitted prompt? Audits the July 8-9 calibrated long-context cells whose 4k and 8k TTFT were identical (~2.83s) across both days.",
+  "method": {
+    "needle": "unique fact 'the secret budget code for this project is ZEBRA-7741' planted at the transcript start or end",
+    "question": "what is the secret budget code mentioned in the transcript? Answer with just the code.",
+    "temperature": 0.0,
+    "max_tokens": 40,
+    "messages": "system (transcript QA) + user (transcript + question)"
+  },
+  "results": [
+    {"label": "needle_at_start_~1k", "prompt_tokens": 1003, "ttft_seconds": 1.963, "wall_seconds": 2.5, "needle_found": true, "reply": "ZEBRA-7741"},
+    {"label": "needle_at_start_~3.5k", "prompt_tokens": 3353, "ttft_seconds": 4.063, "wall_seconds": 4.4, "needle_found": false, "reply": "M321"},
+    {"label": "needle_at_start_~8k", "prompt_tokens": 7583, "ttft_seconds": 3.207, "wall_seconds": 3.5, "needle_found": false, "reply": "M321"},
+    {"label": "needle_at_end_~8k", "prompt_tokens": 7583, "ttft_seconds": 3.066, "wall_seconds": 3.7, "needle_found": true, "reply": "ZEBRA-7741"}
+  ],
+  "conclusion": {
+    "finding": "keep-last input truncation: content at the start of the prompt is unrecoverable from roughly 3.3k submitted tokens onward, while usage.prompt_tokens still reports the full submitted count (e.g. 7583).",
+    "effective_context_estimate_tokens": "approximately 2000-3000",
+    "invalidates": [
+      "July 8-9 calibrated long-context 'pass' cells for this model (uniform-filler transcript was truncation-blind)",
+      "the '8k TTFT 2.831s vs FLM 22.697s' comparison (compared ~2-3k of real prefill against FLM's honest 8k)",
+      "the qwen25_longctx_quality and qwen25_longctx_sizes clauses of the July 9 replace-FLM gate"
+    ],
+    "unaffected": "short-task grammar (40/40) and prompt (45/50) results; prompts fit well inside the effective window"
+  },
+  "side_findings": [
+    "NPU exclusivity: with `flm serve` running, every Lemonade inference failed HTTP 500 (RyzenAI DynamicDispatch 'Failed to submit'); the backend stayed wedged after FLM was stopped and recovered only after model unload+reload.",
+    "TTFT non-monotonicity corroborates truncation: 3.3k tokens cost 4.06s TTFT but 7.6k tokens cost 3.21s."
+  ],
+  "harness_fix": "tools/provider_bench.py long_context_prompt now plants LONGCTX_OPEN_CODE/LONGCTX_CLOSE_CODE at both transcript ends and check_longctx_contract requires both to be quoted (start/end needle flags + truncation_suspected), unit-tested in tests/test_provider_bench.py."
+}

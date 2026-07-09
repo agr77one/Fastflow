@@ -23,6 +23,7 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 
+import ffp_provider_runtime
 from subprocess_util import run_hidden
 
 log = logging.getLogger("ffp.benchmark")
@@ -208,6 +209,105 @@ def run_ollama_bench(
     return rows
 
 
+def _default_openai_chat(base_url: str, payload: dict, timeout: int = 900,
+                         auth_bearer: str = "") -> dict:
+    import urllib.request
+
+    url = ffp_provider_runtime.openai_url(base_url, "chat/completions")
+    headers = {"Content-Type": "application/json"}
+    if auth_bearer:
+        headers["Authorization"] = f"Bearer {auth_bearer}"
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers=headers,
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return json.loads(resp.read().decode("utf-8", errors="replace"))
+
+
+def run_openai_compat_bench(
+    model: str,
+    base_url: str,
+    *,
+    provider: str = "openai-compatible",
+    auth_bearer: str = "",
+    sizes: tuple = _OLLAMA_BENCH_SIZES,
+    iterations: int = _OLLAMA_BENCH_ITERATIONS,
+    num_predict: int = _OLLAMA_NUM_PREDICT,
+    generate: Callable[[str, dict], dict] | None = None,
+    on_progress: Callable[[int, int], None] | None = None,
+) -> list[dict]:
+    """Timed chat-completion sweep for LM Studio/Lemonade-style servers.
+
+    These OpenAI-compatible endpoints do not expose native prefill/decode
+    durations in the response. The row keeps the benchmark history shape, with
+    ttft_s as full non-streaming wall time and decode_tps as completion
+    tokens/wall time when usage is present.
+    """
+    gen = generate or (lambda url, payload: _default_openai_chat(url, payload, auth_bearer=auth_bearer))
+    gen(
+        base_url,
+        {
+            "model": model,
+            "messages": [{"role": "user", "content": "Reply with OK."}],
+            "temperature": 0.1,
+            "max_tokens": 8,
+            "stream": False,
+        },
+    )
+    rows: list[dict] = []
+    for size in sizes:
+        prompt = (_OLLAMA_FILLER * (size // 8 + 1))[: size * 4]
+        prompt += "\nSummarize the text above in one sentence."
+        walls: list[float] = []
+        decodes: list[float] = []
+        ctxs: list[float] = []
+        completions: list[float] = []
+        for i in range(iterations):
+            if on_progress is not None:
+                on_progress(size, i)
+            payload = {
+                "model": model,
+                "messages": [{"role": "user", "content": f"Variant {i}: {prompt}"}],
+                "temperature": 0.1,
+                "max_tokens": num_predict,
+                "stream": False,
+            }
+            started = time.perf_counter()
+            data = gen(base_url, payload)
+            wall = time.perf_counter() - started
+            usage = data.get("usage") or {}
+            p_n = float(usage.get("prompt_tokens") or 0)
+            c_n = float(usage.get("completion_tokens") or 0)
+            walls.append(wall)
+            if p_n > 0:
+                ctxs.append(p_n)
+            if c_n > 0:
+                completions.append(c_n)
+                if wall > 0:
+                    decodes.append(c_n / wall)
+
+        def avg(vals: list[float]):
+            return round(sum(vals) / len(vals), 3) if vals else None
+
+        rows.append({
+            "context": avg(ctxs),
+            "ttft_s": avg(walls),
+            "prefill_tps": None,
+            "decode_tps": avg(decodes),
+            "raw": [
+                f"provider={provider}",
+                f"target_tokens={size}",
+                f"iterations={iterations}",
+                f"num_predict={num_predict}",
+                f"avg_completion_tokens={avg(completions)}",
+            ],
+        })
+    return rows
+
+
 def _run_ollama(model: str, bench_root: Path, base_url: str,
                 generate: Callable[[str, dict], dict] | None) -> None:
     _update(state="running", message=f"Benchmarking {model} via Ollama (timed generation)…")
@@ -223,6 +323,37 @@ def _run_ollama(model: str, bench_root: Path, base_url: str,
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
         "rows": rows,
         "stdout_tail": "",
+    }
+    result_file = bench_root / f"{_slug(model)}_{int(time.time())}.json"
+    bench_root.mkdir(parents=True, exist_ok=True)
+    result_file.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
+    _update(state="done", message=f"Benchmark complete: {model}",
+            finished_at=time.time(), result_file=str(result_file))
+
+
+def _run_openai_compat(model: str, bench_root: Path, provider: str, base_url: str,
+                       auth_bearer: str, generate: Callable[[str, dict], dict] | None) -> None:
+    label = provider
+    _update(state="running", message=f"Benchmarking {model} via {label} (timed chat completions)...")
+
+    def on_progress(size: int, i: int) -> None:
+        _update(message=f"Benchmarking {model} via {label} - ~{size}-token prompt, pass {i + 1}...")
+
+    rows = run_openai_compat_bench(
+        model,
+        base_url,
+        provider=provider,
+        auth_bearer=auth_bearer,
+        generate=generate,
+        on_progress=on_progress,
+    )
+    out = {
+        "model": model,
+        "provider": provider,
+        "flm_version": "",
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        "rows": rows,
+        "stdout_tail": "OpenAI-compatible benchmark: ttft_s is full non-streaming wall time; prefill_tps is unavailable.",
     }
     result_file = bench_root / f"{_slug(model)}_{int(time.time())}.json"
     bench_root.mkdir(parents=True, exist_ok=True)
@@ -263,6 +394,7 @@ def start_benchmark(
     *,
     provider: str = "fastflowlm",
     base_url: str = "",
+    auth_bearer: str = "",
     flm_version: str = "",
     stop_serve: Callable[[], object] | None = None,
     start_serve: Callable[[], object] | None = None,
@@ -293,6 +425,9 @@ def start_benchmark(
             if provider == "ollama":
                 _run_ollama(model, root, base_url, generate)
                 return
+            if provider in ffp_provider_runtime.OPENAI_COMPAT_PROVIDERS:
+                _run_openai_compat(model, root, provider, base_url, auth_bearer, generate)
+                return
             if stop_serve is not None:
                 try:
                     stop_serve()
@@ -304,7 +439,7 @@ def start_benchmark(
             _update(state="error", error=str(exc), message="Benchmark failed.",
                     finished_at=time.time())
         finally:
-            if provider != "ollama" and start_serve is not None:
+            if provider == "fastflowlm" and start_serve is not None:
                 try:
                     start_serve()
                 except Exception as exc:

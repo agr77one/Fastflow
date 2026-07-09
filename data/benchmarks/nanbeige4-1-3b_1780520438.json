@@ -1,0 +1,135 @@
+{
+  "model": "nanbeige4.1:3b",
+  "flm_version": "0.9.43",
+  "timestamp": "2026-06-03T17:00:38",
+  "csv_file": "C:\\Users\\ArseniyGrechenkov\\Downloads\\transfer\\transfer\\FastFlowPrompt_Local_Setup\\release\\data\\benchmarks\\run_nanbeige4-1-3b_1780519007\\bench_nanbeige4.1_3b_20260603_AMD_Ryzen_AI_7_PRO_350_w__Radeon_860M.csv",
+  "rows": [
+    {
+      "context": 1.0,
+      "ttft_s": 1.784497,
+      "prefill_tps": 561.02,
+      "decode_tps": 22.8,
+      "raw": [
+        "1",
+        "1.784497",
+        "0.008854",
+        "1.771067",
+        "1.795918",
+        "561.02",
+        "2.79",
+        "557.45",
+        "565.32",
+        "22.80",
+        "0.06",
+        "22.72",
+        "22.89"
+      ]
+    },
+    {
+      "context": 2.0,
+      "ttft_s": 3.060991,
+      "prefill_tps": 644.03,
+      "decode_tps": 21.71,
+      "raw": [
+        "2",
+        "3.060991",
+        "0.035558",
+        "3.031160",
+        "3.152742",
+        "644.03",
+        "7.39",
+        "624.96",
+        "650.20",
+        "21.71",
+        "0.14",
+        "21.46",
+        "21.84"
+      ]
+    },
+    {
+      "context": 4.0,
+      "ttft_s": 6.089104,
+      "prefill_tps": 641.89,
+      "decode_tps": 20.0,
+      "raw": [
+        "4",
+        "6.089104",
+        "0.074438",
+        "5.986976",
+        "6.228543",
+        "641.89",
+        "7.82",
+        "627.40",
+        "652.72",
+        "20.00",
+        "0.05",
+        "19.93",
+        "20.08"
+      ]
+    },
+    {
+      "context": 8.0,
+      "ttft_s": 13.387642,
+      "prefill_tps": 581.27,
+      "decode_tps": 17.04,
+      "raw": [
+        "8",
+        "13.387642",
+        "0.030065",
+        "13.346700",
+        "13.437003",
+        "581.27",
+        "1.31",
+        "579.15",
+        "583.05",
+        "17.04",
+        "0.06",
+        "16.93",
+        "17.12"
+      ]
+    },
+    {
+      "context": 16.0,
+      "ttft_s": 34.021706,
+      "prefill_tps": 456.45,
+      "decode_tps": 12.94,
+      "raw": [
+        "16",
+        "34.021706",
+        "0.167881",
+        "33.811234",
+        "34.392052",
+        "456.45",
+        "2.25",
+        "451.47",
+        "459.29",
+        "12.94",
+        "0.27",
+        "12.47",
+        "13.13"
+      ]
+    },
+    {
+      "context": 32.0,
+      "ttft_s": 101.137085,
+      "prefill_tps": 306.74,
+      "decode_tps": 8.92,
+      "raw": [
+        "32",
+        "101.137085",
+        "0.631904",
+        "100.541878",
+        "102.493927",
+        "306.74",
+        "1.90",
+        "302.69",
+        "308.55",
+        "8.92",
+        "0.09",
+        "8.69",
+        "8.99"
+      ]
+    }
+  ],
+  "stdout_tail": "pointing context, current context length: 3903\u001b[0m\n\n[FLM]  Model RAW Output: \n<think>\nWe are given a story that has been pasted multiple times. The user has provided the same story multiple times, but the last part of the story is cut\n[FLM]  \tTTFT: 6.03599s, Prefill Speed: 647.437 tokens/s, Decoding Speed: 19.979 tokens/s\n[FLM]  Starting benchmark for 2k and iteration 8...\n\u001b[31m[FLM]  Checkpointing context, current context length: 1967\u001b[0m\n\n[FLM]  Model RAW Output: \n<think>\nWe are given a story and the user has provided the entire story twice (the same story repeated). The user's query is simply the story, and\n[FLM]  \tTTFT: 3.15274s, Prefill Speed: 624.957 tokens/s, Decoding Speed: 21.7939 tokens/s\n[FLM]  Starting benchmark for 1k and iteration 8...\n\u001b[31m[FLM]  Checkpointing context, current context length: 999\u001b[0m\n\n[FLM]  Model RAW Output: \n<think>\nWe are given a story and the user has provided the entire story up to the point of the epilogue where it ends with: \"Ori found herself flooded\n[FLM]  \tTTFT: 1.79476s, Prefill Speed: 557.762 tokens/s, Decoding Speed: 22.7594 tokens/s\n[FLM]  === Benchmark Results ===\n\n Context Length |              TTFT (s) |      Prefill Speed (tok/s) |     Decoding Speed (tok/s)\n----------------------------------------------------------------------------------------------------\n             1k |       1.784 ±   0.009 |         561.02 ±      2.79 |       22.80 ±      0.06\n             2k |       3.061 ±   0.036 |         644.03 ±      7.39 |       21.71 ±      0.14\n             4k |       6.089 ±   0.074 |         641.89 ±      7.82 |       20.00 ±      0.05\n             8k |      13.388 ±   0.030 |         581.27 ±      1.31 |       17.04 ±      0.06\n            16k |      34.022 ±   0.168 |         456.45 ±      2.25 |       12.94 ±      0.27\n            32k |     101.137 ±   0.632 |         306.74 ±      1.90 |        8.92 ±      0.09\n----------------------------------------------------------------------------------------------------\n\n"
+}

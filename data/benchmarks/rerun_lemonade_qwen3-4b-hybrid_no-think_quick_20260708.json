@@ -1,0 +1,3188 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-07-08T11:13:46",
+  "provider": "lemonade",
+  "base_url": "http://127.0.0.1:13305/api/v1",
+  "model": "Qwen3-4B-Hybrid",
+  "quant": "ryzenai-llm-hybrid",
+  "bearer_present": true,
+  "tasks": [
+    "grammar",
+    "prompt"
+  ],
+  "runs": 2,
+  "warmup": 1,
+  "temperature": 0.1,
+  "disable_thinking": true,
+  "process_names": [
+    "LemonadeServer",
+    "lemonade",
+    "ryzenai-server",
+    "ryzenai_server"
+  ],
+  "versions": {
+    "flm": {
+      "returncode": 0,
+      "stdout": "{ \"version\": \"0.9.43\" }",
+      "stderr": ""
+    },
+    "ollama": {
+      "returncode": 0,
+      "stdout": "Warning: could not connect to a running Ollama instance\nWarning: client version is 0.30.7",
+      "stderr": ""
+    },
+    "lms": {
+      "returncode": 0,
+      "stdout": "CLI commit: 9902c3a",
+      "stderr": ""
+    },
+    "lemonade": {
+      "returncode": 0,
+      "stdout": "lemonade version 10.9.0",
+      "stderr": ""
+    }
+  },
+  "cases": [
+    {
+      "case_id": "subject_verb",
+      "task": "grammar",
+      "system_prompt": "Fix grammar, spelling, punctuation, capitalization, and obvious wording mistakes. Preserve the meaning and leave everything else exactly as written. Return only the corrected text, with no preamble and no notes.",
+      "user_prompt": "This are the notes from today and it need to be cleaned up before sending.",
+      "max_tokens": 160,
+      "summary": {
+        "timed_runs": 2,
+        "pass_count": 2,
+        "pass_rate": 1.0,
+        "wall_seconds_median": 3.627848,
+        "wall_seconds_min": 3.563195,
+        "wall_seconds_max": 3.692501,
+        "seconds_per_completion_token_median": 0.181393,
+        "memory_guard_violations": 0
+      },
+      "runs": [
+        {
+          "run_index": 1,
+          "warmup": true,
+          "wall_seconds": 4.14855,
+          "ttft_seconds": 0.627,
+          "provider_native_metrics": {},
+          "prompt_tokens": 71,
+          "completion_tokens": 20,
+          "total_tokens": 91,
+          "seconds_per_completion_token": 0.207427,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\nThis are the notes from today and it need to be cleaned up before sending.",
+          "visible_output": "This are the notes from today and it need to be cleaned up before sending.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 74,
+            "length_ratio": 1.0,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 3502.0,
+            "completion_tokens": 20,
+            "decoding_speed_tps": 6.608695652173913,
+            "prefill_duration_ttft": 0.627,
+            "prompt_tokens": 71,
+            "total_tokens": 91
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 5969956864,
+              "system_available_bytes": 7019483136
+            },
+            "after": {
+              "provider_rss_bytes": 6158888960,
+              "system_available_bytes": 6850490368
+            },
+            "max_provider_rss_bytes": 6158848000,
+            "min_system_available_bytes": 6864736256,
+            "available_delta_bytes": 154746880,
+            "memory_guard_violation": false,
+            "sample_count": 3
+          },
+          "error": ""
+        },
+        {
+          "run_index": 2,
+          "warmup": false,
+          "wall_seconds": 3.563195,
+          "ttft_seconds": 0.499,
+          "provider_native_metrics": {},
+          "prompt_tokens": 71,
+          "completion_tokens": 20,
+          "total_tokens": 91,
+          "seconds_per_completion_token": 0.17816,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\nThis are the notes from today and it need to be cleaned up before sending.",
+          "visible_output": "This are the notes from today and it need to be cleaned up before sending.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 74,
+            "length_ratio": 1.0,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 2823.0,
+            "completion_tokens": 20,
+            "decoding_speed_tps": 8.175559380378658,
+            "prefill_duration_ttft": 0.499,
+            "prompt_tokens": 71,
+            "total_tokens": 91
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6158888960,
+              "system_available_bytes": 6868910080
+            },
+            "after": {
+              "provider_rss_bytes": 6237691904,
+              "system_available_bytes": 6845063168
+            },
+            "max_provider_rss_bytes": 6279299072,
+            "min_system_available_bytes": 6740373504,
+            "available_delta_bytes": 128536576,
+            "memory_guard_violation": false,
+            "sample_count": 3
+          },
+          "error": ""
+        },
+        {
+          "run_index": 3,
+          "warmup": false,
+          "wall_seconds": 3.692501,
+          "ttft_seconds": 0.537,
+          "provider_native_metrics": {},
+          "prompt_tokens": 71,
+          "completion_tokens": 20,
+          "total_tokens": 91,
+          "seconds_per_completion_token": 0.184625,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\nThis are the notes from today and it need to be cleaned up before sending.",
+          "visible_output": "This are the notes from today and it need to be cleaned up before sending.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 74,
+            "length_ratio": 1.0,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 3056.0,
+            "completion_tokens": 20,
+            "decoding_speed_tps": 7.542675664946407,
+            "prefill_duration_ttft": 0.537,
+            "prompt_tokens": 71,
+            "total_tokens": 91
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6237691904,
+              "system_available_bytes": 6772756480
+            },
+            "after": {
+              "provider_rss_bytes": 6237650944,
+              "system_available_bytes": 6848491520
+            },
+            "max_provider_rss_bytes": 6281428992,
+            "min_system_available_bytes": 6791282688,
+            "available_delta_bytes": -18526208,
+            "memory_guard_violation": false,
+            "sample_count": 3
+          },
+          "error": ""
+        }
+      ]
+    },
+    {
+      "case_id": "its_its",
+      "task": "grammar",
+      "system_prompt": "Fix grammar, spelling, punctuation, capitalization, and obvious wording mistakes. Preserve the meaning and leave everything else exactly as written. Return only the corrected text, with no preamble and no notes.",
+      "user_prompt": "Its important that the app keeps it's local history private.",
+      "max_tokens": 160,
+      "summary": {
+        "timed_runs": 2,
+        "pass_count": 2,
+        "pass_rate": 1.0,
+        "wall_seconds_median": 2.880147,
+        "wall_seconds_min": 2.688865,
+        "wall_seconds_max": 3.071429,
+        "seconds_per_completion_token_median": 0.180009,
+        "memory_guard_violations": 0
+      },
+      "runs": [
+        {
+          "run_index": 1,
+          "warmup": true,
+          "wall_seconds": 3.267921,
+          "ttft_seconds": 0.481,
+          "provider_native_metrics": {},
+          "prompt_tokens": 67,
+          "completion_tokens": 16,
+          "total_tokens": 83,
+          "seconds_per_completion_token": 0.204245,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\nIt is important that the app keeps its local history private.",
+          "visible_output": "It is important that the app keeps its local history private.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 61,
+            "length_ratio": 1.017,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 2648.0,
+            "completion_tokens": 16,
+            "decoding_speed_tps": 6.92201199815413,
+            "prefill_duration_ttft": 0.481,
+            "prompt_tokens": 67,
+            "total_tokens": 83
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6237650944,
+              "system_available_bytes": 6837456896
+            },
+            "after": {
+              "provider_rss_bytes": 6313869312,
+              "system_available_bytes": 6769319936
+            },
+            "max_provider_rss_bytes": 6313873408,
+            "min_system_available_bytes": 6755155968,
+            "available_delta_bytes": 82300928,
+            "memory_guard_violation": false,
+            "sample_count": 2
+          },
+          "error": ""
+        },
+        {
+          "run_index": 2,
+          "warmup": false,
+          "wall_seconds": 3.071429,
+          "ttft_seconds": 0.533,
+          "provider_native_metrics": {},
+          "prompt_tokens": 67,
+          "completion_tokens": 16,
+          "total_tokens": 83,
+          "seconds_per_completion_token": 0.191964,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\nIt is important that the app keeps its local history private.",
+          "visible_output": "It is important that the app keeps its local history private.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 61,
+            "length_ratio": 1.017,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 2204.0,
+            "completion_tokens": 16,
+            "decoding_speed_tps": 8.976660682226212,
+            "prefill_duration_ttft": 0.533,
+            "prompt_tokens": 67,
+            "total_tokens": 83
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6240940032,
+              "system_available_bytes": 6831140864
+            },
+            "after": {
+              "provider_rss_bytes": 6284435456,
+              "system_available_bytes": 6806183936
+            },
+            "max_provider_rss_bytes": 6284435456,
+            "min_system_available_bytes": 6751633408,
+            "available_delta_bytes": 79507456,
+            "memory_guard_violation": false,
+            "sample_count": 2
+          },
+          "error": ""
+        },
+        {
+          "run_index": 3,
+          "warmup": false,
+          "wall_seconds": 2.688865,
+          "ttft_seconds": 0.443,
+          "provider_native_metrics": {},
+          "prompt_tokens": 67,
+          "completion_tokens": 16,
+          "total_tokens": 83,
+          "seconds_per_completion_token": 0.168054,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\nIt is important that the app keeps its local history private.",
+          "visible_output": "It is important that the app keeps its local history private.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 61,
+            "length_ratio": 1.017,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 2157.0,
+            "completion_tokens": 16,
+            "decoding_speed_tps": 8.751458576429405,
+            "prefill_duration_ttft": 0.443,
+            "prompt_tokens": 67,
+            "total_tokens": 83
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6284435456,
+              "system_available_bytes": 6808305664
+            },
+            "after": {
+              "provider_rss_bytes": 6275743744,
+              "system_available_bytes": 6840696832
+            },
+            "max_provider_rss_bytes": 6276014080,
+            "min_system_available_bytes": 6811041792,
+            "available_delta_bytes": -2736128,
+            "memory_guard_violation": false,
+            "sample_count": 2
+          },
+          "error": ""
+        }
+      ]
+    },
+    {
+      "case_id": "run_on",
+      "task": "grammar",
+      "system_prompt": "Fix grammar, spelling, punctuation, capitalization, and obvious wording mistakes. Preserve the meaning and leave everything else exactly as written. Return only the corrected text, with no preamble and no notes.",
+      "user_prompt": "I pulled the model it started fine but the first response was very slow and I need the timing separated.",
+      "max_tokens": 160,
+      "summary": {
+        "timed_runs": 2,
+        "pass_count": 2,
+        "pass_rate": 1.0,
+        "wall_seconds_median": 4.182682,
+        "wall_seconds_min": 3.914209,
+        "wall_seconds_max": 4.451155,
+        "seconds_per_completion_token_median": 0.160872,
+        "memory_guard_violations": 0
+      },
+      "runs": [
+        {
+          "run_index": 1,
+          "warmup": true,
+          "wall_seconds": 6.609032,
+          "ttft_seconds": 0.486,
+          "provider_native_metrics": {},
+          "prompt_tokens": 76,
+          "completion_tokens": 51,
+          "total_tokens": 127,
+          "seconds_per_completion_token": 0.129589,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\nI pulled the model; it started fine but the first response was very slow and I need the timing separated.\n</think>\n\nI pulled the model; it started fine, but the first response was very slow and I need the timing separated.",
+          "visible_output": "I pulled the model; it started fine but the first response was very slow and I need the timing separated.\n</think>\n\nI pulled the model; it started fine, but the first response was very slow and I need the timing separated.",
+          "think_stripped": true,
+          "unclosed_think": false,
+          "contract": {
+            "pass": false,
+            "reasons": [
+              "length_outside_30_percent",
+              "think_residue"
+            ],
+            "visible_chars": 222,
+            "length_ratio": 2.135,
+            "control_similarity": null,
+            "think_stripped": true,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 6078.0,
+            "completion_tokens": 51,
+            "decoding_speed_tps": 8.941344778254651,
+            "prefill_duration_ttft": 0.486,
+            "prompt_tokens": 76,
+            "total_tokens": 127
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6275743744,
+              "system_available_bytes": 6780776448
+            },
+            "after": {
+              "provider_rss_bytes": 6274736128,
+              "system_available_bytes": 6851047424
+            },
+            "max_provider_rss_bytes": 6318641152,
+            "min_system_available_bytes": 6733045760,
+            "available_delta_bytes": 47730688,
+            "memory_guard_violation": false,
+            "sample_count": 5
+          },
+          "error": ""
+        },
+        {
+          "run_index": 2,
+          "warmup": false,
+          "wall_seconds": 3.914209,
+          "ttft_seconds": 0.513,
+          "provider_native_metrics": {},
+          "prompt_tokens": 76,
+          "completion_tokens": 26,
+          "total_tokens": 102,
+          "seconds_per_completion_token": 0.150547,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\nI pulled the model; it started fine but the first response was very slow and I need the timing separated.",
+          "visible_output": "I pulled the model; it started fine but the first response was very slow and I need the timing separated.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 105,
+            "length_ratio": 1.01,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 3369.0,
+            "completion_tokens": 26,
+            "decoding_speed_tps": 8.753501400560225,
+            "prefill_duration_ttft": 0.513,
+            "prompt_tokens": 76,
+            "total_tokens": 102
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6246359040,
+              "system_available_bytes": 7015923712
+            },
+            "after": {
+              "provider_rss_bytes": 6244925440,
+              "system_available_bytes": 6903758848
+            },
+            "max_provider_rss_bytes": 6245588992,
+            "min_system_available_bytes": 6799618048,
+            "available_delta_bytes": 216305664,
+            "memory_guard_violation": false,
+            "sample_count": 3
+          },
+          "error": ""
+        },
+        {
+          "run_index": 3,
+          "warmup": false,
+          "wall_seconds": 4.451155,
+          "ttft_seconds": 0.459,
+          "provider_native_metrics": {},
+          "prompt_tokens": 76,
+          "completion_tokens": 26,
+          "total_tokens": 102,
+          "seconds_per_completion_token": 0.171198,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\nI pulled the model; it started fine but the first response was very slow and I need the timing separated.",
+          "visible_output": "I pulled the model; it started fine but the first response was very slow and I need the timing separated.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 105,
+            "length_ratio": 1.01,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 3850.0,
+            "completion_tokens": 26,
+            "decoding_speed_tps": 7.372456502506635,
+            "prefill_duration_ttft": 0.459,
+            "prompt_tokens": 76,
+            "total_tokens": 102
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6244925440,
+              "system_available_bytes": 6902468608
+            },
+            "after": {
+              "provider_rss_bytes": 6244925440,
+              "system_available_bytes": 6794043392
+            },
+            "max_provider_rss_bytes": 6286868480,
+            "min_system_available_bytes": 6751830016,
+            "available_delta_bytes": 150638592,
+            "memory_guard_violation": false,
+            "sample_count": 3
+          },
+          "error": ""
+        }
+      ]
+    },
+    {
+      "case_id": "comma_splice",
+      "task": "grammar",
+      "system_prompt": "Fix grammar, spelling, punctuation, capitalization, and obvious wording mistakes. Preserve the meaning and leave everything else exactly as written. Return only the corrected text, with no preamble and no notes.",
+      "user_prompt": "The dashboard loaded, it did not show the provider status.",
+      "max_tokens": 160,
+      "summary": {
+        "timed_runs": 2,
+        "pass_count": 2,
+        "pass_rate": 1.0,
+        "wall_seconds_median": 3.077265,
+        "wall_seconds_min": 2.905625,
+        "wall_seconds_max": 3.248904,
+        "seconds_per_completion_token_median": 0.192329,
+        "memory_guard_violations": 0
+      },
+      "runs": [
+        {
+          "run_index": 1,
+          "warmup": true,
+          "wall_seconds": 3.231851,
+          "ttft_seconds": 0.52,
+          "provider_native_metrics": {},
+          "prompt_tokens": 67,
+          "completion_tokens": 16,
+          "total_tokens": 83,
+          "seconds_per_completion_token": 0.201991,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\nThe dashboard loaded. It did not show the provider status.",
+          "visible_output": "The dashboard loaded. It did not show the provider status.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 58,
+            "length_ratio": 1.0,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 2614.0,
+            "completion_tokens": 16,
+            "decoding_speed_tps": 7.163323782234958,
+            "prefill_duration_ttft": 0.52,
+            "prompt_tokens": 67,
+            "total_tokens": 83
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6244925440,
+              "system_available_bytes": 6753009664
+            },
+            "after": {
+              "provider_rss_bytes": 6278520832,
+              "system_available_bytes": 6734774272
+            },
+            "max_provider_rss_bytes": 6286909440,
+            "min_system_available_bytes": 6662144000,
+            "available_delta_bytes": 90865664,
+            "memory_guard_violation": false,
+            "sample_count": 2
+          },
+          "error": ""
+        },
+        {
+          "run_index": 2,
+          "warmup": false,
+          "wall_seconds": 3.248904,
+          "ttft_seconds": 0.462,
+          "provider_native_metrics": {},
+          "prompt_tokens": 67,
+          "completion_tokens": 16,
+          "total_tokens": 83,
+          "seconds_per_completion_token": 0.203057,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\nThe dashboard loaded. It did not show the provider status.",
+          "visible_output": "The dashboard loaded. It did not show the provider status.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 58,
+            "length_ratio": 1.0,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 2683.0,
+            "completion_tokens": 16,
+            "decoding_speed_tps": 6.753714542998649,
+            "prefill_duration_ttft": 0.462,
+            "prompt_tokens": 67,
+            "total_tokens": 83
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6244966400,
+              "system_available_bytes": 6761046016
+            },
+            "after": {
+              "provider_rss_bytes": 6323757056,
+              "system_available_bytes": 6714126336
+            },
+            "max_provider_rss_bytes": 6328852480,
+            "min_system_available_bytes": 6618320896,
+            "available_delta_bytes": 142725120,
+            "memory_guard_violation": false,
+            "sample_count": 2
+          },
+          "error": ""
+        },
+        {
+          "run_index": 3,
+          "warmup": false,
+          "wall_seconds": 2.905625,
+          "ttft_seconds": 0.501,
+          "provider_native_metrics": {},
+          "prompt_tokens": 67,
+          "completion_tokens": 16,
+          "total_tokens": 83,
+          "seconds_per_completion_token": 0.181602,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\nThe dashboard loaded. It did not show the provider status.",
+          "visible_output": "The dashboard loaded. It did not show the provider status.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 58,
+            "length_ratio": 1.0,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 2331.0,
+            "completion_tokens": 16,
+            "decoding_speed_tps": 8.19672131147541,
+            "prefill_duration_ttft": 0.501,
+            "prompt_tokens": 67,
+            "total_tokens": 83
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6323757056,
+              "system_available_bytes": 6698291200
+            },
+            "after": {
+              "provider_rss_bytes": 6210412544,
+              "system_available_bytes": 7208165376
+            },
+            "max_provider_rss_bytes": 6290403328,
+            "min_system_available_bytes": 6795149312,
+            "available_delta_bytes": -96858112,
+            "memory_guard_violation": false,
+            "sample_count": 2
+          },
+          "error": ""
+        }
+      ]
+    },
+    {
+      "case_id": "tense",
+      "task": "grammar",
+      "system_prompt": "Fix grammar, spelling, punctuation, capitalization, and obvious wording mistakes. Preserve the meaning and leave everything else exactly as written. Return only the corrected text, with no preamble and no notes.",
+      "user_prompt": "Yesterday I run the benchmark and it fail after the model was loaded.",
+      "max_tokens": 160,
+      "summary": {
+        "timed_runs": 2,
+        "pass_count": 2,
+        "pass_rate": 1.0,
+        "wall_seconds_median": 3.080246,
+        "wall_seconds_min": 3.014717,
+        "wall_seconds_max": 3.145774,
+        "seconds_per_completion_token_median": 0.171125,
+        "memory_guard_violations": 0
+      },
+      "runs": [
+        {
+          "run_index": 1,
+          "warmup": true,
+          "wall_seconds": 3.598864,
+          "ttft_seconds": 0.452,
+          "provider_native_metrics": {},
+          "prompt_tokens": 69,
+          "completion_tokens": 18,
+          "total_tokens": 87,
+          "seconds_per_completion_token": 0.199937,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\nYesterday I ran the benchmark and it failed after the model was loaded.",
+          "visible_output": "Yesterday I ran the benchmark and it failed after the model was loaded.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 71,
+            "length_ratio": 1.029,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 2702.0,
+            "completion_tokens": 18,
+            "decoding_speed_tps": 7.555555555555555,
+            "prefill_duration_ttft": 0.452,
+            "prompt_tokens": 69,
+            "total_tokens": 87
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6210412544,
+              "system_available_bytes": 7203196928
+            },
+            "after": {
+              "provider_rss_bytes": 6195240960,
+              "system_available_bytes": 7218946048
+            },
+            "max_provider_rss_bytes": 6210781184,
+            "min_system_available_bytes": 7199309824,
+            "available_delta_bytes": 3887104,
+            "memory_guard_violation": false,
+            "sample_count": 3
+          },
+          "error": ""
+        },
+        {
+          "run_index": 2,
+          "warmup": false,
+          "wall_seconds": 3.145774,
+          "ttft_seconds": 0.485,
+          "provider_native_metrics": {},
+          "prompt_tokens": 69,
+          "completion_tokens": 18,
+          "total_tokens": 87,
+          "seconds_per_completion_token": 0.174765,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\nYesterday I ran the benchmark and it failed after the model was loaded.",
+          "visible_output": "Yesterday I ran the benchmark and it failed after the model was loaded.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 71,
+            "length_ratio": 1.029,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 2514.0,
+            "completion_tokens": 18,
+            "decoding_speed_tps": 8.378511582060128,
+            "prefill_duration_ttft": 0.485,
+            "prompt_tokens": 69,
+            "total_tokens": 87
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6195240960,
+              "system_available_bytes": 7159087104
+            },
+            "after": {
+              "provider_rss_bytes": 6279659520,
+              "system_available_bytes": 7116144640
+            },
+            "max_provider_rss_bytes": 6279643136,
+            "min_system_available_bytes": 7040126976,
+            "available_delta_bytes": 118960128,
+            "memory_guard_violation": false,
+            "sample_count": 2
+          },
+          "error": ""
+        },
+        {
+          "run_index": 3,
+          "warmup": false,
+          "wall_seconds": 3.014717,
+          "ttft_seconds": 0.433,
+          "provider_native_metrics": {},
+          "prompt_tokens": 69,
+          "completion_tokens": 18,
+          "total_tokens": 87,
+          "seconds_per_completion_token": 0.167484,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\nYesterday I ran the benchmark and it failed after the model was loaded.",
+          "visible_output": "Yesterday I ran the benchmark and it failed after the model was loaded.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 71,
+            "length_ratio": 1.029,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 2473.0,
+            "completion_tokens": 18,
+            "decoding_speed_tps": 8.333333333333334,
+            "prefill_duration_ttft": 0.433,
+            "prompt_tokens": 69,
+            "total_tokens": 87
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6254493696,
+              "system_available_bytes": 7140249600
+            },
+            "after": {
+              "provider_rss_bytes": 6329618432,
+              "system_available_bytes": 7041294336
+            },
+            "max_provider_rss_bytes": 6329618432,
+            "min_system_available_bytes": 7027302400,
+            "available_delta_bytes": 112947200,
+            "memory_guard_violation": false,
+            "sample_count": 2
+          },
+          "error": ""
+        }
+      ]
+    },
+    {
+      "case_id": "typo",
+      "task": "grammar",
+      "system_prompt": "Fix grammar, spelling, punctuation, capitalization, and obvious wording mistakes. Preserve the meaning and leave everything else exactly as written. Return only the corrected text, with no preamble and no notes.",
+      "user_prompt": "Please fix the grammer but dont invent new requirments.",
+      "max_tokens": 160,
+      "summary": {
+        "timed_runs": 2,
+        "pass_count": 2,
+        "pass_rate": 1.0,
+        "wall_seconds_median": 2.668893,
+        "wall_seconds_min": 2.605472,
+        "wall_seconds_max": 2.732314,
+        "seconds_per_completion_token_median": 0.177926,
+        "memory_guard_violations": 0
+      },
+      "runs": [
+        {
+          "run_index": 1,
+          "warmup": true,
+          "wall_seconds": 2.967664,
+          "ttft_seconds": 0.467,
+          "provider_native_metrics": {},
+          "prompt_tokens": 68,
+          "completion_tokens": 15,
+          "total_tokens": 83,
+          "seconds_per_completion_token": 0.197844,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\nPlease fix the grammar but don't add new requirements.",
+          "visible_output": "Please fix the grammar but don't add new requirements.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 54,
+            "length_ratio": 0.982,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 2380.0,
+            "completion_tokens": 15,
+            "decoding_speed_tps": 7.3183481442760066,
+            "prefill_duration_ttft": 0.467,
+            "prompt_tokens": 68,
+            "total_tokens": 83
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6329618432,
+              "system_available_bytes": 7005454336
+            },
+            "after": {
+              "provider_rss_bytes": 6263128064,
+              "system_available_bytes": 7113928704
+            },
+            "max_provider_rss_bytes": 6296109056,
+            "min_system_available_bytes": 6992166912,
+            "available_delta_bytes": 13287424,
+            "memory_guard_violation": false,
+            "sample_count": 2
+          },
+          "error": ""
+        },
+        {
+          "run_index": 2,
+          "warmup": false,
+          "wall_seconds": 2.605472,
+          "ttft_seconds": 0.441,
+          "provider_native_metrics": {},
+          "prompt_tokens": 68,
+          "completion_tokens": 15,
+          "total_tokens": 83,
+          "seconds_per_completion_token": 0.173698,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\nPlease fix the grammar but don't add new requirements.",
+          "visible_output": "Please fix the grammar but don't add new requirements.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 54,
+            "length_ratio": 0.982,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 2072.0,
+            "completion_tokens": 15,
+            "decoding_speed_tps": 8.583690987124463,
+            "prefill_duration_ttft": 0.441,
+            "prompt_tokens": 68,
+            "total_tokens": 83
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6263128064,
+              "system_available_bytes": 7107420160
+            },
+            "after": {
+              "provider_rss_bytes": 6280105984,
+              "system_available_bytes": 7107141632
+            },
+            "max_provider_rss_bytes": 6280105984,
+            "min_system_available_bytes": 7080722432,
+            "available_delta_bytes": 26697728,
+            "memory_guard_violation": false,
+            "sample_count": 2
+          },
+          "error": ""
+        },
+        {
+          "run_index": 3,
+          "warmup": false,
+          "wall_seconds": 2.732314,
+          "ttft_seconds": 0.464,
+          "provider_native_metrics": {},
+          "prompt_tokens": 68,
+          "completion_tokens": 15,
+          "total_tokens": 83,
+          "seconds_per_completion_token": 0.182154,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\nPlease fix the grammar but don't add new requirements.",
+          "visible_output": "Please fix the grammar but don't add new requirements.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 54,
+            "length_ratio": 0.982,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 2131.0,
+            "completion_tokens": 15,
+            "decoding_speed_tps": 8.398320335932814,
+            "prefill_duration_ttft": 0.464,
+            "prompt_tokens": 68,
+            "total_tokens": 83
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6280105984,
+              "system_available_bytes": 7043829760
+            },
+            "after": {
+              "provider_rss_bytes": 6271225856,
+              "system_available_bytes": 7073783808
+            },
+            "max_provider_rss_bytes": 6280130560,
+            "min_system_available_bytes": 6988693504,
+            "available_delta_bytes": 55136256,
+            "memory_guard_violation": false,
+            "sample_count": 2
+          },
+          "error": ""
+        }
+      ]
+    },
+    {
+      "case_id": "long_sentence",
+      "task": "grammar",
+      "system_prompt": "Fix grammar, spelling, punctuation, capitalization, and obvious wording mistakes. Preserve the meaning and leave everything else exactly as written. Return only the corrected text, with no preamble and no notes.",
+      "user_prompt": "The meeting digest feature should process long transcripts locally because some users will paste sensitive customer notes and they expect the app to preserve privacy while still producing useful summaries.",
+      "max_tokens": 160,
+      "summary": {
+        "timed_runs": 2,
+        "pass_count": 2,
+        "pass_rate": 1.0,
+        "wall_seconds_median": 5.562941,
+        "wall_seconds_min": 5.361871,
+        "wall_seconds_max": 5.764011,
+        "seconds_per_completion_token_median": 0.158941,
+        "memory_guard_violations": 0
+      },
+      "runs": [
+        {
+          "run_index": 1,
+          "warmup": true,
+          "wall_seconds": 4.973034,
+          "ttft_seconds": 0.477,
+          "provider_native_metrics": {},
+          "prompt_tokens": 86,
+          "completion_tokens": 35,
+          "total_tokens": 121,
+          "seconds_per_completion_token": 0.142087,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\nThe meeting digest feature should process long transcripts locally because some users will paste sensitive customer notes and they expect the app to preserve privacy while still producing useful summaries.",
+          "visible_output": "The meeting digest feature should process long transcripts locally because some users will paste sensitive customer notes and they expect the app to preserve privacy while still producing useful summaries.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 205,
+            "length_ratio": 1.0,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 4430.0,
+            "completion_tokens": 35,
+            "decoding_speed_tps": 8.601062484189224,
+            "prefill_duration_ttft": 0.477,
+            "prompt_tokens": 86,
+            "total_tokens": 121
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6271225856,
+              "system_available_bytes": 7073009664
+            },
+            "after": {
+              "provider_rss_bytes": 6239477760,
+              "system_available_bytes": 7131971584
+            },
+            "max_provider_rss_bytes": 6272110592,
+            "min_system_available_bytes": 7062151168,
+            "available_delta_bytes": 10858496,
+            "memory_guard_violation": false,
+            "sample_count": 4
+          },
+          "error": ""
+        },
+        {
+          "run_index": 2,
+          "warmup": false,
+          "wall_seconds": 5.361871,
+          "ttft_seconds": 0.506,
+          "provider_native_metrics": {},
+          "prompt_tokens": 86,
+          "completion_tokens": 35,
+          "total_tokens": 121,
+          "seconds_per_completion_token": 0.153196,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\nThe meeting digest feature should process long transcripts locally because some users will paste sensitive customer notes and they expect the app to preserve privacy while still producing useful summaries.",
+          "visible_output": "The meeting digest feature should process long transcripts locally because some users will paste sensitive customer notes and they expect the app to preserve privacy while still producing useful summaries.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 205,
+            "length_ratio": 1.0,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 4741.0,
+            "completion_tokens": 35,
+            "decoding_speed_tps": 8.028335301062572,
+            "prefill_duration_ttft": 0.506,
+            "prompt_tokens": 86,
+            "total_tokens": 121
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6239477760,
+              "system_available_bytes": 7077396480
+            },
+            "after": {
+              "provider_rss_bytes": 6225313792,
+              "system_available_bytes": 7122808832
+            },
+            "max_provider_rss_bytes": 6326841344,
+            "min_system_available_bytes": 6977642496,
+            "available_delta_bytes": 99753984,
+            "memory_guard_violation": false,
+            "sample_count": 4
+          },
+          "error": ""
+        },
+        {
+          "run_index": 3,
+          "warmup": false,
+          "wall_seconds": 5.764011,
+          "ttft_seconds": 0.537,
+          "provider_native_metrics": {},
+          "prompt_tokens": 86,
+          "completion_tokens": 35,
+          "total_tokens": 121,
+          "seconds_per_completion_token": 0.164686,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\nThe meeting digest feature should process long transcripts locally because some users will paste sensitive customer notes and they expect the app to preserve privacy while still producing useful summaries.",
+          "visible_output": "The meeting digest feature should process long transcripts locally because some users will paste sensitive customer notes and they expect the app to preserve privacy while still producing useful summaries.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 205,
+            "length_ratio": 1.0,
+            "control_similarity": null,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 5113.0,
+            "completion_tokens": 35,
+            "decoding_speed_tps": 7.430069930069931,
+            "prefill_duration_ttft": 0.537,
+            "prompt_tokens": 86,
+            "total_tokens": 121
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6225313792,
+              "system_available_bytes": 6979076096
+            },
+            "after": {
+              "provider_rss_bytes": 6225797120,
+              "system_available_bytes": 6970417152
+            },
+            "max_provider_rss_bytes": 6309654528,
+            "min_system_available_bytes": 6891409408,
+            "available_delta_bytes": 87666688,
+            "memory_guard_violation": false,
+            "sample_count": 4
+          },
+          "error": ""
+        }
+      ]
+    },
+    {
+      "case_id": "control",
+      "task": "grammar",
+      "system_prompt": "Fix grammar, spelling, punctuation, capitalization, and obvious wording mistakes. Preserve the meaning and leave everything else exactly as written. Return only the corrected text, with no preamble and no notes.",
+      "user_prompt": "The local provider returned a valid JSON response in under two seconds.",
+      "max_tokens": 160,
+      "summary": {
+        "timed_runs": 2,
+        "pass_count": 2,
+        "pass_rate": 1.0,
+        "wall_seconds_median": 2.851539,
+        "wall_seconds_min": 2.779656,
+        "wall_seconds_max": 2.923421,
+        "seconds_per_completion_token_median": 0.167737,
+        "memory_guard_violations": 0
+      },
+      "runs": [
+        {
+          "run_index": 1,
+          "warmup": true,
+          "wall_seconds": 3.125386,
+          "ttft_seconds": 0.483,
+          "provider_native_metrics": {},
+          "prompt_tokens": 68,
+          "completion_tokens": 17,
+          "total_tokens": 85,
+          "seconds_per_completion_token": 0.183846,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\nThe local provider returned a valid JSON response in under two seconds.",
+          "visible_output": "The local provider returned a valid JSON response in under two seconds.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 71,
+            "length_ratio": 1.0,
+            "control_similarity": 1.0,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 2548.0,
+            "completion_tokens": 17,
+            "decoding_speed_tps": 7.74818401937046,
+            "prefill_duration_ttft": 0.483,
+            "prompt_tokens": 68,
+            "total_tokens": 85
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6224388096,
+              "system_available_bytes": 6926532608
+            },
+            "after": {
+              "provider_rss_bytes": 6232571904,
+              "system_available_bytes": 7014694912
+            },
+            "max_provider_rss_bytes": 6234144768,
+            "min_system_available_bytes": 6913179648,
+            "available_delta_bytes": 13352960,
+            "memory_guard_violation": false,
+            "sample_count": 2
+          },
+          "error": ""
+        },
+        {
+          "run_index": 2,
+          "warmup": false,
+          "wall_seconds": 2.779656,
+          "ttft_seconds": 0.43,
+          "provider_native_metrics": {},
+          "prompt_tokens": 68,
+          "completion_tokens": 17,
+          "total_tokens": 85,
+          "seconds_per_completion_token": 0.163509,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\nThe local provider returned a valid JSON response in under two seconds.",
+          "visible_output": "The local provider returned a valid JSON response in under two seconds.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 71,
+            "length_ratio": 1.0,
+            "control_similarity": 1.0,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 2239.0,
+            "completion_tokens": 17,
+            "decoding_speed_tps": 8.844665561083472,
+            "prefill_duration_ttft": 0.43,
+            "prompt_tokens": 68,
+            "total_tokens": 85
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6224183296,
+              "system_available_bytes": 7016824832
+            },
+            "after": {
+              "provider_rss_bytes": 6308114432,
+              "system_available_bytes": 6953660416
+            },
+            "max_provider_rss_bytes": 6308114432,
+            "min_system_available_bytes": 6931316736,
+            "available_delta_bytes": 85508096,
+            "memory_guard_violation": false,
+            "sample_count": 2
+          },
+          "error": ""
+        },
+        {
+          "run_index": 3,
+          "warmup": false,
+          "wall_seconds": 2.923421,
+          "ttft_seconds": 0.471,
+          "provider_native_metrics": {},
+          "prompt_tokens": 68,
+          "completion_tokens": 17,
+          "total_tokens": 85,
+          "seconds_per_completion_token": 0.171966,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\nThe local provider returned a valid JSON response in under two seconds.",
+          "visible_output": "The local provider returned a valid JSON response in under two seconds.",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "visible_chars": 71,
+            "length_ratio": 1.0,
+            "control_similarity": 1.0,
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 2343.0,
+            "completion_tokens": 17,
+            "decoding_speed_tps": 8.547008547008547,
+            "prefill_duration_ttft": 0.471,
+            "prompt_tokens": 68,
+            "total_tokens": 85
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6308114432,
+              "system_available_bytes": 6898356224
+            },
+            "after": {
+              "provider_rss_bytes": 6265278464,
+              "system_available_bytes": 6961754112
+            },
+            "max_provider_rss_bytes": 6274572288,
+            "min_system_available_bytes": 6876237824,
+            "available_delta_bytes": 22118400,
+            "memory_guard_violation": false,
+            "sample_count": 2
+          },
+          "error": ""
+        }
+      ]
+    },
+    {
+      "case_id": "prompt_code",
+      "task": "prompt",
+      "system_prompt": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact shape — Markdown headers, JSON keys, etc.). Keep each section short. No meta-framing, no preamble. Base every constraint on what the user actually asked for — never invent requirements they did not state. Return only the prompt.",
+      "user_prompt": "build a python cli that scans a folder of json files and reports invalid rows with line numbers",
+      "max_tokens": 700,
+      "summary": {
+        "timed_runs": 2,
+        "pass_count": 2,
+        "pass_rate": 1.0,
+        "wall_seconds_median": 12.935945,
+        "wall_seconds_min": 12.363734,
+        "wall_seconds_max": 13.508157,
+        "seconds_per_completion_token_median": 0.124384,
+        "memory_guard_violations": 0
+      },
+      "runs": [
+        {
+          "run_index": 1,
+          "warmup": true,
+          "wall_seconds": 13.069019,
+          "ttft_seconds": 0.687,
+          "provider_native_metrics": {},
+          "prompt_tokens": 139,
+          "completion_tokens": 113,
+          "total_tokens": 252,
+          "seconds_per_completion_token": 0.115655,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\n<task>Build a Python CLI tool that scans a folder of JSON files and reports invalid rows with line numbers.</task>  \n<context>A user wants to validate JSON data in a folder, identifying any malformed entries and listing their line numbers for debugging.</context>  \n<constraints>Output must be under 500 characters. Use plain text with line numbers. Maintain a neutral, technical tone.</constraints>  \n<output_format>Plain text list of invalid lines, e.g., \"Line 12: Invalid JSON\"</output_format>",
+          "visible_output": "<task>Build a Python CLI tool that scans a folder of JSON files and reports invalid rows with line numbers.</task>  \n<context>A user wants to validate JSON data in a folder, identifying any malformed entries and listing their line numbers for debugging.</context>  \n<constraints>Output must be under 500 characters. Use plain text with line numbers. Maintain a neutral, technical tone.</constraints>  \n<output_format>Plain text list of invalid lines, e.g., \"Line 12: Invalid JSON\"</output_format>",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 496,
+            "sections": {
+              "task": 101,
+              "context": 127,
+              "constraints": 106,
+              "output_format": 63
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 12395.0,
+            "completion_tokens": 113,
+            "decoding_speed_tps": 9.566108643662453,
+            "prefill_duration_ttft": 0.687,
+            "prompt_tokens": 139,
+            "total_tokens": 252
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6265278464,
+              "system_available_bytes": 6957424640
+            },
+            "after": {
+              "provider_rss_bytes": 6161395712,
+              "system_available_bytes": 7060684800
+            },
+            "max_provider_rss_bytes": 6419865600,
+            "min_system_available_bytes": 6794530816,
+            "available_delta_bytes": 162893824,
+            "memory_guard_violation": false,
+            "sample_count": 10
+          },
+          "error": ""
+        },
+        {
+          "run_index": 2,
+          "warmup": false,
+          "wall_seconds": 12.363734,
+          "ttft_seconds": 0.711,
+          "provider_native_metrics": {},
+          "prompt_tokens": 139,
+          "completion_tokens": 104,
+          "total_tokens": 243,
+          "seconds_per_completion_token": 0.118882,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\n<task>Build a Python CLI tool that scans a folder of JSON files and reports invalid rows with line numbers</task>\n<context>Files are JSON arrays where each item represents a row; invalid rows are those that do not parse as valid JSON</context>\n<constraints>Output must be under 500 characters, use plain text with line numbers, maintain technical but clear language</constraints>\n<output_format>Each invalid row is listed as \"Line X: Error message\"</output_format>",
+          "visible_output": "<task>Build a Python CLI tool that scans a folder of JSON files and reports invalid rows with line numbers</task>\n<context>Files are JSON arrays where each item represents a row; invalid rows are those that do not parse as valid JSON</context>\n<constraints>Output must be under 500 characters, use plain text with line numbers, maintain technical but clear language</constraints>\n<output_format>Each invalid row is listed as \"Line X: Error message\"</output_format>",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 464,
+            "sections": {
+              "task": 100,
+              "context": 110,
+              "constraints": 108,
+              "output_format": 53
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 11846.0,
+            "completion_tokens": 104,
+            "decoding_speed_tps": 9.250112258643917,
+            "prefill_duration_ttft": 0.711,
+            "prompt_tokens": 139,
+            "total_tokens": 243
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6161395712,
+              "system_available_bytes": 7070945280
+            },
+            "after": {
+              "provider_rss_bytes": 6212739072,
+              "system_available_bytes": 7096729600
+            },
+            "max_provider_rss_bytes": 6449418240,
+            "min_system_available_bytes": 6762127360,
+            "available_delta_bytes": 308817920,
+            "memory_guard_violation": false,
+            "sample_count": 9
+          },
+          "error": ""
+        },
+        {
+          "run_index": 3,
+          "warmup": false,
+          "wall_seconds": 13.508157,
+          "ttft_seconds": 0.681,
+          "provider_native_metrics": {},
+          "prompt_tokens": 139,
+          "completion_tokens": 104,
+          "total_tokens": 243,
+          "seconds_per_completion_token": 0.129886,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\n<task>Build a Python CLI tool that scans a folder of JSON files and reports invalid rows with line numbers</task>\n<context>Files are JSON arrays where each item represents a row; invalid rows are those that do not parse as valid JSON</context>\n<constraints>Output must be under 500 characters, use plain text with line numbers, maintain technical but clear language</constraints>\n<output_format>Each invalid row is listed as \"Line X: Error message\"</output_format>",
+          "visible_output": "<task>Build a Python CLI tool that scans a folder of JSON files and reports invalid rows with line numbers</task>\n<context>Files are JSON arrays where each item represents a row; invalid rows are those that do not parse as valid JSON</context>\n<constraints>Output must be under 500 characters, use plain text with line numbers, maintain technical but clear language</constraints>\n<output_format>Each invalid row is listed as \"Line X: Error message\"</output_format>",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 464,
+            "sections": {
+              "task": 100,
+              "context": 110,
+              "constraints": 108,
+              "output_format": 53
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 12927.0,
+            "completion_tokens": 104,
+            "decoding_speed_tps": 8.410909684795035,
+            "prefill_duration_ttft": 0.681,
+            "prompt_tokens": 139,
+            "total_tokens": 243
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6212739072,
+              "system_available_bytes": 7010840576
+            },
+            "after": {
+              "provider_rss_bytes": 6212620288,
+              "system_available_bytes": 7179239424
+            },
+            "max_provider_rss_bytes": 6408192000,
+            "min_system_available_bytes": 6795001856,
+            "available_delta_bytes": 215838720,
+            "memory_guard_violation": false,
+            "sample_count": 10
+          },
+          "error": ""
+        }
+      ]
+    },
+    {
+      "case_id": "prompt_research",
+      "task": "prompt",
+      "system_prompt": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact shape — Markdown headers, JSON keys, etc.). Keep each section short. No meta-framing, no preamble. Base every constraint on what the user actually asked for — never invent requirements they did not state. Return only the prompt.",
+      "user_prompt": "compare LM Studio Lemonade Ollama and FLM for a local AI desktop app and show the tradeoffs",
+      "max_tokens": 700,
+      "summary": {
+        "timed_runs": 2,
+        "pass_count": 2,
+        "pass_rate": 1.0,
+        "wall_seconds_median": 16.98497,
+        "wall_seconds_min": 16.29123,
+        "wall_seconds_max": 17.678711,
+        "seconds_per_completion_token_median": 0.126753,
+        "memory_guard_violations": 0
+      },
+      "runs": [
+        {
+          "run_index": 1,
+          "warmup": true,
+          "wall_seconds": 20.606386,
+          "ttft_seconds": 0.726,
+          "provider_native_metrics": {},
+          "prompt_tokens": 143,
+          "completion_tokens": 159,
+          "total_tokens": 302,
+          "seconds_per_completion_token": 0.1296,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\n<task>Compare LM Studio Lemonade Ollama and FLM for a local AI desktop app and outline key tradeoffs</task>  \n<context>LM Studio Lemonade Ollama is a toolchain for running large language models locally using Ollama, while FLM (Fast Language Model] is a lightweight alternative designed for faster inference on local hardware.</context>  \n<constraints>Maximum 500 words. Use Markdown. Tone: neutral, technical. Include pros and cons of each.</constraints>  \n<output_format>  \n- Use Markdown headers  \n- Include key points under \"Pros\", \"Cons\", and \"Tradeoffs\"  \n- Limit to 3 bullet points per section  \n- Avoid markdown formatting in the final output  \n</output_format>",
+          "visible_output": "<task>Compare LM Studio Lemonade Ollama and FLM for a local AI desktop app and outline key tradeoffs</task>  \n<context>LM Studio Lemonade Ollama is a toolchain for running large language models locally using Ollama, while FLM (Fast Language Model] is a lightweight alternative designed for faster inference on local hardware.</context>  \n<constraints>Maximum 500 words. Use Markdown. Tone: neutral, technical. Include pros and cons of each.</constraints>  \n<output_format>  \n- Use Markdown headers  \n- Include key points under \"Pros\", \"Cons\", and \"Tradeoffs\"  \n- Limit to 3 bullet points per section  \n- Avoid markdown formatting in the final output  \n</output_format>",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 668,
+            "sections": {
+              "task": 94,
+              "context": 206,
+              "constraints": 89,
+              "output_format": 174
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 20085.0,
+            "completion_tokens": 159,
+            "decoding_speed_tps": 8.161578593935637,
+            "prefill_duration_ttft": 0.726,
+            "prompt_tokens": 143,
+            "total_tokens": 302
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6212620288,
+              "system_available_bytes": 7135571968
+            },
+            "after": {
+              "provider_rss_bytes": 6214492160,
+              "system_available_bytes": 7216660480
+            },
+            "max_provider_rss_bytes": 6410506240,
+            "min_system_available_bytes": 6893379584,
+            "available_delta_bytes": 242192384,
+            "memory_guard_violation": false,
+            "sample_count": 15
+          },
+          "error": ""
+        },
+        {
+          "run_index": 2,
+          "warmup": false,
+          "wall_seconds": 17.678711,
+          "ttft_seconds": 0.814,
+          "provider_native_metrics": {},
+          "prompt_tokens": 143,
+          "completion_tokens": 134,
+          "total_tokens": 277,
+          "seconds_per_completion_token": 0.131931,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\n<task>Compare LM Studio Lemonade Ollama and FLM for a local AI desktop app and outline key tradeoffs</task>  \n<context>LM Studio Lemonade Ollama is a toolchain for running large language models locally using Ollama, while FLM (Fast Language Model] is a lightweight alternative designed for faster inference on local hardware.</context>  \n<constraints>Maximum 500 words. Use Markdown. Tone: neutral, technical. Include pros and cons of each.</constraints>  \n<output_format>Markdown with headings: **Comparison**, **Pros**, **Cons**, **Tradeoffs**</output_format>",
+          "visible_output": "<task>Compare LM Studio Lemonade Ollama and FLM for a local AI desktop app and outline key tradeoffs</task>  \n<context>LM Studio Lemonade Ollama is a toolchain for running large language models locally using Ollama, while FLM (Fast Language Model] is a lightweight alternative designed for faster inference on local hardware.</context>  \n<constraints>Maximum 500 words. Use Markdown. Tone: neutral, technical. Include pros and cons of each.</constraints>  \n<output_format>Markdown with headings: **Comparison**, **Pros**, **Cons**, **Tradeoffs**</output_format>",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 561,
+            "sections": {
+              "task": 94,
+              "context": 206,
+              "constraints": 89,
+              "output_format": 73
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 17107.0,
+            "completion_tokens": 134,
+            "decoding_speed_tps": 8.163014791628306,
+            "prefill_duration_ttft": 0.814,
+            "prompt_tokens": 143,
+            "total_tokens": 277
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6214492160,
+              "system_available_bytes": 7159021568
+            },
+            "after": {
+              "provider_rss_bytes": 6212960256,
+              "system_available_bytes": 7213895680
+            },
+            "max_provider_rss_bytes": 6409969664,
+            "min_system_available_bytes": 6907813888,
+            "available_delta_bytes": 251207680,
+            "memory_guard_violation": false,
+            "sample_count": 13
+          },
+          "error": ""
+        },
+        {
+          "run_index": 3,
+          "warmup": false,
+          "wall_seconds": 16.29123,
+          "ttft_seconds": 0.819,
+          "provider_native_metrics": {},
+          "prompt_tokens": 143,
+          "completion_tokens": 134,
+          "total_tokens": 277,
+          "seconds_per_completion_token": 0.121576,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\n<task>Compare LM Studio Lemonade Ollama and FLM for a local AI desktop app and outline key tradeoffs</task>  \n<context>LM Studio Lemonade Ollama is a toolchain for running large language models locally using Ollama, while FLM (Fast Language Model] is a lightweight alternative designed for faster inference on local hardware.</context>  \n<constraints>Maximum 500 words. Use Markdown. Tone: neutral, technical. Include pros and cons of each.</constraints>  \n<output_format>Markdown with headings: **Comparison**, **Pros**, **Cons**, **Tradeoffs**</output_format>",
+          "visible_output": "<task>Compare LM Studio Lemonade Ollama and FLM for a local AI desktop app and outline key tradeoffs</task>  \n<context>LM Studio Lemonade Ollama is a toolchain for running large language models locally using Ollama, while FLM (Fast Language Model] is a lightweight alternative designed for faster inference on local hardware.</context>  \n<constraints>Maximum 500 words. Use Markdown. Tone: neutral, technical. Include pros and cons of each.</constraints>  \n<output_format>Markdown with headings: **Comparison**, **Pros**, **Cons**, **Tradeoffs**</output_format>",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 561,
+            "sections": {
+              "task": 94,
+              "context": 206,
+              "constraints": 89,
+              "output_format": 73
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 15614.0,
+            "completion_tokens": 134,
+            "decoding_speed_tps": 8.989523487664751,
+            "prefill_duration_ttft": 0.819,
+            "prompt_tokens": 143,
+            "total_tokens": 277
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6212960256,
+              "system_available_bytes": 7166537728
+            },
+            "after": {
+              "provider_rss_bytes": 6212993024,
+              "system_available_bytes": 7245234176
+            },
+            "max_provider_rss_bytes": 6408642560,
+            "min_system_available_bytes": 6936481792,
+            "available_delta_bytes": 230055936,
+            "memory_guard_violation": false,
+            "sample_count": 12
+          },
+          "error": ""
+        }
+      ]
+    },
+    {
+      "case_id": "prompt_email",
+      "task": "prompt",
+      "system_prompt": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact shape — Markdown headers, JSON keys, etc.). Keep each section short. No meta-framing, no preamble. Base every constraint on what the user actually asked for — never invent requirements they did not state. Return only the prompt.",
+      "user_prompt": "write a polite email to a vendor asking for missing API credentials and a timeline",
+      "max_tokens": 700,
+      "summary": {
+        "timed_runs": 2,
+        "pass_count": 2,
+        "pass_rate": 1.0,
+        "wall_seconds_median": 11.540012,
+        "wall_seconds_min": 11.531677,
+        "wall_seconds_max": 11.548346,
+        "seconds_per_completion_token_median": 0.128223,
+        "memory_guard_violations": 0
+      },
+      "runs": [
+        {
+          "run_index": 1,
+          "warmup": true,
+          "wall_seconds": 16.733609,
+          "ttft_seconds": 0.734,
+          "provider_native_metrics": {},
+          "prompt_tokens": 136,
+          "completion_tokens": 128,
+          "total_tokens": 264,
+          "seconds_per_completion_token": 0.130731,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\n<task> Request missing API credentials and a timeline from a vendor</task>  \n<context> You need to contact a third-party vendor to obtain missing API credentials and ask for a timeline for their availability.</context>  \n<constraints> 12 sentences maximum. Use formal but polite language. Include a subject line. Use sender’s name and company in the salutation.</constraints>  \n<output_format>  \n# Subject: Request for Missing API Credentials and Timeline  \nDear [Vendor Name],  \n[Body of email with request]  \nSincerely,  \n[Your Name]  \n[Your Company</output_format>",
+          "visible_output": "<task> Request missing API credentials and a timeline from a vendor</task>  \n<context> You need to contact a third-party vendor to obtain missing API credentials and ask for a timeline for their availability.</context>  \n<constraints> 12 sentences maximum. Use formal but polite language. Include a subject line. Use sender’s name and company in the salutation.</constraints>  \n<output_format>  \n# Subject: Request for Missing API Credentials and Timeline  \nDear [Vendor Name],  \n[Body of email with request]  \nSincerely,  \n[Your Name]  \n[Your Company</output_format>",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 567,
+            "sections": {
+              "task": 60,
+              "context": 121,
+              "constraints": 126,
+              "output_format": 155
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 16166.0,
+            "completion_tokens": 128,
+            "decoding_speed_tps": 8.229652669777087,
+            "prefill_duration_ttft": 0.734,
+            "prompt_tokens": 136,
+            "total_tokens": 264
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6212993024,
+              "system_available_bytes": 7190888448
+            },
+            "after": {
+              "provider_rss_bytes": 6212726784,
+              "system_available_bytes": 7418818560
+            },
+            "max_provider_rss_bytes": 6408839168,
+            "min_system_available_bytes": 6974586880,
+            "available_delta_bytes": 216301568,
+            "memory_guard_violation": false,
+            "sample_count": 12
+          },
+          "error": ""
+        },
+        {
+          "run_index": 2,
+          "warmup": false,
+          "wall_seconds": 11.548346,
+          "ttft_seconds": 0.744,
+          "provider_native_metrics": {},
+          "prompt_tokens": 136,
+          "completion_tokens": 90,
+          "total_tokens": 226,
+          "seconds_per_completion_token": 0.128315,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\n<task>Request missing API credentials and a timeline for resolution</task>  \n<context>Vendor has not provided required API credentials, causing delays in system integration. Follow-up is needed to ensure timely access.</context>  \n<constraints>125 characters or less. Use formal but polite tone. Include request for credentials and timeline.</constraints>  \n<output_format>Subject line followed by body paragraph in Markdown</output_format>",
+          "visible_output": "<task>Request missing API credentials and a timeline for resolution</task>  \n<context>Vendor has not provided required API credentials, causing delays in system integration. Follow-up is needed to ensure timely access.</context>  \n<constraints>125 characters or less. Use formal but polite tone. Include request for credentials and timeline.</constraints>  \n<output_format>Subject line followed by body paragraph in Markdown</output_format>",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 440,
+            "sections": {
+              "task": 61,
+              "context": 132,
+              "constraints": 97,
+              "output_format": 51
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 10861.0,
+            "completion_tokens": 90,
+            "decoding_speed_tps": 8.797074231491548,
+            "prefill_duration_ttft": 0.744,
+            "prompt_tokens": 136,
+            "total_tokens": 226
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6212726784,
+              "system_available_bytes": 7348809728
+            },
+            "after": {
+              "provider_rss_bytes": 6212694016,
+              "system_available_bytes": 7441002496
+            },
+            "max_provider_rss_bytes": 6410780672,
+            "min_system_available_bytes": 7088975872,
+            "available_delta_bytes": 259833856,
+            "memory_guard_violation": false,
+            "sample_count": 9
+          },
+          "error": ""
+        },
+        {
+          "run_index": 3,
+          "warmup": false,
+          "wall_seconds": 11.531677,
+          "ttft_seconds": 0.673,
+          "provider_native_metrics": {},
+          "prompt_tokens": 136,
+          "completion_tokens": 90,
+          "total_tokens": 226,
+          "seconds_per_completion_token": 0.12813,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\n<task>Request missing API credentials and a timeline for resolution</task>  \n<context>Vendor has not provided required API credentials, causing delays in system integration. Follow-up is needed to ensure timely access.</context>  \n<constraints>125 characters or less. Use formal but polite tone. Include request for credentials and timeline.</constraints>  \n<output_format>Subject line followed by body paragraph in Markdown</output_format>",
+          "visible_output": "<task>Request missing API credentials and a timeline for resolution</task>  \n<context>Vendor has not provided required API credentials, causing delays in system integration. Follow-up is needed to ensure timely access.</context>  \n<constraints>125 characters or less. Use formal but polite tone. Include request for credentials and timeline.</constraints>  \n<output_format>Subject line followed by body paragraph in Markdown</output_format>",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 440,
+            "sections": {
+              "task": 61,
+              "context": 132,
+              "constraints": 97,
+              "output_format": 51
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 10871.0,
+            "completion_tokens": 90,
+            "decoding_speed_tps": 8.727201412041577,
+            "prefill_duration_ttft": 0.673,
+            "prompt_tokens": 136,
+            "total_tokens": 226
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6212694016,
+              "system_available_bytes": 7368192000
+            },
+            "after": {
+              "provider_rss_bytes": 6212718592,
+              "system_available_bytes": 7377936384
+            },
+            "max_provider_rss_bytes": 6408101888,
+            "min_system_available_bytes": 7148548096,
+            "available_delta_bytes": 219643904,
+            "memory_guard_violation": false,
+            "sample_count": 9
+          },
+          "error": ""
+        }
+      ]
+    },
+    {
+      "case_id": "prompt_data",
+      "task": "prompt",
+      "system_prompt": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact shape — Markdown headers, JSON keys, etc.). Keep each section short. No meta-framing, no preamble. Base every constraint on what the user actually asked for — never invent requirements they did not state. Return only the prompt.",
+      "user_prompt": "analyze a CSV export of time logs and explain missing expected hours by person and date",
+      "max_tokens": 700,
+      "summary": {
+        "timed_runs": 2,
+        "pass_count": 2,
+        "pass_rate": 1.0,
+        "wall_seconds_median": 17.600903,
+        "wall_seconds_min": 17.359544,
+        "wall_seconds_max": 17.842262,
+        "seconds_per_completion_token_median": 0.127543,
+        "memory_guard_violations": 0
+      },
+      "runs": [
+        {
+          "run_index": 1,
+          "warmup": true,
+          "wall_seconds": 18.588468,
+          "ttft_seconds": 0.818,
+          "provider_native_metrics": {},
+          "prompt_tokens": 137,
+          "completion_tokens": 138,
+          "total_tokens": 275,
+          "seconds_per_completion_token": 0.134699,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\n<task>Identify missing expected hours in time log data by person and date</task>  \n<context>A CSV file contains time log records with fields: person, date, actual_hours. Expected hours are defined as 8 per day. The goal is to find days where actual_hours is less than 8 for each person.</context>  \n<constraints>Output must be in a table with columns: person, date, missing_hours (calculated as 8 - actual_hours]. Missing hours must be non-negative. Each row must be a single entry.</constraints>  \n<output_format>Markdown table with headers: person, date, missing_hours</output_format>",
+          "visible_output": "<task>Identify missing expected hours in time log data by person and date</task>  \n<context>A CSV file contains time log records with fields: person, date, actual_hours. Expected hours are defined as 8 per day. The goal is to find days where actual_hours is less than 8 for each person.</context>  \n<constraints>Output must be in a table with columns: person, date, missing_hours (calculated as 8 - actual_hours]. Missing hours must be non-negative. Each row must be a single entry.</constraints>  \n<output_format>Markdown table with headers: person, date, missing_hours</output_format>",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 586,
+            "sections": {
+              "task": 67,
+              "context": 194,
+              "constraints": 170,
+              "output_format": 56
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 18069.0,
+            "completion_tokens": 138,
+            "decoding_speed_tps": 7.941568604718566,
+            "prefill_duration_ttft": 0.818,
+            "prompt_tokens": 137,
+            "total_tokens": 275
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6212718592,
+              "system_available_bytes": 7336075264
+            },
+            "after": {
+              "provider_rss_bytes": 6214103040,
+              "system_available_bytes": 7292108800
+            },
+            "max_provider_rss_bytes": 6412697600,
+            "min_system_available_bytes": 6974513152,
+            "available_delta_bytes": 361562112,
+            "memory_guard_violation": false,
+            "sample_count": 14
+          },
+          "error": ""
+        },
+        {
+          "run_index": 2,
+          "warmup": false,
+          "wall_seconds": 17.842262,
+          "ttft_seconds": 0.773,
+          "provider_native_metrics": {},
+          "prompt_tokens": 137,
+          "completion_tokens": 138,
+          "total_tokens": 275,
+          "seconds_per_completion_token": 0.129292,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\n<task>Identify missing expected hours in time log data by person and date</task>  \n<context>A CSV file contains time log records with fields: person, date, actual_hours. Expected hours are defined as 8 per day. The goal is to find days where actual_hours is less than 8 for each person.</context>  \n<constraints>Output must be in a table with columns: person, date, missing_hours (calculated as 8 - actual_hours]. Missing hours must be non-negative. Each row must be a single entry.</constraints>  \n<output_format>Markdown table with headers: person, date, missing_hours</output_format>",
+          "visible_output": "<task>Identify missing expected hours in time log data by person and date</task>  \n<context>A CSV file contains time log records with fields: person, date, actual_hours. Expected hours are defined as 8 per day. The goal is to find days where actual_hours is less than 8 for each person.</context>  \n<constraints>Output must be in a table with columns: person, date, missing_hours (calculated as 8 - actual_hours]. Missing hours must be non-negative. Each row must be a single entry.</constraints>  \n<output_format>Markdown table with headers: person, date, missing_hours</output_format>",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 586,
+            "sections": {
+              "task": 67,
+              "context": 194,
+              "constraints": 170,
+              "output_format": 56
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 17328.0,
+            "completion_tokens": 138,
+            "decoding_speed_tps": 8.275445484747811,
+            "prefill_duration_ttft": 0.773,
+            "prompt_tokens": 137,
+            "total_tokens": 275
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6214103040,
+              "system_available_bytes": 7248334848
+            },
+            "after": {
+              "provider_rss_bytes": 6213607424,
+              "system_available_bytes": 7221141504
+            },
+            "max_provider_rss_bytes": 6411198464,
+            "min_system_available_bytes": 7004225536,
+            "available_delta_bytes": 244109312,
+            "memory_guard_violation": false,
+            "sample_count": 13
+          },
+          "error": ""
+        },
+        {
+          "run_index": 3,
+          "warmup": false,
+          "wall_seconds": 17.359544,
+          "ttft_seconds": 0.794,
+          "provider_native_metrics": {},
+          "prompt_tokens": 137,
+          "completion_tokens": 138,
+          "total_tokens": 275,
+          "seconds_per_completion_token": 0.125794,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\n<task>Identify missing expected hours in time log data by person and date</task>  \n<context>A CSV file contains time log records with fields: person, date, actual_hours. Expected hours are defined as 8 per day. The goal is to find days where actual_hours is less than 8 for each person.</context>  \n<constraints>Output must be in a table with columns: person, date, missing_hours (calculated as 8 - actual_hours]. Missing hours must be non-negative. Each row must be a single entry.</constraints>  \n<output_format>Markdown table with headers: person, date, missing_hours</output_format>",
+          "visible_output": "<task>Identify missing expected hours in time log data by person and date</task>  \n<context>A CSV file contains time log records with fields: person, date, actual_hours. Expected hours are defined as 8 per day. The goal is to find days where actual_hours is less than 8 for each person.</context>  \n<constraints>Output must be in a table with columns: person, date, missing_hours (calculated as 8 - actual_hours]. Missing hours must be non-negative. Each row must be a single entry.</constraints>  \n<output_format>Markdown table with headers: person, date, missing_hours</output_format>",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 586,
+            "sections": {
+              "task": 67,
+              "context": 194,
+              "constraints": 170,
+              "output_format": 56
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 16841.0,
+            "completion_tokens": 138,
+            "decoding_speed_tps": 8.53742132485823,
+            "prefill_duration_ttft": 0.794,
+            "prompt_tokens": 137,
+            "total_tokens": 275
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6213607424,
+              "system_available_bytes": 7162884096
+            },
+            "after": {
+              "provider_rss_bytes": 6213636096,
+              "system_available_bytes": 7298609152
+            },
+            "max_provider_rss_bytes": 6412836864,
+            "min_system_available_bytes": 6897815552,
+            "available_delta_bytes": 265068544,
+            "memory_guard_violation": false,
+            "sample_count": 13
+          },
+          "error": ""
+        }
+      ]
+    },
+    {
+      "case_id": "prompt_meeting",
+      "task": "prompt",
+      "system_prompt": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact shape — Markdown headers, JSON keys, etc.). Keep each section short. No meta-framing, no preamble. Base every constraint on what the user actually asked for — never invent requirements they did not state. Return only the prompt.",
+      "user_prompt": "turn a rough meeting transcript into summary decisions risks and action items",
+      "max_tokens": 700,
+      "summary": {
+        "timed_runs": 2,
+        "pass_count": 2,
+        "pass_rate": 1.0,
+        "wall_seconds_median": 16.483141,
+        "wall_seconds_min": 16.248183,
+        "wall_seconds_max": 16.718099,
+        "seconds_per_completion_token_median": 0.147171,
+        "memory_guard_violations": 0
+      },
+      "runs": [
+        {
+          "run_index": 1,
+          "warmup": true,
+          "wall_seconds": 12.357733,
+          "ttft_seconds": 0.789,
+          "provider_native_metrics": {},
+          "prompt_tokens": 133,
+          "completion_tokens": 87,
+          "total_tokens": 220,
+          "seconds_per_completion_token": 0.142043,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\n<task>Summarize key decisions, risks, and action items from a meeting transcript</task>  \n<context>A meeting transcript containing discussion points, outcomes, and pending tasks</context>  \n<constraints>Maximum 300 words. Use bullet points. Maintain formal but concise tone.</constraints>  \n<output_format>  \n- Decisions  \n- Risks  \n- Action Items  \n</output_format>",
+          "visible_output": "<task>Summarize key decisions, risks, and action items from a meeting transcript</task>  \n<context>A meeting transcript containing discussion points, outcomes, and pending tasks</context>  \n<constraints>Maximum 300 words. Use bullet points. Maintain formal but concise tone.</constraints>  \n<output_format>  \n- Decisions  \n- Risks  \n- Action Items  \n</output_format>",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 366,
+            "sections": {
+              "task": 74,
+              "context": 78,
+              "constraints": 71,
+              "output_format": 38
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 11806.0,
+            "completion_tokens": 87,
+            "decoding_speed_tps": 7.806117817917764,
+            "prefill_duration_ttft": 0.789,
+            "prompt_tokens": 133,
+            "total_tokens": 220
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6213636096,
+              "system_available_bytes": 7279271936
+            },
+            "after": {
+              "provider_rss_bytes": 6214451200,
+              "system_available_bytes": 7243730944
+            },
+            "max_provider_rss_bytes": 6412247040,
+            "min_system_available_bytes": 7030538240,
+            "available_delta_bytes": 248733696,
+            "memory_guard_violation": false,
+            "sample_count": 9
+          },
+          "error": ""
+        },
+        {
+          "run_index": 2,
+          "warmup": false,
+          "wall_seconds": 16.718099,
+          "ttft_seconds": 0.789,
+          "provider_native_metrics": {},
+          "prompt_tokens": 133,
+          "completion_tokens": 112,
+          "total_tokens": 245,
+          "seconds_per_completion_token": 0.149269,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\n<task>Summarize a meeting transcript into decisions, risks, and action items</task>  \n<context>A meeting transcript contains notes from a discussion about project progress, team updates, and upcoming tasks. The goal is to extract key outcomes and next steps.</context>  \n<constraints>Output must be under 300 words. Use bullet points. Maintain formal but concise tone.</constraints>  \n<output_format>  \n- **Decisions**:  \n- **Risks**:  \n- **Action Items**:  \n</output_format>",
+          "visible_output": "<task>Summarize a meeting transcript into decisions, risks, and action items</task>  \n<context>A meeting transcript contains notes from a discussion about project progress, team updates, and upcoming tasks. The goal is to extract key outcomes and next steps.</context>  \n<constraints>Output must be under 300 words. Use bullet points. Maintain formal but concise tone.</constraints>  \n<output_format>  \n- **Decisions**:  \n- **Risks**:  \n- **Action Items**:  \n</output_format>",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 475,
+            "sections": {
+              "task": 70,
+              "context": 163,
+              "constraints": 84,
+              "output_format": 53
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 16141.0,
+            "completion_tokens": 112,
+            "decoding_speed_tps": 7.230328295987493,
+            "prefill_duration_ttft": 0.789,
+            "prompt_tokens": 133,
+            "total_tokens": 245
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6214451200,
+              "system_available_bytes": 7212965888
+            },
+            "after": {
+              "provider_rss_bytes": 6214463488,
+              "system_available_bytes": 6674837504
+            },
+            "max_provider_rss_bytes": 6409826304,
+            "min_system_available_bytes": 6698295296,
+            "available_delta_bytes": 514670592,
+            "memory_guard_violation": false,
+            "sample_count": 12
+          },
+          "error": ""
+        },
+        {
+          "run_index": 3,
+          "warmup": false,
+          "wall_seconds": 16.248183,
+          "ttft_seconds": 0.878,
+          "provider_native_metrics": {},
+          "prompt_tokens": 133,
+          "completion_tokens": 112,
+          "total_tokens": 245,
+          "seconds_per_completion_token": 0.145073,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\n<task>Summarize a meeting transcript into decisions, risks, and action items</task>  \n<context>A meeting transcript contains notes from a discussion about project progress, team updates, and upcoming tasks. The goal is to extract key outcomes and next steps.</context>  \n<constraints>Output must be under 300 words. Use bullet points. Maintain formal but concise tone.</constraints>  \n<output_format>  \n- **Decisions**:  \n- **Risks**:  \n- **Action Items**:  \n</output_format>",
+          "visible_output": "<task>Summarize a meeting transcript into decisions, risks, and action items</task>  \n<context>A meeting transcript contains notes from a discussion about project progress, team updates, and upcoming tasks. The goal is to extract key outcomes and next steps.</context>  \n<constraints>Output must be under 300 words. Use bullet points. Maintain formal but concise tone.</constraints>  \n<output_format>  \n- **Decisions**:  \n- **Risks**:  \n- **Action Items**:  \n</output_format>",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 475,
+            "sections": {
+              "task": 70,
+              "context": 163,
+              "constraints": 84,
+              "output_format": 53
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 15675.0,
+            "completion_tokens": 112,
+            "decoding_speed_tps": 7.501520578495641,
+            "prefill_duration_ttft": 0.878,
+            "prompt_tokens": 133,
+            "total_tokens": 245
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6214463488,
+              "system_available_bytes": 6633357312
+            },
+            "after": {
+              "provider_rss_bytes": 6214467584,
+              "system_available_bytes": 6723547136
+            },
+            "max_provider_rss_bytes": 6411206656,
+            "min_system_available_bytes": 6398803968,
+            "available_delta_bytes": 234553344,
+            "memory_guard_violation": false,
+            "sample_count": 12
+          },
+          "error": ""
+        }
+      ]
+    },
+    {
+      "case_id": "prompt_vague",
+      "task": "prompt",
+      "system_prompt": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact shape — Markdown headers, JSON keys, etc.). Keep each section short. No meta-framing, no preamble. Base every constraint on what the user actually asked for — never invent requirements they did not state. Return only the prompt.",
+      "user_prompt": "make this better and more clear for the team",
+      "max_tokens": 700,
+      "summary": {
+        "timed_runs": 2,
+        "pass_count": 2,
+        "pass_rate": 1.0,
+        "wall_seconds_median": 13.6437,
+        "wall_seconds_min": 13.465027,
+        "wall_seconds_max": 13.822374,
+        "seconds_per_completion_token_median": 0.14993,
+        "memory_guard_violations": 0
+      },
+      "runs": [
+        {
+          "run_index": 1,
+          "warmup": true,
+          "wall_seconds": 14.470788,
+          "ttft_seconds": 0.804,
+          "provider_native_metrics": {},
+          "prompt_tokens": 130,
+          "completion_tokens": 90,
+          "total_tokens": 220,
+          "seconds_per_completion_token": 0.160787,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\n<task> Improve the clarity of the team's communication.</task>  \n<context> The team is struggling with unclear messages that lead to misunderstandings and inefficiencies.</context>  \n<constraints> Output must be under 200 words. Use simple, direct language. Avoid jargon.</constraints>  \n<output_format> Markdown document with a heading and a single paragraph explaining the issue and suggesting a solution.</output_format>",
+          "visible_output": "<task> Improve the clarity of the team's communication.</task>  \n<context> The team is struggling with unclear messages that lead to misunderstandings and inefficiencies.</context>  \n<constraints> Output must be under 200 words. Use simple, direct language. Avoid jargon.</constraints>  \n<output_format> Markdown document with a heading and a single paragraph explaining the issue and suggesting a solution.</output_format>",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 423,
+            "sections": {
+              "task": 48,
+              "context": 95,
+              "constraints": 74,
+              "output_format": 103
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 13774.0,
+            "completion_tokens": 90,
+            "decoding_speed_tps": 6.861989205859675,
+            "prefill_duration_ttft": 0.804,
+            "prompt_tokens": 130,
+            "total_tokens": 220
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6214500352,
+              "system_available_bytes": 6699692032
+            },
+            "after": {
+              "provider_rss_bytes": 6209945600,
+              "system_available_bytes": 6554021888
+            },
+            "max_provider_rss_bytes": 6411436032,
+            "min_system_available_bytes": 6305861632,
+            "available_delta_bytes": 393830400,
+            "memory_guard_violation": false,
+            "sample_count": 11
+          },
+          "error": ""
+        },
+        {
+          "run_index": 2,
+          "warmup": false,
+          "wall_seconds": 13.822374,
+          "ttft_seconds": 0.766,
+          "provider_native_metrics": {},
+          "prompt_tokens": 130,
+          "completion_tokens": 91,
+          "total_tokens": 221,
+          "seconds_per_completion_token": 0.151894,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\n<task> Improve the clarity of the team's communication.</task>  \n<context> The team is struggling with unclear messages that lead to misunderstandings during collaboration.</context>  \n<constraints> Output must be under 200 words. Use concise, professional language. Ensure clarity and directness.</constraints>  \n<output_format> Markdown header for the task, followed by a brief, clear explanation in one sentence.</output_format>",
+          "visible_output": "<task> Improve the clarity of the team's communication.</task>  \n<context> The team is struggling with unclear messages that lead to misunderstandings during collaboration.</context>  \n<constraints> Output must be under 200 words. Use concise, professional language. Ensure clarity and directness.</constraints>  \n<output_format> Markdown header for the task, followed by a brief, clear explanation in one sentence.</output_format>",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 431,
+            "sections": {
+              "task": 48,
+              "context": 97,
+              "constraints": 98,
+              "output_format": 85
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 13260.0,
+            "completion_tokens": 91,
+            "decoding_speed_tps": 7.203457659676645,
+            "prefill_duration_ttft": 0.766,
+            "prompt_tokens": 130,
+            "total_tokens": 221
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6209945600,
+              "system_available_bytes": 6532796416
+            },
+            "after": {
+              "provider_rss_bytes": 6210084864,
+              "system_available_bytes": 6540070912
+            },
+            "max_provider_rss_bytes": 6405324800,
+            "min_system_available_bytes": 6299721728,
+            "available_delta_bytes": 233074688,
+            "memory_guard_violation": false,
+            "sample_count": 10
+          },
+          "error": ""
+        },
+        {
+          "run_index": 3,
+          "warmup": false,
+          "wall_seconds": 13.465027,
+          "ttft_seconds": 0.803,
+          "provider_native_metrics": {},
+          "prompt_tokens": 130,
+          "completion_tokens": 91,
+          "total_tokens": 221,
+          "seconds_per_completion_token": 0.147967,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\n<task> Improve the clarity of the team's communication.</task>  \n<context> The team is struggling with unclear messages that lead to misunderstandings during collaboration.</context>  \n<constraints> Output must be under 200 words. Use concise, professional language. Ensure clarity and directness.</constraints>  \n<output_format> Markdown header for the task, followed by a brief, clear explanation in one sentence.</output_format>",
+          "visible_output": "<task> Improve the clarity of the team's communication.</task>  \n<context> The team is struggling with unclear messages that lead to misunderstandings during collaboration.</context>  \n<constraints> Output must be under 200 words. Use concise, professional language. Ensure clarity and directness.</constraints>  \n<output_format> Markdown header for the task, followed by a brief, clear explanation in one sentence.</output_format>",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 431,
+            "sections": {
+              "task": 48,
+              "context": 97,
+              "constraints": 98,
+              "output_format": 85
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 12914.0,
+            "completion_tokens": 91,
+            "decoding_speed_tps": 7.431260837255388,
+            "prefill_duration_ttft": 0.803,
+            "prompt_tokens": 130,
+            "total_tokens": 221
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6210084864,
+              "system_available_bytes": 6498267136
+            },
+            "after": {
+              "provider_rss_bytes": 6210052096,
+              "system_available_bytes": 6312669184
+            },
+            "max_provider_rss_bytes": 6405423104,
+            "min_system_available_bytes": 6265798656,
+            "available_delta_bytes": 232468480,
+            "memory_guard_violation": false,
+            "sample_count": 10
+          },
+          "error": ""
+        }
+      ]
+    },
+    {
+      "case_id": "prompt_ui",
+      "task": "prompt",
+      "system_prompt": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact shape — Markdown headers, JSON keys, etc.). Keep each section short. No meta-framing, no preamble. Base every constraint on what the user actually asked for — never invent requirements they did not state. Return only the prompt.",
+      "user_prompt": "design a small dashboard for model benchmarks with provider filters and failure states",
+      "max_tokens": 700,
+      "summary": {
+        "timed_runs": 2,
+        "pass_count": 2,
+        "pass_rate": 1.0,
+        "wall_seconds_median": 18.76921,
+        "wall_seconds_min": 18.414949,
+        "wall_seconds_max": 19.123472,
+        "seconds_per_completion_token_median": 0.13503,
+        "memory_guard_violations": 0
+      },
+      "runs": [
+        {
+          "run_index": 1,
+          "warmup": true,
+          "wall_seconds": 20.98864,
+          "ttft_seconds": 0.824,
+          "provider_native_metrics": {},
+          "prompt_tokens": 134,
+          "completion_tokens": 139,
+          "total_tokens": 273,
+          "seconds_per_completion_token": 0.150997,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\n<task>Design a dashboard to display model benchmark results with provider filters and failure states</task>\n<context>Benchmarking models across different providers to evaluate performance, including metrics like accuracy, latency, and error rates. Filters allow users to isolate data by provider, while failure states highlight models that failed during testing.</context>\n<constraints>Max 500 words. Use bullet points or tables. Include visual indicators for failure states (e.g., red icons). Ensure clarity for non-technical users.</constraints>\n<output_format>Markdown document with headers for Dashboard Overview, Provider Filters, Failure States, and Key Metrics. Include a table showing sample data.</output_format>",
+          "visible_output": "<task>Design a dashboard to display model benchmark results with provider filters and failure states</task>\n<context>Benchmarking models across different providers to evaluate performance, including metrics like accuracy, latency, and error rates. Filters allow users to isolate data by provider, while failure states highlight models that failed during testing.</context>\n<constraints>Max 500 words. Use bullet points or tables. Include visual indicators for failure states (e.g., red icons). Ensure clarity for non-technical users.</constraints>\n<output_format>Markdown document with headers for Dashboard Overview, Provider Filters, Failure States, and Key Metrics. Include a table showing sample data.</output_format>",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 721,
+            "sections": {
+              "task": 94,
+              "context": 245,
+              "constraints": 147,
+              "output_format": 142
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 20424.0,
+            "completion_tokens": 139,
+            "decoding_speed_tps": 7.040816326530612,
+            "prefill_duration_ttft": 0.824,
+            "prompt_tokens": 134,
+            "total_tokens": 273
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6210052096,
+              "system_available_bytes": 6291390464
+            },
+            "after": {
+              "provider_rss_bytes": 6076915712,
+              "system_available_bytes": 6233071616
+            },
+            "max_provider_rss_bytes": 6407475200,
+            "min_system_available_bytes": 5932871680,
+            "available_delta_bytes": 358518784,
+            "memory_guard_violation": false,
+            "sample_count": 15
+          },
+          "error": ""
+        },
+        {
+          "run_index": 2,
+          "warmup": false,
+          "wall_seconds": 19.123472,
+          "ttft_seconds": 0.824,
+          "provider_native_metrics": {},
+          "prompt_tokens": 134,
+          "completion_tokens": 139,
+          "total_tokens": 273,
+          "seconds_per_completion_token": 0.137579,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\n<task>Design a dashboard to display model benchmark results with provider filters and failure states</task>\n<context>Benchmarking models across different providers to evaluate performance, including metrics like accuracy, latency, and error rates. Filters allow users to isolate data by provider, while failure states highlight models that failed during testing.</context>\n<constraints>Max 500 words. Use bullet points or tables. Include visual indicators for failure states (e.g., red icons). Ensure clarity for non-technical users.</constraints>\n<output_format>Markdown document with headers for Dashboard Overview, Provider Filters, Failure States, and Key Metrics. Include a table showing sample data.</output_format>",
+          "visible_output": "<task>Design a dashboard to display model benchmark results with provider filters and failure states</task>\n<context>Benchmarking models across different providers to evaluate performance, including metrics like accuracy, latency, and error rates. Filters allow users to isolate data by provider, while failure states highlight models that failed during testing.</context>\n<constraints>Max 500 words. Use bullet points or tables. Include visual indicators for failure states (e.g., red icons). Ensure clarity for non-technical users.</constraints>\n<output_format>Markdown document with headers for Dashboard Overview, Provider Filters, Failure States, and Key Metrics. Include a table showing sample data.</output_format>",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 721,
+            "sections": {
+              "task": 94,
+              "context": 245,
+              "constraints": 147,
+              "output_format": 142
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 18567.0,
+            "completion_tokens": 139,
+            "decoding_speed_tps": 7.777715155272502,
+            "prefill_duration_ttft": 0.824,
+            "prompt_tokens": 134,
+            "total_tokens": 273
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6076915712,
+              "system_available_bytes": 6215688192
+            },
+            "after": {
+              "provider_rss_bytes": 6215180288,
+              "system_available_bytes": 6057177088
+            },
+            "max_provider_rss_bytes": 6410772480,
+            "min_system_available_bytes": 5858902016,
+            "available_delta_bytes": 356786176,
+            "memory_guard_violation": false,
+            "sample_count": 14
+          },
+          "error": ""
+        },
+        {
+          "run_index": 3,
+          "warmup": false,
+          "wall_seconds": 18.414949,
+          "ttft_seconds": 0.871,
+          "provider_native_metrics": {},
+          "prompt_tokens": 134,
+          "completion_tokens": 139,
+          "total_tokens": 273,
+          "seconds_per_completion_token": 0.132482,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\n<task>Design a dashboard to display model benchmark results with provider filters and failure states</task>\n<context>Benchmarking models across different providers to evaluate performance, including metrics like accuracy, latency, and error rates. Filters allow users to isolate data by provider, while failure states highlight models that failed during testing.</context>\n<constraints>Max 500 words. Use bullet points or tables. Include visual indicators for failure states (e.g., red icons). Ensure clarity for non-technical users.</constraints>\n<output_format>Markdown document with headers for Dashboard Overview, Provider Filters, Failure States, and Key Metrics. Include a table showing sample data.</output_format>",
+          "visible_output": "<task>Design a dashboard to display model benchmark results with provider filters and failure states</task>\n<context>Benchmarking models across different providers to evaluate performance, including metrics like accuracy, latency, and error rates. Filters allow users to isolate data by provider, while failure states highlight models that failed during testing.</context>\n<constraints>Max 500 words. Use bullet points or tables. Include visual indicators for failure states (e.g., red icons). Ensure clarity for non-technical users.</constraints>\n<output_format>Markdown document with headers for Dashboard Overview, Provider Filters, Failure States, and Key Metrics. Include a table showing sample data.</output_format>",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 721,
+            "sections": {
+              "task": 94,
+              "context": 245,
+              "constraints": 147,
+              "output_format": 142
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 17798.0,
+            "completion_tokens": 139,
+            "decoding_speed_tps": 8.152655520765641,
+            "prefill_duration_ttft": 0.871,
+            "prompt_tokens": 134,
+            "total_tokens": 273
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6215180288,
+              "system_available_bytes": 6027419648
+            },
+            "after": {
+              "provider_rss_bytes": 6215213056,
+              "system_available_bytes": 6040707072
+            },
+            "max_provider_rss_bytes": 6417592320,
+            "min_system_available_bytes": 5741838336,
+            "available_delta_bytes": 285581312,
+            "memory_guard_violation": false,
+            "sample_count": 14
+          },
+          "error": ""
+        }
+      ]
+    },
+    {
+      "case_id": "prompt_bug",
+      "task": "prompt",
+      "system_prompt": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact shape — Markdown headers, JSON keys, etc.). Keep each section short. No meta-framing, no preamble. Base every constraint on what the user actually asked for — never invent requirements they did not state. Return only the prompt.",
+      "user_prompt": "debug why a local server health check passes but chat completions fail with 404",
+      "max_tokens": 700,
+      "summary": {
+        "timed_runs": 2,
+        "pass_count": 2,
+        "pass_rate": 1.0,
+        "wall_seconds_median": 13.837141,
+        "wall_seconds_min": 13.736685,
+        "wall_seconds_max": 13.937596,
+        "seconds_per_completion_token_median": 0.150404,
+        "memory_guard_violations": 0
+      },
+      "runs": [
+        {
+          "run_index": 1,
+          "warmup": true,
+          "wall_seconds": 13.262855,
+          "ttft_seconds": 0.808,
+          "provider_native_metrics": {},
+          "prompt_tokens": 139,
+          "completion_tokens": 92,
+          "total_tokens": 231,
+          "seconds_per_completion_token": 0.144161,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\n<task>Debug why a local server health check passes but chat completions fail with 404</task>  \n<context>A local server is passing a health check but returning 404 errors for chat completion endpoints.</context>  \n<constraints>Output must be under 200 characters. Use concise, technical language. Ensure output is in English.</constraints>  \n<output_format>Markdown headers only</output_format>",
+          "visible_output": "<task>Debug why a local server health check passes but chat completions fail with 404</task>  \n<context>A local server is passing a health check but returning 404 errors for chat completion endpoints.</context>  \n<constraints>Output must be under 200 characters. Use concise, technical language. Ensure output is in English.</constraints>  \n<output_format>Markdown headers only</output_format>",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 393,
+            "sections": {
+              "task": 79,
+              "context": 96,
+              "constraints": 98,
+              "output_format": 21
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 12667.0,
+            "completion_tokens": 92,
+            "decoding_speed_tps": 7.673496922168817,
+            "prefill_duration_ttft": 0.808,
+            "prompt_tokens": 139,
+            "total_tokens": 231
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6215213056,
+              "system_available_bytes": 6005125120
+            },
+            "after": {
+              "provider_rss_bytes": 6215118848,
+              "system_available_bytes": 5986197504
+            },
+            "max_provider_rss_bytes": 6414442496,
+            "min_system_available_bytes": 5766197248,
+            "available_delta_bytes": 238927872,
+            "memory_guard_violation": false,
+            "sample_count": 10
+          },
+          "error": ""
+        },
+        {
+          "run_index": 2,
+          "warmup": false,
+          "wall_seconds": 13.937596,
+          "ttft_seconds": 0.905,
+          "provider_native_metrics": {},
+          "prompt_tokens": 139,
+          "completion_tokens": 92,
+          "total_tokens": 231,
+          "seconds_per_completion_token": 0.151496,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\n<task>Debug why a local server health check passes but chat completions fail with 404</task>  \n<context>A local server is passing a health check but returning 404 errors for chat completion endpoints.</context>  \n<constraints>Output must be under 200 characters. Use concise, technical language. Ensure output is in English.</constraints>  \n<output_format>Markdown headers only</output_format>",
+          "visible_output": "<task>Debug why a local server health check passes but chat completions fail with 404</task>  \n<context>A local server is passing a health check but returning 404 errors for chat completion endpoints.</context>  \n<constraints>Output must be under 200 characters. Use concise, technical language. Ensure output is in English.</constraints>  \n<output_format>Markdown headers only</output_format>",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 393,
+            "sections": {
+              "task": 79,
+              "context": 96,
+              "constraints": 98,
+              "output_format": 21
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 13328.0,
+            "completion_tokens": 92,
+            "decoding_speed_tps": 7.3251227561780565,
+            "prefill_duration_ttft": 0.905,
+            "prompt_tokens": 139,
+            "total_tokens": 231
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6215118848,
+              "system_available_bytes": 6007644160
+            },
+            "after": {
+              "provider_rss_bytes": 6215118848,
+              "system_available_bytes": 6132523008
+            },
+            "max_provider_rss_bytes": 6410534912,
+            "min_system_available_bytes": 5755129856,
+            "available_delta_bytes": 252514304,
+            "memory_guard_violation": false,
+            "sample_count": 10
+          },
+          "error": ""
+        },
+        {
+          "run_index": 3,
+          "warmup": false,
+          "wall_seconds": 13.736685,
+          "ttft_seconds": 0.819,
+          "provider_native_metrics": {},
+          "prompt_tokens": 139,
+          "completion_tokens": 92,
+          "total_tokens": 231,
+          "seconds_per_completion_token": 0.149312,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\n<task>Debug why a local server health check passes but chat completions fail with 404</task>  \n<context>A local server is passing a health check but returning 404 errors for chat completion endpoints.</context>  \n<constraints>Output must be under 200 characters. Use concise, technical language. Ensure output is in English.</constraints>  \n<output_format>Markdown headers only</output_format>",
+          "visible_output": "<task>Debug why a local server health check passes but chat completions fail with 404</task>  \n<context>A local server is passing a health check but returning 404 errors for chat completion endpoints.</context>  \n<constraints>Output must be under 200 characters. Use concise, technical language. Ensure output is in English.</constraints>  \n<output_format>Markdown headers only</output_format>",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 393,
+            "sections": {
+              "task": 79,
+              "context": 96,
+              "constraints": 98,
+              "output_format": 21
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 13158.0,
+            "completion_tokens": 92,
+            "decoding_speed_tps": 7.37498986951941,
+            "prefill_duration_ttft": 0.819,
+            "prompt_tokens": 139,
+            "total_tokens": 231
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6215118848,
+              "system_available_bytes": 6097502208
+            },
+            "after": {
+              "provider_rss_bytes": 6215086080,
+              "system_available_bytes": 6113251328
+            },
+            "max_provider_rss_bytes": 6415671296,
+            "min_system_available_bytes": 5831569408,
+            "available_delta_bytes": 265932800,
+            "memory_guard_violation": false,
+            "sample_count": 10
+          },
+          "error": ""
+        }
+      ]
+    },
+    {
+      "case_id": "prompt_plan",
+      "task": "prompt",
+      "system_prompt": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact shape — Markdown headers, JSON keys, etc.). Keep each section short. No meta-framing, no preamble. Base every constraint on what the user actually asked for — never invent requirements they did not state. Return only the prompt.",
+      "user_prompt": "create a rollout plan for switching providers with fallback and performance gates",
+      "max_tokens": 700,
+      "summary": {
+        "timed_runs": 2,
+        "pass_count": 2,
+        "pass_rate": 1.0,
+        "wall_seconds_median": 17.235459,
+        "wall_seconds_min": 17.234288,
+        "wall_seconds_max": 17.23663,
+        "seconds_per_completion_token_median": 0.134652,
+        "memory_guard_violations": 0
+      },
+      "runs": [
+        {
+          "run_index": 1,
+          "warmup": true,
+          "wall_seconds": 17.351092,
+          "ttft_seconds": 0.86,
+          "provider_native_metrics": {},
+          "prompt_tokens": 133,
+          "completion_tokens": 128,
+          "total_tokens": 261,
+          "seconds_per_completion_token": 0.135555,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\n<task>Rollout plan for provider switch with fallback and performance gates</task>  \n<context>Organisation is transitioning from Provider A to Provider B across multiple regions. The switch must be reversible with fallback to Provider A if issues arise. Performance gates will determine when to fully transition based on real-time metrics.</context>  \n<constraints>Maximum 500 words. Use bullet points and numbered lists. Tone: professional but concise. Include phases, criteria, and rollback steps.</constraints>  \n<output_format>Markdown with headers #, ##, and lists. No markdown in the final output.</output_format>",
+          "visible_output": "<task>Rollout plan for provider switch with fallback and performance gates</task>  \n<context>Organisation is transitioning from Provider A to Provider B across multiple regions. The switch must be reversible with fallback to Provider A if issues arise. Performance gates will determine when to fully transition based on real-time metrics.</context>  \n<constraints>Maximum 500 words. Use bullet points and numbered lists. Tone: professional but concise. Include phases, criteria, and rollback steps.</constraints>  \n<output_format>Markdown with headers #, ##, and lists. No markdown in the final output.</output_format>",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 618,
+            "sections": {
+              "task": 68,
+              "context": 245,
+              "constraints": 134,
+              "output_format": 72
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 16807.0,
+            "completion_tokens": 128,
+            "decoding_speed_tps": 7.963880353671537,
+            "prefill_duration_ttft": 0.86,
+            "prompt_tokens": 133,
+            "total_tokens": 261
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6215086080,
+              "system_available_bytes": 6075494400
+            },
+            "after": {
+              "provider_rss_bytes": 6215090176,
+              "system_available_bytes": 6120493056
+            },
+            "max_provider_rss_bytes": 6410461184,
+            "min_system_available_bytes": 5849219072,
+            "available_delta_bytes": 226275328,
+            "memory_guard_violation": false,
+            "sample_count": 13
+          },
+          "error": ""
+        },
+        {
+          "run_index": 2,
+          "warmup": false,
+          "wall_seconds": 17.23663,
+          "ttft_seconds": 0.783,
+          "provider_native_metrics": {},
+          "prompt_tokens": 133,
+          "completion_tokens": 128,
+          "total_tokens": 261,
+          "seconds_per_completion_token": 0.134661,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\n<task>Rollout plan for provider switch with fallback and performance gates</task>  \n<context>Organisation is transitioning from Provider A to Provider B across multiple regions. The switch must be reversible with fallback to Provider A if issues arise. Performance gates will determine when to fully transition based on real-time metrics.</context>  \n<constraints>Maximum 500 words. Use bullet points and numbered lists. Tone: professional but concise. Include phases, criteria, and rollback steps.</constraints>  \n<output_format>Markdown with headers #, ##, and lists. No markdown in the final output.</output_format>",
+          "visible_output": "<task>Rollout plan for provider switch with fallback and performance gates</task>  \n<context>Organisation is transitioning from Provider A to Provider B across multiple regions. The switch must be reversible with fallback to Provider A if issues arise. Performance gates will determine when to fully transition based on real-time metrics.</context>  \n<constraints>Maximum 500 words. Use bullet points and numbered lists. Tone: professional but concise. Include phases, criteria, and rollback steps.</constraints>  \n<output_format>Markdown with headers #, ##, and lists. No markdown in the final output.</output_format>",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 618,
+            "sections": {
+              "task": 68,
+              "context": 245,
+              "constraints": 134,
+              "output_format": 72
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 16728.0,
+            "completion_tokens": 128,
+            "decoding_speed_tps": 7.964879272499216,
+            "prefill_duration_ttft": 0.783,
+            "prompt_tokens": 133,
+            "total_tokens": 261
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6215090176,
+              "system_available_bytes": 6081216512
+            },
+            "after": {
+              "provider_rss_bytes": 6214811648,
+              "system_available_bytes": 6061342720
+            },
+            "max_provider_rss_bytes": 6412091392,
+            "min_system_available_bytes": 5853016064,
+            "available_delta_bytes": 228200448,
+            "memory_guard_violation": false,
+            "sample_count": 13
+          },
+          "error": ""
+        },
+        {
+          "run_index": 3,
+          "warmup": false,
+          "wall_seconds": 17.234288,
+          "ttft_seconds": 0.802,
+          "provider_native_metrics": {},
+          "prompt_tokens": 133,
+          "completion_tokens": 128,
+          "total_tokens": 261,
+          "seconds_per_completion_token": 0.134643,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\n<task>Rollout plan for provider switch with fallback and performance gates</task>  \n<context>Organisation is transitioning from Provider A to Provider B across multiple regions. The switch must be reversible with fallback to Provider A if issues arise. Performance gates will determine when to fully transition based on real-time metrics.</context>  \n<constraints>Maximum 500 words. Use bullet points and numbered lists. Tone: professional but concise. Include phases, criteria, and rollback steps.</constraints>  \n<output_format>Markdown with headers #, ##, and lists. No markdown in the final output.</output_format>",
+          "visible_output": "<task>Rollout plan for provider switch with fallback and performance gates</task>  \n<context>Organisation is transitioning from Provider A to Provider B across multiple regions. The switch must be reversible with fallback to Provider A if issues arise. Performance gates will determine when to fully transition based on real-time metrics.</context>  \n<constraints>Maximum 500 words. Use bullet points and numbered lists. Tone: professional but concise. Include phases, criteria, and rollback steps.</constraints>  \n<output_format>Markdown with headers #, ##, and lists. No markdown in the final output.</output_format>",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 618,
+            "sections": {
+              "task": 68,
+              "context": 245,
+              "constraints": 134,
+              "output_format": 72
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 16702.0,
+            "completion_tokens": 128,
+            "decoding_speed_tps": 7.987421383647798,
+            "prefill_duration_ttft": 0.802,
+            "prompt_tokens": 133,
+            "total_tokens": 261
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6214811648,
+              "system_available_bytes": 6060224512
+            },
+            "after": {
+              "provider_rss_bytes": 6214815744,
+              "system_available_bytes": 6196281344
+            },
+            "max_provider_rss_bytes": 6415613952,
+            "min_system_available_bytes": 5839605760,
+            "available_delta_bytes": 220618752,
+            "memory_guard_violation": false,
+            "sample_count": 13
+          },
+          "error": ""
+        }
+      ]
+    },
+    {
+      "case_id": "prompt_review",
+      "task": "prompt",
+      "system_prompt": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact shape — Markdown headers, JSON keys, etc.). Keep each section short. No meta-framing, no preamble. Base every constraint on what the user actually asked for — never invent requirements they did not state. Return only the prompt.",
+      "user_prompt": "review this pull request for regressions and missing tests before release",
+      "max_tokens": 700,
+      "summary": {
+        "timed_runs": 2,
+        "pass_count": 2,
+        "pass_rate": 1.0,
+        "wall_seconds_median": 15.696168,
+        "wall_seconds_min": 14.903213,
+        "wall_seconds_max": 16.489123,
+        "seconds_per_completion_token_median": 0.141407,
+        "memory_guard_violations": 0
+      },
+      "runs": [
+        {
+          "run_index": 1,
+          "warmup": true,
+          "wall_seconds": 14.657921,
+          "ttft_seconds": 0.819,
+          "provider_native_metrics": {},
+          "prompt_tokens": 133,
+          "completion_tokens": 111,
+          "total_tokens": 244,
+          "seconds_per_completion_token": 0.132053,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\n<task>Review the pull request for potential regressions and missing test cases</task>\n<context>The pull request introduces a new feature for handling large file uploads, with changes to the upload service and storage logic.</context>\n<constraints>Output must be no longer than 250 words. Use concrete, testable language. Maintain a formal but concise tone.</constraints>\n<output_format>Markdown headers only. Include a brief summary of findings, list any regression risks, and identify missing test cases in bullet points.</output_format>",
+          "visible_output": "<task>Review the pull request for potential regressions and missing test cases</task>\n<context>The pull request introduces a new feature for handling large file uploads, with changes to the upload service and storage logic.</context>\n<constraints>Output must be no longer than 250 words. Use concrete, testable language. Maintain a formal but concise tone.</constraints>\n<output_format>Markdown headers only. Include a brief summary of findings, list any regression risks, and identify missing test cases in bullet points.</output_format>",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 538,
+            "sections": {
+              "task": 72,
+              "context": 128,
+              "constraints": 109,
+              "output_format": 136
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 14079.0,
+            "completion_tokens": 111,
+            "decoding_speed_tps": 8.295625942684767,
+            "prefill_duration_ttft": 0.819,
+            "prompt_tokens": 133,
+            "total_tokens": 244
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6214815744,
+              "system_available_bytes": 6159642624
+            },
+            "after": {
+              "provider_rss_bytes": 6214840320,
+              "system_available_bytes": 6228504576
+            },
+            "max_provider_rss_bytes": 6415355904,
+            "min_system_available_bytes": 5899730944,
+            "available_delta_bytes": 259911680,
+            "memory_guard_violation": false,
+            "sample_count": 11
+          },
+          "error": ""
+        },
+        {
+          "run_index": 2,
+          "warmup": false,
+          "wall_seconds": 14.903213,
+          "ttft_seconds": 0.779,
+          "provider_native_metrics": {},
+          "prompt_tokens": 133,
+          "completion_tokens": 111,
+          "total_tokens": 244,
+          "seconds_per_completion_token": 0.134263,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\n<task>Review the pull request for potential regressions and missing test cases</task>\n<context>The pull request introduces a new feature for handling large file uploads, with changes to the upload service and storage logic.</context>\n<constraints>Output must be no longer than 250 words. Use concrete, testable language. Maintain a formal but concise tone.</constraints>\n<output_format>Markdown headers only. Include a brief summary of findings, list any regression risks, and identify missing test cases in bullet points.</output_format>",
+          "visible_output": "<task>Review the pull request for potential regressions and missing test cases</task>\n<context>The pull request introduces a new feature for handling large file uploads, with changes to the upload service and storage logic.</context>\n<constraints>Output must be no longer than 250 words. Use concrete, testable language. Maintain a formal but concise tone.</constraints>\n<output_format>Markdown headers only. Include a brief summary of findings, list any regression risks, and identify missing test cases in bullet points.</output_format>",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 538,
+            "sections": {
+              "task": 72,
+              "context": 128,
+              "constraints": 109,
+              "output_format": 136
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 14368.0,
+            "completion_tokens": 111,
+            "decoding_speed_tps": 8.094782544705277,
+            "prefill_duration_ttft": 0.779,
+            "prompt_tokens": 133,
+            "total_tokens": 244
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6214840320,
+              "system_available_bytes": 6194053120
+            },
+            "after": {
+              "provider_rss_bytes": 6214844416,
+              "system_available_bytes": 6224027648
+            },
+            "max_provider_rss_bytes": 6410207232,
+            "min_system_available_bytes": 5940076544,
+            "available_delta_bytes": 253976576,
+            "memory_guard_violation": false,
+            "sample_count": 11
+          },
+          "error": ""
+        },
+        {
+          "run_index": 3,
+          "warmup": false,
+          "wall_seconds": 16.489123,
+          "ttft_seconds": 0.755,
+          "provider_native_metrics": {},
+          "prompt_tokens": 133,
+          "completion_tokens": 111,
+          "total_tokens": 244,
+          "seconds_per_completion_token": 0.148551,
+          "model_used": "0419b0cb1ddbc6a18014b7fe485998df144689c0",
+          "raw_output": "\n\n<task>Review the pull request for potential regressions and missing test cases</task>\n<context>The pull request introduces a new feature for handling large file uploads, with changes to the upload service and storage logic.</context>\n<constraints>Output must be no longer than 250 words. Use concrete, testable language. Maintain a formal but concise tone.</constraints>\n<output_format>Markdown headers only. Include a brief summary of findings, list any regression risks, and identify missing test cases in bullet points.</output_format>",
+          "visible_output": "<task>Review the pull request for potential regressions and missing test cases</task>\n<context>The pull request introduces a new feature for handling large file uploads, with changes to the upload service and storage logic.</context>\n<constraints>Output must be no longer than 250 words. Use concrete, testable language. Maintain a formal but concise tone.</constraints>\n<output_format>Markdown headers only. Include a brief summary of findings, list any regression risks, and identify missing test cases in bullet points.</output_format>",
+          "think_stripped": false,
+          "unclosed_think": false,
+          "contract": {
+            "pass": true,
+            "reasons": [],
+            "near_miss": false,
+            "visible_chars": 538,
+            "sections": {
+              "task": 72,
+              "context": 128,
+              "constraints": 109,
+              "output_format": 136
+            },
+            "think_stripped": false,
+            "unclosed_think": false
+          },
+          "usage": {
+            "completion_time_ms": 15897.0,
+            "completion_tokens": 111,
+            "decoding_speed_tps": 7.264562145027077,
+            "prefill_duration_ttft": 0.755,
+            "prompt_tokens": 133,
+            "total_tokens": 244
+          },
+          "memory": {
+            "before": {
+              "provider_rss_bytes": 6214844416,
+              "system_available_bytes": 6191579136
+            },
+            "after": {
+              "provider_rss_bytes": 6214844416,
+              "system_available_bytes": 5950545920
+            },
+            "max_provider_rss_bytes": 6410207232,
+            "min_system_available_bytes": 5942857728,
+            "available_delta_bytes": 248721408,
+            "memory_guard_violation": false,
+            "sample_count": 12
+          },
+          "error": ""
+        }
+      ]
+    }
+  ]
+}

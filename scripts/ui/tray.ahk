@@ -117,7 +117,7 @@ OpenWebDashboard_Impl(tab := "") {
 
 CheckForUpdates_Impl() {
     Notify("Flowkey", "Checking for updates…")
-    raw := RunAction("update_check")
+    raw := RunAction_Impl("update_check")
     if (raw = "" || InStr(raw, "python launcher not found")) {
         Notify("Flowkey", "Update check failed.")
         return
@@ -141,7 +141,7 @@ CheckForUpdates_Impl() {
     ; forgotten dialog never sits on screen indefinitely.
     if (MsgBox("Update available: " current " → " latest "`n`nDownload and install now?", "Flowkey", "YesNo Icon! T60") = "Yes") {
         Notify("Flowkey", "Downloading update…")
-        out := RunAction("update_apply")
+        out := RunAction_Impl("update_apply")
         Notify("Flowkey", out != "" ? out : "Update applied. Please restart grammarFix.ahk.")
     }
 }
@@ -149,7 +149,7 @@ CheckForUpdates_Impl() {
 SetPerformance_Impl(target) {
     if (GetPerformanceMode() = target)
         return
-    out := RunAction(target = "max" ? "set_perf_max" : "set_perf_balanced")
+    out := RunAction_Impl(target = "max" ? "set_perf_max" : "set_perf_balanced")
     Notify("Flowkey", "Performance: " (out != "" ? out : target))
     SetupTrayMenu()
 }
@@ -158,7 +158,7 @@ SetTonePreset_Impl(target) {
     if (GetTonePreset() = target)
         return
     action := "set_tone_" target
-    out := RunAction(action)
+    out := RunAction_Impl(action)
     Notify("Flowkey", "Tone: " . TonePrettyName(target))
     SetupTrayMenu()
 }
@@ -166,7 +166,7 @@ SetTonePreset_Impl(target) {
 SetHistoryMode_Impl(target) {
     if (GetHistoryTextMode() = target)
         return
-    out := RunAction(target = "visible" ? "set_history_visible" : "set_history_redacted")
+    out := RunAction_Impl(target = "visible" ? "set_history_visible" : "set_history_redacted")
     Notify("Flowkey", "History text: " (out != "" ? out : target))
     SetupTrayMenu()
 }
@@ -188,7 +188,7 @@ TonePrettyName_Impl(preset) {
 }
 
 GetTonePreset_Impl() {
-    out := Trim(StrLower(RunAction("tone_preset")), "`r`n`t ")
+    out := Trim(StrLower(RunAction_Impl("tone_preset")), "`r`n`t ")
     if (out = "formal" || out = "casual" || out = "friendly")
         return out
     return "formal"
@@ -196,7 +196,7 @@ GetTonePreset_Impl() {
 
 RunDiagnostics_Impl() {
     Notify("Flowkey", "Running diagnostics…")
-    out := RunAction("doctor")
+    out := RunAction_Impl("doctor")
     ShowDiagnosticsWindow_Impl(out != "" ? out : "Diagnostics returned no output.")
 }
 
@@ -246,12 +246,12 @@ EnsureConfig_Impl() {
 }
 
 AppWarmup_Impl() {
-    out := RunAction("warmup")
+    out := RunAction_Impl("warmup")
     Notify("Flowkey", "Server: " (out != "" ? out : "warmup requested"))
 }
 
 AppStop_Impl() {
-    out := RunAction("stop")
+    out := RunAction_Impl("stop")
     Notify("Flowkey", "Server: " (out != "" ? out : "stop requested"))
 }
 
@@ -263,7 +263,7 @@ ToggleStartup_Impl() {
     ; boot. See SPEC B14 / V33.
     enabled := IsStartupEnabled()
     body := enabled ? '{"args":{"enabled":false}}' : '{"args":{"enabled":true}}'
-    result := RunAction("set_autostart", body)
+    result := RunAction_Impl("set_autostart", body)
     ok := InStr(result, '"ok": true') || InStr(result, '"ok":true')
     try FileDelete(A_Startup "\\FastFlowPrompt.lnk")
     if (ok)
@@ -275,6 +275,6 @@ ToggleStartup_Impl() {
 
 IsStartupEnabled_Impl() {
     ; Reflect the HKCU Run-key state, not the legacy shortcut. See SPEC B14 / V33.
-    raw := RunAction("get_autostart_state")
+    raw := RunAction_Impl("get_autostart_state")
     return (InStr(raw, '"enabled": true') || InStr(raw, '"enabled":true')) ? true : false
 }

@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "decision": "pass",
+  "replace_flm_gate_satisfied": true,
+  "gates": {
+    "qwen25_grammar": {
+      "pass": true,
+      "observed": {
+        "cases": 8,
+        "timed_runs": 40,
+        "pass_count": 40,
+        "pass_rate": 1.0,
+        "memory_guard_violations": 0,
+        "median_wall_seconds": 1.624307,
+        "failed_cases": []
+      },
+      "required": ">= 0.875",
+      "blocking": true
+    },
+    "qwen25_prompt": {
+      "pass": true,
+      "observed": {
+        "cases": 10,
+        "timed_runs": 50,
+        "pass_count": 45,
+        "pass_rate": 0.9,
+        "memory_guard_violations": 0,
+        "median_wall_seconds": 5.292532,
+        "failed_cases": [
+          "prompt_plan"
+        ]
+      },
+      "required": ">= 0.900",
+      "blocking": true
+    },
+    "qwen25_longctx_quality": {
+      "pass": true,
+      "observed": {
+        "cases": 3,
+        "timed_runs": 15,
+        "pass_count": 15,
+        "pass_rate": 1.0,
+        "memory_guard_violations": 0,
+        "median_wall_seconds": 14.823114,
+        "failed_cases": []
+      },
+      "required": "all timed longctx runs pass",
+      "blocking": true
+    },
+    "qwen25_longctx_sizes": {
+      "pass": true,
+      "observed": [
+        "longctx_1000",
+        "longctx_4000",
+        "longctx_8000"
+      ],
+      "required": [
+        "longctx_1000",
+        "longctx_4000",
+        "longctx_8000"
+      ],
+      "blocking": true
+    },
+    "memory_guard": {
+      "pass": true,
+      "observed": {
+        "short_grammar": 0,
+        "short_prompt": 0,
+        "longctx": 0
+      },
+      "required": "<= 0 total guard violations",
+      "blocking": true
+    },
+    "qwen3_grammar": {
+      "pass": true,
+      "observed": {
+        "cases": 8,
+        "timed_runs": 40,
+        "pass_count": 40,
+        "pass_rate": 1.0,
+        "memory_guard_violations": 0,
+        "median_wall_seconds": 3.0172485,
+        "failed_cases": []
+      },
+      "required": ">= 0.875",
+      "blocking": false
+    },
+    "qwen3_prompt": {
+      "pass": true,
+      "observed": {
+        "cases": 10,
+        "timed_runs": 50,
+        "pass_count": 50,
+        "pass_rate": 1.0,
+        "memory_guard_violations": 0,
+        "median_wall_seconds": 13.327981,
+        "failed_cases": []
+      },
+      "required": ">= 0.900",
+      "blocking": false
+    }
+  },
+  "markdown": "# Second-Day Provider Rerun Evaluation\n\nQwen2.5 replace-FLM gate: PASS\n\n| Gate | Scope | Result | Observed | Required |\n|---|---|---|---|---|\n| `qwen25_grammar` | blocking | PASS | 40/40 rate=1.000 guard=0 | >= 0.875 |\n| `qwen25_prompt` | blocking | PASS | 45/50 rate=0.900 guard=0 failed=prompt_plan | >= 0.900 |\n| `qwen25_longctx_quality` | blocking | PASS | 15/15 rate=1.000 guard=0 | all timed longctx runs pass |\n| `qwen25_longctx_sizes` | blocking | PASS | [\"longctx_1000\", \"longctx_4000\", \"longctx_8000\"] | ['longctx_1000', 'longctx_4000', 'longctx_8000'] |\n| `memory_guard` | blocking | PASS | {\"short_grammar\": 0, \"short_prompt\": 0, \"longctx\": 0} | <= 0 total guard violations |\n| `qwen3_grammar` | informational | PASS | 40/40 rate=1.000 guard=0 | >= 0.875 |\n| `qwen3_prompt` | informational | PASS | 50/50 rate=1.000 guard=0 | >= 0.900 |\n"
+}

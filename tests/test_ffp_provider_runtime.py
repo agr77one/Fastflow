@@ -75,6 +75,75 @@ def test_ollama_installed_list_fails_fast_when_api_unreachable(monkeypatch):
     }
 
 
+def test_openai_url_accepts_server_root_or_versioned_base():
+    assert (
+        ffp_provider_runtime.openai_url("http://127.0.0.1:1234", "chat/completions")
+        == "http://127.0.0.1:1234/v1/chat/completions"
+    )
+    assert (
+        ffp_provider_runtime.openai_url("http://127.0.0.1:13305/api/v1", "chat/completions")
+        == "http://127.0.0.1:13305/api/v1/chat/completions"
+    )
+
+
+def test_lmstudio_list_models_reads_lms_json(monkeypatch):
+    def fake_run(argv, **_kwargs):
+        assert argv[:2] == ["lms", "ls"]
+        return SimpleNamespace(
+            returncode=0,
+            stdout=json.dumps([
+                {"type": "llm", "modelKey": "qwen2.5-3b-instruct"},
+                {"type": "embedding", "modelKey": "text-embedding"},
+            ]),
+            stderr="",
+        )
+
+    monkeypatch.setattr(ffp_provider_runtime, "provider_cli", lambda provider: "lms")
+    monkeypatch.setattr(ffp_provider_runtime, "run_hidden", fake_run)
+
+    out = ffp_provider_runtime.list_models("lmstudio", "installed", "qwen2.5-3b-instruct", 0, "")
+
+    assert out == {
+        "models": ["qwen2.5-3b-instruct"],
+        "active": "qwen2.5-3b-instruct",
+        "provider": "lmstudio",
+    }
+
+
+def test_lemonade_list_models_reads_openai_models(monkeypatch):
+    monkeypatch.setattr(ffp_provider_runtime.ffp_provider_status, "is_reachable", lambda _base_url: True)
+    seen = []
+
+    def fake_urlopen(url, timeout=4):
+        seen.append(url)
+        return _Resp({"data": [{"id": "Qwen3-4B-Hybrid"}]})
+
+    monkeypatch.setattr(ffp_provider_runtime.urllib.request, "urlopen", fake_urlopen)
+
+    out = ffp_provider_runtime.list_models(
+        "lemonade",
+        "installed",
+        "Qwen3-4B-Hybrid",
+        0,
+        "http://127.0.0.1:13305/api/v1",
+    )
+
+    assert seen == ["http://127.0.0.1:13305/api/v1/models"]
+    assert out == {
+        "models": ["Qwen3-4B-Hybrid"],
+        "active": "Qwen3-4B-Hybrid",
+        "provider": "lemonade",
+    }
+
+
+def test_lemonade_suggestions_start_with_qwen25_npu_candidate():
+    assert ffp_provider_runtime.LEMONADE_SUGGESTED_MODELS[0] == "Qwen2.5-3B-Instruct-NPU"
+    assert (
+        ffp_provider_runtime.LEMONADE_SUGGESTED_MODELS.index("Qwen2.5-3B-Instruct-NPU")
+        < ffp_provider_runtime.LEMONADE_SUGGESTED_MODELS.index("Qwen3-4B-Hybrid")
+    )
+
+
 def test_fastflowlm_list_models_delegates_to_existing_flm_parser(monkeypatch):
     monkeypatch.setattr(
         ffp_provider_runtime.ffp_flm_server,

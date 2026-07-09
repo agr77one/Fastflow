@@ -1,0 +1,82 @@
+{
+  "models": [
+    {
+      "config": {
+        "measurement_runs": 1,
+        "memory_tracking": true,
+        "warmup_runs": 0
+      },
+      "model": "Llama-3.2-1B-Instruct-Hybrid",
+      "results": [
+        {
+          "backend": "npu",
+          "backend_args": "",
+          "ctx_size": 4096,
+          "recipe": "ryzenai-llm",
+          "scenarios": [
+            {
+              "category": "chat",
+              "duration_ms": {
+                "max": 1853.4521,
+                "mean": 1853.4521,
+                "min": 1853.4521,
+                "p50": 1853.4521,
+                "p95": 1853.4521
+              },
+              "failed_runs": 0,
+              "input_tokens": 21,
+              "memory_peak_gb": 17.7,
+              "name": "chat-short",
+              "output_tokens": 20,
+              "tps": {
+                "max": 19.853709508881924,
+                "mean": 19.853709508881924,
+                "min": 19.853709508881924,
+                "p50": 19.853709508881924,
+                "p95": 19.853709508881924
+              },
+              "ttft_ms": {
+                "max": 879.0,
+                "mean": 879.0,
+                "min": 879.0,
+                "p50": 879.0,
+                "p95": 879.0
+              }
+            },
+            {
+              "category": "chat",
+              "duration_ms": {
+                "max": 7966.6751,
+                "mean": 7966.6751,
+                "min": 7966.6751,
+                "p50": 7966.6751,
+                "p95": 7966.6751
+              },
+              "failed_runs": 0,
+              "input_tokens": 37,
+              "memory_peak_gb": 17.5,
+              "name": "chat-long-output",
+              "output_tokens": 256,
+              "tps": {
+                "max": 33.177205308352846,
+                "mean": 33.177205308352846,
+                "min": 33.177205308352846,
+                "p50": 33.177205308352846,
+                "p95": 33.177205308352846
+              },
+              "ttft_ms": {
+                "max": 277.0,
+                "mean": 277.0,
+                "min": 277.0,
+                "p50": 277.0,
+                "p95": 277.0
+              }
+            }
+          ]
+        }
+      ],
+      "timestamp": "2026-07-07T19:14:56Z"
+    }
+  ],
+  "timestamp": "2026-07-07T19:13:36Z"
+}
