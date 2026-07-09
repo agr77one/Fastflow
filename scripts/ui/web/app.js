@@ -92,6 +92,18 @@ function isValidHotkey(hk) {
 
 const PERF_LABELS = { balanced: "🟡 Balanced", max: "🔴 Max throughput" };
 const TONE_LABELS = { formal: "🎩 Formal", casual: "👕 Casual", friendly: "🤝 Friendly" };
+const PROMPT_BUILDER_DEFAULTS = {
+  target_agent: "claude_code",
+  detail_level: "balanced",
+  action_mode: "implement",
+  structure: "agent_default",
+  include_acceptance_criteria: false,
+  include_verification: false,
+  include_output_format: true,
+  preserve_user_constraints: true,
+  allow_user_suffix: true,
+  user_suffix: "",
+};
 
 // ---- LLM providers -----------------------------------------------------------
 // The daemon resolves the *effective* provider (configured one, with fallback
@@ -552,6 +564,64 @@ async function saveNotes() {
 
 // ---- Config ----------------------------------------------------------------
 
+function populatePromptBuilder(pb) {
+  const cfg = { ...PROMPT_BUILDER_DEFAULTS, ...(pb || {}) };
+  $("pb-target").value = cfg.target_agent;
+  $("pb-action").value = cfg.action_mode;
+  $("pb-detail").value = cfg.detail_level;
+  $("pb-structure").value = cfg.structure;
+  $("pb-acceptance").checked = !!cfg.include_acceptance_criteria;
+  $("pb-verification").checked = !!cfg.include_verification;
+  $("pb-output").checked = cfg.include_output_format !== false;
+  $("pb-preserve").checked = cfg.preserve_user_constraints !== false;
+  $("pb-allow-suffix").checked = cfg.allow_user_suffix !== false;
+  $("pb-suffix").value = cfg.user_suffix || "";
+  $("pb-suffix").disabled = !$("pb-allow-suffix").checked;
+  updatePromptBuilderHint();
+}
+
+function promptBuilderPatch() {
+  const suffix = $("pb-allow-suffix").checked ? $("pb-suffix").value.trim().slice(0, 500) : "";
+  return {
+    target_agent: $("pb-target").value || "claude_code",
+    detail_level: $("pb-detail").value || "balanced",
+    action_mode: $("pb-action").value || "implement",
+    structure: $("pb-structure").value || "agent_default",
+    include_acceptance_criteria: $("pb-acceptance").checked,
+    include_verification: $("pb-verification").checked,
+    include_output_format: $("pb-output").checked,
+    preserve_user_constraints: $("pb-preserve").checked,
+    allow_user_suffix: $("pb-allow-suffix").checked,
+    user_suffix: suffix,
+  };
+}
+
+function updatePromptBuilderHint() {
+  const override = ($("pb-structure").value || "agent_default") !== "agent_default";
+  $("pb-structure-note").hidden = !override;
+  $("pb-suffix").disabled = !$("pb-allow-suffix").checked;
+  const remaining = 500 - ($("pb-suffix").value || "").length;
+  setStatus("pb-status", remaining < 0 ? "Suffix is over 500 characters; save will trim it." : "");
+}
+
+async function previewPromptBuilder() {
+  const preview = $("pb-preview");
+  preview.hidden = true;
+  setStatus("pb-status", "Rendering preview…");
+  try {
+    const result = await action("prompt_builder_preview", {
+      sample: "Refactor the selected code, fix edge cases, and run the relevant tests.",
+      settings: promptBuilderPatch(),
+    });
+    preview.textContent = result.output || "";
+    preview.hidden = false;
+    const status = result.valid ? `Preview: ${result.target_agent}/${result.structure}` : `Preview has issues: ${(result.errors || []).join(", ")}`;
+    setStatus("pb-status", status, !!result.valid);
+  } catch (e) {
+    setStatus("pb-status", `Preview failed: ${e.message}`, false);
+  }
+}
+
 // ---- Custom modes ------------------------------------------------------------
 
 let customModes = {}; // id -> {label, system_prompt} (non-builtin only)
@@ -656,6 +726,7 @@ async function loadConfig() {
     $("cfg-long-thr").value = routing.long_threshold_chars ?? 1400;
     $("cfg-chunk-size").value = routing.chunk_size_chars ?? 1200;
     $("cfg-min-chunk").value = routing.min_chunk_chars ?? 700;
+    populatePromptBuilder(cfg.prompt_builder || {});
     const tone = (cfg.tone || {}).preset || "formal";
     document.querySelectorAll('input[name="tone"]').forEach((r) => (r.checked = r.value === tone));
     populateNotifications(cfg.notifications || {});
@@ -866,6 +937,7 @@ async function saveConfig() {
       chunk_size_chars: Number($("cfg-chunk-size").value) || 1200,
       min_chunk_chars: Number($("cfg-min-chunk").value) || 700,
     },
+    prompt_builder: promptBuilderPatch(),
     modes: { tone: { preset: tone ? tone.value : "formal" } },
     hotkeys,
     notifications: notificationsPatch(),
@@ -1603,6 +1675,10 @@ document.addEventListener("DOMContentLoaded", () => {
   $("cm-select").addEventListener("change", fillCustomModeForm);
   $("cm-save").addEventListener("click", saveCustomMode);
   $("cm-delete").addEventListener("click", deleteCustomMode);
+  $("pb-preview-btn").addEventListener("click", previewPromptBuilder);
+  $("pb-structure").addEventListener("change", updatePromptBuilderHint);
+  $("pb-allow-suffix").addEventListener("change", updatePromptBuilderHint);
+  $("pb-suffix").addEventListener("input", updatePromptBuilderHint);
   $("model-set-active").addEventListener("click", setActiveModel);
   $("model-remove").addEventListener("click", removeModel);
   $("pull-btn").addEventListener("click", pullModel);

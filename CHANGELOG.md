@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 2.2.0
+
+**Prompt builder controls.** Flowkey's `prompt:` mode can now target Claude Code or generic chat tools without exposing raw built-in system-prompt editing.
+
+### Added
+
+- **Prompt builder settings for `prompt:` mode.** The Config tab now exposes bounded prompt-output controls (target agent, action, detail, structure, acceptance criteria, verification, output expectations, and a capped user suffix) without allowing raw edits to the locked built-in system prompt. The default remains Claude Code-compatible and keeps the existing prompt-mode system prompt byte-identical; `generic_chat` adds a production Markdown adapter with target-aware validation and deterministic fallback/preview. Live FastFlowLM eval on `qwen3.5:4b`: `claude_code` 2/2, `generic_chat` 10/10.
+
 ## 2.1.1
 
 **Maintenance.** Fixes a recurring meetings-batch error and clears a batch of small audit/doc items.

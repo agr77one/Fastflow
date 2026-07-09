@@ -12,6 +12,7 @@ import threading
 from pathlib import Path
 from urllib.parse import urlparse
 
+import ffp_prompt_builder
 import paths as _paths
 
 log = logging.getLogger("ffp.config")
@@ -74,6 +75,7 @@ DEFAULT_CONFIG = {
         "chunk_size_chars": 1200,
         "min_chunk_chars": 700,
     },
+    "prompt_builder": copy.deepcopy(ffp_prompt_builder.DEFAULT_PROMPT_BUILDER_CONFIG),
     "dictionary": {
         "protected_words": [],
     },
@@ -160,6 +162,7 @@ def load_config(config_path: Path) -> dict:
     merged = copy.deepcopy(DEFAULT_CONFIG)
     deep_merge(merged, loaded)
     normalize_llm_config(merged, prefer_legacy=not has_llm_block)
+    normalize_prompt_builder_config(merged)
     _enforce_builtin_mode_prompts(merged)
     return merged
 
@@ -316,6 +319,13 @@ def normalize_llm_config(cfg: dict, *, prefer_legacy: bool = False) -> dict:
     return cfg
 
 
+def normalize_prompt_builder_config(cfg: dict) -> dict:
+    cfg["prompt_builder"] = ffp_prompt_builder.PromptBuilderSettings.from_config(
+        cfg.get("prompt_builder")
+    ).to_dict()
+    return cfg
+
+
 _LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
 
 _PATCH_SERVER_KEYS = frozenset({
@@ -343,6 +353,7 @@ _PATCH_NOTES_KEYS = frozenset({
 _PATCH_HOTKEYS_KEYS = frozenset({"ask_chat", "capture_note", "grammar_fix", "open_chat"})
 _PATCH_TONE_KEYS = frozenset({"preset"})
 _PATCH_PROVIDER_PROFILE_KEYS = frozenset({"base_url", "model", "auth_bearer", "timeout_seconds", "auto_start"})
+_PATCH_PROMPT_BUILDER_KEYS = frozenset(ffp_prompt_builder.DEFAULT_PROMPT_BUILDER_CONFIG.keys())
 # Notification categories accepted in a patch. Keep in sync with
 # ffp_notifications.CATEGORIES (a test guards against drift).
 _PATCH_NOTIF_CATEGORIES = frozenset({
@@ -437,6 +448,17 @@ def _filter_meetings_patch(value: dict) -> dict:
             out["batch"] = fb
     return out
 
+
+def _filter_prompt_builder_patch(value: dict) -> dict:
+    raw = {k: v for k, v in value.items() if k in _PATCH_PROMPT_BUILDER_KEYS}
+    if not raw:
+        return {}
+    normalized = ffp_prompt_builder.PromptBuilderSettings.from_config({
+        **ffp_prompt_builder.DEFAULT_PROMPT_BUILDER_CONFIG,
+        **raw,
+    }).to_dict()
+    return {k: normalized[k] for k in raw}
+
 # Built-in mode prompts stay locked against patching (system-prompt injection
 # guard); only tone.preset is patchable among them. User-defined modes accept
 # label + system_prompt under ids matching _MODE_ID_RE, and a JSON null value
@@ -509,6 +531,10 @@ def filter_config_patch(patch: dict) -> dict:
                 out[key] = filtered
         elif key == "routing" and isinstance(value, dict):
             filtered = {k: v for k, v in value.items() if k in _PATCH_ROUTING_KEYS}
+            if filtered:
+                out[key] = filtered
+        elif key == "prompt_builder" and isinstance(value, dict):
+            filtered = _filter_prompt_builder_patch(value)
             if filtered:
                 out[key] = filtered
         elif key == "notes" and isinstance(value, dict):

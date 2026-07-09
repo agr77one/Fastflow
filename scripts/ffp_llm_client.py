@@ -8,6 +8,8 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass
 
+import ffp_prompt_builder
+
 log = logging.getLogger("ffp.llm")
 
 
@@ -20,6 +22,7 @@ class LlmRuntimeConfig:
     routing_cfg: dict
     protected_words: list[str]
     modes_cfg: dict
+    prompt_builder_cfg: dict | None = None
 
 
 def is_prompt_mode(mode: str) -> bool:
@@ -158,14 +161,25 @@ def has_prompt_structure(text: str) -> bool:
     return any(tag in lowered for tag in ("<task>", "<context>", "<constraints>", "<output_format>"))
 
 
-def is_weak_prompt_echo(input_text: str, output_text: str) -> bool:
+def has_target_structure(
+    text: str,
+    settings: ffp_prompt_builder.PromptBuilderSettings | None = None,
+) -> bool:
+    return ffp_prompt_builder.has_target_structure(text, settings)
+
+
+def is_weak_prompt_echo(
+    input_text: str,
+    output_text: str,
+    settings: ffp_prompt_builder.PromptBuilderSettings | None = None,
+) -> bool:
     """True when the model only grammar-fixed/reformatted or prefixed with 'Prompt:' instead of expanding."""
     out = str(output_text or "").strip()
     inp = str(input_text or "").strip()
     if not out or not inp:
         return False
-    # A real converted prompt carries XML scaffold tags — never weak.
-    if has_prompt_structure(out):
+    # A real converted prompt carries the target scaffold — never weak.
+    if has_target_structure(out, settings):
         return False
     # Bare "Prompt: ..." prefix is the classic echo.
     if re.match(r"^prompt:\s*.+", out.lower()):
@@ -207,20 +221,23 @@ def looks_like_prompt_text(text: str) -> bool:
     return any(marker in lowered for marker in prompt_markers)
 
 
-def force_prompt_shape(input_text: str) -> str:
+def force_prompt_shape(
+    input_text: str,
+    settings: ffp_prompt_builder.PromptBuilderSettings | None = None,
+) -> str:
+    settings = settings or ffp_prompt_builder.PromptBuilderSettings()
+    intent = ffp_prompt_builder.resolve_intent(settings, input_text)
     cleaned = normalize_output(input_text)
-    return (
-        "<task>\n"
-        f"Produce a copy-paste-ready Claude prompt for: {cleaned}\n"
-        "</task>\n"
-        "<output_format>\n"
-        "Use <context>, <constraints>, and <output_format> sections; Markdown structure; "
-        "testable constraints; professional approachable tone; no meta-framing.\n"
-        "</output_format>"
-    )
+    return ffp_prompt_builder.render_fallback(settings, intent, cleaned)
 
 
-def strip_prompt_scaffold_labels(text: str) -> str:
+def strip_prompt_scaffold_labels(
+    text: str,
+    settings: ffp_prompt_builder.PromptBuilderSettings | None = None,
+) -> str:
+    settings = settings or ffp_prompt_builder.PromptBuilderSettings()
+    if ffp_prompt_builder.effective_structure(settings) != "xml":
+        return str(text or "").strip()
     cleaned = str(text or "")
     cleaned = re.sub(r"(?im)^\s*\*{0,2}\s*(task|constraints|output format)\s*\*{0,2}\s*:\s*", "", cleaned)
     cleaned = re.sub(r"(?m)^\s*\*\*\s*$", "", cleaned)
@@ -264,12 +281,20 @@ def call_flm(
 ) -> tuple[str, float, str, str]:
     mode_cfg = (runtime.modes_cfg or {}).get(mode) or {}
     system_prompt = str(mode_cfg.get("system_prompt") or "").strip()
+    prompt_settings = ffp_prompt_builder.PromptBuilderSettings.from_config(runtime.prompt_builder_cfg)
+    prompt_intent = ffp_prompt_builder.resolve_intent(prompt_settings, input_text)
     if mode == "tone":
         preset = str(mode_cfg.get("preset") or "formal").strip().lower()
         preset_cfg = (mode_cfg.get("presets") or {}).get(preset) or {}
         preset_prompt = str(preset_cfg.get("system_prompt") or "").strip()
         if preset_prompt:
             system_prompt = preset_prompt
+    if is_prompt_mode(mode):
+        system_prompt = ffp_prompt_builder.build_system_prompt(
+            prompt_settings,
+            prompt_intent,
+            legacy_system_prompt=system_prompt,
+        )
     if not system_prompt:
         raise RuntimeError(f"No system_prompt configured for mode '{mode}'.")
 
@@ -365,7 +390,7 @@ def call_flm(
         raise RuntimeError("Local LLM returned no usable text.")
 
     if is_prompt_mode(mode):
-        stripped = strip_prompt_scaffold_labels(text)
+        stripped = strip_prompt_scaffold_labels(text, prompt_settings)
         if stripped:
             text = stripped
         out_norm = re.sub(r"\s+", " ", str(text).lower()).strip()
@@ -374,15 +399,10 @@ def call_flm(
         near_verbatim = (
             (out_norm == in_norm)
             or (reuse_ratio >= 0.85)
-            or is_weak_prompt_echo(masked_input, text)
+            or is_weak_prompt_echo(masked_input, text, prompt_settings)
         )
         if near_verbatim:
-            anti_echo_prompt = (
-                "Rewrite into a Claude-ready prompt with <task>, <constraints>, and <output_format> sections. "
-                "Do not copy the request verbatim or use meta-framing like 'Act as a prompt engineer'. "
-                "Do not use bare labels like Task: or Constraints: without XML tags. "
-                "Return only the rewritten prompt text."
-            )
+            anti_echo_prompt = ffp_prompt_builder.build_retry_prompt(prompt_settings, rescue=False)
             try:
                 retried, retry_model = call_api(
                     model,
@@ -401,14 +421,9 @@ def call_flm(
         overlap_ratio = word_overlap_ratio(masked_input, text)
         reuse_ratio = line_reuse_ratio(masked_input, text)
         near_copy = overlap_ratio >= 0.9 or reuse_ratio >= 0.9
-        weak_echo = is_weak_prompt_echo(masked_input, text)
-        if (near_copy and not has_prompt_structure(text)) or weak_echo:
-            rescue_prompt = (
-                "Rewrite into a stronger Claude-ready prompt for Anthropic models. "
-                "Use XML sections, testable constraints, and Markdown output format. "
-                "Do not copy the request verbatim or add meta-commentary. "
-                "Preserve intent and emoji/smiley symbols. Return only the rewritten prompt text."
-            )
+        weak_echo = is_weak_prompt_echo(masked_input, text, prompt_settings)
+        if (near_copy and not has_target_structure(text, prompt_settings)) or weak_echo:
+            rescue_prompt = ffp_prompt_builder.build_retry_prompt(prompt_settings, rescue=True)
             try:
                 rescued, rescue_model = call_api(
                     model,
@@ -421,14 +436,30 @@ def call_flm(
                     text = rescued
                     model_used = rescue_model
                 else:
-                    text = force_prompt_shape(masked_input)
+                    text = force_prompt_shape(masked_input, prompt_settings)
             except Exception as exc:
                 log.warning("prompt-rescue call failed, using deterministic prompt shaping: %s", exc)
-                text = force_prompt_shape(masked_input)
+                text = force_prompt_shape(masked_input, prompt_settings)
 
-    if is_prompt_mode(mode) and is_weak_prompt_echo(masked_input, text):
+    if is_prompt_mode(mode) and is_weak_prompt_echo(masked_input, text, prompt_settings):
         log.warning("prompt mode still weak after retries; using deterministic prompt shape")
-        text = force_prompt_shape(masked_input)
+        text = force_prompt_shape(masked_input, prompt_settings)
+
+    if is_prompt_mode(mode) and prompt_settings.requires_contract_gate():
+        result = ffp_prompt_builder.validate(text, prompt_settings)
+        if not result.valid:
+            repaired = ffp_prompt_builder.repair_output(text, prompt_settings)
+            repaired_result = ffp_prompt_builder.validate(repaired, prompt_settings)
+            if repaired_result.valid:
+                text = repaired
+            else:
+                log.warning(
+                    "prompt output failed %s/%s contract (%s); using deterministic fallback",
+                    prompt_settings.target_agent,
+                    ffp_prompt_builder.effective_structure(prompt_settings),
+                    ", ".join(result.errors),
+                )
+                text = force_prompt_shape(masked_input, prompt_settings)
 
     if not text.strip():
         raise RuntimeError("Local LLM returned no usable text.")

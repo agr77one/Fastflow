@@ -23,6 +23,7 @@ import ffp_flm_server
 import ffp_llm_client
 import ffp_meetings
 import ffp_notifications
+import ffp_prompt_builder
 import ffp_provider_runtime
 import ffp_provider_status
 import ffp_telemetry
@@ -70,7 +71,7 @@ def refresh_runtime_config() -> None:
     global HISTORY_PATH, HISTORY_STORE_TEXT, SERVER_CFG, SERVER_AUTO_START
     global SERVER_PERFORMANCE_MODE, SERVER_STARTUP_TIMEOUT_SECONDS
     global SERVER_EXTRA_ARGS, SERVER_LOG_TO_FILE, SERVER_LOG_FILE
-    global ROUTING_CFG, DICT_CFG, PROTECTED_WORDS
+    global ROUTING_CFG, PROMPT_BUILDER_CFG, DICT_CFG, PROTECTED_WORDS
 
     CONFIG = load_config()
     ENABLED = bool(CONFIG.get("enabled", True))
@@ -113,6 +114,7 @@ def refresh_runtime_config() -> None:
     SERVER_LOG_TO_FILE = bool(SERVER_CFG.get("log_to_file", True))
     SERVER_LOG_FILE = str(SERVER_CFG.get("log_file") or "flm_server.log")
     ROUTING_CFG = CONFIG.get("routing") or {}
+    PROMPT_BUILDER_CFG = CONFIG.get("prompt_builder") or {}
     DICT_CFG = CONFIG.get("dictionary") or {}
     PROTECTED_WORDS = [str(w) for w in (DICT_CFG.get("protected_words") or []) if str(w).strip()]
 
@@ -441,6 +443,7 @@ def _select_runtime(mode: str, input_text: str) -> tuple[str, int, str]:
         routing_cfg=ROUTING_CFG,
         protected_words=PROTECTED_WORDS,
         modes_cfg=CONFIG.get("modes") or {},
+        prompt_builder_cfg=PROMPT_BUILDER_CFG,
     )
     return ffp_llm_client.select_runtime(runtime, mode, input_text)
 
@@ -508,6 +511,7 @@ def call_flm(mode: str, input_text: str) -> tuple[str, float, str, str]:
         routing_cfg=ROUTING_CFG,
         protected_words=PROTECTED_WORDS,
         modes_cfg=CONFIG.get("modes") or {},
+        prompt_builder_cfg=PROMPT_BUILDER_CFG,
     )
     return ffp_llm_client.call_flm(
         runtime,
@@ -735,6 +739,14 @@ def apply_config_patch(patch: dict) -> str:
     return "ok"
 
 
+def prompt_builder_preview(sample_text: str = "", settings_cfg: dict | None = None) -> dict:
+    cfg = load_config()
+    return ffp_prompt_builder.preview(
+        settings_cfg if isinstance(settings_cfg, dict) else (cfg.get("prompt_builder") or {}),
+        sample_text or "Refactor the selected code and verify the change.",
+    )
+
+
 def build_config_snapshot() -> dict:
     """Build the live config snapshot consumed by the AHK dashboard.
 
@@ -747,6 +759,7 @@ def build_config_snapshot() -> dict:
     llm_cfg = cfg.get("llm") or {}
     notes_cfg = cfg.get("notes") or {}
     routing_cfg = cfg.get("routing") or {}
+    prompt_builder_cfg = cfg.get("prompt_builder") or {}
     hotkeys_cfg = cfg.get("hotkeys") or {}
     tone_cfg = ((cfg.get("modes") or {}).get("tone") or {})
     server_cfg = cfg.get("server") or {}
@@ -810,6 +823,9 @@ def build_config_snapshot() -> dict:
             "chunk_size_chars": int(routing_cfg.get("chunk_size_chars") or 1200),
             "min_chunk_chars": int(routing_cfg.get("min_chunk_chars") or 700),
         },
+        "prompt_builder": ffp_prompt_builder.PromptBuilderSettings.from_config(
+            prompt_builder_cfg
+        ).to_dict(),
         "notes": {
             "vault_dir": str(notes_cfg.get("vault_dir") or r"%USERPROFILE%\Documents\FastFlowPrompt Notes"),
             "categories": list(notes_cfg.get("categories") or []),
@@ -889,6 +905,15 @@ def handle_server_cli() -> bool:
             return True
         if action == "provider_status":
             print(json.dumps(build_config_snapshot()["provider_status"], ensure_ascii=False))
+            return True
+        if action == "prompt_builder_preview":
+            value = ""
+            if "--value" in args:
+                vidx = args.index("--value")
+                if vidx + 1 >= len(args):
+                    raise RuntimeError("Missing value for --value.")
+                value = str(args[vidx + 1])
+            print(json.dumps(prompt_builder_preview(value), ensure_ascii=False))
             return True
         if action == "models_list":
             print(json.dumps(list_llm_models(), ensure_ascii=False))
