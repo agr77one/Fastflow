@@ -4,7 +4,7 @@ Flowkey is a Windows desktop assistant that adds local-LLM hotkeys for grammar f
 
 Everything runs locally through [FastFlowLM](https://fastflowlm.com) (AMD Ryzen AI NPU) or, on machines without the NPU, through [Ollama](https://ollama.com) (CPU/GPU) as a secondary provider. No cloud service, analytics, or telemetry is used by the app.
 
-Current version: `2.1.0`
+Current version: `2.1.1`
 
 ## What's new in 2.1
 
@@ -112,7 +112,7 @@ Prefix tip: put the keyword on the first line of your selection — `prompt: rou
 
 The dashboard is a web page served by the local daemon — open it from the tray menu ("Dashboard") or browse to `http://127.0.0.1:52650/`. It is loopback-only and works in any browser.
 
-- **Tabs:** Overview, Chat, Telemetry, History, Notes, Meetings, Config.
+- **Tabs:** Overview, Chat, Telemetry, History, Notes, Meetings, Config, Benchmark.
 - **Theme:** auto-follows your OS day/night setting; the topbar button cycles auto → light → dark.
 - **Custom modes:** Config → Custom modes lets you add your own `prefix:` commands (id + system prompt). Changes apply to the running app within a second.
 - **Models:** pull models with live progress — pick a suggestion or type any name (on Ollama, anything from the [library](https://ollama.com/library) works); set active, remove. Suggestions are hardware-aware: detected RAM/VRAM caps the model size (e.g. 32 GB RAM → ~4B on the NPU; 8 GB VRAM → ~9B on the GPU), oversized models are hidden, and free-typing one asks before pulling.

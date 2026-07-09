@@ -632,7 +632,7 @@ async function loadConfig() {
     populateCustomModes(cfg.modes);
     const hk = cfg.hotkeys || {};
     $("hk-in-grammar").value = hk.grammar_fix || "^+g";
-    $("hk-in-chat").value = hk.open_chat || "^+t";
+    $("hk-in-chat").value = hk.open_chat || "^!c";
     $("hk-in-note").value = hk.capture_note || "^!n";
     $("hk-in-ask").value = hk.ask_chat || "^+a";
     const llm = cfg.llm || {};
@@ -1432,7 +1432,9 @@ async function runBatchNow() {
   try {
     const r = await action("meeting_batch_run", {});
     s.textContent = r.ok
-      ? `processed ${r.processed} of ${r.queued} queued${r.errors && r.errors.length ? `, ${r.errors.length} errors` : ""}`
+      ? `processed ${r.processed} of ${r.queued} queued`
+        + (r.skipped ? `, ${r.skipped} skipped (no content)` : "")
+        + (r.errors && r.errors.length ? `, ${r.errors.length} errors (details in logs/daemon.log)` : "")
       : `⚠ ${r.error}`;
   } catch (e) {
     s.textContent = `⚠ ${e.message}`;

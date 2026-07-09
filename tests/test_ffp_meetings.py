@@ -14,6 +14,7 @@ import pytest
 def _tmp_digests(tmp_path, monkeypatch):
     monkeypatch.setattr(M, "DIGESTS_PATH", tmp_path / "meeting_digests.jsonl")
     monkeypatch.setattr(M, "ACTION_STATUS_PATH", tmp_path / "meeting_action_status.jsonl")
+    monkeypatch.setattr(M, "SKIPS_PATH", tmp_path / "meeting_skips.jsonl")
 
 
 class FakeQuill:
@@ -162,6 +163,97 @@ def test_run_batch_respects_max_per_run():
     res = M.run_batch(_cfg(), client=fake, llm_call=lambda m: "d", max_per_run=2)
     assert res["processed"] == 2
     assert M.batch_status()["total_digests"] == 2
+
+
+# ---------- no-content skip markers -----------------------------------------------------
+
+def test_process_meeting_no_content_raises_typed_error():
+    fake = FakeQuill([], minutes="", transcript="")
+    with pytest.raises(M.NoContentError):
+        M.process_meeting({"id": "m0", "title": "T", "date": ""}, _cfg(), client=fake, llm_call=lambda m: "d")
+
+
+def test_run_batch_skip_marks_old_no_content_meetings():
+    # A months-old stub with neither minutes nor transcript: skip-marked once,
+    # never re-queued — not reported as an error.
+    old = {"id": "ghost1", "title": "Ghost", "date": "2026-01-05T10:00:00Z"}
+    fake = FakeQuill([old], minutes="", transcript="")
+    res = M.run_batch(_cfg(), client=fake, llm_call=lambda m: "d")
+    assert res["ok"] is True
+    assert (res["processed"], res["skipped"], res["errors"]) == (0, 1, [])
+    assert M.skip_exists("ghost1")
+    assert M.list_skips()["count"] == 1
+    assert M.batch_status()["total_skips"] == 1
+    res2 = M.run_batch(_cfg(), client=fake, llm_call=lambda m: "d")
+    assert res2["queued"] == 0 and res2["skipped"] == 0
+
+
+def test_skip_store_can_list_clear_and_successful_digest_clears_marker():
+    old = {"id": "ghost1", "title": "Ghost", "date": "2026-01-05T10:00:00Z"}
+    other = {"id": "ghost2", "title": "Other", "date": "2026-01-06T10:00:00Z"}
+    M.save_skip(old)
+    M.save_skip(other)
+    M.save_skip(old)  # duplicate marker suppressed
+    listed = M.list_skips()
+    assert listed["count"] == 2
+    assert {r["meeting_id"] for r in listed["skips"]} == {"ghost1", "ghost2"}
+
+    assert M.clear_skip("ghost2") == {"ok": True, "removed": 1, "remaining": 1}
+    assert M.skip_exists("ghost1")
+    M.save_digest({"meeting_id": "ghost1", "title": "Ghost", "processed_at": "2026-07-06T12:00:00", "digest_md": "ok"})
+    assert not M.skip_exists("ghost1")
+    assert M.list_skips() == {"skips": [], "count": 0}
+
+
+def test_skip_store_clear_all():
+    M.save_skip({"id": "a", "title": "A", "date": ""})
+    M.save_skip({"id": "b", "title": "B", "date": ""})
+    assert M.clear_skip() == {"ok": True, "removed": 2, "remaining": 0}
+    assert M.load_skips() == set()
+
+
+def test_run_batch_retries_recent_no_content_meetings():
+    # A meeting that just ended may still be transcribing in Quill — no skip
+    # marker; it stays queued for the next run and counts as an error.
+    now_z = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    recent = {"id": "fresh1", "title": "JustEnded", "date": now_z}
+    fake = FakeQuill([recent], minutes="", transcript="")
+    res = M.run_batch(_cfg(), client=fake, llm_call=lambda m: "d")
+    assert (res["processed"], res["skipped"], len(res["errors"])) == (0, 0, 1)
+    assert not M.skip_exists("fresh1")
+    res2 = M.run_batch(_cfg(), client=fake, llm_call=lambda m: "d")
+    assert res2["queued"] == 1
+
+
+def test_older_than_days_unparseable_counts_as_old():
+    assert M._older_than_days("", 2) is True
+    assert M._older_than_days(None, 2) is True
+    assert M._older_than_days("2026-01-05T10:00:00Z", 2) is True
+
+
+def test_older_than_days_boundary_and_future_dates():
+    now = datetime.datetime(2026, 7, 6, 12, 0, tzinfo=datetime.UTC)
+    assert M._older_than_days("2026-07-04T12:00:01Z", 2, now=now) is False
+    assert M._older_than_days("2026-07-04T12:00:00Z", 2, now=now) is True
+    assert M._older_than_days("2026-07-03T12:00:00Z", 2, now=now) is True
+    assert M._older_than_days("2026-07-07T12:00:00Z", 2, now=now) is False
+
+
+def test_older_than_days_handles_naive_reference_dates():
+    now = datetime.datetime(2026, 7, 6, 12, 0)
+    assert M._older_than_days("2026-07-04T12:00:00", 2, now=now) is True
+    assert M._older_than_days("2026-07-05T12:00:00", 2, now=now) is False
+
+
+def test_non_content_errors_are_not_skip_marked():
+    # An LLM failure must NOT permanently skip the meeting.
+    old = {"id": "llmfail", "title": "T", "date": "2026-01-05T10:00:00Z"}
+    fake = FakeQuill([old], minutes="## m\n- a")
+    def boom(messages):
+        raise ConnectionError("provider down")
+    res = M.run_batch(_cfg(), client=fake, llm_call=boom)
+    assert (res["processed"], res["skipped"], len(res["errors"])) == (0, 0, 1)
+    assert not M.skip_exists("llmfail")
 
 
 # ---------- ask -----------------------------------------------------------------------
