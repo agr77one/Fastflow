@@ -128,7 +128,8 @@ if (-not $DryRun) {
   New-Item -ItemType Directory -Force -Path $outRoot | Out-Null
 }
 
-Invoke-External "Unload Lemonade models" @($lemonade, "unload", "all") -ContinueOnError
+Invoke-External "Unload Lemonade Qwen3 Hybrid" @($lemonade, "unload", "Qwen3-4B-Hybrid") -ContinueOnError
+Invoke-External "Unload Lemonade Qwen2.5" @($lemonade, "unload", "Qwen2.5-3B-Instruct-NPU") -ContinueOnError
 Invoke-External "Load Lemonade Qwen2.5 3B NPU" @($lemonade, "load", "Qwen2.5-3B-Instruct-NPU")
 
 $qwenShortOut = Join-Path $outRoot "second_day_lemonade_qwen2.5-3b-instruct-npu_${DateStamp}.json"
@@ -182,7 +183,8 @@ if ($RunQwen3Short) {
   )
 }
 
-Invoke-External "Unload Lemonade models after rerun" @($lemonade, "unload", "all") -ContinueOnError
+Invoke-External "Unload Lemonade Qwen3 Hybrid after rerun" @($lemonade, "unload", "Qwen3-4B-Hybrid") -ContinueOnError
+Invoke-External "Unload Lemonade Qwen2.5 after rerun" @($lemonade, "unload", "Qwen2.5-3B-Instruct-NPU") -ContinueOnError
 
 if (-not $NoRestoreFlowkey) {
   Restore-Flowkey
