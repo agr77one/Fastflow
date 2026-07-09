@@ -30,6 +30,26 @@ function setStatus(id, message, ok = true) {
   el.className = ok ? "ok" : "bad";
 }
 
+function attachHelpMarker(containerId, text) {
+  const wrap = $(containerId);
+  if (!wrap || wrap.childElementCount > 0) return;
+  const tipId = `${containerId}-tooltip`;
+  const marker = document.createElement("span");
+  marker.className = "help";
+  marker.tabIndex = 0;
+  marker.setAttribute("role", "img");
+  marker.setAttribute("aria-label", "What is this?");
+  marker.setAttribute("aria-describedby", tipId);
+  marker.title = text;
+  marker.textContent = "i";
+  const tip = document.createElement("span");
+  tip.className = "help-text";
+  tip.id = tipId;
+  tip.setAttribute("role", "tooltip");
+  tip.textContent = text;
+  wrap.append(marker, tip);
+}
+
 // In-page confirmation modal. We never use native confirm()/alert()/prompt() —
 // they break the dashboard's look and feel. Returns a Promise<boolean>. All DOM
 // via createElement/textContent (no innerHTML; CSP-safe).
@@ -104,6 +124,7 @@ const PROMPT_BUILDER_DEFAULTS = {
   allow_user_suffix: true,
   user_suffix: "",
 };
+const HISTORY_STORE_HELP_TEXT = "Store selected text. Controls whether the exact text you send to a hotkey is saved in History. Off (default, redacted): only telemetry is kept - mode, character counts, timing, tokens - your text is never written to disk. On (visible): the captured request and generated result text are also saved so you can re-read them in History's Exposed view. This is a capture policy for new runs; it never reveals or hides text already recorded. Everything stays on your machine.";
 
 // ---- LLM providers -----------------------------------------------------------
 // The daemon resolves the *effective* provider (configured one, with fallback
@@ -384,22 +405,145 @@ function renderHours(buckets) {
 
 // ---- History ---------------------------------------------------------------
 
-async function loadHistory() {
-  try {
-    const entries = await action("recent_history", { limit: 50 });
-    const rows = entries.map((e) => [
-      String(e.timestamp || e.ts || "-").slice(0, 19).replace("T", " "),
+const HISTORY_TELEMETRY_HEADERS = ["When", "Mode", "In", "Out", "Latency", "tok/s", "Tokens"];
+const HISTORY_EXPOSED_HEADERS = ["When", "Mode", "Request", "Result", "Latency"];
+let historyEntries = [];
+let historyView = "telemetry";
+let historyStoreText = false;
+
+function historyTime(e) {
+  return String(e.timestamp || e.ts || "-").slice(0, 19).replace("T", " ");
+}
+
+function historyLatency(e) {
+  const value = e.elapsed_seconds ?? e.api_time;
+  return value === undefined || value === null || value === "" ? "-" : `${value}s`;
+}
+
+function setHistoryColumns(headers) {
+  const head = $("history-head");
+  head.replaceChildren();
+  const tr = document.createElement("tr");
+  for (const label of headers) {
+    const th = document.createElement("th");
+    th.textContent = label;
+    tr.append(th);
+  }
+  head.append(tr);
+}
+
+function renderHistoryTable(headers, rows, textColumns = []) {
+  setHistoryColumns(headers);
+  const body = $("history-body");
+  body.replaceChildren();
+  for (const cells of rows) {
+    const tr = document.createElement("tr");
+    cells.forEach((cell, index) => {
+      const td = document.createElement("td");
+      td.textContent = cell;
+      if (textColumns.includes(index)) td.classList.add("history-text-cell");
+      tr.append(td);
+    });
+    body.append(tr);
+  }
+  $("history-empty").hidden = rows.length > 0;
+}
+
+function storedHistoryText(e, key) {
+  if (Object.prototype.hasOwnProperty.call(e, key)) {
+    const text = String(e[key] ?? "");
+    if (text.trim()) return text;
+  }
+  return "- (not stored - captured while redacted)";
+}
+
+function updateHistoryViewButtons() {
+  const telemetry = historyView === "telemetry";
+  $("history-view-telemetry").classList.toggle("active", telemetry);
+  $("history-view-exposed").classList.toggle("active", !telemetry);
+  $("history-view-telemetry").setAttribute("aria-pressed", telemetry ? "true" : "false");
+  $("history-view-exposed").setAttribute("aria-pressed", telemetry ? "false" : "true");
+  $("history-exposed-note").hidden = telemetry;
+  $("history-table").classList.toggle("history-exposed", !telemetry);
+}
+
+function renderHistoryStorageBanner() {
+  const copy = $("history-storage-copy");
+  const button = $("history-storage-action");
+  if (historyStoreText) {
+    copy.textContent = "Text storage: Visible - new runs store captured request and result text.";
+    button.textContent = "Switch to redacted";
+    button.dataset.target = "redacted";
+  } else {
+    copy.textContent = "Text storage: Redacted - new runs store telemetry only.";
+    button.textContent = "Store new text";
+    button.dataset.target = "visible";
+  }
+}
+
+function renderHistory() {
+  updateHistoryViewButtons();
+  if (historyView === "exposed") {
+    const rows = historyEntries.map((e) => [
+      historyTime(e),
       e.mode || "?",
-      e.input_chars ?? "?",
-      e.output_chars ?? "?",
-      `${e.elapsed_seconds ?? e.api_time ?? "-"}s`,
-      e.tok_per_sec ?? "-",
-      e.completion_tokens ?? "-",
+      storedHistoryText(e, "input_text"),
+      storedHistoryText(e, "output_text"),
+      historyLatency(e),
     ]);
-    const n = fillTable("history-body", rows);
-    $("history-empty").hidden = n > 0;
+    renderHistoryTable(HISTORY_EXPOSED_HEADERS, rows, [2, 3]);
+    return;
+  }
+  const rows = historyEntries.map((e) => [
+    historyTime(e),
+    e.mode || "?",
+    e.input_chars ?? "?",
+    e.output_chars ?? "?",
+    historyLatency(e),
+    e.tok_per_sec ?? "-",
+    e.completion_tokens ?? "-",
+  ]);
+  renderHistoryTable(HISTORY_TELEMETRY_HEADERS, rows);
+}
+
+function setHistoryView(view) {
+  historyView = view === "exposed" ? "exposed" : "telemetry";
+  renderHistory();
+}
+
+async function setHistoryStorageFromBanner() {
+  const target = $("history-storage-action").dataset.target === "visible" ? "visible" : "redacted";
+  $("history-storage-action").disabled = true;
+  try {
+    await action(target === "visible" ? "set_history_visible" : "set_history_redacted");
+    historyStoreText = target === "visible";
+    $("cfg-store-text").checked = historyStoreText;
+    renderHistoryStorageBanner();
+    loadOverview();
   } catch (e) {
-    fillTable("history-body", [[`History unavailable: ${e.message}`, "", "", "", "", "", ""]]);
+    $("history-storage-copy").textContent = `Text storage change failed: ${e.message}`;
+  } finally {
+    $("history-storage-action").disabled = false;
+  }
+}
+
+async function loadHistory() {
+  historyView = "telemetry";
+  try {
+    const [entries, cfg] = await Promise.all([
+      action("recent_history", { limit: 50 }),
+      action("config_snapshot"),
+    ]);
+    historyEntries = Array.isArray(entries) ? entries : [];
+    historyStoreText = !!cfg.history_store_text;
+    renderHistoryStorageBanner();
+    renderHistory();
+  } catch (e) {
+    historyEntries = [];
+    renderHistoryStorageBanner();
+    updateHistoryViewButtons();
+    renderHistoryTable(HISTORY_TELEMETRY_HEADERS, [[`History unavailable: ${e.message}`, "", "", "", "", "", ""]]);
+    $("history-empty").hidden = true;
   }
 }
 
@@ -1630,6 +1774,7 @@ function tabFromHash() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  attachHelpMarker("history-store-help", HISTORY_STORE_HELP_TEXT);
   $("tabs").addEventListener("click", (e) => {
     const btn = e.target.closest(".tab");
     if (btn) { location.hash = btn.dataset.tab; switchTab(btn.dataset.tab); }
@@ -1655,6 +1800,9 @@ document.addEventListener("DOMContentLoaded", () => {
   $("nr-move").addEventListener("click", moveNoteToBucket);
   $("nr-delete").addEventListener("click", deleteCurrentNote);
   $("nr-close").addEventListener("click", () => { $("note-reader").hidden = true; });
+  $("history-view-telemetry").addEventListener("click", () => setHistoryView("telemetry"));
+  $("history-view-exposed").addEventListener("click", () => setHistoryView("exposed"));
+  $("history-storage-action").addEventListener("click", setHistoryStorageFromBanner);
   $("mtg-search-btn").addEventListener("click", searchMeetings);
   $("mtg-query").addEventListener("keydown", (e) => { if (e.key === "Enter") searchMeetings(); });
   $("mtg-load-more").addEventListener("click", loadMoreMeetings);

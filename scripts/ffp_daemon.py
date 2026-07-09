@@ -411,7 +411,7 @@ def _act_mode_ids(_args: dict) -> str:
 
 
 def _act_recent_history(args: dict) -> list[dict]:
-    """Last N history entries (summary fields only — never stored text)."""
+    """Last N history entries (telemetry plus stored text when present)."""
     try:
         limit = int(args.get("limit") or 50)
     except (TypeError, ValueError):

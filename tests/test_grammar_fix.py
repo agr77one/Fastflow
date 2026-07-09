@@ -263,6 +263,29 @@ def test_append_history_writes_jsonl_line(fresh_modules):
     assert json.loads(rows[0]) == entry
 
 
+def test_main_stores_history_text_only_when_visible(fresh_modules, monkeypatch):
+    grammar_fix = fresh_modules("grammar_fix")
+    entries = []
+    outputs = []
+    monkeypatch.setattr(sys, "argv", ["grammar_fix.py"])
+    monkeypatch.setattr(grammar_fix, "_read_input_text", lambda: "source text")
+    monkeypatch.setattr(grammar_fix, "_write_output_text", outputs.append)
+    monkeypatch.setattr(grammar_fix, "append_history", entries.append)
+    monkeypatch.setattr(grammar_fix, "_snapshot_usage_acc", lambda: {"prompt_tokens": 4, "completion_tokens": 5})
+    monkeypatch.setattr(grammar_fix, "call_flm", lambda mode, text: ("fixed text", 2.0, "model", "strategy"))
+
+    grammar_fix.HISTORY_STORE_TEXT = True
+    grammar_fix.main()
+    assert entries[-1]["input_text"] == "source text"
+    assert entries[-1]["output_text"] == "fixed text"
+
+    grammar_fix.HISTORY_STORE_TEXT = False
+    grammar_fix.main()
+    assert "input_text" not in entries[-1]
+    assert "output_text" not in entries[-1]
+    assert outputs == ["fixed text", "fixed text"]
+
+
 def test_split_chunks_returns_single_chunk_when_short(fresh_modules):
     grammar_fix = fresh_modules("grammar_fix")
 

@@ -418,6 +418,53 @@ kbd {
 }
 .data-table tr:last-child td { border-bottom: none; }
 .data-table tbody tr:hover td { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+.data-table.history-exposed td { vertical-align: top; }
+.data-table td.history-text-cell {
+  white-space: pre-wrap;
+  overflow: visible;
+  text-overflow: clip;
+  max-width: 520px;
+  line-height: 1.35;
+}
+
+.history-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  margin: 8px 0 10px;
+}
+.segmented {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.seg-btn {
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  padding: 5px 11px;
+  cursor: pointer;
+}
+.seg-btn.active {
+  background: var(--accent);
+  color: #fff;
+}
+.history-storage-banner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+.history-notice { margin: 6px 0 10px; }
 
 /* ---- Forms (Notes, Config) ---- */
 input[type="text"], input[type="number"], textarea, select {
@@ -455,6 +502,63 @@ input[type="number"] { max-width: 120px; }
   cursor: pointer;
 }
 .check-row input { width: auto; margin-right: 8px; accent-color: var(--accent); }
+.check-help-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 8px 0;
+}
+.check-help-row .check-row { margin: 0; }
+.help-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.help {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: help;
+}
+.help:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--ring);
+}
+.help-text {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 7px);
+  z-index: 20;
+  width: min(520px, calc(100vw - 48px));
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--text);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: normal;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-2px);
+  transition: opacity 0.12s, transform 0.12s, visibility 0.12s;
+}
+.help-wrap:hover .help-text,
+.help-wrap:focus-within .help-text {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
 
 /* Scrollable list container (meetings results, etc.) */
 .table-scroll { max-height: 520px; overflow-y: auto; }

@@ -18,18 +18,19 @@ def append_history(history_path: Path, entry: dict) -> None:
         log.warning("append_history failed (%s): %s", history_path, exc)
 
 
-# Summary fields exposed to dashboard clients. input_text / output_text are
-# deliberately excluded so stored selection text can never leak into a client
-# that only needs telemetry (e.g. the web dashboard's History tab).
-_HISTORY_SUMMARY_KEYS = (
+# Fields exposed to dashboard clients. input_text / output_text are included
+# only when they were written under history_store_text=True; rows captured while
+# redacted have no text to reveal at read time.
+_HISTORY_DISPLAY_KEYS = (
     "timestamp", "ts", "status", "mode", "source", "model", "strategy",
     "input_chars", "output_chars", "elapsed_seconds", "api_time",
     "prompt_tokens", "completion_tokens", "tok_per_sec",
+    "input_text", "output_text",
 )
 
 
 def recent_history(history_path: Path, limit: int = 50) -> list[dict]:
-    """Last `limit` history entries, newest first, summary fields only."""
+    """Last `limit` history entries, newest first, with stored text if present."""
     entries: list[dict] = []
     if not history_path.exists():
         return entries
@@ -47,7 +48,7 @@ def recent_history(history_path: Path, limit: int = 50) -> list[dict]:
             row = json.loads(raw)
         except Exception:
             continue
-        entries.append({key: row[key] for key in _HISTORY_SUMMARY_KEYS if key in row})
+        entries.append({key: row[key] for key in _HISTORY_DISPLAY_KEYS if key in row})
         if len(entries) >= limit:
             break
     return entries

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- **History visibility controls.** The History tab now defaults to a privacy-safe Telemetry view, adds an Exposed view for request/result text that was actually stored, and surfaces the redacted/visible capture setting in context. Rows captured while redacted remain text-free.
+
 ## 2.2.0
 
 **Prompt builder controls.** Flowkey's `prompt:` mode can now target Claude Code or generic chat tools without exposing raw built-in system-prompt editing.

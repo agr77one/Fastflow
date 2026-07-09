@@ -320,7 +320,7 @@ def test_post_provider_status_returns_capabilities(daemon_server):
     assert set(payload["result"]["providers"]) >= {"fastflowlm", "ollama"}
 
 
-def test_recent_history_returns_summary_without_text(daemon_server):
+def test_recent_history_returns_stored_text_when_present(daemon_server):
     daemon_module, base_url = daemon_server
     history_path = daemon_module.grammar_fix.HISTORY_PATH
     history_path.parent.mkdir(parents=True, exist_ok=True)
@@ -338,7 +338,10 @@ def test_recent_history_returns_summary_without_text(daemon_server):
     assert status == 200
     entries = payload["result"]
     assert [e["mode"] for e in entries] == ["prompt", "grammar"]  # newest first
-    assert all("input_text" not in e and "output_text" not in e for e in entries)
+    assert "input_text" not in entries[0]
+    assert "output_text" not in entries[0]
+    assert entries[1]["input_text"] == "SECRET-IN"
+    assert entries[1]["output_text"] == "SECRET-OUT"
     assert entries[1]["input_chars"] == 10
 
 
