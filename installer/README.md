@@ -71,7 +71,7 @@ Steps the script runs:
 3. Download `vendor\ahk\AutoHotkey64.exe` if missing (`-BundleAhk`)
 4. Download `vendor\flm\flm-setup.exe` if missing (`-BundleFlm`)
 5. Run `pyinstaller --clean --noconfirm fastflowprompt.spec` → `dist\FastFlowPrompt\`
-6. Run `iscc installer.iss` → `out\Flowkey-Setup-2.1.0.exe`
+6. Run `iscc installer.iss` → `out\Flowkey-Setup-<version>.exe`
 7. Run `sign.ps1` against the output (`-Sign`)
 
 Debug flags:

@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+## 2.1.1
+
+**Maintenance.** Fixes a recurring meetings-batch error and clears a batch of small audit/doc items.
+
+### Fixed
+
+- **Meeting batch no longer retries content-less meetings forever.** A meeting Quill has neither minutes nor a transcript for (aborted/duplicate stub recordings) used to re-queue and re-fail on every batch run, so "Run batch now" and the after-hours scheduler kept reporting errors (e.g. "processed 0 of 5, 5 errors"). Such meetings are now marked skipped (`data/meeting_skips.jsonl`) and excluded from future queues — but only when the meeting is older than 2 days, so a just-ended meeting whose transcript is still syncing keeps retrying. LLM/provider failures are never skip-marked. The batch result now reports a `skipped` count, and per-meeting error reasons remain in `logs/daemon.log`.
+- The `open_chat` hotkey default is now `Ctrl+Alt+C` (`^!c`) everywhere. The retired `Ctrl+Shift+T` (`^+t`) still lingered as a fallback in the first-run wizard, the daemon's config snapshot, and the dashboard hotkey field, so a fresh config could surface the colliding old binding.
+
+### Internal / docs
+
+- First-run wizard text updated ("Open chat popup" → "Open chat") — the tkinter chat popup was retired in 2.0.
+- Installer bootstrapper (`bootstrap.cmd`) no longer prints a hardcoded stale version in its build banner.
+- README dashboard tab list corrected (added **Benchmark** → 8 tabs).
+- New seed-vs-schema drift guard test (`test_config_seeds`) freezes the known delta between the shipped first-run seed and `DEFAULT_CONFIG`.
+
 ## 2.1.0
 
 **Meetings, on your own time.** Flowkey can now read your local Quill meetings and answer questions about them on the local model — and an after-hours scheduler pre-computes each meeting's digest (summary / goals / action items) during your idle window, so daytime reads are instant.

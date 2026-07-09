@@ -824,7 +824,7 @@ def build_config_snapshot() -> dict:
         },
         "hotkeys": {
             "grammar_fix": str(hotkeys_cfg.get("grammar_fix") or "^+g"),
-            "open_chat": str(hotkeys_cfg.get("open_chat") or "^+t"),
+            "open_chat": str(hotkeys_cfg.get("open_chat") or "^!c"),
             "capture_note": str(hotkeys_cfg.get("capture_note") or "^!n"),
             "ask_chat": str(hotkeys_cfg.get("ask_chat") or "^+a"),
         },

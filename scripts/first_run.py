@@ -60,7 +60,7 @@ DEFAULT_MODEL_CHOICES = {
 
 HOTKEY_FIELDS = [
     ("grammar_fix",   "Grammar fix",            "^+g"),
-    ("open_chat",     "Open chat popup",        "^+t"),
+    ("open_chat",     "Open chat",              "^!c"),
     ("capture_note",  "Capture note",           "^!n"),
     ("ask_chat",      "Ask in chat (selection)","^+a"),
 ]
@@ -663,7 +663,7 @@ class WizardApp:
                   text=("Flowkey is ready. Hotkeys are live globally.\n\n"
                         "Try one of these now:\n"
                         f"  • {HOTKEY_FIELDS[0][2]} — grammar-fix selected text\n"
-                        f"  • {HOTKEY_FIELDS[1][2]} — open the chat popup\n"
+                        f"  • {HOTKEY_FIELDS[1][2]} — open chat in the dashboard\n"
                         f"  • {HOTKEY_FIELDS[2][2]} — capture the selection as a note\n"
                         f"  • {HOTKEY_FIELDS[3][2]} — ask in chat with the selection attached\n\n"
                         "Right-click the tray icon for the dashboard, diagnostics, and settings.")
