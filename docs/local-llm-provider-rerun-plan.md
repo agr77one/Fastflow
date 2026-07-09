@@ -1,7 +1,7 @@
 # Local LLM Provider Benchmark — Proper Rerun Plan
 
 Date: 2026-07-07
-Status: JULY 8 BATCH EXECUTED — second-day reproducibility and optional stretch cells remain
+Status: JULY 9 SECOND-DAY BATCH EXECUTED — Qwen2.5 replace-FLM gate passed
 Supersedes the methodology of: `docs/local-llm-provider-poc-readme.md` (POC of 2026-07-07)
 
 ## Execution Tracker
@@ -55,26 +55,47 @@ Completed in the July 8 batch:
   `tools/evaluate_second_day_provider_gate.ps1`.
 - Single-command second-day batch wrapper added:
   `tools/run_second_day_provider_batch.ps1`.
+- July 9 second-day batch executed with `-RunQwen3Short`.
+  Artifacts:
+  `second_day_lemonade_qwen2.5-3b-instruct-npu_20260709.json`,
+  `second_day_lemonade_qwen2.5-3b-instruct-npu_longctx_calibrated_20260709.json`,
+  `second_day_lemonade_qwen3-4b-hybrid_no-think_20260709.json`,
+  `second_day_lemonade_qwen2.5-3b-instruct-npu_gate_20260709.json`, and
+  `second_day_lemonade_qwen2.5-3b-instruct-npu_gate_20260709.md`.
+- Qwen2.5 replace-FLM gate passed: `40/40` grammar, `45/50` prompt,
+  `15/15` calibrated long-context, all required long-context sizes present, and
+  zero memory-guard violations. Optional Qwen3 short rerun also passed
+  informational gates: `40/40` grammar and `50/50` prompt.
 
 Not complete yet:
 
-- Replace-FLM gate is not satisfied because the strongest candidate,
-  Lemonade `Qwen2.5-3B-Instruct-NPU`, still needs a second-day rerun.
 - Lemonade Qwen3 4B Hybrid passes short prompt mode but is disqualified for
   meetings until its visible-output failure above roughly 2.1k prompt tokens is
   fixed.
 - LM Studio Qwen2.5 7B remains experimental; it is approved only as an opt-in
   non-default prompt route after app-level repair validation.
+- Product default/config switch to Lemonade `Qwen2.5-3B-Instruct-NPU` still
+  needs a Flowkey route smoke test before removing FLM as the fallback.
 
-Next batch:
-
-For the normal run, use the single-command wrapper:
+Batch command used:
 
 ```powershell
 pwsh -NoProfile -ExecutionPolicy Bypass -File tools\run_second_day_provider_batch.ps1 -RunQwen3Short
 ```
 
-Use the step-by-step commands below if a failure needs to be isolated.
+Gate evaluation result:
+
+```text
+Qwen2.5 replace-FLM gate: PASS
+```
+
+Re-run command, if another confirmation batch is needed:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File tools\run_second_day_provider_batch.ps1 -RunQwen3Short
+```
+
+Use the step-by-step commands below if a future failure needs to be isolated.
 
 0. Before the live run, repeat the non-benchmark preflight:
 

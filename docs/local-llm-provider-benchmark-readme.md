@@ -1,6 +1,6 @@
 # Local LLM Provider Benchmark README
 
-Date: 2026-07-08
+Date: 2026-07-09
 
 This README captures the current proof of concept for whether Flowkey should
 drop FastFlowLM (FLM) and use Ollama, LM Studio, or Lemonade on the AMD NPU
@@ -9,19 +9,26 @@ results, anomalies, and the current decision.
 
 ## Decision
 
-Do not drop FLM as the global default yet.
+Do not drop FLM in favor of Ollama.
+
+Lemonade `Qwen2.5-3B-Instruct-NPU` has now passed the defined second-day
+replace-FLM gate on this AMD NPU machine. It is the recommended replacement
+route to promote next, with FLM kept as a fallback during product rollout and
+smoke testing.
 
 The corrected rerun shows:
 
-- FLM `qwen3.5:4b` is still the safest global default because it passes short
+- FLM `qwen3.5:4b` remains the proven incumbent/fallback because it passes short
   prompt/grammar quality and the long-context meeting workload in the same
   session: `49/50` prompt passes, `40/40` grammar passes, and `5/5` at roughly
   8k prompt tokens.
-- Lemonade `Qwen2.5-3B-Instruct-NPU` is the first serious replacement
-  candidate: `40/40` grammar, `45/50` prompt XML, and much faster calibrated
-  8k TTFT than the FLM incumbent. It still needs a second-day rerun before
-  replacing FLM. Its one consistent prompt miss is narrow: `prompt_plan`
-  is recoverable with deterministic tag repair or a stricter retry prompt.
+- Lemonade `Qwen2.5-3B-Instruct-NPU` is the first serious replacement route:
+  `40/40` grammar, `45/50` prompt XML, and much faster calibrated
+  8k TTFT than the FLM incumbent. Its July 9 second-day rerun passed the
+  replace-FLM gate: `40/40` grammar, `45/50` prompt XML, `15/15` calibrated
+  long-context, all required long-context sizes present, and zero memory-guard
+  violations. Its one consistent prompt miss is narrow: `prompt_plan` is
+  recoverable with deterministic tag repair or a stricter retry prompt.
 - Lemonade `Qwen3-4B-Hybrid`, retested with thinking disabled, is now a strong
   short prompt-mode candidate: `40/40` grammar and `50/50` prompt XML. It is not
   a global replacement because its long-context route returns empty visible
@@ -41,9 +48,11 @@ The corrected rerun shows:
 
 Practical recommendation:
 
-- Keep `fastflowlm` as the production default.
-- Treat Lemonade `Qwen2.5-3B-Instruct-NPU` as the leading replacement candidate,
-  pending a second session. The deterministic repair path for its known
+- Promote Lemonade `Qwen2.5-3B-Instruct-NPU` as the next AMD NPU replacement
+  route for FLM, with FLM retained as a fallback until the config/default
+  switch is smoke-tested end to end.
+- Treat Lemonade `Qwen2.5-3B-Instruct-NPU` as the leading replacement route.
+  The deterministic repair path for its known
   `prompt_plan` miss is implemented, unit-tested, and validated through the app
   path.
 - Treat Lemonade `Qwen3-4B-Hybrid` as a short-task-only candidate, pending a
@@ -52,8 +61,8 @@ Practical recommendation:
 - Keep `lmstudio` wired as an experimental fast local provider. LM Studio
   Qwen2.5 7B can be a supported opt-in prompt route, but not a default or
   automatic replacement.
-- Keep `lemonade` wired as the AMD NPU experiment path, but do not route
-  production Flowkey prompt mode to it yet without the second-session gate.
+- Keep `lemonade` wired as the AMD NPU replacement path, but keep Qwen3 out of
+  meeting/long-context routing until its visible-output failure is fixed.
 
 ## Why Bigger Models Were Tested
 
@@ -358,9 +367,12 @@ Lemonade downloaded before/at rerun:
 Still not run from the rerun plan:
 
 - Matrix A Lemonade Llama 3B; the rerun plan correctly lists no Lemonade 3B cell
-- second-day reproducibility for Lemonade `Qwen2.5-3B-Instruct-NPU`
 - optional Matrix B stretch `Meta-Llama-3.1-8B-Instruct-NPU`, intentionally
   skipped for this batch after the Llama matrix failures and RAM-risk review
+
+No longer pending: second-day reproducibility for Lemonade
+`Qwen2.5-3B-Instruct-NPU` completed on 2026-07-09 and passed the replace-FLM
+gate.
 
 ## July 8 Corrected Rerun Artifacts
 
@@ -395,6 +407,40 @@ Still not run from the rerun plan:
 | `data/benchmarks/rerun_lemonade_mistral-7b-instruct-v0.3-npu_quick_20260708.json` | quick-quality only | failed prompt gate, no full 5-run pass |
 | `data/benchmarks/rerun_lmstudio_qwen2.5-3b-instruct_20260708.json` | anomaly | memory guard fired during initial run |
 | `data/benchmarks/rerun_ollama_llama3.2-3b_20260708.json` | superseded | RSS did not include `llama-server.exe` |
+
+## July 9 Second-Day Rerun Artifacts
+
+| Artifact | Status | Notes |
+|---|---|---|
+| `data/benchmarks/second_day_lemonade_qwen2.5-3b-instruct-npu_20260709.json` | valid | second-day Qwen2.5 short grammar/prompt rerun |
+| `data/benchmarks/second_day_lemonade_qwen2.5-3b-instruct-npu_longctx_calibrated_20260709.json` | valid | second-day Qwen2.5 calibrated long-context rerun |
+| `data/benchmarks/second_day_lemonade_qwen3-4b-hybrid_no-think_20260709.json` | informational | second-day Qwen3 short grammar/prompt rerun with thinking disabled |
+| `data/benchmarks/second_day_lemonade_qwen2.5-3b-instruct-npu_gate_20260709.json` | gate record | Qwen2.5 replace-FLM gate passed |
+| `data/benchmarks/second_day_lemonade_qwen2.5-3b-instruct-npu_gate_20260709.md` | gate report | Markdown rendering of the gate result |
+
+## July 9 Second-Day Gate Result
+
+Qwen2.5 replace-FLM gate: **PASS**.
+
+| Gate | Scope | Result | Observed | Required |
+|---|---|---|---|---|
+| `qwen25_grammar` | blocking | PASS | `40/40`, rate `1.000`, guard `0` | `>= 0.875` |
+| `qwen25_prompt` | blocking | PASS | `45/50`, rate `0.900`, guard `0`, failed case `prompt_plan` | `>= 0.900` |
+| `qwen25_longctx_quality` | blocking | PASS | `15/15`, rate `1.000`, guard `0` | all timed long-context runs pass |
+| `qwen25_longctx_sizes` | blocking | PASS | `longctx_1000`, `longctx_4000`, `longctx_8000` | all required sizes present |
+| `memory_guard` | blocking | PASS | grammar `0`, prompt `0`, long-context `0` | `<= 0` total guard violations |
+| `qwen3_grammar` | informational | PASS | `40/40`, rate `1.000`, guard `0` | `>= 0.875` |
+| `qwen3_prompt` | informational | PASS | `50/50`, rate `1.000`, guard `0` | `>= 0.900` |
+
+Full cells used 1 warmup plus 5 timed runs per case.
+
+| Provider | Model | Runtime | Task | Pass rate | Median s | TTFT median | Decode TPS median | Prefill TPS median | Median completion tokens | Median prompt tokens | Peak RSS MB | Memory guard | Failed cases |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
+| Lemonade | `Qwen2.5-3B-Instruct-NPU` | NPU | grammar | 40/40 | 1.697 | 0.436 | 17.0723 | 155.0 | 14.0 | 66 | 3733 | no | none |
+| Lemonade | `Qwen2.5-3B-Instruct-NPU` | NPU | prompt | 45/50 | 5.462 | 0.514 | 18.3023 | 260.8 | 79.0 | 132 | 3775 | no | `prompt_plan` |
+| Lemonade | `Qwen2.5-3B-Instruct-NPU` | NPU | longctx | 15/15 | 14.823 | 2.704 | 18.0708 | 1489.9 | 212.0 | 4042 | 4561 | no | none |
+| Lemonade | `Qwen3-4B-Hybrid` | NPU+iGPU hybrid, thinking disabled | grammar | 40/40 | 3.101 | 0.517 | 8.5276 | 136.0 | 17.5 | 68 | 5987 | no | none |
+| Lemonade | `Qwen3-4B-Hybrid` | NPU+iGPU hybrid, thinking disabled | prompt | 50/50 | 13.516 | 0.774 | 9.0875 | 175.9 | 111.5 | 135 | 6102 | no | none |
 
 ## July 8 Full Rerun Summary
 
@@ -450,7 +496,8 @@ Qwen2.5 `prompt_plan` repair/retry diagnostic:
 
 Interpretation: use deterministic repair first for this specific malformed-tag
 case, then fall back to model retry only if repair still fails the contract.
-This does not remove the second-day reproducibility gate.
+The July 9 second-day gate passed with this repair path available for the known
+`prompt_plan` miss.
 
 LM Studio Qwen2.5 7B output-repair diagnostic:
 
@@ -1485,12 +1532,12 @@ checker correctly rejects it.
 
 Production:
 
-- `prompt`: keep FLM default until Lemonade Qwen2.5 or Qwen3 passes a second-day
-  rerun. Qwen3 has the cleaner short prompt score, but Qwen2.5 has the better
-  all-workload profile and a validated recovery path for its `prompt_plan` miss.
-- `meeting/long-context`: Lemonade Qwen2.5 is the leading candidate based on the
-  calibrated 8k sweep, but do not switch production until the second-session gate
-  is satisfied. Do not route meetings to Qwen3 Hybrid until the empty 4k/8k
+- `prompt`: promote Lemonade Qwen2.5 as the gate-passed AMD NPU replacement
+  route for FLM. Qwen3 has the cleaner short prompt score, but Qwen2.5 has the
+  better all-workload profile and a validated recovery path for its
+  `prompt_plan` miss.
+- `meeting/long-context`: Lemonade Qwen2.5 passed the calibrated 1k/4k/8k
+  second-day sweep. Do not route meetings to Qwen3 Hybrid until the empty 4k/8k
   output failure is fixed.
 - `grammar`: Lemonade Qwen2.5 is the leading candidate; it passed `40/40` and was
   faster than both FLM Qwen2.5 and FLM Qwen3.5.
@@ -1507,11 +1554,11 @@ Experimental:
   through the app route. Supported only as an opt-in experimental prompt route;
   do not make it the default or automatic route because it is non-NPU and has not
   been second-day rerun as a production route.
-- `lemonade Qwen2.5-3B-Instruct-NPU`: leading replacement candidate, pending
-  second session. The known prompt-plan repair is implemented, unit-tested, and
-  app-route validated.
+- `lemonade Qwen2.5-3B-Instruct-NPU`: gate-passed replacement route. The known
+  prompt-plan repair is implemented, unit-tested, and app-route validated.
 - `lemonade Qwen3-4B-Hybrid`: strong short prompt candidate with thinking
-  disabled; exclude from meetings for now.
+  disabled and a passed informational second-day short rerun; exclude from
+  meetings for now.
 - `lemonade Qwen2.5-7B-Instruct-NPU`: do not continue under the current prompt;
   prompt quality was `0/20` in quick testing.
 - `lemonade Phi-4-mini-instruct-NPU`: do not continue under the current prompt;
@@ -1521,28 +1568,35 @@ Experimental:
 
 ## Remaining Work
 
-The full rerun plan is not complete. Still needed:
+The planned second-day benchmark batch is complete. Remaining product work:
 
-1. Rerun Lemonade `Qwen2.5-3B-Instruct-NPU` on a second day/session before a
-   production switch.
-2. Rerun Lemonade `Qwen3-4B-Hybrid` short mode on a second day if short prompt
-   routing is considered.
-3. Track or fix Qwen3 Hybrid's visible-output failure above roughly 2.1k prompt
+1. Promote Lemonade `Qwen2.5-3B-Instruct-NPU` through the app default/config
+   path and smoke-test the installed Flowkey route.
+2. Track or fix Qwen3 Hybrid's visible-output failure above roughly 2.1k prompt
    tokens before using it for meetings.
-4. Keep LM Studio Qwen2.5 7B opt-in only unless a future second-day route test
+3. Keep LM Studio Qwen2.5 7B opt-in only unless a future second-day route test
    and product decision promotes it.
 
-Second-day helper:
+Second-day batch command used:
 
 ```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File tools\run_second_day_provider_batch.ps1 -RunQwen3Short
+```
+
+Step-by-step helpers remain available:
+
+```powershell
+# Non-benchmark preflight.
+pwsh -NoProfile -ExecutionPolicy Bypass -File tools\check_second_day_provider_preflight.ps1 -RunQwen3Short -StrictDateGate
+
 # Qwen2.5 second-day gate: grammar/prompt plus calibrated long-context.
 pwsh -NoProfile -ExecutionPolicy Bypass -File tools\run_next_day_provider_rerun.ps1
 
 # Include Qwen3 Hybrid short rerun if still considering short prompt routing.
 pwsh -NoProfile -ExecutionPolicy Bypass -File tools\run_next_day_provider_rerun.ps1 -RunQwen3Short
 
-# Same-day command validation only; this refuses to perform a live same-day run.
-pwsh -NoProfile -ExecutionPolicy Bypass -File tools\run_next_day_provider_rerun.ps1 -DryRun -AllowSameDay
+# Evaluate the gate using same-day artifact names.
+pwsh -NoProfile -ExecutionPolicy Bypass -File tools\evaluate_second_day_provider_gate.ps1 -RunQwen3Short
 ```
 
 The helper stops Flowkey/FLM and other provider contaminants, unloads LM Studio,
@@ -1550,16 +1604,6 @@ loads Lemonade, runs `tools/provider_bench.py` with the same 1-warmup/5-run
 methodology, writes `second_day_*` artifacts under `data/benchmarks`, unloads
 Lemonade, and restores the Flowkey hotkey unless `-NoRestoreFlowkey` is passed.
 It refuses live execution on July 8, 2026 or earlier.
-
-After the second-day run, evaluate the gate:
-
-```powershell
-python tools\evaluate_second_day_provider_rerun.py `
-  --qwen25-short data\benchmarks\second_day_lemonade_qwen2.5-3b-instruct-npu_<yyyymmdd>.json `
-  --qwen25-longctx data\benchmarks\second_day_lemonade_qwen2.5-3b-instruct-npu_longctx_calibrated_<yyyymmdd>.json `
-  --out data\benchmarks\second_day_lemonade_qwen2.5-3b-instruct-npu_gate_<yyyymmdd>.json `
-  --markdown-out data\benchmarks\second_day_lemonade_qwen2.5-3b-instruct-npu_gate_<yyyymmdd>.md
-```
 
 The evaluator returns exit code `0` only when Qwen2.5 clears the grammar,
 prompt, calibrated long-context, required-size, and memory-guard gates. If Qwen3
@@ -1600,13 +1644,14 @@ Start-Process `
 
 ## Bottom Line
 
-Dropping FLM globally does not make sense yet.
+Dropping FLM for Ollama does not make sense.
 
-Lemonade `Qwen2.5-3B-Instruct-NPU` is now the first credible FLM replacement
-candidate. It passes the headline short-task quality threshold, beats FLM on
-calibrated 8k TTFT, and stays inside the memory guard. It is not production-ready
-until it passes the second-session reproducibility gate. The implemented
-`prompt_plan` repair path has now passed a clean app-level provider run.
+Replacing FLM with Lemonade `Qwen2.5-3B-Instruct-NPU` on this AMD NPU machine
+now makes sense as the next product route. It passes the headline short-task
+quality threshold, beats FLM on calibrated 8k TTFT, stays inside the memory
+guard, and passed the July 9 second-session reproducibility gate. The
+implemented `prompt_plan` repair path has also passed a clean app-level provider
+run.
 
 Lemonade `Qwen3-4B-Hybrid` with thinking disabled is the best short prompt-mode
 score so far (`50/50`), but it is not a global replacement because direct API
@@ -1618,7 +1663,7 @@ Llama 3.2 was small and sometimes fast, and the exact Lemonade 1B NPU cell was
 also light, but every tested provider/model row failed prompt XML (`0/50`), so
 it is not a Flowkey prompt-mode replacement.
 
-The correct near-term path is to keep FLM as default, keep the new provider
-wiring, and focus the next rerun on Lemonade Qwen2.5 reproducibility, Qwen3
-short-mode reproducibility, the LM Studio route decision, and a targeted fix for
-Qwen3 long-context output.
+The correct near-term path is to promote Lemonade Qwen2.5 through the Flowkey
+default/config route, keep FLM as a fallback while that switch is smoke-tested,
+keep Ollama as a portable CPU fallback, keep LM Studio opt-in, and fix Qwen3
+long-context output before using Qwen3 for meetings.
