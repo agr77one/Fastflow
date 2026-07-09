@@ -25,6 +25,7 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - api: `POST /action/<name>` ! header `X-FFP-API: 1` → 200 `{ok,result,error,elapsed_ms}`
 - api: `GET /` → dashboard; `GET /healthz` → `{ok,version,api,actions}`
 - action: `config_snapshot` → full cfg; `apply_config_patch {patch}` → merge (whitelist `filter_config_patch`)
+- action: `recent_history {limit?}` → newest history rows; `input_text`/`output_text` iff stored @ write-time
 - action: `prompt_builder_preview {settings?,sample?}` → deterministic local preview (`⊥` LLM call)
 - action: `notify_gate {title,message}` → `{show,reason,category}` (logs); `notifications_log {limit}` → rows
 - action: `quill_status` → `{reachable,enabled,server,server_version}`
@@ -70,6 +71,8 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - V22: `sync.ps1` ∃ uncommitted tracked changes → skip pull (⊥ clobber un-pushed WIP)
 - V23: meeting `NoContentError` & age ≥ 2d → skip-marker (`meeting_skips.jsonl`) ∴ ⊥ re-queue ever; age < 2d → retry (Quill transcript may still sync); non-content errors ⊥ skip-mark. batch errors → `daemon.log` only (⊥ UI panel, per user)
 - V24: prompt_builder default cfg ⇒ `CLAUDE_PROMPT_SYSTEM_PROMPT` identity; non-default prompt validation target-aware (XML only when effective structure=xml); built-in `modes.prompt.system_prompt` still locked
+- V25: History view toggle = display-only; ⊥ mutate `history_store_text`; ⊥ reveal text absent from jsonl row
+- V26: History tab load default view = Telemetry (text hidden) even when storage visible
 
 ## §T tasks
 
@@ -96,6 +99,7 @@ T18|.|[DOCS] provider roadmap marks selector/status UX incomplete → update to 
 T19|x|[DOCS] first-run wizard text "chat popup" → "Open chat" + hotkey now `^!c` (2.1.1)|B5
 T20|x|[DOCS] daemon log location — audited 2.1.1: no stale ref in README/docs; nothing to change|—
 T21|x|prompt_builder cfg + claude_code identity + generic_chat adapter + dashboard controls/preview|V17,V24
+T22|x|History Telemetry/Exposed views + inline redacted/visible storage control/help|V5,V6,V25,V26
 ```
 
 ## §B bugs

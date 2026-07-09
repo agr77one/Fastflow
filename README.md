@@ -122,7 +122,8 @@ The dashboard is a web page served by the local daemon — open it from the tray
 - **Prompt builder:** Config → Prompt builder controls the built-in `prompt:` output style without allowing raw edits to the locked system prompt.
 - **Models:** pull models with live progress — pick a suggestion or type any name (on Ollama, anything from the [library](https://ollama.com/library) works); set active, remove. Suggestions are hardware-aware: detected RAM/VRAM caps the model size (e.g. 32 GB RAM → ~4B on the NPU; 8 GB VRAM → ~9B on the GPU), oversized models are hidden, and free-typing one asks before pulling.
 - **Benchmark:** works on both providers — `flm bench` on FastFlowLM (~10–20 min, NPU), timed generations with native metrics on Ollama (~1–3 min, server keeps running).
-- **Notes:** browse or search your vault; History shows recent runs (text is stored only if history storage is enabled).
+- **History:** Telemetry view shows what ran and how fast; Exposed view shows stored request/result text only for rows captured while history storage was visible. The History tab includes the same redacted/visible storage toggle as Config.
+- **Notes:** browse or search your vault.
 - **Meetings:** connect the local [Quill](https://quillapp.com) app to search meetings, read AI digests (pre-computed after-hours), review action items (accept / reject), and generate a weekly review. Off by default — enable in Config → Meetings.
 - **Notifications:** per-event toggles, dedupe window, Do-Not-Disturb, and quiet hours; every toast (shown or muted) is logged to the Telemetry feed.
 

@@ -130,9 +130,20 @@
 
   <section class="panel" id="tab-history">
     <div class="card card-wide">
-      <h2>Recent activity <span class="muted small">(last 50, newest first — summary fields only)</span></h2>
-      <table class="data-table">
-        <thead><tr><th>When</th><th>Mode</th><th>In</th><th>Out</th><th>Latency</th><th>tok/s</th><th>Tokens</th></tr></thead>
+      <h2>Recent activity <span class="muted small">(last 50, newest first)</span></h2>
+      <div class="history-controls">
+        <div class="segmented" role="group" aria-label="History view">
+          <button class="seg-btn active" id="history-view-telemetry" type="button" aria-pressed="true">Telemetry</button>
+          <button class="seg-btn" id="history-view-exposed" type="button" aria-pressed="false">Exposed</button>
+        </div>
+        <div class="history-storage-banner" id="history-storage-banner">
+          <span id="history-storage-copy">Text storage: checking...</span>
+          <button class="btn" id="history-storage-action" type="button">Change</button>
+        </div>
+      </div>
+      <p class="muted small history-notice" id="history-exposed-note" hidden>Showing stored request and result text for rows captured while text storage was visible. Rows captured while redacted cannot be revealed.</p>
+      <table class="data-table" id="history-table">
+        <thead id="history-head"><tr><th>When</th><th>Mode</th><th>In</th><th>Out</th><th>Latency</th><th>tok/s</th><th>Tokens</th></tr></thead>
         <tbody id="history-body"></tbody>
       </table>
       <p class="muted small" id="history-empty" hidden>No history yet.</p>
@@ -335,7 +346,10 @@
           <label><input type="radio" name="perf" value="max"> 🔴 Max</label>
         </div>
         <p class="muted small" id="perf-note" hidden>Performance modes are FastFlowLM-only.</p>
-        <label class="check-row"><input type="checkbox" id="cfg-store-text"> Store selected text (off = redacted)</label>
+        <div class="check-help-row">
+          <label class="check-row"><input type="checkbox" id="cfg-store-text"> Store selected text (off = redacted)</label>
+          <span class="help-wrap" id="history-store-help"></span>
+        </div>
         <h2>Tone preset <span class="muted small">(tone: prefix)</span></h2>
         <div class="radio-row">
           <label><input type="radio" name="tone" value="formal"> 🎩 Formal</label>
