@@ -522,6 +522,40 @@ def test_call_flm_prompt_rescues_multiline_echo_with_marker_words(fresh_modules,
     assert "<task>" in text
 
 
+def test_call_flm_prompt_generic_chat_falls_back_to_markdown(fresh_modules, monkeypatch):
+    grammar_fix = fresh_modules("grammar_fix")
+    grammar_fix.CONFIG["prompt_builder"] = {
+        "target_agent": "generic_chat",
+        "detail_level": "balanced",
+        "action_mode": "implement",
+        "structure": "agent_default",
+        "include_acceptance_criteria": True,
+        "include_verification": True,
+        "include_output_format": True,
+        "preserve_user_constraints": True,
+        "allow_user_suffix": True,
+        "user_suffix": "",
+    }
+    grammar_fix.PROMPT_BUILDER_CFG = grammar_fix.CONFIG["prompt_builder"]
+    monkeypatch.setattr(grammar_fix, "is_flm_server_reachable", lambda: True)
+    prompts = []
+
+    def fake_call(model, system_prompt, user_content, max_tokens, timeout_seconds):
+        prompts.append(system_prompt)
+        return (user_content, grammar_fix.FLM_MODEL)
+
+    monkeypatch.setattr(grammar_fix, "_call_flm_api", fake_call)
+
+    text, _, _, _ = grammar_fix.call_flm("prompt", "fix the failing config test")
+
+    assert "generic coding/chat assistant" in prompts[0]
+    assert text.startswith("## Task")
+    settings = grammar_fix.ffp_prompt_builder.PromptBuilderSettings.from_config(
+        grammar_fix.PROMPT_BUILDER_CFG
+    )
+    assert grammar_fix.ffp_prompt_builder.validate(text, settings).valid is True
+
+
 def test_is_weak_prompt_echo_flags_multiline_reformat(fresh_modules):
     grammar_fix = fresh_modules("grammar_fix")
     llm = grammar_fix.ffp_llm_client

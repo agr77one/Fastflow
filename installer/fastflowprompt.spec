@@ -60,6 +60,7 @@ HIDDEN_IMPORTS = [
     "ffp_meetings",
     "ffp_notifications",
     "ffp_notify",
+    "ffp_prompt_builder",
     "ffp_provider_runtime",
     "ffp_provider_status",
     "ffp_pull",

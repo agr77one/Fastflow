@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import ffp_config
+import ffp_prompt_builder
 import pytest
 
 
@@ -271,6 +272,49 @@ def test_filter_config_patch_accepts_provider_profiles():
                 "timeout_seconds": 120,
                 "auto_start": False,
             }
+        }
+    }
+
+
+def test_default_config_has_prompt_builder_defaults():
+    assert ffp_config.DEFAULT_CONFIG["prompt_builder"] == ffp_prompt_builder.DEFAULT_PROMPT_BUILDER_CONFIG
+
+
+def test_load_config_normalizes_prompt_builder(tmp_path):
+    cfg_path = tmp_path / "grammar_hotkey.config.json"
+    cfg_path.write_text(
+        json.dumps({
+            "prompt_builder": {
+                "target_agent": "codex",
+                "detail_level": "very long",
+                "user_suffix": "x" * 700,
+            }
+        }),
+        encoding="utf-8",
+    )
+
+    loaded = ffp_config.load_config(cfg_path)
+
+    assert loaded["prompt_builder"]["target_agent"] == "claude_code"
+    assert loaded["prompt_builder"]["detail_level"] == "balanced"
+    assert len(loaded["prompt_builder"]["user_suffix"]) == ffp_prompt_builder.USER_SUFFIX_MAX_CHARS
+
+
+def test_filter_config_patch_prompt_builder_partial_and_clamped():
+    filtered = ffp_config.filter_config_patch({
+        "prompt_builder": {
+            "target_agent": "generic_chat",
+            "include_verification": 1,
+            "user_suffix": "x" * 700,
+            "system_prompt": "evil",
+        }
+    })
+
+    assert filtered == {
+        "prompt_builder": {
+            "target_agent": "generic_chat",
+            "include_verification": True,
+            "user_suffix": "x" * ffp_prompt_builder.USER_SUFFIX_MAX_CHARS,
         }
     }
 

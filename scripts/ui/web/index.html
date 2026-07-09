@@ -344,6 +344,56 @@
         </div>
       </div>
       <div class="card">
+        <h2>Prompt builder</h2>
+        <p class="muted small">Controls the <code>prompt:</code> output shape without editing the locked built-in system prompt. Custom modes remain the fully custom escape hatch.</p>
+        <div class="form-row">
+          <label for="pb-target">Target</label>
+          <select id="pb-target">
+            <option value="claude_code">Claude Code</option>
+            <option value="generic_chat">Generic chat</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="pb-action">Action</label>
+          <select id="pb-action">
+            <option value="implement">Implement</option>
+            <option value="review">Review</option>
+            <option value="plan">Plan</option>
+            <option value="debug">Debug</option>
+            <option value="explain">Explain</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="pb-detail">Detail</label>
+          <select id="pb-detail">
+            <option value="balanced">Balanced</option>
+            <option value="concise">Concise</option>
+            <option value="detailed">Detailed</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="pb-structure">Structure</label>
+          <select id="pb-structure">
+            <option value="agent_default">Agent default</option>
+            <option value="xml">XML</option>
+            <option value="markdown">Markdown</option>
+            <option value="checklist">Checklist</option>
+          </select>
+        </div>
+        <p class="muted small" id="pb-structure-note" hidden>Overriding the agent default can reduce local model reliability.</p>
+        <label class="check-row"><input type="checkbox" id="pb-acceptance"> Include acceptance criteria</label>
+        <label class="check-row"><input type="checkbox" id="pb-verification"> Include verification</label>
+        <label class="check-row"><input type="checkbox" id="pb-output"> Include output expectations</label>
+        <label class="check-row"><input type="checkbox" id="pb-preserve"> Preserve user-stated constraints</label>
+        <label class="check-row"><input type="checkbox" id="pb-allow-suffix"> Enable user suffix</label>
+        <textarea id="pb-suffix" rows="3" maxlength="500" spellcheck="false" placeholder="Optional style preference, max 500 characters."></textarea>
+        <div class="card-actions">
+          <button class="btn" id="pb-preview-btn">Preview</button>
+          <span class="muted" id="pb-status"></span>
+        </div>
+        <pre class="note-body" id="pb-preview" hidden></pre>
+      </div>
+      <div class="card">
         <h2>Custom modes</h2>
         <p class="muted small">Your own <code>prefix:</code> commands for the grammar hotkey — the mode id is the prefix (e.g. id <code>translate</code> → select text, prefix with <code>translate:</code>). Built-in modes aren't editable here.</p>
         <div class="form-row"><label for="cm-select">Mode</label><select id="cm-select"></select></div>

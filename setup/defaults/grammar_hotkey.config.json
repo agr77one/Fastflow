@@ -27,6 +27,18 @@
     "chunk_size_chars": 1200,
     "min_chunk_chars": 700
   },
+  "prompt_builder": {
+    "target_agent": "claude_code",
+    "detail_level": "balanced",
+    "action_mode": "implement",
+    "structure": "agent_default",
+    "include_acceptance_criteria": false,
+    "include_verification": false,
+    "include_output_format": true,
+    "preserve_user_constraints": true,
+    "allow_user_suffix": true,
+    "user_suffix": ""
+  },
   "dictionary": {
     "protected_words": []
   },

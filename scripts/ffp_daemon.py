@@ -318,6 +318,14 @@ def _act_provider_status(_args: dict) -> dict:
     return grammar_fix.build_config_snapshot()["provider_status"]
 
 
+def _act_prompt_builder_preview(args: dict) -> dict:
+    settings = args.get("settings")
+    return grammar_fix.prompt_builder_preview(
+        str(args.get("sample") or args.get("value") or ""),
+        settings if isinstance(settings, dict) else None,
+    )
+
+
 def _act_models_list(_args: dict) -> dict:
     return grammar_fix.list_llm_models()
 
@@ -755,6 +763,7 @@ ACTIONS: dict[str, Callable[[dict], Any]] = {
     "recent_history": _act_recent_history,
     "config_snapshot": _act_config_snapshot,
     "provider_status": _act_provider_status,
+    "prompt_builder_preview": _act_prompt_builder_preview,
     "models_list": _act_models_list,
     "models_installed": _act_models_installed,
     "models_not_installed": _act_models_not_installed,

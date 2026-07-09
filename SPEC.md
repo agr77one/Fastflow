@@ -16,15 +16,16 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - LLM: FastFlowLM NPU @ `:52625` | Ollama @ `:11434`, OpenAI-compat `POST /v1/chat/completions`
 - dashboard: daemon-served `scripts/ui/web/{index.html,app.js,styles.css}`, CSP `default-src 'self'`
 - paths: `scripts/paths.py` → USER_ROOT/{config,data,logs}; `_version.py` = version src of truth
-- version: `2.1.1` (this branch, maintenance); `2.1.0` released (tag on `7835d4b`); repo `agr77one/Fastflow`
+- version: `2.2.0` (prompt_builder release branch); `2.1.0` released (tag on `7835d4b`); repo `agr77one/Fastflow`
 - run tree = `flowkey-pub2` (worktree, branch `live`=origin/main). old `FastFlowPrompt_Local_Setup`=1.5.0 stale.
 
 ## §I interfaces
 
-- cfg blocks: `enabled`, `llm`, `providers.{fastflowlm,ollama}`, `server`, `routing`, `notes`, `chat`, `modes`, `dictionary`, `notifications`, `meetings`, `hotkeys`
+- cfg blocks: `enabled`, `llm`, `providers.{fastflowlm,ollama}`, `server`, `routing`, `prompt_builder`, `notes`, `chat`, `modes`, `dictionary`, `notifications`, `meetings`, `hotkeys`
 - api: `POST /action/<name>` ! header `X-FFP-API: 1` → 200 `{ok,result,error,elapsed_ms}`
 - api: `GET /` → dashboard; `GET /healthz` → `{ok,version,api,actions}`
 - action: `config_snapshot` → full cfg; `apply_config_patch {patch}` → merge (whitelist `filter_config_patch`)
+- action: `prompt_builder_preview {settings?,sample?}` → deterministic local preview (`⊥` LLM call)
 - action: `notify_gate {title,message}` → `{show,reason,category}` (logs); `notifications_log {limit}` → rows
 - action: `quill_status` → `{reachable,enabled,server,server_version}`
 - action: `quill_search_meetings {query,limit}` → `{meetings:[{id,title,date,duration,participants,url}]}`
@@ -41,7 +42,7 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - data: `data/{meeting_digests,meeting_action_status,meeting_skips,notifications,chat_threads}.jsonl`
 - autostart: HKCU Run `FastFlowPrompt` → bundled `AutoHotkey64.exe` + `grammarFix.ahk`; `FlowkeyGitSync` → `sync.ps1`
 - sched: Windows task `FlowkeyGitSync` daily 12:00 → `sync.ps1` (ff-only pull, guarded)
-- ACTIONS count = 73
+- ACTIONS count = 75
 
 ## §V invariants
 
@@ -68,6 +69,7 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - V21: local data (config/data/logs/vendor/certs) ∈ `.gitignore` ∴ pull moves code only, never user data
 - V22: `sync.ps1` ∃ uncommitted tracked changes → skip pull (⊥ clobber un-pushed WIP)
 - V23: meeting `NoContentError` & age ≥ 2d → skip-marker (`meeting_skips.jsonl`) ∴ ⊥ re-queue ever; age < 2d → retry (Quill transcript may still sync); non-content errors ⊥ skip-mark. batch errors → `daemon.log` only (⊥ UI panel, per user)
+- V24: prompt_builder default cfg ⇒ `CLAUDE_PROMPT_SYSTEM_PROMPT` identity; non-default prompt validation target-aware (XML only when effective structure=xml); built-in `modes.prompt.system_prompt` still locked
 
 ## §T tasks
 
@@ -93,6 +95,7 @@ T17|.|[DOCS] installer layout: build script says flattened, installer.md still s
 T18|.|[DOCS] provider roadmap marks selector/status UX incomplete → update to reflect it exists|—
 T19|x|[DOCS] first-run wizard text "chat popup" → "Open chat" + hotkey now `^!c` (2.1.1)|B5
 T20|x|[DOCS] daemon log location — audited 2.1.1: no stale ref in README/docs; nothing to change|—
+T21|x|prompt_builder cfg + claude_code identity + generic_chat adapter + dashboard controls/preview|V17,V24
 ```
 
 ## §B bugs
