@@ -4,7 +4,7 @@ Flowkey is a Windows desktop assistant that adds local-LLM hotkeys for grammar f
 
 Everything runs locally through [FastFlowLM](https://fastflowlm.com) (AMD Ryzen AI NPU) or, on machines without the NPU, through [Ollama](https://ollama.com) (CPU/GPU) as a secondary provider. No cloud service, analytics, or telemetry is used by the app.
 
-Current version: `2.2.0`
+Current version: `2.2.1`
 
 ## What's new in 2.2
 

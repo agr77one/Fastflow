@@ -125,12 +125,11 @@ the `-PfxPath` parameter — no other changes needed.
 
 ```
 C:\Program Files\FastFlowPrompt\           (read-only, admin-installed)
-├── Flowkey\                        PyInstaller bundle
-│   ├── ffp-daemon.exe
-│   ├── ffp-grammar-fix.exe
-│   ├── ffp-first-run.exe
-│   ├── _internal\
-│   └── setup\defaults\
+├── ffp-daemon.exe                  PyInstaller bundle, flattened into {app}
+├── ffp-grammar-fix.exe
+├── ffp-first-run.exe
+├── _internal\                      shared Python runtime + bundled datas
+├── setup\defaults\                 seed config (also lands loose here for paths.py)
 ├── ahk\
 │   └── AutoHotkey64.exe
 └── scripts\

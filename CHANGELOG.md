@@ -2,9 +2,20 @@
 
 ## Unreleased
 
+## 2.2.1
+
+**Maintenance.** Ships the History visibility controls and clears the remaining SPEC audit backlog.
+
 ### Added
 
 - **History visibility controls.** The History tab now defaults to a privacy-safe Telemetry view, adds an Exposed view for request/result text that was actually stored, and surfaces the redacted/visible capture setting in context. Rows captured while redacted remain text-free.
+
+### Internal / docs
+
+- Removed dead release-install shims (`setup/install_release.{cmd,ps1,sh}`, `setup/bootstrap_release.sh`) — superseded by `scripts/install.py`.
+- Installer README layout diagram corrected to the flattened `{app}` bundle (matches `installer.iss`).
+- Provider roadmap updated — the provider selector + per-provider status UX shipped in 2.0; only side-by-side dual-provider and multi-device sync remain future work.
+- New README↔dashboard tab-count parity test guards against tab-list doc drift.
 
 ## 2.2.0
 
