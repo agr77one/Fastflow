@@ -10,10 +10,15 @@ Implemented on the local-LLM side:
 - dashboard fallback to the effective local provider instead of stale FLM defaults
 - dashboard control path to start Ollama when it is the active provider
 
+Shipped since this roadmap was written (2.0):
+
+- explicit provider selector in Dashboard → Config with per-provider status
+  (installed / API reachable / active) and provider-scoped controls
+  (start server, disabled-with-reason for unsupported actions)
+
 Still intentionally incomplete:
 
-- explicit provider switcher UX
-- dual-provider selection and comparison on one machine
+- dual-provider selection and comparison on one machine (side-by-side)
 - multi-device sync and shared memory
 - encrypted/shared storage design
 
@@ -27,19 +32,18 @@ Make provider choice explicit and easy to recover from:
 - `FastFlowLM only`
 - `Both installed`
 
-### Next UI additions
+### UI additions — DONE (2.0)
 
-1. Add a provider selector to the dashboard config surface.
-2. Show per-provider status rows:
-   - installed
-   - API reachable
-   - active/inactive
-   - supported actions
-3. Add per-provider actions:
-   - start
-   - stop where supported
-   - open install/update docs
-4. Make unsupported controls visibly disabled with a short reason.
+1. ✅ Provider selector on the dashboard Config surface.
+2. ✅ Per-provider status rows: installed / API reachable / active-inactive /
+   supported actions.
+3. ✅ Per-provider actions: start (incl. `ollama serve`); FLM-only controls
+   hide/disable when Ollama is active.
+4. ✅ Unsupported controls are visibly disabled.
+
+Remaining UI follow-up:
+
+- stop-server where supported; inline "open install/update docs" links.
 
 ### Runtime rules
 

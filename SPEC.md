@@ -16,7 +16,7 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - LLM: FastFlowLM NPU @ `:52625` | Ollama @ `:11434`, OpenAI-compat `POST /v1/chat/completions`
 - dashboard: daemon-served `scripts/ui/web/{index.html,app.js,styles.css}`, CSP `default-src 'self'`
 - paths: `scripts/paths.py` → USER_ROOT/{config,data,logs}; `_version.py` = version src of truth
-- version: `2.2.0` (prompt_builder release branch); `2.1.0` released (tag on `7835d4b`); repo `agr77one/Fastflow`
+- version: `2.2.1` (maintenance: history-visibility release + audit cleanup); `2.2.0` released (`v2.2.0` on `25b8794`); repo `agr77one/Fastflow`
 - run tree = `flowkey-pub2` (worktree, branch `live`=origin/main). old `FastFlowPrompt_Local_Setup`=1.5.0 stale.
 
 ## §I interfaces
@@ -86,16 +86,16 @@ T5|x|overview meeting hours + action-item board + weekly review|V15,V16
 T6|x|git autosync: `sync.ps1` + daily task + autostart→flowkey-pub2|V21,V22
 T7|x|2.1.0 released (tag on `7835d4b`); 2.1.1 maintenance batch on `fix/2.1.1-meeting-skip-and-audit`|V18,V19
 T8|.|installer clean-VM smoke test|—
-T9|.|[AUDIT] dead-code: unused daemon helper + 2 AHK wrappers + stale chat-popup config key + obsolete settings ref in test fixture + deprecated install shims|—
+T9|x|[AUDIT] dead-code: removed deprecated install shims (`setup/install_release.*`,`bootstrap_release.sh`, superseded by `install.py`); chat-popup key + other residuals already clean in 2.0/2.1 (2.2.1)|—
 T10|x|[AUDIT-P1] autostart: unify 3 divergent Run keys (daemon/src-installer/pkg-installer) → single HKCU entry|V20,B6
 T11|x|[AUDIT] old open_chat default `^+t` in first-run + `grammar_fix` snapshot + web config fallback → all `^!c` (2.1.1)|B5
 T12|x|[AUDIT] seed thinner than DEFAULT_CONFIG (deep-merge fills at runtime ∴ harmless) → drift guard freezes known delta in `test_config_seeds` (2.1.1)|—
 T13|x|[AUDIT] `bootstrap.cmd` hardcoded stale `1.6.0` in build banner → version-neutral `<version>` (2.1.1)|V18
-T14|.|[AUDIT] quality-gate gaps: installer policy drift, autostart reg-name drift, bootstrap output name, README/dashboard tab count|V20
+T14|x|[AUDIT] quality-gate gaps: tab-count drift now guarded by `test_dashboard_tabs_parity`; autostart reg-name (`test_installer_autostart`) + bootstrap name (T13) already covered (2.2.1)|V20
 T15|x|[DOCS] dashboard docs: 7 tabs → 8 (added Benchmark) in README (2.1.1)|—
 T16|x|[DOCS] autostart docs conflict: main says no machine-wide entry; installer docs+impl still describe it → align on HKCU-only|B6
-T17|.|[DOCS] installer layout: build script says flattened, installer.md still shows nested layout|—
-T18|.|[DOCS] provider roadmap marks selector/status UX incomplete → update to reflect it exists|—
+T17|x|[DOCS] installer README layout diagram → flattened `{app}` bundle, matches `installer.iss` (2.2.1)|—
+T18|x|[DOCS] provider roadmap: selector + per-provider status UX marked shipped (2.0); only side-by-side + sync remain (2.2.1)|—
 T19|x|[DOCS] first-run wizard text "chat popup" → "Open chat" + hotkey now `^!c` (2.1.1)|B5
 T20|x|[DOCS] daemon log location — audited 2.1.1: no stale ref in README/docs; nothing to change|—
 T21|x|prompt_builder cfg + claude_code identity + generic_chat adapter + dashboard controls/preview|V17,V24

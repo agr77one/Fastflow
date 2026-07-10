@@ -1,8 +1,8 @@
 # FastFlow Prompt Logic Refinement Plan (rev 2)
 
 Date: 2026-07-09
-Target release: **2.2.0** (minor feature — touches the locked built-in prompt path)
-Status: LOCAL 2.2.0 RELEASE WORK COMPLETE — remote PR/tag/installer release still pending
+Target release: **2.2.0** shipped; **2.2.x** adapter follow-up planned
+Status: 2.2.0 released (`v2.2.0`); this document now tracks the next prompt-adapter refinement pass
 
 ## Implementation status (2026-07-09)
 
@@ -39,11 +39,13 @@ Verified:
 - `python tools\prompt_builder_eval.py --live --base-url http://127.0.0.1:52625 --model qwen3.5:4b --bearer flm --json --out data\benchmarks\prompt_builder_eval_flm_20260709.json`
   → `claude_code` 2/2, `generic_chat` 10/10
 
-Still pending before publishing 2.2.0:
+Follow-up after 2.2.0:
 
-- Commit/push branch, open PR, wait for CI, ruleset-toggle squash merge, tag
-  `v2.2.0`, build installer, and patch release notes.
 - Codex/Cursor adapters remain 2.2.x follow-up, as planned below.
+- Add clearer dashboard help text explaining when to use Claude Code, Codex,
+  Cursor, or generic chat output.
+- Decide whether extra dashboard knobs are worth the UI complexity after the
+  Codex/Cursor eval results are available.
 
 ## Revision note (what changed from rev 1, after code review)
 
@@ -193,6 +195,177 @@ Anthropic prompting best practices
 (platform.claude.com/docs/en/build-with-claude/prompt-engineering);
 Claude Code prompt library (code.claude.com/docs/en/prompt-library);
 Cursor rules (cursor.com/docs/rules).
+
+## 2.2.x refinement decision
+
+Use one internal semantic prompt model, but keep different output adapters. A
+single universal prompt shape is useful as a fallback, but it should not be the
+primary output for every agent because the agents receive context differently:
+
+- Claude Code: good fit for explicit XML-like sections. Keep the existing
+  `<task>/<context>/<constraints>/<output_format>` default for non-regression.
+- Codex: good fit for compact Markdown or label sections. Prefer objective,
+  constraints, likely files/patterns, verification commands, and final-response
+  expectations. Do not duplicate repo-wide rules that belong in `AGENTS.md`.
+- Cursor: good fit for shorter editor-context prompts. Prefer direct action,
+  focus files/areas, project-rule references, and concise done criteria.
+- Generic chat: include more background because it may not have repo memory,
+  project rules, or editor context.
+
+Universal semantic core:
+
+```text
+Task / Outcome
+Context / Source request
+Target files or areas
+Constraints / Safety rules
+Acceptance criteria
+Verification
+Final response expectations
+```
+
+Adapter renderers decide how much of that core to emit and what syntax to use.
+The dashboard can expose this as user settings, but it must keep raw built-in
+system-prompt editing locked.
+
+## 2.2.x implementation plan
+
+### Phase A — Adapter contracts first
+
+Define the contract before exposing a target in the dashboard:
+
+- `claude_code`: existing XML contract remains the default identity path.
+- `generic_chat`: existing Markdown contract remains shipped.
+- `codex`: Markdown/label contract requiring `Task:`, `Context:`,
+  `Constraints:`, optional `Done when:`, optional `Verification:`, and optional
+  `Final response:`. No XML required by default.
+- `cursor`: concise contract requiring an imperative first line, `Focus
+  files/areas:` or an explicit project-rule reference, optional `Done when:`,
+  and a length cap for concise/balanced modes.
+
+Each contract must reject near-verbatim echoes, code fences around the whole
+prompt, `<think>` residue, and invented hard limits not present in user input.
+
+### Phase B — Backend changes
+
+- Expand `TARGET_AGENTS` to include `codex` and `cursor` only after their eval
+  cases exist.
+- Split `effective_structure()` from adapter behavior. Shape (`xml`,
+  `markdown`, `checklist`) is not enough; Codex/Cursor need different section
+  labels and required fields even when both use Markdown.
+- Add adapter-specific target instructions, fallback renderers, validators, and
+  label repair paths.
+- Keep `claude_code` default byte-identical to `CLAUDE_PROMPT_SYSTEM_PROMPT`.
+- Keep `target_agent` orthogonal to LLM provider. FastFlowLM/Ollama generate the
+  prompt; Claude/Codex/Cursor describe where the generated prompt will be used.
+
+### Phase C — Dashboard settings
+
+Keep the current safe controls:
+
+- target agent
+- action mode: plan / implement / review / debug / explain
+- detail level: concise / balanced / detailed
+- structure: agent default / Markdown / XML / checklist
+- acceptance criteria, verification, output expectations
+- preserve user constraints
+- capped user suffix
+- deterministic preview
+
+Add only high-value controls:
+
+- per-target help text: explain why Claude/Codex/Cursor outputs differ
+- optional "verification strictness": off / suggest / require
+- optional "context density": minimal / normal / include files-and-risks
+- optional saved presets, e.g. "My Codex review prompt" or "Cursor quick fix"
+
+Do not add raw system-prompt editing for built-in `prompt:` mode. Use custom
+modes as the full-custom escape hatch.
+
+### Phase D — Eval gates
+
+Extend `tools/prompt_builder_eval.py` before enabling UI options:
+
+- Add at least 10 Codex cases across plan/implement/review/debug/explain.
+- Add at least 10 Cursor cases with short editor-context inputs.
+- Run deterministic model-free eval: every fallback must pass its own contract.
+- Run live local eval on the current preferred short-task model.
+- Ship each new adapter only if it reaches at least 8/10 live valid outputs
+  with repair enabled and no default Claude regression.
+
+### Phase E — Docs and rollout
+
+- README: list supported targets and explain provider vs target-agent
+  separation.
+- SPEC: add invariants for Codex/Cursor target-aware validation and locked raw
+  system prompt.
+- CHANGELOG: add an Unreleased item for the adapters and dashboard help text.
+- Keep Codex/Cursor hidden until their eval JSON is committed or attached to the
+  release evidence.
+
+## Recommended user-facing copy
+
+Dashboard help text:
+
+```text
+Target agent controls where the generated prompt will be pasted. It does not
+change the local model used to generate it. Claude Code uses XML-style sections,
+Codex prefers compact task/context/verification instructions and repo rules from
+AGENTS.md, Cursor prefers shorter prompts that reference editor context and
+project rules, and Generic chat includes more standalone context.
+```
+
+Universal fallback note:
+
+```text
+Most coding agents understand Task / Context / Constraints / Done when /
+Verification / Final response. Agent default is usually better because each tool
+already gets different persistent context.
+```
+
+## 2.2.x plan — review refinements (2026-07-09)
+
+The Phase A–E plan above is sound and follows the staged-rollout discipline that
+made `generic_chat` succeed. Four specifics to pin before building, so the plan
+is build-ready:
+
+**1. Version & sequencing.** Ship one adapter per release, each behind its own
+eval-gated PR — do NOT bundle codex + cursor. Suggested: **`codex` in 2.2.2**
+(closest to the proven generic_chat Markdown path), **`cursor` in 2.2.3**.
+Each stays hidden from the dashboard `target_agent` selector until its live-eval
+JSON is committed (Phase D). `universal` stays internal.
+
+**2. Machine-checkable contracts (pin the exact predicates, like generic_chat).**
+A prose contract isn't testable. Define per adapter, in `ffp_prompt_builder`:
+
+- `codex` valid = contains `Task:` AND `Context:` AND `Constraints:`; `Done when:`
+  required iff `include_acceptance_criteria`; `Verification:` required iff
+  `include_verification`; `Final response:` required iff `include_output_format`;
+  no XML tags; not a Markdown-fenced whole; not a near-verbatim echo; no
+  `<think>` residue.
+- `cursor` valid = first non-empty line is imperative (starts with a verb, not a
+  heading); contains `Focus files/areas:` OR an explicit "project rules"/rule
+  reference; `Done when:` required iff acceptance; visible length ≤ **1200 chars**
+  for `concise`/`balanced` (no cap for `detailed`); not an echo.
+
+**3. Gate-fail path is per-adapter, never silent.** On contract failure:
+model output → `repair_output(target)` → re-validate → if still invalid,
+`render_fallback(target)` (the adapter's own deterministic shape), which by
+construction passes its contract (assert this in `test_fallback_shape_passes_its_own_contract`,
+extended to codex/cursor). The claude_code identity prompt remains the ultimate
+safe default only for the claude_code target — do not cross-fall-back codex →
+claude_code (that would paste XML into a Codex prompt).
+
+**4. Reuse the existing dispatch, don't fork it.** `effective_structure()`,
+`validate()`, `render_fallback()`, `repair_output()`, and `has_target_structure()`
+already dispatch on `target_agent`; add codex/cursor branches inside them rather
+than new parallel code paths. Phase B's "split shape from adapter behavior" =
+give each `target_agent` its own required-section set even when two share
+`markdown` shape.
+
+**Effort:** each adapter is ~1 focused PR (contract + renderer + validator +
+repair + ~10 eval cases + dashboard unhide + docs). Gate to ship: ≥ 8/10 live on
+the preferred model with repair, and zero claude_code default regression.
 
 ## Settings
 
