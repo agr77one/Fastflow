@@ -8,6 +8,7 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - G2: run on AMD NPU (FastFlowLM) | any CPU/GPU (Ollama). provider ? → auto-fallback to other.
 - G3: web dashboard = single home for chat, notes, meetings, config, benchmark, notifications.
 - G4: heavy LLM cost (prefill) → pre-compute after-hours, read cached.
+- G5: `prompt:` warm p50 ≤ 15s & p90 ≤ 20s; v2 p50 ≤ 60% v1; quality median ≥ v1; invented requirements = 0.
 
 ## §C context / stack
 
@@ -27,6 +28,10 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - action: `config_snapshot` → full cfg; `apply_config_patch {patch}` → merge (whitelist `filter_config_patch`)
 - action: `recent_history {limit?}` → newest history rows; `input_text`/`output_text` iff stored @ write-time
 - action: `prompt_builder_preview {settings?,sample?}` → deterministic local preview (`⊥` LLM call)
+- config: `prompt_builder.prompt_version` ∈ {`v1`,`v2`}; default `v2`; v1 = instant rollback
+- config: `server.warm_on_start` bool + `server.keep_warm_minutes` 0..1440; warmup best-effort
+- cmd: `python tools/prompt_speed_quality_eval.py [--live] [--runs N] [--judge-file PATH] [--out PATH]` → old-vs-v2 JSON
+- data: `data/benchmarks/prompt_v2_ab_<date>.json` → speed+quality gate evidence
 - action: `notify_gate {title,message}` → `{show,reason,category}` (logs); `notifications_log {limit}` → rows
 - action: `quill_status` → `{reachable,enabled,server,server_version}`
 - action: `quill_search_meetings {query,limit}` → `{meetings:[{id,title,date,duration,participants,url}]}`
@@ -66,13 +71,18 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - V17: builtin mode prompts locked from patching (only `tone.preset` patchable)
 - V18: version ∀ ∈ {`_version.py`,`pyproject.toml`,`installer/installer.iss`,`README.md`} equal; CI smoke fails on drift
 - V19: `main` branch-protected (ruleset 17344133) → land via PR + ruleset toggle; ⊥ direct push
-- V20: change gates ! pass: `ruff check scripts tests`, `pytest`, `node --check scripts/ui/web/app.js`, AHK parse-check (PowerShell `/ErrorStdOut`)
+- V20: change gates ! pass: `ruff check scripts tests`, `python -m pytest`, `node --check scripts/ui/web/app.js`, AHK parse-check (PowerShell `/ErrorStdOut`)
 - V21: local data (config/data/logs/vendor/certs) ∈ `.gitignore` ∴ pull moves code only, never user data
 - V22: `sync.ps1` ∃ uncommitted tracked changes → skip pull (⊥ clobber un-pushed WIP)
 - V23: meeting `NoContentError` & age ≥ 2d → skip-marker (`meeting_skips.jsonl`) ∴ ⊥ re-queue ever; age < 2d → retry (Quill transcript may still sync); non-content errors ⊥ skip-mark. batch errors → `daemon.log` only (⊥ UI panel, per user)
-- V24: prompt_builder default cfg ⇒ `CLAUDE_PROMPT_SYSTEM_PROMPT` identity; non-default prompt validation target-aware (XML only when effective structure=xml); built-in `modes.prompt.system_prompt` still locked
+- V24: prompt_builder default cfg ⇒ `CLAUDE_PROMPT_SYSTEM_PROMPT_V2`; `prompt_version=v1` ⇒ `CLAUDE_PROMPT_SYSTEM_PROMPT_V1`; non-default validation target-aware; built-in `modes.prompt.system_prompt` still locked
 - V25: History view toggle = display-only; ⊥ mutate `history_store_text`; ⊥ reveal text absent from jsonl row
 - V26: History tab load default view = Telemetry (text hidden) even when storage visible
+- V27: default v2 output → exactly ordered `<task>`,`<context>`,`<constraints>`,`<output_format>`; task = 1 imperative sentence; constraints = 3–5 concrete items; output_format = 1 line; ⊥ preamble/fence/`<think>`; ≤ 220 tokens
+- V28: prompt runtime caps short/medium/long = 240/320/420 tokens; retries ! same strategy cap
+- V29: A/B gate → ≥12 fixed inputs; 1 warmup + ≥5 timed/style/input; p50/p90/min/max, TTFT, completion tokens, decode tok/s, seconds/output-token; v2 speed gate + median quality ≥v1 + invented=0 + R1 rate ≥v1
+- V30: v1 prompt constant retained + config-selectable without built-in prompt patching
+- V31: daemon startup + configured idle interval → best-effort FastFlowLM warmup; failure logs only, ⊥ daemon startup failure
 
 ## §T tasks
 
@@ -100,6 +110,10 @@ T19|x|[DOCS] first-run wizard text "chat popup" → "Open chat" + hotkey now `^!
 T20|x|[DOCS] daemon log location — audited 2.1.1: no stale ref in README/docs; nothing to change|—
 T21|x|prompt_builder cfg + claude_code identity + generic_chat adapter + dashboard controls/preview|V17,V24
 T22|x|History Telemetry/Exposed views + inline redacted/visible storage control/help|V5,V6,V25,V26
+T23|x|prompt-v2 fixed A/B speed+quality harness + tests|V29
+T24|.|prompt-v2 default + v1 rollback selector + 240/320/420 caps|V24,V27,V28,V30
+T25|.|FastFlowLM startup+idle keep-warm + cold/warm measurement support|V31
+T26|.|2.3.0 release evidence + version/docs rebaseline after A/B gate passes|V18,V29
 ```
 
 ## §B bugs
@@ -113,4 +127,7 @@ B4|2026-06|install launch: AHK called `.py`, shipped only `.exe`|flatten bundle 
 B5|2026-06|`Ctrl+Shift+T` open_chat collided w/ browser reopen-tab|default → `^!c`; tray label = configured hotkey
 B6|2026-07|3 divergent autostart Run keys: daemon HKCU\Run\FastFlowPrompt, `install.ps1` HKCU\Run\Flowkey (different name!), `installer.iss` optional HKLM\Run\Flowkey → toggle blind to other 2, could double-launch|unify on HKCU\Run\FastFlowPrompt everywhere; drop installer.iss HKLM task; uninstall now cleans the HKCU value; guarded by `test_installer_autostart.py`
 B7|2026-07|"Run batch now" → "0 of 5, 5 errors" ∀ run: 5 Quill stub recordings (⊥ minutes ⊥ transcript) re-queued forever ∵ idempotency = digest_exists only|typed `NoContentError` → skip store `meeting_skips.jsonl` (age ≥ 2d guard) + `skipped` count in result; queue checks digest ∧ skip; reasons stay in daemon.log|V23
+B8|2026-07-10|new prompt-v2 eval imports violated Ruff I001/UP035|V20 caught; sort imports + `Callable` from `collections.abc`
+B9|2026-07-10|prompt-v2 eval test import block retained extra blank line|V20 caught; normalize import spacing
+B10|2026-07-10|stale user-level `pytest.exe` exited 1 + ⊥ diagnostics while active interpreter pytest passed|V20 → interpreter-bound `python -m pytest`
 ```
