@@ -13,6 +13,7 @@ import logging
 import os
 import subprocess
 import sys
+import threading
 import time
 import urllib.request
 from pathlib import Path
@@ -123,6 +124,7 @@ PERF_TO_PMODE = ffp_flm_server.PERF_TO_PMODE
 
 # Token usage accumulator across all sub-calls made during one call_flm() run.
 _USAGE_ACC = {"prompt_tokens": 0, "completion_tokens": 0}
+_WARMUP_LOCK = threading.Lock()
 
 
 def _snapshot_usage_acc() -> dict:
@@ -259,6 +261,63 @@ def _find_pids_on_port(port: int) -> list[int]:
 
 def _warmup_request(model: str) -> None:
     ffp_flm_server.warmup_request(model, FLM_TIMEOUT_SECONDS, _call_flm_api)
+
+
+def warm_configured_fastflowlm() -> str:
+    """Start and warm the configured FastFlowLM profile, even during fallback."""
+    with _WARMUP_LOCK:
+        cfg = load_config()
+        llm_cfg = cfg.get("llm") or {}
+        if str(llm_cfg.get("provider") or "fastflowlm").strip().lower() != "fastflowlm":
+            return "skipped_provider"
+        profile = ((cfg.get("providers") or {}).get("fastflowlm") or {})
+        base_url = ffp_config.validate_llm_base_url(
+            str(profile.get("base_url") or "http://127.0.0.1:52625")
+        ).rstrip("/")
+        model = str(profile.get("model") or "qwen3.5:4b").strip()
+        bearer = str(profile.get("auth_bearer") or "flm").strip()
+        timeout_seconds = max(2, int(profile.get("timeout_seconds") or 60))
+        server_cfg = cfg.get("server") or {}
+
+        def call_api(
+            requested_model: str,
+            system_prompt: str,
+            user_content: str,
+            max_tokens: int,
+            timeout: int,
+        ) -> tuple[str, str]:
+            text, model_used, _usage = _call_openai_compatible(
+                base_url,
+                bearer,
+                requested_model,
+                system_prompt,
+                user_content,
+                max_tokens,
+                timeout,
+            )
+            return text, model_used
+
+        reachable = ffp_flm_server.is_flm_server_reachable(base_url)
+        if not reachable and not bool(profile.get("auto_start", True)):
+            return "skipped_auto_start"
+        if not reachable:
+            settings = ffp_flm_server.FlmServerSettings(
+                base_url=base_url,
+                model=model,
+                timeout_seconds=timeout_seconds,
+                performance_mode=str(server_cfg.get("performance_mode") or "balanced"),
+                startup_timeout_seconds=int(server_cfg.get("startup_timeout_seconds") or 25),
+                extra_args=[str(item) for item in (server_cfg.get("serve_extra_args") or [])],
+                log_to_file=bool(server_cfg.get("log_to_file", False)),
+                log_file=str(server_cfg.get("log_file") or "flm_server.log"),
+                pid_path=PID_PATH,
+                logs_dir=_paths.LOGS_DIR,
+                no_window=_NO_WINDOW,
+            )
+            ffp_flm_server.start_flm_server(settings, call_api)
+        ffp_flm_server.warmup_request(model, timeout_seconds, call_api)
+        refresh_runtime_config()
+        return "warmed_up"
 
 
 def start_flm_server(force_restart: bool = False) -> str:
@@ -456,6 +515,35 @@ def _call_flm_api(
     timeout_seconds: int,
 ) -> tuple[str, str]:
     """POST one chat completion; record token usage into _USAGE_ACC. Returns (text, model_used)."""
+    text, model_used, usage = _call_openai_compatible(
+        FLM_BASE_URL,
+        LLM_AUTH_BEARER,
+        model,
+        system_prompt,
+        user_content,
+        max_tokens,
+        timeout_seconds,
+    )
+    try:
+        _USAGE_ACC["prompt_tokens"] += int(usage.get("prompt_tokens") or 0)
+    except Exception:
+        pass
+    try:
+        _USAGE_ACC["completion_tokens"] += int(usage.get("completion_tokens") or 0)
+    except Exception:
+        pass
+    return text, model_used
+
+
+def _call_openai_compatible(
+    base_url: str,
+    bearer: str,
+    model: str,
+    system_prompt: str,
+    user_content: str,
+    max_tokens: int,
+    timeout_seconds: int,
+) -> tuple[str, str, dict]:
     body = json.dumps(
         {
             "model": model,
@@ -469,9 +557,9 @@ def _call_flm_api(
         }
     ).encode("utf-8")
     req = urllib.request.Request(
-        FLM_BASE_URL + "/v1/chat/completions",
+        base_url.rstrip("/") + "/v1/chat/completions",
         data=body,
-        headers={"Content-Type": "application/json", "Authorization": f"Bearer {LLM_AUTH_BEARER}"},
+        headers={"Content-Type": "application/json", "Authorization": f"Bearer {bearer}"},
         method="POST",
     )
     with urllib.request.urlopen(req, timeout=max(2, timeout_seconds)) as resp:
@@ -483,15 +571,7 @@ def _call_flm_api(
         content = str(msg.get("content") or "")
     text = normalize_output(content)
     usage = payload.get("usage") or {}
-    try:
-        _USAGE_ACC["prompt_tokens"] += int(usage.get("prompt_tokens") or 0)
-    except Exception:
-        pass
-    try:
-        _USAGE_ACC["completion_tokens"] += int(usage.get("completion_tokens") or 0)
-    except Exception:
-        pass
-    return text, str(payload.get("model") or model)
+    return text, str(payload.get("model") or model), usage
 
 
 def _dict_protect(text: str) -> tuple[str, dict[str, str]]:
@@ -747,6 +827,13 @@ def prompt_builder_preview(sample_text: str = "", settings_cfg: dict | None = No
     )
 
 
+def _bounded_int(value, default: int, low: int, high: int) -> int:
+    try:
+        return max(low, min(int(value), high))
+    except (TypeError, ValueError):
+        return default
+
+
 def build_config_snapshot() -> dict:
     """Build the live config snapshot consumed by the AHK dashboard.
 
@@ -815,6 +902,8 @@ def build_config_snapshot() -> dict:
         "history_store_text": bool(cfg.get("history_store_text", False)),
         "server": {
             "auto_start": bool(server_cfg.get("auto_start", True)),
+            "warm_on_start": bool(server_cfg.get("warm_on_start", True)),
+            "keep_warm_minutes": _bounded_int(server_cfg.get("keep_warm_minutes"), 15, 0, 1440),
             "performance_mode": str(server_cfg.get("performance_mode") or "balanced"),
         },
         "routing": {

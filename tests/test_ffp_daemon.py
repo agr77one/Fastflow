@@ -5,6 +5,7 @@ import threading
 import time
 import urllib.error
 import urllib.request
+from pathlib import Path
 
 import pytest
 
@@ -120,6 +121,57 @@ def test_actions_count_and_expected_names(daemon_module):
     assert "pull_status" in daemon_module.ACTIONS
     # removed in v1.5.0
     assert "model_stats" not in daemon_module.ACTIONS
+
+
+def test_v31_model_warm_scheduler_runs_startup_and_idle_interval(daemon_module):
+    cfg = {
+        "llm": {"provider": "fastflowlm"},
+        "server": {"warm_on_start": True, "keep_warm_minutes": 10},
+    }
+    waits = []
+    warmups = []
+
+    def wait(seconds):
+        waits.append(seconds)
+        return len(waits) >= 2
+
+    daemon_module._model_warm_scheduler(
+        wait=wait,
+        load_config_fn=lambda: cfg,
+        warm_fn=lambda: warmups.append(True) or "warmed_up",
+    )
+
+    assert waits == [600, 600]
+    assert warmups == [True, True]
+
+
+def test_v31_model_warm_failure_is_logged_and_does_not_escape(daemon_module, caplog):
+    cfg = {
+        "llm": {"provider": "fastflowlm"},
+        "server": {"warm_on_start": True, "keep_warm_minutes": 0},
+    }
+
+    def fail():
+        raise RuntimeError("model load failed")
+
+    daemon_module._model_warm_scheduler(
+        wait=lambda _seconds: True,
+        load_config_fn=lambda: cfg,
+        warm_fn=fail,
+    )
+
+    assert "model warmup reason=startup failed: model load failed" in caplog.text
+
+
+def test_dashboard_keep_warm_controls_are_config_wired():
+    root = Path(__file__).resolve().parents[1]
+    html = (root / "scripts" / "ui" / "web" / "index.html").read_text(encoding="utf-8")
+    js = (root / "scripts" / "ui" / "web" / "app.js").read_text(encoding="utf-8")
+
+    assert 'id="cfg-warm-on-start"' in html
+    assert 'id="cfg-keep-warm"' in html
+    assert '$("cfg-warm-on-start").checked = server.warm_on_start !== false' in js
+    assert 'keep_warm_minutes: Math.max(0, Math.min(Number($("cfg-keep-warm").value)' in js
 
 
 def test_write_actions_include_mutating_routes(daemon_module):
@@ -304,6 +356,8 @@ def test_post_config_snapshot_returns_flat_dashboard_fields(daemon_server):
     }
     notes = payload["result"]["notes"]
     assert isinstance(notes.get("categories"), list)
+    assert payload["result"]["server"]["warm_on_start"] is True
+    assert payload["result"]["server"]["keep_warm_minutes"] == 15
     assert set(payload["result"]["llm"]) >= {"provider", "base_url", "model", "configured_provider"}
     assert set(payload["result"]["provider_configs"]) >= {"fastflowlm", "ollama"}
     provider_status = payload["result"]["provider_status"]

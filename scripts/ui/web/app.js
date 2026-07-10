@@ -172,6 +172,9 @@ function applyProviderCaps() {
   $("flm-runtime-block").hidden = !isFlm;
   document.querySelectorAll('input[name="perf"]').forEach((r) => (r.disabled = !isFlm));
   $("perf-note").hidden = isFlm;
+  $("cfg-warm-on-start").disabled = !isFlm;
+  $("cfg-keep-warm").disabled = !isFlm;
+  $("warm-model-note").hidden = !isFlm;
   $("models-title").textContent = `Installed models — ${PROVIDER_LABELS[sel]}`;
   $("pull-hint").hidden = isFlm;
   $("pull-name").placeholder = isFlm ? "model name, e.g. qwen3.5:4b" : "model name, e.g. llama3.2:3b";
@@ -865,8 +868,11 @@ async function loadConfig() {
     $("cfg-timeout").value = profile.timeout_seconds;
     renderProviderStatus(providerState.status);
     applyProviderCaps();
-    const perf = (cfg.server || {}).performance_mode || "balanced";
+    const server = cfg.server || {};
+    const perf = server.performance_mode || "balanced";
     document.querySelectorAll('input[name="perf"]').forEach((r) => (r.checked = r.value === perf));
+    $("cfg-warm-on-start").checked = server.warm_on_start !== false;
+    $("cfg-keep-warm").value = server.keep_warm_minutes ?? 15;
     $("cfg-store-text").checked = !!cfg.history_store_text;
     const routing = cfg.routing || {};
     $("cfg-routing").checked = routing.enabled !== false;
@@ -1077,7 +1083,11 @@ async function saveConfig() {
       },
     },
     history_store_text: $("cfg-store-text").checked,
-    server: { performance_mode: perf ? perf.value : "balanced" },
+    server: {
+      performance_mode: perf ? perf.value : "balanced",
+      warm_on_start: $("cfg-warm-on-start").checked,
+      keep_warm_minutes: Math.max(0, Math.min(Number($("cfg-keep-warm").value) || 0, 1440)),
+    },
     routing: {
       enabled: $("cfg-routing").checked,
       long_threshold_chars: Number($("cfg-long-thr").value) || 1400,

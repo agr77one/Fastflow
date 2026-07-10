@@ -15,6 +15,8 @@
   "history_store_text": false,
   "server": {
     "auto_start": true,
+    "warm_on_start": true,
+    "keep_warm_minutes": 15,
     "performance_mode": "balanced",
     "startup_timeout_seconds": 25,
     "serve_extra_args": [],

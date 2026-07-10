@@ -151,3 +151,35 @@ def test_protocol_rejects_too_few_timed_runs():
         assert str(exc) == "runs must be >= 5"
     else:
         raise AssertionError("runs below the invariant must be rejected")
+
+
+def test_cold_warm_probe_records_first_call_penalty_and_speedup():
+    restarted = []
+    calls = []
+
+    def fake_model(**kwargs):
+        calls.append(kwargs)
+        cold = len(calls) == 1
+        return {
+            "output": GOOD_OUTPUT,
+            "model": kwargs["model"],
+            "_wall_seconds": 30.0 if cold else 12.0,
+            "usage": {
+                "prefill_duration_ttft": 18.0 if cold else 1.5,
+                "completion_tokens": 100,
+                "decode_duration": 8.0,
+            },
+        }
+
+    result = prompt_eval.run_cold_warm_probe(
+        fake_model,
+        lambda: restarted.append(True) or "started",
+    )
+
+    assert restarted == [True]
+    assert len(calls) == 2
+    assert result["ok"] is True
+    assert result["cold"]["wall_seconds"] == 30.0
+    assert result["warm"]["wall_seconds"] == 12.0
+    assert result["wall_speedup"] == 2.5
+    assert result["ttft_reduction_seconds"] == 16.5

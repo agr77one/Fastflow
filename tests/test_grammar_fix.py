@@ -217,6 +217,67 @@ def test_start_llm_server_launches_ollama_when_selected_provider_is_ollama(fresh
     assert calls[0][0] == ["ollama", "serve"]
 
 
+def test_v31_warm_configured_fastflow_starts_profile_during_fallback(fresh_modules, monkeypatch):
+    grammar_fix = fresh_modules("grammar_fix")
+    cfg = {
+        "llm": {"provider": "fastflowlm"},
+        "providers": {
+            "fastflowlm": {
+                "base_url": "http://127.0.0.1:52625",
+                "model": "qwen3.5:4b",
+                "auth_bearer": "flm",
+                "timeout_seconds": 60,
+                "auto_start": True,
+            }
+        },
+        "server": {
+            "performance_mode": "balanced",
+            "startup_timeout_seconds": 25,
+            "serve_extra_args": [],
+            "log_to_file": False,
+            "log_file": "flm_server.log",
+        },
+    }
+    starts = []
+    warmups = []
+    refreshes = []
+    monkeypatch.setattr(grammar_fix, "load_config", lambda: cfg)
+    monkeypatch.setattr(grammar_fix.ffp_flm_server, "is_flm_server_reachable", lambda _url: False)
+    monkeypatch.setattr(
+        grammar_fix.ffp_flm_server,
+        "start_flm_server",
+        lambda settings, call_api: starts.append((settings, call_api)) or "started",
+    )
+    monkeypatch.setattr(
+        grammar_fix.ffp_flm_server,
+        "warmup_request",
+        lambda model, timeout, call_api: warmups.append((model, timeout, call_api)),
+    )
+    monkeypatch.setattr(grammar_fix, "refresh_runtime_config", lambda: refreshes.append(True))
+
+    result = grammar_fix.warm_configured_fastflowlm()
+
+    assert result == "warmed_up"
+    assert starts[0][0].base_url == "http://127.0.0.1:52625"
+    assert starts[0][0].model == "qwen3.5:4b"
+    assert warmups[0][:2] == ("qwen3.5:4b", 60)
+    assert refreshes == [True]
+
+
+def test_v31_warm_configured_fastflow_honors_provider_and_autostart(fresh_modules, monkeypatch):
+    grammar_fix = fresh_modules("grammar_fix")
+    monkeypatch.setattr(grammar_fix, "load_config", lambda: {"llm": {"provider": "ollama"}})
+    assert grammar_fix.warm_configured_fastflowlm() == "skipped_provider"
+
+    cfg = {
+        "llm": {"provider": "fastflowlm"},
+        "providers": {"fastflowlm": {"auto_start": False}},
+    }
+    monkeypatch.setattr(grammar_fix, "load_config", lambda: cfg)
+    monkeypatch.setattr(grammar_fix.ffp_flm_server, "is_flm_server_reachable", lambda _url: False)
+    assert grammar_fix.warm_configured_fastflowlm() == "skipped_auto_start"
+
+
 def test_save_config_writes_utf8_json_with_newline(fresh_modules):
     grammar_fix = fresh_modules("grammar_fix")
     payload = {"message": "hello 🙂", "server": {"auto_start": True}}

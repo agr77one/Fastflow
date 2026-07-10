@@ -537,6 +537,48 @@ def _judge_template(cases: tuple[dict[str, Any], ...] | list[dict[str, Any]]) ->
     return {"method": "manual", "judgments": judgments}
 
 
+def run_cold_warm_probe(
+    call_model: ModelCall,
+    restart_model: Callable[[], Any],
+    *,
+    model: str = "qwen3.5:4b",
+    case: dict[str, Any] = FIXED_CASES[0],
+) -> dict[str, Any]:
+    """Measure first post-restart completion against the immediately warm completion."""
+    try:
+        restart_result = restart_model()
+    except Exception as exc:
+        return {"ok": False, "error": f"restart failed: {exc}"}
+    call_args = {
+        "style": "v2",
+        "system_prompt": STYLE_SPECS["v2"]["system_prompt"],
+        "user_content": case["input"],
+        "max_tokens": _cap_for_input(STYLE_SPECS["v2"]["caps"], case["input"]),
+        "model": model,
+    }
+    cold = _run_sample(call_model, **call_args)
+    warm = _run_sample(call_model, **call_args)
+    cold_wall = _as_float(cold.get("wall_seconds"))
+    warm_wall = _as_float(warm.get("wall_seconds"))
+    cold_ttft = _as_float(cold.get("ttft_seconds"))
+    warm_ttft = _as_float(warm.get("ttft_seconds"))
+    return {
+        "ok": bool(cold.get("ok") and warm.get("ok")),
+        "case": case["name"],
+        "restart_result": restart_result,
+        "cold": cold,
+        "warm": warm,
+        "wall_speedup": (
+            round(cold_wall / warm_wall, 4) if cold_wall is not None and warm_wall else None
+        ),
+        "ttft_reduction_seconds": (
+            round(cold_ttft - warm_ttft, 4)
+            if cold_ttft is not None and warm_ttft is not None
+            else None
+        ),
+    }
+
+
 def run_evaluation(
     call_model: ModelCall,
     *,
@@ -679,6 +721,20 @@ def _call_openai_compatible(
     }
 
 
+def _daemon_action(daemon_url: str, action_name: str) -> Any:
+    request = urllib.request.Request(
+        daemon_url.rstrip("/") + f"/action/{action_name}",
+        data=b'{"args":{}}',
+        headers={"Content-Type": "application/json", "X-FFP-API": "1"},
+        method="POST",
+    )
+    with urllib.request.urlopen(request, timeout=120) as response:
+        payload = json.loads(response.read().decode("utf-8", errors="replace"))
+    if not payload.get("ok"):
+        raise RuntimeError(str(payload.get("error") or f"daemon action {action_name} failed"))
+    return payload.get("result")
+
+
 def _load_judge(path: str) -> dict[str, Any]:
     if not path:
         return {}
@@ -707,7 +763,13 @@ def _manifest() -> dict[str, Any]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--live", action="store_true", help="run the full live A/B protocol")
+    parser.add_argument(
+        "--cold-warm",
+        action="store_true",
+        help="restart FastFlowLM and record first-call versus immediate warm-call latency",
+    )
     parser.add_argument("--base-url", default="http://127.0.0.1:52625")
+    parser.add_argument("--daemon-url", default="http://127.0.0.1:52650")
     parser.add_argument("--model", default="qwen3.5:4b")
     parser.add_argument("--bearer", default="flm")
     parser.add_argument("--timeout-seconds", type=int, default=90)
@@ -717,6 +779,8 @@ def main() -> int:
     parser.add_argument("--json", action="store_true", help="print the full JSON payload")
     args = parser.parse_args()
 
+    if args.cold_warm and not args.live:
+        parser.error("--cold-warm requires --live")
     if not args.live:
         payload = _manifest()
         if args.out:
@@ -740,6 +804,13 @@ def main() -> int:
             **kwargs,
         )
 
+    cold_warm_probe = None
+    if args.cold_warm:
+        cold_warm_probe = run_cold_warm_probe(
+            call_model,
+            lambda: _daemon_action(args.daemon_url, "restart"),
+            model=args.model,
+        )
     payload = run_evaluation(
         call_model,
         runs=args.runs,
@@ -747,6 +818,8 @@ def main() -> int:
         model=args.model,
         base_url=args.base_url,
     )
+    if cold_warm_probe is not None:
+        payload["cold_warm_probe"] = cold_warm_probe
     out_path = Path(args.out) if args.out else (
         ROOT / "data" / "benchmarks" / f"prompt_v2_ab_{datetime.now():%Y-%m-%d}.json"
     )

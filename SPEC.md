@@ -30,7 +30,7 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - action: `prompt_builder_preview {settings?,sample?}` → deterministic local preview (`⊥` LLM call)
 - config: `prompt_builder.prompt_version` ∈ {`v1`,`v2`}; default `v2`; v1 = instant rollback
 - config: `server.warm_on_start` bool + `server.keep_warm_minutes` 0..1440; warmup best-effort
-- cmd: `python tools/prompt_speed_quality_eval.py [--live] [--runs N] [--judge-file PATH] [--out PATH]` → old-vs-v2 JSON
+- cmd: `python tools/prompt_speed_quality_eval.py [--live] [--cold-warm] [--runs N] [--judge-file PATH] [--out PATH]` → old-vs-v2 JSON
 - data: `data/benchmarks/prompt_v2_ab_<date>.json` → speed+quality gate evidence
 - action: `notify_gate {title,message}` → `{show,reason,category}` (logs); `notifications_log {limit}` → rows
 - action: `quill_status` → `{reachable,enabled,server,server_version}`
@@ -113,7 +113,7 @@ T21|x|prompt_builder cfg + claude_code identity + generic_chat adapter + dashboa
 T22|x|History Telemetry/Exposed views + inline redacted/visible storage control/help|V5,V6,V25,V26
 T23|x|prompt-v2 fixed A/B speed+quality harness + tests|V29
 T24|x|prompt-v2 default + v1 rollback selector + 240/320/420 caps|V24,V27,V28,V30,V32
-T25|.|FastFlowLM startup+idle keep-warm + cold/warm measurement support|V31
+T25|x|FastFlowLM startup+idle keep-warm + cold/warm measurement support|V31
 T26|.|2.3.0 release evidence + version/docs rebaseline after A/B gate passes|V18,V29
 ```
 
@@ -133,4 +133,6 @@ B9|2026-07-10|prompt-v2 eval test import block retained extra blank line|V20 cau
 B10|2026-07-10|stale user-level `pytest.exe` exited 1 + ⊥ diagnostics while active interpreter pytest passed|V20 → interpreter-bound `python -m pytest`
 B11|2026-07-10|`node` absent from desktop PowerShell PATH|V20; run bundled workspace `node.exe --check`
 B12|2026-07-10|structured v1 rollback output retried ∵ first anti-echo gate ignored target structure|V32
+B13|2026-07-10|focused Ruff command accidentally included `scripts/ui/web/app.js`|V20 caught; JS → Node syntax gate only
+B14|2026-07-10|warmup test insertion split existing daemon action assertions into wrong test|V20 caught; restore test block boundary
 ```

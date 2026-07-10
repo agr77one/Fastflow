@@ -278,6 +278,26 @@ def test_filter_config_patch_accepts_provider_profiles():
 
 def test_default_config_has_prompt_builder_defaults():
     assert ffp_config.DEFAULT_CONFIG["prompt_builder"] == ffp_prompt_builder.DEFAULT_PROMPT_BUILDER_CONFIG
+    assert ffp_config.DEFAULT_CONFIG["server"]["warm_on_start"] is True
+    assert ffp_config.DEFAULT_CONFIG["server"]["keep_warm_minutes"] == 15
+
+
+def test_filter_config_patch_clamps_keep_warm_settings():
+    filtered = ffp_config.filter_config_patch({
+        "server": {
+            "warm_on_start": 0,
+            "keep_warm_minutes": 9999,
+            "performance_mode": "invalid",
+            "unknown": True,
+        }
+    })
+
+    assert filtered == {
+        "server": {
+            "warm_on_start": False,
+            "keep_warm_minutes": 1440,
+        }
+    }
 
 
 def test_load_config_normalizes_prompt_builder(tmp_path):
