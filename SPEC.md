@@ -17,7 +17,7 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - LLM: FastFlowLM NPU @ `:52625` | Ollama @ `:11434`, OpenAI-compat `POST /v1/chat/completions`
 - dashboard: daemon-served `scripts/ui/web/{index.html,app.js,styles.css}`, CSP `default-src 'self'`
 - paths: `scripts/paths.py` → USER_ROOT/{config,data,logs}; `_version.py` = version src of truth
-- version: `2.2.1` (maintenance: history-visibility release + audit cleanup); `2.2.0` released (`v2.2.0` on `25b8794`); repo `agr77one/Fastflow`
+- version: `2.3.0` (prompt-v2 speed+quality release); `2.2.0` released (`v2.2.0` on `25b8794`); repo `agr77one/Fastflow`
 - run tree = `flowkey-pub2` (worktree, branch `live`=origin/main). old `FastFlowPrompt_Local_Setup`=1.5.0 stale.
 
 ## §I interfaces
@@ -30,7 +30,7 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - action: `prompt_builder_preview {settings?,sample?}` → deterministic local preview (`⊥` LLM call)
 - config: `prompt_builder.prompt_version` ∈ {`v1`,`v2`}; default `v2`; v1 = instant rollback
 - config: `server.warm_on_start` bool + `server.keep_warm_minutes` 0..1440; warmup best-effort
-- cmd: `python tools/prompt_speed_quality_eval.py [--live] [--cold-warm] [--runs N] [--judge-file PATH] [--out PATH]` → old-vs-v2 JSON
+- cmd: `python tools/prompt_speed_quality_eval.py [--live] [--cold-warm] [--reuse-v1 PATH] [--rescore PATH] [--export-v1 PATH] [--runs N] [--judge-file PATH] [--out PATH]` → old-vs-v2 JSON
 - data: `data/benchmarks/prompt_v2_ab_<date>.json` → speed+quality gate evidence
 - action: `notify_gate {title,message}` → `{show,reason,category}` (logs); `notifications_log {limit}` → rows
 - action: `quill_status` → `{reachable,enabled,server,server_version}`
@@ -72,7 +72,7 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - V18: version ∀ ∈ {`_version.py`,`pyproject.toml`,`installer/installer.iss`,`README.md`} equal; CI smoke fails on drift
 - V19: `main` branch-protected (ruleset 17344133) → land via PR + ruleset toggle; ⊥ direct push
 - V20: change gates ! pass: `ruff check scripts tests`, `python -m pytest`, `node --check scripts/ui/web/app.js`, AHK parse-check (PowerShell `/ErrorStdOut`)
-- V21: local data (config/data/logs/vendor/certs) ∈ `.gitignore` ∴ pull moves code only, never user data
+- V21: local runtime data (config/data/logs/vendor/certs) ∈ `.gitignore`; exception = sanitized fixed-input `data/benchmarks/prompt_v*.json` release evidence
 - V22: `sync.ps1` ∃ uncommitted tracked changes → skip pull (⊥ clobber un-pushed WIP)
 - V23: meeting `NoContentError` & age ≥ 2d → skip-marker (`meeting_skips.jsonl`) ∴ ⊥ re-queue ever; age < 2d → retry (Quill transcript may still sync); non-content errors ⊥ skip-mark. batch errors → `daemon.log` only (⊥ UI panel, per user)
 - V24: prompt_builder default cfg ⇒ `CLAUDE_PROMPT_SYSTEM_PROMPT_V2`; `prompt_version=v1` ⇒ `CLAUDE_PROMPT_SYSTEM_PROMPT_V1`; non-default validation target-aware; built-in `modes.prompt.system_prompt` still locked
@@ -84,6 +84,10 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - V30: v1 prompt constant retained + config-selectable without built-in prompt patching
 - V31: daemon startup + configured idle interval → best-effort FastFlowLM warmup; failure logs only, ⊥ daemon startup failure
 - V32: prompt output with valid target structure → ⊥ anti-echo retry solely from line/word overlap
+- V33: default v2 surfaced output → source-clause grounding + fixed scope guards only; raw model inventions ⊥ surface
+- V34: FastFlowLM force restart → old port observed closed before new spawn; ⊥ return `already_running` from dying instance
+- V35: default v2 → exactly 1 short LLM draft call; ⊥ anti-echo/rescue calls; V33 finalizer supplies surfaced 4-section contract
+- V36: pre-2.3 prompt_builder identity cfg (⊥ `prompt_version`, legacy default fields) → migrate v2+concise; any custom field → preserve
 
 ## §T tasks
 
@@ -114,7 +118,7 @@ T22|x|History Telemetry/Exposed views + inline redacted/visible storage control/
 T23|x|prompt-v2 fixed A/B speed+quality harness + tests|V29
 T24|x|prompt-v2 default + v1 rollback selector + 240/320/420 caps|V24,V27,V28,V30,V32
 T25|x|FastFlowLM startup+idle keep-warm + cold/warm measurement support|V31
-T26|.|2.3.0 release evidence + version/docs rebaseline after A/B gate passes|V18,V29
+T26|x|2.3.0 release evidence + version/docs rebaseline after A/B gate passes|V18,V29,V33,V34,V35,V36
 ```
 
 ## §B bugs
@@ -135,4 +139,18 @@ B11|2026-07-10|`node` absent from desktop PowerShell PATH|V20; run bundled works
 B12|2026-07-10|structured v1 rollback output retried ∵ first anti-echo gate ignored target structure|V32
 B13|2026-07-10|focused Ruff command accidentally included `scripts/ui/web/app.js`|V20 caught; JS → Node syntax gate only
 B14|2026-07-10|warmup test insertion split existing daemon action assertions into wrong test|V20 caught; restore test block boundary
+B15|2026-07-10|FastFlowLM usage emits `decoding_duration`; eval parsed only `decode_duration`|V29; accept both aliases
+B16|2026-07-10|first live v2 probe omitted closing XML tags + invented libraries/config/files/error behavior|V27,V29; explicit skeleton + anti-invention list
+B17|2026-07-10|second live v2 probe stopped after valid `</task>` ∵ descriptive skeleton treated as optional sequence|V27; literal all-tags template + final-tag completion rule
+B18|2026-07-10|literal-template probe passed structure but trap/vague inputs gained inferred CLI/browser/file details; CSV got 2 constraints|V29; entailment-only content + exact safe fillers
+B19|2026-07-10|entailment wording fixed vague case but CSV/CLI still gained conventional schema/args/I/O details|V29; clause-copy rules + grounded example + final unsupported-detail audit
+B20|2026-07-10|3 live prompt-only revisions still invented conventional details on 4B trap inputs|V33; deterministic source-clause grounding before output surfaces
+B21|2026-07-10|CLI prompt test pinned prose from first v2 draft after contract-preserving tune|V20 caught; assert stable final-tag rule
+B22|2026-07-10|V27 sentence check treated dots/question marks inside identifiers/regex as boundaries|V27; split only terminal punctuation before whitespace/end
+B23|2026-07-10|cold probe force-restart returned `already_running` while killed FLM socket still closing; service then vanished|V34
+B24|2026-07-10|live v2 p50 11.22s but ratio 61.69% ∵ discarded raw 4-section draft still decoded median 121 tokens|V35; 1 short task draft + deterministic V33 finalizer
+B25|2026-07-10|broad V35 patch changed runtime/system branches instead of retry branches|V20 caught; restore + scope conditions by surrounding logic
+B26|2026-07-10|default v2 input ≥ routing threshold still made compression subcalls; 1 huge clause could exceed V27|V27,V35; bypass routing + bound grounded sections
+B27|2026-07-10|upgraded 2.2 cfg retained `detail_level=balanced` ∴ v1 selector missed new concise-default identity|V24,V30; `prompt_version=v1` authoritative legacy XML path
+B28|2026-07-10|2.2 persisted identity cfg lacked `prompt_version` + kept `balanced` ∴ upgrade bypassed v2 path|V36; narrow legacy-identity migration
 ```

@@ -1,0 +1,29 @@
+{
+  "method": "manual_gpt5_source_review",
+  "judgments": {
+    "v1:implement_csv_validator": {"r3": true, "r4": false, "invented_requirement": true, "notes": "Invents Python 3, Markdown fences, comments, standard-library-only, argv, and JSON schema file."},
+    "v2:implement_csv_validator": {"r3": true, "r4": true, "invented_requirement": false, "notes": "Four source-derived requirements; no implementation assumptions."},
+    "v1:debug_async_cache_race": {"r3": true, "r4": false, "invented_requirement": true, "notes": "Invents word count, Python, asyncio.Semaphore, pytest, and output shape."},
+    "v2:debug_async_cache_race": {"r3": true, "r4": true, "invented_requirement": false, "notes": "Reported race and API constraint only."},
+    "v1:review_auth_middleware": {"r3": true, "r4": false, "invented_requirement": true, "notes": "Invents exact length, bullet format, severity set, title, and report structure."},
+    "v2:review_auth_middleware": {"r3": true, "r4": true, "invented_requirement": false, "notes": "Review and source-reference requirements preserved without additions."},
+    "v1:refactor_invoice_service": {"r3": true, "r4": false, "invented_requirement": true, "notes": "Invents database/repository design, TypeScript, test policy, word count, and class limits."},
+    "v2:refactor_invoice_service": {"r3": true, "r4": true, "invented_requirement": false, "notes": "All three explicit refactor constraints preserved."},
+    "v1:data_monthly_rollup": {"r3": true, "r4": false, "invented_requirement": true, "notes": "Invents columns, sample tables, Markdown layout, and presentation details."},
+    "v2:data_monthly_rollup": {"r3": true, "r4": true, "invented_requirement": false, "notes": "Four auditable source requirements retained."},
+    "v1:vague_dashboard_speed": {"r3": false, "r4": false, "invented_requirement": true, "notes": "Invents dashboard technology, functionality, design, libraries, virtualization, lazy loading, and format."},
+    "v2:vague_dashboard_speed": {"r3": false, "r4": true, "invented_requirement": false, "notes": "Source is too vague for three concrete requirements; safe scope guards avoid invention."},
+    "v1:long_webhook_import": {"r3": true, "r4": false, "invented_requirement": true, "notes": "Invents line limit, file layout, comments, header, synchronous architecture details, and repository constraints."},
+    "v2:long_webhook_import": {"r3": true, "r4": true, "invented_requirement": false, "notes": "Five bullets cover all explicit endpoint requirements; final bullet groups overflow without adding facts."},
+    "v1:trap_rename_cli": {"r3": true, "r4": false, "invented_requirement": true, "notes": "Invents Python, mapping syntax, dependencies, arguments, output directory, filename, and usage format."},
+    "v2:trap_rename_cli": {"r3": true, "r4": true, "invented_requirement": false, "notes": "CLI, rename behavior, and text mapping only; no conventional CLI assumptions."},
+    "v1:plan_postgres_migration": {"r3": true, "r4": false, "invented_requirement": true, "notes": "Invents word limit, phase format, DevOps audience, validation checks, and rollback content."},
+    "v2:plan_postgres_migration": {"r3": true, "r4": true, "invented_requirement": false, "notes": "Zero-downtime, column split, Postgres, planning-only, and no-code constraints stay intact."},
+    "v1:explain_regex": {"r3": true, "r4": false, "invented_requirement": true, "notes": "Invents URL-slug purpose, word limit, Markdown layout, tone, and explanation components."},
+    "v2:explain_regex": {"r3": true, "r4": true, "invented_requirement": false, "notes": "Regex explanation and three examples are the only requested requirements."},
+    "v1:fix_timezone_boundary": {"r3": true, "r4": false, "invented_requirement": true, "notes": "Invents Python, length, code-only format, and additional boundary behavior."},
+    "v2:fix_timezone_boundary": {"r3": true, "r4": true, "invented_requirement": false, "notes": "Timezone, Monday boundary, and JSON-shape constraints remain source-derived."},
+    "v1:api_retry_policy": {"r3": true, "r4": false, "invented_requirement": true, "notes": "Invents file-size limit, comments, function name, output format, and backoff behavior."},
+    "v2:api_retry_policy": {"r3": true, "r4": true, "invented_requirement": false, "notes": "Status codes, Retry-After, attempt cap, and fake-clock test are preserved exactly."}
+  }
+}

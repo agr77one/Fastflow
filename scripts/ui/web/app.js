@@ -115,7 +115,7 @@ const TONE_LABELS = { formal: "🎩 Formal", casual: "👕 Casual", friendly: "�
 const PROMPT_BUILDER_DEFAULTS = {
   prompt_version: "v2",
   target_agent: "claude_code",
-  detail_level: "balanced",
+  detail_level: "concise",
   action_mode: "implement",
   structure: "agent_default",
   include_acceptance_criteria: false,
@@ -734,7 +734,7 @@ function promptBuilderPatch() {
   return {
     prompt_version: $("pb-version").value || "v2",
     target_agent: $("pb-target").value || "claude_code",
-    detail_level: $("pb-detail").value || "balanced",
+    detail_level: $("pb-detail").value || "concise",
     action_mode: $("pb-action").value || "implement",
     structure: $("pb-structure").value || "agent_default",
     include_acceptance_criteria: $("pb-acceptance").checked,

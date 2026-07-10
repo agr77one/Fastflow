@@ -318,8 +318,30 @@ def test_load_config_normalizes_prompt_builder(tmp_path):
 
     assert loaded["prompt_builder"]["prompt_version"] == "v2"
     assert loaded["prompt_builder"]["target_agent"] == "claude_code"
-    assert loaded["prompt_builder"]["detail_level"] == "balanced"
+    assert loaded["prompt_builder"]["detail_level"] == "concise"
     assert len(loaded["prompt_builder"]["user_suffix"]) == ffp_prompt_builder.USER_SUFFIX_MAX_CHARS
+
+
+def test_v36_load_config_migrates_only_legacy_prompt_builder_identity(tmp_path):
+    legacy = {
+        **ffp_prompt_builder.DEFAULT_PROMPT_BUILDER_CONFIG,
+        "detail_level": "balanced",
+    }
+    legacy.pop("prompt_version")
+    cfg_path = tmp_path / "grammar_hotkey.config.json"
+    cfg_path.write_text(json.dumps({"prompt_builder": legacy}), encoding="utf-8")
+
+    loaded = ffp_config.load_config(cfg_path)
+
+    assert loaded["prompt_builder"]["prompt_version"] == "v2"
+    assert loaded["prompt_builder"]["detail_level"] == "concise"
+
+    legacy["include_verification"] = True
+    cfg_path.write_text(json.dumps({"prompt_builder": legacy}), encoding="utf-8")
+    customized = ffp_config.load_config(cfg_path)
+
+    assert customized["prompt_builder"]["detail_level"] == "balanced"
+    assert customized["prompt_builder"]["include_verification"] is True
 
 
 def test_filter_config_patch_prompt_builder_partial_and_clamped():

@@ -323,7 +323,11 @@ def call_flm(
             "Return only corrected text."
         )
 
-    if routing_enabled and len(masked_input or "") >= long_threshold:
+    if (
+        routing_enabled
+        and len(masked_input or "") >= long_threshold
+        and not (is_prompt_mode(mode) and prompt_settings.uses_prompt_v2_contract())
+    ):
         chunks = split_chunks(masked_input, chunk_size, runtime.routing_cfg)[:max_chunks]
         if mode == "grammar":
             out_parts: list[str] = []
@@ -387,7 +391,7 @@ def call_flm(
     if not text:
         raise RuntimeError("Local LLM returned no usable text.")
 
-    if is_prompt_mode(mode):
+    if is_prompt_mode(mode) and not prompt_settings.uses_prompt_v2_contract():
         stripped = strip_prompt_scaffold_labels(text, prompt_settings)
         if stripped:
             text = stripped
@@ -416,7 +420,7 @@ def call_flm(
             except Exception as exc:
                 log.debug("anti-echo retry failed, keeping original prompt text: %s", exc)
 
-    if is_prompt_mode(mode):
+    if is_prompt_mode(mode) and not prompt_settings.uses_prompt_v2_contract():
         overlap_ratio = word_overlap_ratio(masked_input, text)
         reuse_ratio = line_reuse_ratio(masked_input, text)
         near_copy = overlap_ratio >= 0.9 or reuse_ratio >= 0.9
@@ -440,9 +444,21 @@ def call_flm(
                 log.warning("prompt-rescue call failed, using deterministic prompt shaping: %s", exc)
                 text = force_prompt_shape(masked_input, prompt_settings)
 
-    if is_prompt_mode(mode) and is_weak_prompt_echo(masked_input, text, prompt_settings):
+    if (
+        is_prompt_mode(mode)
+        and not prompt_settings.uses_prompt_v2_contract()
+        and is_weak_prompt_echo(masked_input, text, prompt_settings)
+    ):
         log.warning("prompt mode still weak after retries; using deterministic prompt shape")
         text = force_prompt_shape(masked_input, prompt_settings)
+
+    if is_prompt_mode(mode) and prompt_settings.uses_prompt_v2_contract():
+        text = ffp_prompt_builder.ground_prompt_v2_output(
+            text,
+            prompt_settings,
+            prompt_intent,
+            masked_input,
+        )
 
     if is_prompt_mode(mode) and prompt_settings.requires_contract_gate():
         result = ffp_prompt_builder.validate(text, prompt_settings)

@@ -16,7 +16,7 @@ USER_SUFFIX_MAX_CHARS = 500
 DEFAULT_PROMPT_BUILDER_CONFIG = {
     "prompt_version": "v2",
     "target_agent": "claude_code",
-    "detail_level": "balanced",
+    "detail_level": "concise",
     "action_mode": "implement",
     "structure": "agent_default",
     "include_acceptance_criteria": False,
@@ -57,6 +57,7 @@ _IMPERATIVE_STARTS = frozenset(
         "implement",
         "integrate",
         "investigate",
+        "make",
         "migrate",
         "optimize",
         "plan",
@@ -76,13 +77,95 @@ _IMPERATIVE_STARTS = frozenset(
         "write",
     }
 )
+_CLAUSE_VERB_FORMS = {
+    "add": "Add",
+    "adds": "Add",
+    "authenticate": "Authenticate",
+    "authenticates": "Authenticate",
+    "build": "Build",
+    "builds": "Build",
+    "cap": "Cap",
+    "caps": "Cap",
+    "check": "Check",
+    "checks": "Check",
+    "combine": "Combine",
+    "combines": "Combine",
+    "create": "Create",
+    "creates": "Create",
+    "debug": "Debug",
+    "do": "Do",
+    "explain": "Explain",
+    "fix": "Fix",
+    "fixes": "Fix",
+    "generate": "Generate",
+    "generates": "Generate",
+    "handle": "Handle",
+    "handles": "Handle",
+    "honor": "Honor",
+    "honors": "Honor",
+    "keep": "Keep",
+    "keeps": "Keep",
+    "make": "Make",
+    "makes": "Make",
+    "plan": "Plan",
+    "process": "Process",
+    "processes": "Process",
+    "preserve": "Preserve",
+    "preserves": "Preserve",
+    "prevent": "Prevent",
+    "prevents": "Prevent",
+    "read": "Read",
+    "reads": "Read",
+    "reconcile": "Reconcile",
+    "reconciles": "Reconcile",
+    "refactor": "Refactor",
+    "reject": "Reject",
+    "rejects": "Reject",
+    "rename": "Rename",
+    "renames": "Rename",
+    "report": "Report",
+    "reports": "Report",
+    "return": "Return",
+    "returns": "Return",
+    "review": "Review",
+    "show": "Show",
+    "shows": "Show",
+    "store": "Store",
+    "stores": "Store",
+    "summarize": "Summarize",
+    "summarizes": "Summarize",
+    "test": "Test",
+    "tests": "Test",
+    "use": "Use",
+    "uses": "Use",
+    "validate": "Validate",
+    "validates": "Validate",
+    "write": "Write",
+    "writes": "Write",
+}
+_CLAUSE_VERBS_PATTERN = "|".join(
+    re.escape(verb) for verb in sorted(_CLAUSE_VERB_FORMS, key=len, reverse=True)
+)
+_CLAUSE_SPLIT_RE = re.compile(
+    rf"(?:;\s*|,\s*(?:and\s+)?|\s+and\s+)(?=(?:{_CLAUSE_VERBS_PATTERN})\b)",
+    flags=re.IGNORECASE,
+)
+_RELATIVE_SPLIT_RE = re.compile(
+    rf"\s+(?:that|which)\s+(?=(?:{_CLAUSE_VERBS_PATTERN})\b)",
+    flags=re.IGNORECASE,
+)
+_SAFE_SCOPE_GUARDS = (
+    "Preserve all stated requirements.",
+    "Do not add unstated requirements.",
+    "Leave unspecified choices to the implementer.",
+)
 
 
 @dataclass(frozen=True)
 class PromptBuilderSettings:
     prompt_version: str = "v2"
     target_agent: str = "claude_code"
-    detail_level: str = "balanced"
+    detail_level: str = "concise"
     action_mode: str = "implement"
     structure: str = "agent_default"
     include_acceptance_criteria: bool = False
@@ -142,9 +225,7 @@ class PromptBuilderSettings:
         return self.to_dict() == DEFAULT_PROMPT_BUILDER_CONFIG
 
     def is_v1_rollback_default(self) -> bool:
-        value = self.to_dict()
-        value["prompt_version"] = DEFAULT_PROMPT_BUILDER_CONFIG["prompt_version"]
-        return self.prompt_version == "v1" and value == DEFAULT_PROMPT_BUILDER_CONFIG
+        return self.prompt_version == "v1"
 
     def uses_prompt_v2_contract(self) -> bool:
         return self.prompt_version == "v2" and self.is_identity_default()
@@ -173,6 +254,8 @@ def resolve_intent(settings: PromptBuilderSettings, input_text: str = "") -> Pro
 
 
 def effective_structure(settings: PromptBuilderSettings) -> str:
+    if settings.is_v1_rollback_default():
+        return "xml"
     if settings.structure != "agent_default":
         return settings.structure
     if settings.target_agent == "claude_code":
@@ -248,6 +331,18 @@ def render_fallback(
     else:
         text = _render_markdown(settings, intent, cleaned)
     return text.strip()
+
+
+def ground_prompt_v2_output(
+    model_output: str,
+    settings: PromptBuilderSettings,
+    intent: PromptIntent,
+    source_text: str,
+) -> str:
+    """Prevent semantic model inventions from reaching the default v2 output."""
+    if not settings.uses_prompt_v2_contract():
+        return str(model_output or "").strip()
+    return _render_prompt_v2_fallback(intent, _normalize_text(source_text))
 
 
 def validate(text: str, settings: PromptBuilderSettings) -> PromptRenderResult:
@@ -408,32 +503,152 @@ def _render_xml(settings: PromptBuilderSettings, intent: PromptIntent, cleaned: 
 
 
 def _render_prompt_v2_fallback(intent: PromptIntent, cleaned: str) -> str:
-    action = {
-        "plan": "Plan",
-        "implement": "Implement",
-        "review": "Review",
-        "debug": "Debug",
-        "explain": "Explain",
-    }.get(intent.action_mode, "Implement")
-    request = re.sub(r"[.!?]+", ";", cleaned).strip(" ;")
-    request = request[:360].rstrip()
-    task = f"{action} the requested deliverable: {request}."
+    task = _prompt_v2_task(intent, cleaned)
+    constraints = _prompt_v2_constraints(cleaned)
+    constraint_body = "\n".join(f"- {item}" for item in constraints)
     return (
         "<task>\n"
         f"{task}\n"
         "</task>\n"
         "<context>\n"
-        "No additional background facts were stated.\n"
+        "No additional context stated.\n"
         "</context>\n"
         "<constraints>\n"
-        "- Preserve every requirement explicitly stated by the user.\n"
-        "- Do not add requirements or background the user did not state.\n"
-        "- Keep the result limited to the requested deliverable.\n"
+        f"{constraint_body}\n"
         "</constraints>\n"
         "<output_format>\n"
-        "Return the requested deliverable in its stated format.\n"
+        f"{_prompt_v2_output_format(cleaned)}\n"
         "</output_format>"
     )
+
+
+def _source_sentences(cleaned: str) -> list[str]:
+    return [
+        part.strip(" \t\r\n.;")
+        for part in re.split(r"(?<=[.!?])\s+|[\r\n]+", cleaned)
+        if part.strip(" \t\r\n.;")
+    ]
+
+
+def _strip_request_prefix(text: str) -> str:
+    cleaned = re.sub(r"^(?:task|request|prompt)\s*:\s*", "", text, flags=re.IGNORECASE)
+    return re.sub(
+        r"^(?:please\s+|can you\s+|could you\s+|i (?:need|want) you to\s+)",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    ).strip()
+
+
+def _imperative_clause(text: str) -> str:
+    cleaned = _strip_request_prefix(text).strip(" \t\r\n.;")
+    first = re.match(r"([A-Za-z]+)(.*)", cleaned, flags=re.DOTALL)
+    if not first:
+        return cleaned
+    verb = _CLAUSE_VERB_FORMS.get(first.group(1).lower())
+    if verb:
+        return verb + first.group(2)
+    return cleaned[:1].upper() + cleaned[1:]
+
+
+def _prompt_v2_task(intent: PromptIntent, cleaned: str) -> str:
+    sentences = _source_sentences(cleaned)
+    source = _strip_request_prefix(sentences[0] if sentences else cleaned)
+    source = _truncate_words(source, 240)
+    task = _imperative_clause(source)
+    first = re.match(r"[A-Za-z]+", task)
+    if not first or first.group(0).lower() not in _IMPERATIVE_STARTS:
+        action = {
+            "plan": "Plan",
+            "implement": "Implement",
+            "review": "Review",
+            "debug": "Debug",
+            "explain": "Explain",
+        }.get(intent.action_mode, "Implement")
+        task = f"{action} the requested deliverable: {task}"
+    return task.rstrip(".!? ") + "."
+
+
+def _prompt_v2_constraints(cleaned: str) -> list[str]:
+    clauses: list[str] = []
+    for sentence in _source_sentences(cleaned):
+        for relative_part in _RELATIVE_SPLIT_RE.split(sentence, maxsplit=1):
+            for part in _CLAUSE_SPLIT_RE.split(relative_part):
+                clause = _imperative_clause(part)
+                if not clause:
+                    continue
+                clause = clause.rstrip(".!? ") + "."
+                if clause.lower() not in {item.lower() for item in clauses}:
+                    clauses.append(clause)
+    for guard in _SAFE_SCOPE_GUARDS:
+        if len(clauses) >= 3:
+            break
+        if guard.lower() not in {item.lower() for item in clauses}:
+            clauses.append(guard)
+    if len(clauses) > 5:
+        tail = "; ".join(item.rstrip(".") for item in clauses[4:]) + "."
+        clauses = [*clauses[:4], tail]
+    clauses = clauses[:5]
+    fitted: list[str] = []
+    remaining = 380
+    for index, clause in enumerate(clauses):
+        remaining_items = len(clauses) - index - 1
+        budget = max(48, remaining - (remaining_items * 48))
+        item = _truncate_words(clause, budget).rstrip(".!? ") + "."
+        fitted.append(item)
+        remaining = max(0, remaining - len(item))
+    return fitted
+
+
+def _truncate_words(text: str, max_chars: int) -> str:
+    cleaned = str(text or "").strip()
+    if len(cleaned) <= max_chars:
+        return cleaned
+    shortened = cleaned[:max_chars].rsplit(" ", 1)[0].rstrip(" ,;:.!?")
+    return shortened or cleaned[:max_chars].rstrip(" ,;:.!?")
+
+
+def _display_phrase(value: str) -> str:
+    cleaned = value.strip(" \t\r\n.;")
+    for source, replacement in {
+        "api": "API",
+        "cli": "CLI",
+        "csv": "CSV",
+        "go": "Go",
+        "json": "JSON",
+        "postgres": "Postgres",
+        "python": "Python",
+    }.items():
+        cleaned = re.sub(rf"\b{source}\b", replacement, cleaned, flags=re.IGNORECASE)
+    return cleaned[:1].upper() + cleaned[1:] if cleaned else cleaned
+
+
+def _prompt_v2_output_format(cleaned: str) -> str:
+    source = _strip_request_prefix((_source_sentences(cleaned) or [cleaned])[0])
+    create = re.match(
+        r"^(?:build|create|develop|generate|produce|write)\s+((?:a|an|the)\s+)?(.+)$",
+        source,
+        flags=re.IGNORECASE,
+    )
+    if create:
+        phrase = _RELATIVE_SPLIT_RE.split(create.group(2), maxsplit=1)[0]
+        phrase = _CLAUSE_SPLIT_RE.split(phrase, maxsplit=1)[0]
+        article = create.group(1) or ""
+        return _display_phrase(_truncate_words(article + phrase, 120)) + "."
+    add = re.match(r"^add\s+((?:a|an|the)\s+)?(.+)$", source, flags=re.IGNORECASE)
+    if add:
+        phrase = re.split(r"\s+to\s+|[,;]", add.group(2), maxsplit=1)[0]
+        return _display_phrase(_truncate_words((add.group(1) or "") + phrase, 120)) + "."
+    verb = (re.match(r"[A-Za-z]+", source) or [""])[0].lower()
+    return {
+        "combine": "Combined data and summary.",
+        "debug": "Debugging result.",
+        "explain": "Explanation.",
+        "fix": "Fix.",
+        "plan": "Plan.",
+        "refactor": "Refactor.",
+        "review": "Review.",
+    }.get(verb, "No output format specified.")
 
 
 def _render_markdown(settings: PromptBuilderSettings, intent: PromptIntent, cleaned: str) -> str:
@@ -561,12 +776,12 @@ def _validate_prompt_v2_xml(raw: str) -> tuple[bool, list[str]]:
             errors.append(f"empty <{name}>")
 
     task = re.sub(r"\s+", " ", sections["task"]).strip()
-    sentences = re.findall(r"[^.!?]+[.!?](?=\s|$)", task)
+    sentences = [part.strip() for part in re.split(r"[.!?]+(?=\s|$)", task) if part.strip()]
     first = re.match(r"[A-Za-z]+", task)
     if (
         "\n" in sections["task"]
         or len(sentences) != 1
-        or sentences[0].strip() != task
+        or not re.search(r"[.!?]\s*$", task)
         or not first
         or first.group(0).lower() not in _IMPERATIVE_STARTS
     ):

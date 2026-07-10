@@ -30,18 +30,19 @@ CLAUDE_PROMPT_SYSTEM_PROMPT_V1 = (
     "requirements they did not state. Return only the prompt."
 )
 CLAUDE_PROMPT_SYSTEM_PROMPT_V2 = (
-    "Turn the user's rough request into a tight coding-agent prompt. "
-    "Return only four sibling XML sections in this exact order: "
-    "<task> one imperative sentence naming the concrete deliverable; "
-    "<context> only facts the user stated, without restating the task; "
-    "<constraints> 3-5 concrete, testable '- ' bullets based only on the request; "
-    "<output_format> one line naming the exact deliverable shape. "
-    "Keep every section separate. No preamble, fences, meta-framing, filler, or invented facts. "
-    "Keep the whole prompt under 160 tokens."
+    "Restate the user's requested coding deliverable as one concise imperative sentence. "
+    "Use only details the user explicitly stated. Do not solve, infer, explain, or add requirements. "
+    "Return only that sentence with no preamble, under 40 tokens."
 )
 # Compatibility import for integrations that previously consumed the sole
 # prompt constant. The unversioned name always denotes the current default.
 CLAUDE_PROMPT_SYSTEM_PROMPT = CLAUDE_PROMPT_SYSTEM_PROMPT_V2
+
+_LEGACY_PROMPT_BUILDER_IDENTITY = {
+    **ffp_prompt_builder.DEFAULT_PROMPT_BUILDER_CONFIG,
+    "detail_level": "balanced",
+}
+_LEGACY_PROMPT_BUILDER_IDENTITY.pop("prompt_version")
 
 DEFAULT_CONFIG = {
     "enabled": True,
@@ -174,12 +175,30 @@ def load_config(config_path: Path) -> dict:
         log.warning("config file root is not an object (%s), using defaults", config_path)
         return copy.deepcopy(DEFAULT_CONFIG)
     has_llm_block = isinstance(loaded.get("llm"), dict)
+    raw_prompt_builder = loaded.get("prompt_builder")
     merged = copy.deepcopy(DEFAULT_CONFIG)
     deep_merge(merged, loaded)
     normalize_llm_config(merged, prefer_legacy=not has_llm_block)
+    _migrate_legacy_prompt_builder_identity(merged, raw_prompt_builder)
     normalize_prompt_builder_config(merged)
     _enforce_builtin_mode_prompts(merged)
     return merged
+
+
+def _migrate_legacy_prompt_builder_identity(cfg: dict, raw_value) -> None:
+    if not isinstance(raw_value, dict) or "prompt_version" in raw_value:
+        return
+    if any(
+        key not in _LEGACY_PROMPT_BUILDER_IDENTITY
+        or value != _LEGACY_PROMPT_BUILDER_IDENTITY[key]
+        for key, value in raw_value.items()
+    ):
+        return
+    prompt_builder = cfg.get("prompt_builder")
+    if not isinstance(prompt_builder, dict):
+        return
+    prompt_builder["prompt_version"] = "v2"
+    prompt_builder["detail_level"] = "concise"
 
 
 def _enforce_builtin_mode_prompts(cfg: dict) -> None:

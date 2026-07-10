@@ -4,8 +4,15 @@
 # bundled binaries, or caches. Source + docs + config templates only.
 # ──────────────────────────────────────────────────────────────
 
-# Private runtime data (prompt/grammar history, notes, chat threads, counters, pids)
-data/
+# Private runtime data (prompt/grammar history, notes, chat threads, counters, pids).
+# Fixed-input prompt-v2 release evidence is sanitized and intentionally tracked.
+data/*
+!data/benchmarks/
+data/benchmarks/*
+!data/benchmarks/prompt_v1_frozen_*.json
+!data/benchmarks/prompt_v2_ab_*.json
+!data/benchmarks/prompt_v2_cold_warm_*.json
+!data/benchmarks/prompt_v2_judge_*.json
 
 # Live working config (personal hotkeys/paths). Regenerated on first run from
 # setup/defaults/ or the .example template — both of which ARE tracked.

@@ -94,7 +94,7 @@ def test_usage_metrics_include_units_percentiles_and_per_token_cost():
         "usage": {
             "completion_tokens": 100,
             "prefill_duration_ttft": "1600ms",
-            "decode_duration": 8.0,
+            "decoding_duration": 8.0,
         },
         "_wall_seconds": 10.0,
     }
@@ -142,6 +142,10 @@ def test_full_protocol_uses_warmup_plus_five_runs_and_passes_both_gates():
     assert artifact["gate"]["quality"]["passed"] is True
     assert artifact["gate"]["passed"] is True
     assert len(artifact["manual_side_by_side"]) == 2
+    v2_sample = artifact["cases"][0]["styles"]["v2"]["samples"][0]
+    assert v2_sample["raw_output"] == GOOD_OUTPUT
+    assert v2_sample["output"] != v2_sample["raw_output"]
+    assert v2_sample["final_output_tokens"] > 0
 
 
 def test_protocol_rejects_too_few_timed_runs():
@@ -183,3 +187,73 @@ def test_cold_warm_probe_records_first_call_penalty_and_speedup():
     assert result["warm"]["wall_seconds"] == 12.0
     assert result["wall_speedup"] == 2.5
     assert result["ttft_reduction_seconds"] == 16.5
+
+
+def test_existing_artifact_can_be_judged_without_rerunning_model_calls():
+    cases = list(prompt_eval.FIXED_CASES[:1])
+    calls = []
+
+    def fake_model(**kwargs):
+        calls.append(kwargs["style"])
+        return {
+            "output": GOOD_OUTPUT,
+            "model": kwargs["model"],
+            "_wall_seconds": 12.0 if kwargs["style"] == "v2" else 30.0,
+            "usage": {"completion_tokens": 100, "decoding_duration": 8.0},
+        }
+
+    artifact = prompt_eval.run_evaluation(fake_model, cases=cases, runs=5)
+    calls_after_run = len(calls)
+    rescored = prompt_eval.rescore_artifact(artifact, _judge(cases))
+
+    assert artifact["gate"]["quality"]["judge_complete"] is False
+    assert rescored["gate"]["passed"] is True
+    assert rescored["judge"]["method"] == "manual"
+    assert len(calls) == calls_after_run
+
+
+def test_frozen_v1_replay_preserves_five_timed_samples_after_warmup():
+    cases = list(prompt_eval.FIXED_CASES[:1])
+
+    def fake_model(**kwargs):
+        return {
+            "output": GOOD_OUTPUT,
+            "model": kwargs["model"],
+            "_wall_seconds": 30.0 if kwargs["style"] == "v1" else 12.0,
+            "usage": {"completion_tokens": 100, "decoding_duration": 8.0},
+        }
+
+    artifact = prompt_eval.run_evaluation(fake_model, cases=cases, runs=5, judge_data=_judge(cases))
+    samples = artifact["cases"][0]["styles"]["v1"]["samples"]
+    for index, sample in enumerate(samples, start=1):
+        sample["wall_seconds"] = float(index)
+    replay = prompt_eval.build_v1_replay(artifact)
+    kwargs = {
+        "style": "v1",
+        "user_content": cases[0]["input"],
+        "model": "qwen3.5:4b",
+    }
+    walls = [replay(**kwargs)["_wall_seconds"] for _ in range(6)]
+
+    assert walls == [1.0, 1.0, 2.0, 3.0, 4.0, 5.0]
+
+
+def test_v1_baseline_export_contains_no_v2_samples():
+    cases = list(prompt_eval.FIXED_CASES[:1])
+
+    def fake_model(**kwargs):
+        return {
+            "output": GOOD_OUTPUT,
+            "model": kwargs["model"],
+            "_wall_seconds": 12.0 if kwargs["style"] == "v2" else 30.0,
+            "usage": {"completion_tokens": 100, "decoding_duration": 8.0},
+        }
+
+    artifact = prompt_eval.run_evaluation(fake_model, cases=cases, runs=5, judge_data=_judge(cases))
+    baseline = prompt_eval.export_v1_baseline(artifact, "source.json")
+
+    assert baseline["kind"] == "prompt_v1_frozen_baseline"
+    assert baseline["source_artifact"] == "source.json"
+    assert baseline["summary"] == artifact["summaries"]["v1"]
+    assert set(baseline["cases"][0]) == {"name", "category", "trap", "input", "v1"}
+    assert "v2" not in baseline["cases"][0]

@@ -496,39 +496,51 @@ def test_call_flm_short_grammar_uses_tight_prompt_and_restores_dictionary(fresh_
     assert "Fix grammar and punctuation only." in calls[0][1]
 
 
-def test_call_flm_prompt_retries_on_near_verbatim_output(fresh_modules, monkeypatch):
+def test_v35_default_prompt_uses_one_short_draft_call(fresh_modules, monkeypatch):
     grammar_fix = fresh_modules("grammar_fix")
     monkeypatch.setattr(grammar_fix, "is_flm_server_reachable", lambda: True)
-    responses = iter(
-        [
-            ("Task: Build a plan", grammar_fix.FLM_MODEL),
-            (
-                "<task>\nPlan the requested deliverable.\n</task>\n"
-                "<context>\nThe user requested a plan.\n</context>\n"
-                "<constraints>\n- Keep the plan concrete.\n- Preserve the requested scope.\n"
-                "- Do not invent requirements.\n</constraints>\n"
-                "<output_format>\nReturn an ordered execution plan.\n</output_format>",
-                grammar_fix.FLM_MODEL,
-            ),
-        ]
-    )
     prompts = []
 
     def fake_call(model, system_prompt, user_content, max_tokens, timeout_seconds):
         prompts.append(system_prompt)
-        return next(responses)
+        return ("Task: Build a plan", grammar_fix.FLM_MODEL)
 
     monkeypatch.setattr(grammar_fix, "_call_flm_api", fake_call)
 
     text, _, _, strategy = grammar_fix.call_flm("prompt", "Task: Build a plan")
 
     assert strategy == "prompt_short"
-    assert text.startswith("<task>\nPlan the requested deliverable.")
-    assert any("meta-framing" in prompt for prompt in prompts)
+    assert text.startswith("<task>\nBuild a plan.")
+    assert prompts == [grammar_fix.ffp_config.CLAUDE_PROMPT_SYSTEM_PROMPT_V2]
+    assert "under 40 tokens" in prompts[0]
+
+
+def test_v27_v35_long_default_prompt_is_one_call_and_bounded(fresh_modules, monkeypatch):
+    grammar_fix = fresh_modules("grammar_fix")
+    monkeypatch.setattr(grammar_fix, "is_flm_server_reachable", lambda: True)
+    calls = []
+    source = "build a tool that " + ("processes records while preserving stated behavior " * 60)
+
+    def fake_call(model, system_prompt, user_content, max_tokens, timeout_seconds):
+        calls.append((user_content, max_tokens))
+        return "Build the requested tool.", model
+
+    monkeypatch.setattr(grammar_fix, "_call_flm_api", fake_call)
+
+    text, _, _, strategy = grammar_fix.call_flm("prompt", source)
+    settings = grammar_fix.ffp_prompt_builder.PromptBuilderSettings.from_config({})
+
+    assert strategy == "prompt_long"
+    assert calls == [(source, 420)]
+    assert grammar_fix.ffp_prompt_builder.validate(text, settings).valid is True
 
 
 def test_prompt_retries_never_exceed_selected_strategy_cap(fresh_modules, monkeypatch):
     grammar_fix = fresh_modules("grammar_fix")
+    grammar_fix.PROMPT_BUILDER_CFG = {
+        **grammar_fix.ffp_prompt_builder.DEFAULT_PROMPT_BUILDER_CONFIG,
+        "target_agent": "generic_chat",
+    }
     monkeypatch.setattr(grammar_fix, "is_flm_server_reachable", lambda: True)
     caps = []
 
@@ -544,7 +556,9 @@ def test_prompt_retries_never_exceed_selected_strategy_cap(fresh_modules, monkey
     assert caps == [240, 240, 240]
     assert grammar_fix.ffp_prompt_builder.validate(
         text,
-        grammar_fix.ffp_prompt_builder.PromptBuilderSettings.from_config({}),
+        grammar_fix.ffp_prompt_builder.PromptBuilderSettings.from_config(
+            grammar_fix.PROMPT_BUILDER_CFG
+        ),
     ).valid
 
 
@@ -574,12 +588,46 @@ def test_v32_prompt_v1_rollback_structure_skips_overlap_retry(fresh_modules, mon
     assert "<output_format>" in text
 
 
+def test_v33_default_prompt_surfaces_grounded_source_not_model_inventions(fresh_modules, monkeypatch):
+    grammar_fix = fresh_modules("grammar_fix")
+    monkeypatch.setattr(grammar_fix, "is_flm_server_reachable", lambda: True)
+    calls = []
+    invented = (
+        "<task>\nWrite a CLI with two required arguments.\n</task>\n"
+        "<context>\nThe tool runs in the current directory.\n</context>\n"
+        "<constraints>\n- Require two arguments.\n- Print to stdout.\n- Add error handling.\n"
+        "</constraints>\n<output_format>\nA Python file.\n</output_format>"
+    )
+
+    def fake_call(model, system_prompt, user_content, max_tokens, timeout_seconds):
+        calls.append(max_tokens)
+        return invented, model
+
+    monkeypatch.setattr(grammar_fix, "_call_flm_api", fake_call)
+
+    text, _, _, _ = grammar_fix.call_flm(
+        "prompt",
+        "write a CLI that renames files from a mapping in a text file",
+    )
+
+    assert calls == [240]
+    assert grammar_fix.ffp_prompt_builder.validate(
+        text,
+        grammar_fix.ffp_prompt_builder.PromptBuilderSettings.from_config({}),
+    ).valid
+    assert "two required arguments" not in text
+    assert "stdout" not in text
+    assert "error handling" not in text
+    assert "- Write a CLI." in text
+    assert "- Rename files from a mapping in a text file." in text
+
+
 def test_prompt_mode_cli_writes_output_file(fresh_modules, monkeypatch, tmp_path: Path):
     grammar_fix = fresh_modules("grammar_fix")
     monkeypatch.setattr(grammar_fix, "is_flm_server_reachable", lambda: True)
 
     def fake_call(model, system_prompt, user_content, max_tokens, timeout_seconds):
-        assert "four sibling XML sections" in system_prompt
+        assert "under 40 tokens" in system_prompt
         assert max_tokens == 240
         return ("<task>Refine onboarding email</task>", model)
 

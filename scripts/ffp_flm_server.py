@@ -133,6 +133,15 @@ def warmup_request(
     call_api(model, "ping", "warmup ping", 8, max(2, timeout_seconds))
 
 
+def wait_for_flm_shutdown(base_url: str, timeout_seconds: float = 5.0) -> bool:
+    deadline = time.time() + max(0.1, timeout_seconds)
+    while is_flm_server_reachable(base_url):
+        if time.time() >= deadline:
+            return False
+        time.sleep(0.1)
+    return True
+
+
 def start_flm_server(
     settings: FlmServerSettings,
     call_api: Callable[[str, str, str, int, int], tuple[str, str]],
@@ -140,9 +149,13 @@ def start_flm_server(
     force_restart: bool = False,
     stop_callback: Callable[[bool], bool] | None = None,
 ) -> str:
-    if force_restart and stop_callback is not None:
+    if force_restart:
+        if stop_callback is None:
+            raise RuntimeError("FastFlowLM force restart requires a stop callback.")
         stop_callback(True)
-    if is_flm_server_reachable(settings.base_url):
+        if not wait_for_flm_shutdown(settings.base_url):
+            raise RuntimeError("FastFlowLM port did not close after stop.")
+    elif is_flm_server_reachable(settings.base_url):
         return "already_running"
 
     host, port = flm_host_port(settings.base_url)

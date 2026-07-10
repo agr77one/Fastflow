@@ -1,0 +1,53 @@
+{
+  "ok": true,
+  "case": "implement_csv_validator",
+  "restart_result": "started",
+  "cold": {
+    "ok": true,
+    "error": "",
+    "output": "Build a Python script that reads CSVs from a folder, validates rows against a schema, and writes an error report with file and line numbers.",
+    "model": "qwen3.5:4b",
+    "usage": {
+      "prompt_tokens": 90,
+      "completion_tokens": 30,
+      "total_tokens": 120,
+      "kv_token_occupancy_rate_percentage": 0.3662109375,
+      "load_duration": 9e-07,
+      "prefill_duration_ttft": 1.144480384,
+      "decoding_duration": 2.263718,
+      "prefill_speed_tps": 78.6383071813313,
+      "decoding_speed_tps": 13.252534105396519
+    },
+    "wall_seconds": 20.8756,
+    "ttft_seconds": 1.1445,
+    "completion_tokens": 30,
+    "decode_duration_seconds": 2.2637,
+    "decode_tokens_per_second": 13.2525,
+    "seconds_per_output_token": 0.695854
+  },
+  "warm": {
+    "ok": true,
+    "error": "",
+    "output": "Build a Python script that reads CSVs from a folder, validates rows against a schema, and writes an error report with file and line numbers.",
+    "model": "qwen3.5:4b",
+    "usage": {
+      "prompt_tokens": 90,
+      "completion_tokens": 30,
+      "total_tokens": 120,
+      "kv_token_occupancy_rate_percentage": 0.3662109375,
+      "load_duration": 9e-07,
+      "prefill_duration_ttft": 1.153622144,
+      "decoding_duration": 2.22862,
+      "prefill_speed_tps": 78.01514600607389,
+      "decoding_speed_tps": 13.461245075427843
+    },
+    "wall_seconds": 3.6957,
+    "ttft_seconds": 1.1536,
+    "completion_tokens": 30,
+    "decode_duration_seconds": 2.2286,
+    "decode_tokens_per_second": 13.4612,
+    "seconds_per_output_token": 0.123189
+  },
+  "wall_speedup": 5.6486,
+  "ttft_reduction_seconds": -0.0091
+}

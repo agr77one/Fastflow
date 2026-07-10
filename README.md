@@ -4,7 +4,12 @@ Flowkey is a Windows desktop assistant that adds local-LLM hotkeys for grammar f
 
 Everything runs locally through [FastFlowLM](https://fastflowlm.com) (AMD Ryzen AI NPU) or, on machines without the NPU, through [Ollama](https://ollama.com) (CPU/GPU) as a secondary provider. No cloud service, analytics, or telemetry is used by the app.
 
-Current version: `2.2.1`
+Current version: `2.3.0`
+
+## What's new in 2.3
+
+- **`prompt:` is faster and more grounded.** Prompt v2 uses one short local-model draft plus a deterministic source-grounding pass to return a compact four-section coding-agent prompt without inventing libraries, files, formats, tests, or other unstated requirements. On the fixed 12-input `qwen3.5:4b` NPU gate, warm p50 fell from **18.18 s to 3.38 s**, p90 from **22.69 s to 4.67 s**, and median completion tokens from **222 to 26**; all 12 v2 outputs passed the rubric with zero invented-requirement failures. Dashboard → Config → Prompt builder can instantly switch back to the legacy v1 prompt.
+- **FastFlowLM stays warm.** The daemon warms the configured NPU model in the background at startup and every 15 minutes by default (both controls are configurable). Measured first-post-restart wall time was 20.88 s versus 3.70 s immediately warm.
 
 ## What's new in 2.2
 
@@ -142,14 +147,15 @@ The dashboard is a web page served by the local daemon — open it from the tray
 - `config/grammar_hotkey.config.example.json` - example user config.
 - `assets/screenshots/` - README screenshots.
 
-Runtime data, logs, build output, downloaded vendor binaries, caches, and local editor state are intentionally ignored and should not be committed.
+Runtime data, logs, build output, downloaded vendor binaries, caches, and local editor state are intentionally ignored. The only `data/` exception is sanitized fixed-input prompt benchmark evidence under `data/benchmarks/prompt_v*.json`.
 
 ## Development Checks
 
 ```powershell
 python -m pip install -e ".[dev]"
-ruff check scripts tests
-pytest tests -q
+ruff check scripts tests tools
+python -m pytest -q
+node --check scripts/ui/web/app.js
 ```
 
 AutoHotkey tests are run by CI on Windows. Locally, run them with AutoHotkey v2:
