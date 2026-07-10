@@ -83,6 +83,7 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - V29: A/B gate → ≥12 fixed inputs; 1 warmup + ≥5 timed/style/input; p50/p90/min/max, TTFT, completion tokens, decode tok/s, seconds/output-token; v2 speed gate + median quality ≥v1 + invented=0 + R1 rate ≥v1
 - V30: v1 prompt constant retained + config-selectable without built-in prompt patching
 - V31: daemon startup + configured idle interval → best-effort FastFlowLM warmup; failure logs only, ⊥ daemon startup failure
+- V32: prompt output with valid target structure → ⊥ anti-echo retry solely from line/word overlap
 
 ## §T tasks
 
@@ -111,7 +112,7 @@ T20|x|[DOCS] daemon log location — audited 2.1.1: no stale ref in README/docs;
 T21|x|prompt_builder cfg + claude_code identity + generic_chat adapter + dashboard controls/preview|V17,V24
 T22|x|History Telemetry/Exposed views + inline redacted/visible storage control/help|V5,V6,V25,V26
 T23|x|prompt-v2 fixed A/B speed+quality harness + tests|V29
-T24|.|prompt-v2 default + v1 rollback selector + 240/320/420 caps|V24,V27,V28,V30
+T24|x|prompt-v2 default + v1 rollback selector + 240/320/420 caps|V24,V27,V28,V30,V32
 T25|.|FastFlowLM startup+idle keep-warm + cold/warm measurement support|V31
 T26|.|2.3.0 release evidence + version/docs rebaseline after A/B gate passes|V18,V29
 ```
@@ -130,4 +131,6 @@ B7|2026-07|"Run batch now" → "0 of 5, 5 errors" ∀ run: 5 Quill stub recordin
 B8|2026-07-10|new prompt-v2 eval imports violated Ruff I001/UP035|V20 caught; sort imports + `Callable` from `collections.abc`
 B9|2026-07-10|prompt-v2 eval test import block retained extra blank line|V20 caught; normalize import spacing
 B10|2026-07-10|stale user-level `pytest.exe` exited 1 + ⊥ diagnostics while active interpreter pytest passed|V20 → interpreter-bound `python -m pytest`
+B11|2026-07-10|`node` absent from desktop PowerShell PATH|V20; run bundled workspace `node.exe --check`
+B12|2026-07-10|structured v1 rollback output retried ∵ first anti-echo gate ignored target structure|V32
 ```

@@ -285,6 +285,7 @@ def test_load_config_normalizes_prompt_builder(tmp_path):
     cfg_path.write_text(
         json.dumps({
             "prompt_builder": {
+                "prompt_version": "v99",
                 "target_agent": "codex",
                 "detail_level": "very long",
                 "user_suffix": "x" * 700,
@@ -295,6 +296,7 @@ def test_load_config_normalizes_prompt_builder(tmp_path):
 
     loaded = ffp_config.load_config(cfg_path)
 
+    assert loaded["prompt_builder"]["prompt_version"] == "v2"
     assert loaded["prompt_builder"]["target_agent"] == "claude_code"
     assert loaded["prompt_builder"]["detail_level"] == "balanced"
     assert len(loaded["prompt_builder"]["user_suffix"]) == ffp_prompt_builder.USER_SUFFIX_MAX_CHARS
@@ -303,6 +305,7 @@ def test_load_config_normalizes_prompt_builder(tmp_path):
 def test_filter_config_patch_prompt_builder_partial_and_clamped():
     filtered = ffp_config.filter_config_patch({
         "prompt_builder": {
+            "prompt_version": "v1",
             "target_agent": "generic_chat",
             "include_verification": 1,
             "user_suffix": "x" * 700,
@@ -312,6 +315,7 @@ def test_filter_config_patch_prompt_builder_partial_and_clamped():
 
     assert filtered == {
         "prompt_builder": {
+            "prompt_version": "v1",
             "target_agent": "generic_chat",
             "include_verification": True,
             "user_suffix": "x" * ffp_prompt_builder.USER_SUFFIX_MAX_CHARS,
@@ -331,7 +335,9 @@ def test_builtin_mode_prompts_never_mention_emoji():
 
     for prompt in _all_prompts(ffp_config.DEFAULT_CONFIG["modes"]):
         assert "emoji" not in prompt.lower()
-    assert "emoji" not in ffp_config.CLAUDE_PROMPT_SYSTEM_PROMPT.lower()
+    assert "emoji" not in ffp_config.CLAUDE_PROMPT_SYSTEM_PROMPT_V1.lower()
+    assert "emoji" not in ffp_config.CLAUDE_PROMPT_SYSTEM_PROMPT_V2.lower()
+    assert ffp_config.CLAUDE_PROMPT_SYSTEM_PROMPT == ffp_config.CLAUDE_PROMPT_SYSTEM_PROMPT_V2
 
 
 def test_load_config_forces_builtin_prompts_from_code(tmp_path):

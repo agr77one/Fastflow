@@ -216,7 +216,8 @@ def run_case_live(case: dict, args: argparse.Namespace) -> dict:
     system_prompt = ffp_prompt_builder.build_system_prompt(
         settings,
         intent,
-        legacy_system_prompt=ffp_config.CLAUDE_PROMPT_SYSTEM_PROMPT,
+        prompt_v1_system_prompt=ffp_config.CLAUDE_PROMPT_SYSTEM_PROMPT_V1,
+        prompt_v2_system_prompt=ffp_config.CLAUDE_PROMPT_SYSTEM_PROMPT_V2,
     )
     started = time.time()
     try:

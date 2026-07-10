@@ -361,6 +361,13 @@
         <h2>Prompt builder</h2>
         <p class="muted small">Controls the <code>prompt:</code> output shape without editing the locked built-in system prompt. Custom modes remain the fully custom escape hatch.</p>
         <div class="form-row">
+          <label for="pb-version">Prompt engine</label>
+          <select id="pb-version">
+            <option value="v2">v2 — faster, dense</option>
+            <option value="v1">v1 — legacy rollback</option>
+          </select>
+        </div>
+        <div class="form-row">
           <label for="pb-target">Target</label>
           <select id="pb-target">
             <option value="claude_code">Claude Code</option>

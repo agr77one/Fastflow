@@ -113,6 +113,7 @@ function isValidHotkey(hk) {
 const PERF_LABELS = { balanced: "🟡 Balanced", max: "🔴 Max throughput" };
 const TONE_LABELS = { formal: "🎩 Formal", casual: "👕 Casual", friendly: "🤝 Friendly" };
 const PROMPT_BUILDER_DEFAULTS = {
+  prompt_version: "v2",
   target_agent: "claude_code",
   detail_level: "balanced",
   action_mode: "implement",
@@ -710,6 +711,7 @@ async function saveNotes() {
 
 function populatePromptBuilder(pb) {
   const cfg = { ...PROMPT_BUILDER_DEFAULTS, ...(pb || {}) };
+  $("pb-version").value = cfg.prompt_version;
   $("pb-target").value = cfg.target_agent;
   $("pb-action").value = cfg.action_mode;
   $("pb-detail").value = cfg.detail_level;
@@ -727,6 +729,7 @@ function populatePromptBuilder(pb) {
 function promptBuilderPatch() {
   const suffix = $("pb-allow-suffix").checked ? $("pb-suffix").value.trim().slice(0, 500) : "";
   return {
+    prompt_version: $("pb-version").value || "v2",
     target_agent: $("pb-target").value || "claude_code",
     detail_level: $("pb-detail").value || "balanced",
     action_mode: $("pb-action").value || "implement",

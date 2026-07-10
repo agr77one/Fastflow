@@ -28,21 +28,12 @@ if str(SCRIPTS_DIR) not in sys.path:
 import ffp_config  # noqa: E402
 import ffp_llm_client  # noqa: E402
 
-PROMPT_V2_CANDIDATE = (
-    "Turn the user's rough request into a tight, high-signal coding-agent prompt. "
-    "Emit exactly four sections, each on its own: "
-    "<task> one imperative sentence naming the concrete deliverable. "
-    "<context> only facts the user stated; never restate the request or invent background. "
-    "<constraints> 3-5 concrete, testable bullet items drawn only from the request. "
-    "<output_format> one line naming the exact output shape. "
-    "Be specific and actionable. No preamble, meta-framing, or filler. "
-    "Keep the whole prompt under 160 tokens. Return only the prompt."
-)
+PROMPT_V2_CANDIDATE = ffp_config.CLAUDE_PROMPT_SYSTEM_PROMPT_V2
 
 STYLE_SPECS = {
     "v1": {
         "label": "current",
-        "system_prompt": ffp_config.CLAUDE_PROMPT_SYSTEM_PROMPT,
+        "system_prompt": ffp_config.CLAUDE_PROMPT_SYSTEM_PROMPT_V1,
         "caps": (700, 900, 1200),
     },
     "v2": {
@@ -159,21 +150,39 @@ _IMPERATIVE_VERBS = frozenset(
     {
         "add",
         "analyze",
+        "assess",
         "build",
         "check",
         "combine",
+        "convert",
         "create",
         "debug",
+        "develop",
         "design",
+        "diagnose",
+        "document",
         "explain",
+        "extract",
         "fix",
+        "generate",
+        "improve",
         "implement",
+        "integrate",
         "investigate",
         "migrate",
+        "optimize",
         "plan",
+        "produce",
         "refactor",
+        "remove",
+        "rename",
+        "replace",
+        "resolve",
         "review",
+        "separate",
+        "summarize",
         "test",
+        "troubleshoot",
         "update",
         "validate",
         "write",

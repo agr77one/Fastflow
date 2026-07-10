@@ -19,7 +19,7 @@ log = logging.getLogger("ffp.config")
 
 _config_lock = threading.Lock()
 
-CLAUDE_PROMPT_SYSTEM_PROMPT = (
+CLAUDE_PROMPT_SYSTEM_PROMPT_V1 = (
     "Rewrite the user text as a Claude-ready prompt. "
     "Structure: <task> (one primary deliverable, one sentence), "
     "<context> (background facts only, no instructions), "
@@ -29,6 +29,19 @@ CLAUDE_PROMPT_SYSTEM_PROMPT = (
     "Base every constraint on what the user actually asked for — never invent "
     "requirements they did not state. Return only the prompt."
 )
+CLAUDE_PROMPT_SYSTEM_PROMPT_V2 = (
+    "Turn the user's rough request into a tight coding-agent prompt. "
+    "Return only four sibling XML sections in this exact order: "
+    "<task> one imperative sentence naming the concrete deliverable; "
+    "<context> only facts the user stated, without restating the task; "
+    "<constraints> 3-5 concrete, testable '- ' bullets based only on the request; "
+    "<output_format> one line naming the exact deliverable shape. "
+    "Keep every section separate. No preamble, fences, meta-framing, filler, or invented facts. "
+    "Keep the whole prompt under 160 tokens."
+)
+# Compatibility import for integrations that previously consumed the sole
+# prompt constant. The unversioned name always denotes the current default.
+CLAUDE_PROMPT_SYSTEM_PROMPT = CLAUDE_PROMPT_SYSTEM_PROMPT_V2
 
 DEFAULT_CONFIG = {
     "enabled": True,
@@ -119,7 +132,7 @@ DEFAULT_CONFIG = {
         "prompt": {
             "label": "Prompt fix (Claude)",
             "description": "Rewrite rough text into a Claude-ready prompt (use prompt: prefix).",
-            "system_prompt": CLAUDE_PROMPT_SYSTEM_PROMPT,
+            "system_prompt": CLAUDE_PROMPT_SYSTEM_PROMPT_V2,
         },
         "summarize": {
             "label": "Summarize",

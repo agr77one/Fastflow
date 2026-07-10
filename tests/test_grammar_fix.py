@@ -316,20 +316,28 @@ def test_split_chunks_merges_tiny_trailing_chunk(fresh_modules):
 
 
 @pytest.mark.parametrize(
-    ("mode", "text", "strategy"),
+    ("mode", "text", "max_tokens", "strategy"),
     [
-        ("prompt", "tiny", "prompt_short"),
-        ("prompt", "x" * 600, "prompt_medium"),
-        ("grammar", "x" * 800, "grammar_medium"),
-        ("grammar", "x" * 1500, "grammar_long"),
+        ("prompt", "tiny", 240, "prompt_short"),
+        ("prompt", "x" * 600, 320, "prompt_medium"),
+        ("prompt", "x" * 1500, 420, "prompt_long"),
+        ("grammar", "x" * 800, 220, "grammar_medium"),
+        ("grammar", "x" * 1500, 180, "grammar_long"),
     ],
 )
-def test_select_runtime_picks_expected_strategy(fresh_modules, mode, text, strategy):
+def test_select_runtime_picks_expected_strategy_and_cap(
+    fresh_modules,
+    mode,
+    text,
+    max_tokens,
+    strategy,
+):
     grammar_fix = fresh_modules("grammar_fix")
 
-    _, _, selected = grammar_fix._select_runtime(mode, text)
+    _, selected_tokens, selected_strategy = grammar_fix._select_runtime(mode, text)
 
-    assert selected == strategy
+    assert selected_tokens == max_tokens
+    assert selected_strategy == strategy
 
 
 def test_dict_protect_returns_original_when_no_words(fresh_modules):
@@ -433,7 +441,14 @@ def test_call_flm_prompt_retries_on_near_verbatim_output(fresh_modules, monkeypa
     responses = iter(
         [
             ("Task: Build a plan", grammar_fix.FLM_MODEL),
-            ("Create a concrete execution plan with deliverables.", grammar_fix.FLM_MODEL),
+            (
+                "<task>\nPlan the requested deliverable.\n</task>\n"
+                "<context>\nThe user requested a plan.\n</context>\n"
+                "<constraints>\n- Keep the plan concrete.\n- Preserve the requested scope.\n"
+                "- Do not invent requirements.\n</constraints>\n"
+                "<output_format>\nReturn an ordered execution plan.\n</output_format>",
+                grammar_fix.FLM_MODEL,
+            ),
         ]
     )
     prompts = []
@@ -447,8 +462,55 @@ def test_call_flm_prompt_retries_on_near_verbatim_output(fresh_modules, monkeypa
     text, _, _, strategy = grammar_fix.call_flm("prompt", "Task: Build a plan")
 
     assert strategy == "prompt_short"
-    assert text == "Create a concrete execution plan with deliverables."
+    assert text.startswith("<task>\nPlan the requested deliverable.")
     assert any("meta-framing" in prompt for prompt in prompts)
+
+
+def test_prompt_retries_never_exceed_selected_strategy_cap(fresh_modules, monkeypatch):
+    grammar_fix = fresh_modules("grammar_fix")
+    monkeypatch.setattr(grammar_fix, "is_flm_server_reachable", lambda: True)
+    caps = []
+
+    def fake_call(model, system_prompt, user_content, max_tokens, timeout_seconds):
+        caps.append(max_tokens)
+        return (user_content, model)
+
+    monkeypatch.setattr(grammar_fix, "_call_flm_api", fake_call)
+
+    text, _, _, strategy = grammar_fix.call_flm("prompt", "fix the failing test")
+
+    assert strategy == "prompt_short"
+    assert caps == [240, 240, 240]
+    assert grammar_fix.ffp_prompt_builder.validate(
+        text,
+        grammar_fix.ffp_prompt_builder.PromptBuilderSettings.from_config({}),
+    ).valid
+
+
+def test_v32_prompt_v1_rollback_structure_skips_overlap_retry(fresh_modules, monkeypatch):
+    grammar_fix = fresh_modules("grammar_fix")
+    grammar_fix.PROMPT_BUILDER_CFG = {
+        **grammar_fix.ffp_prompt_builder.DEFAULT_PROMPT_BUILDER_CONFIG,
+        "prompt_version": "v1",
+    }
+    monkeypatch.setattr(grammar_fix, "is_flm_server_reachable", lambda: True)
+    prompts = []
+
+    def fake_call(model, system_prompt, user_content, max_tokens, timeout_seconds):
+        prompts.append((system_prompt, max_tokens))
+        return (
+            "<task>\nBuild the requested change.\n</task>\n"
+            "<output_format>\nReturn the result.\n</output_format>",
+            model,
+        )
+
+    monkeypatch.setattr(grammar_fix, "_call_flm_api", fake_call)
+
+    text, _, _, strategy = grammar_fix.call_flm("prompt", "build the requested change")
+
+    assert strategy == "prompt_short"
+    assert prompts == [(grammar_fix.ffp_config.CLAUDE_PROMPT_SYSTEM_PROMPT_V1, 240)]
+    assert "<output_format>" in text
 
 
 def test_prompt_mode_cli_writes_output_file(fresh_modules, monkeypatch, tmp_path: Path):
@@ -456,9 +518,8 @@ def test_prompt_mode_cli_writes_output_file(fresh_modules, monkeypatch, tmp_path
     monkeypatch.setattr(grammar_fix, "is_flm_server_reachable", lambda: True)
 
     def fake_call(model, system_prompt, user_content, max_tokens, timeout_seconds):
-        # v1.3.0 tightened the prompt-mode system prompt; "Claude-ready" is the
-        # remaining signal that the prompt-mode path was selected.
-        assert "Claude-ready" in system_prompt
+        assert "four sibling XML sections" in system_prompt
+        assert max_tokens == 240
         return ("<task>Refine onboarding email</task>", model)
 
     monkeypatch.setattr(grammar_fix, "_call_flm_api", fake_call)

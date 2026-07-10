@@ -28,6 +28,7 @@
     "min_chunk_chars": 700
   },
   "prompt_builder": {
+    "prompt_version": "v2",
     "target_agent": "claude_code",
     "detail_level": "balanced",
     "action_mode": "implement",
