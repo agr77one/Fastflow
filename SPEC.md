@@ -8,6 +8,7 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - G2: run on AMD NPU (FastFlowLM) | any CPU/GPU (Ollama). provider ? → auto-fallback to other.
 - G3: web dashboard = single home for chat, notes, meetings, config, benchmark, notifications.
 - G4: heavy LLM cost (prefill) → pre-compute after-hours, read cached.
+- G5: `prompt:` warm p50 ≤ 15s & p90 ≤ 20s; v2 p50 ≤ 60% v1; quality median ≥ v1; invented requirements = 0.
 
 ## §C context / stack
 
@@ -16,7 +17,7 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - LLM: FastFlowLM NPU @ `:52625` | Ollama @ `:11434`, OpenAI-compat `POST /v1/chat/completions`
 - dashboard: daemon-served `scripts/ui/web/{index.html,app.js,styles.css}`, CSP `default-src 'self'`
 - paths: `scripts/paths.py` → USER_ROOT/{config,data,logs}; `_version.py` = version src of truth
-- version: `2.2.1` (maintenance: history-visibility release + audit cleanup); `2.2.0` released (`v2.2.0` on `25b8794`); repo `agr77one/Fastflow`
+- version: `2.3.0` (prompt-v2 speed+quality release); `2.2.0` released (`v2.2.0` on `25b8794`); repo `agr77one/Fastflow`
 - run tree = `flowkey-pub2` (worktree, branch `live`=origin/main). old `FastFlowPrompt_Local_Setup`=1.5.0 stale.
 
 ## §I interfaces
@@ -27,6 +28,10 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - action: `config_snapshot` → full cfg; `apply_config_patch {patch}` → merge (whitelist `filter_config_patch`)
 - action: `recent_history {limit?}` → newest history rows; `input_text`/`output_text` iff stored @ write-time
 - action: `prompt_builder_preview {settings?,sample?}` → deterministic local preview (`⊥` LLM call)
+- config: `prompt_builder.prompt_version` ∈ {`v1`,`v2`}; default `v2`; v1 = instant rollback
+- config: `server.warm_on_start` bool + `server.keep_warm_minutes` 0..1440; warmup best-effort
+- cmd: `python tools/prompt_speed_quality_eval.py [--live] [--cold-warm] [--reuse-v1 PATH] [--rescore PATH] [--export-v1 PATH] [--runs N] [--judge-file PATH] [--out PATH]` → old-vs-v2 JSON
+- data: `data/benchmarks/prompt_v2_ab_<date>.json` → speed+quality gate evidence
 - action: `notify_gate {title,message}` → `{show,reason,category}` (logs); `notifications_log {limit}` → rows
 - action: `quill_status` → `{reachable,enabled,server,server_version}`
 - action: `quill_search_meetings {query,limit}` → `{meetings:[{id,title,date,duration,participants,url}]}`
@@ -66,13 +71,23 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - V17: builtin mode prompts locked from patching (only `tone.preset` patchable)
 - V18: version ∀ ∈ {`_version.py`,`pyproject.toml`,`installer/installer.iss`,`README.md`} equal; CI smoke fails on drift
 - V19: `main` branch-protected (ruleset 17344133) → land via PR + ruleset toggle; ⊥ direct push
-- V20: change gates ! pass: `ruff check scripts tests`, `pytest`, `node --check scripts/ui/web/app.js`, AHK parse-check (PowerShell `/ErrorStdOut`)
-- V21: local data (config/data/logs/vendor/certs) ∈ `.gitignore` ∴ pull moves code only, never user data
+- V20: change gates ! pass: `ruff check scripts tests`, `python -m pytest`, `node --check scripts/ui/web/app.js`, AHK parse-check (PowerShell `/ErrorStdOut`)
+- V21: local runtime data (config/data/logs/vendor/certs) ∈ `.gitignore`; exception = sanitized fixed-input `data/benchmarks/prompt_v*.json` release evidence
 - V22: `sync.ps1` ∃ uncommitted tracked changes → skip pull (⊥ clobber un-pushed WIP)
 - V23: meeting `NoContentError` & age ≥ 2d → skip-marker (`meeting_skips.jsonl`) ∴ ⊥ re-queue ever; age < 2d → retry (Quill transcript may still sync); non-content errors ⊥ skip-mark. batch errors → `daemon.log` only (⊥ UI panel, per user)
-- V24: prompt_builder default cfg ⇒ `CLAUDE_PROMPT_SYSTEM_PROMPT` identity; non-default prompt validation target-aware (XML only when effective structure=xml); built-in `modes.prompt.system_prompt` still locked
+- V24: prompt_builder default cfg ⇒ `CLAUDE_PROMPT_SYSTEM_PROMPT_V2`; `prompt_version=v1` ⇒ `CLAUDE_PROMPT_SYSTEM_PROMPT_V1`; non-default validation target-aware; built-in `modes.prompt.system_prompt` still locked
 - V25: History view toggle = display-only; ⊥ mutate `history_store_text`; ⊥ reveal text absent from jsonl row
 - V26: History tab load default view = Telemetry (text hidden) even when storage visible
+- V27: default v2 output → exactly ordered `<task>`,`<context>`,`<constraints>`,`<output_format>`; task = 1 imperative sentence; constraints = 3–5 concrete items; output_format = 1 line; ⊥ preamble/fence/`<think>`; ≤ 220 tokens
+- V28: prompt runtime caps short/medium/long = 240/320/420 tokens; retries ! same strategy cap
+- V29: A/B gate → ≥12 fixed inputs; 1 warmup + ≥5 timed/style/input; p50/p90/min/max, TTFT, completion tokens, decode tok/s, seconds/output-token; v2 speed gate + median quality ≥v1 + invented=0 + R1 rate ≥v1
+- V30: v1 prompt constant retained + config-selectable without built-in prompt patching
+- V31: daemon startup + configured idle interval → best-effort FastFlowLM warmup; failure logs only, ⊥ daemon startup failure
+- V32: prompt output with valid target structure → ⊥ anti-echo retry solely from line/word overlap
+- V33: default v2 surfaced output → source-clause grounding + fixed scope guards only; raw model inventions ⊥ surface
+- V34: FastFlowLM force restart → old port observed closed before new spawn; ⊥ return `already_running` from dying instance
+- V35: default v2 → exactly 1 short LLM draft call; ⊥ anti-echo/rescue calls; V33 finalizer supplies surfaced 4-section contract
+- V36: pre-2.3 prompt_builder identity cfg (⊥ `prompt_version`, legacy default fields) → migrate v2+concise; any custom field → preserve
 
 ## §T tasks
 
@@ -100,6 +115,10 @@ T19|x|[DOCS] first-run wizard text "chat popup" → "Open chat" + hotkey now `^!
 T20|x|[DOCS] daemon log location — audited 2.1.1: no stale ref in README/docs; nothing to change|—
 T21|x|prompt_builder cfg + claude_code identity + generic_chat adapter + dashboard controls/preview|V17,V24
 T22|x|History Telemetry/Exposed views + inline redacted/visible storage control/help|V5,V6,V25,V26
+T23|x|prompt-v2 fixed A/B speed+quality harness + tests|V29
+T24|x|prompt-v2 default + v1 rollback selector + 240/320/420 caps|V24,V27,V28,V30,V32
+T25|x|FastFlowLM startup+idle keep-warm + cold/warm measurement support|V31
+T26|x|2.3.0 release evidence + version/docs rebaseline after A/B gate passes|V18,V29,V33,V34,V35,V36
 ```
 
 ## §B bugs
@@ -113,4 +132,25 @@ B4|2026-06|install launch: AHK called `.py`, shipped only `.exe`|flatten bundle 
 B5|2026-06|`Ctrl+Shift+T` open_chat collided w/ browser reopen-tab|default → `^!c`; tray label = configured hotkey
 B6|2026-07|3 divergent autostart Run keys: daemon HKCU\Run\FastFlowPrompt, `install.ps1` HKCU\Run\Flowkey (different name!), `installer.iss` optional HKLM\Run\Flowkey → toggle blind to other 2, could double-launch|unify on HKCU\Run\FastFlowPrompt everywhere; drop installer.iss HKLM task; uninstall now cleans the HKCU value; guarded by `test_installer_autostart.py`
 B7|2026-07|"Run batch now" → "0 of 5, 5 errors" ∀ run: 5 Quill stub recordings (⊥ minutes ⊥ transcript) re-queued forever ∵ idempotency = digest_exists only|typed `NoContentError` → skip store `meeting_skips.jsonl` (age ≥ 2d guard) + `skipped` count in result; queue checks digest ∧ skip; reasons stay in daemon.log|V23
+B8|2026-07-10|new prompt-v2 eval imports violated Ruff I001/UP035|V20 caught; sort imports + `Callable` from `collections.abc`
+B9|2026-07-10|prompt-v2 eval test import block retained extra blank line|V20 caught; normalize import spacing
+B10|2026-07-10|stale user-level `pytest.exe` exited 1 + ⊥ diagnostics while active interpreter pytest passed|V20 → interpreter-bound `python -m pytest`
+B11|2026-07-10|`node` absent from desktop PowerShell PATH|V20; run bundled workspace `node.exe --check`
+B12|2026-07-10|structured v1 rollback output retried ∵ first anti-echo gate ignored target structure|V32
+B13|2026-07-10|focused Ruff command accidentally included `scripts/ui/web/app.js`|V20 caught; JS → Node syntax gate only
+B14|2026-07-10|warmup test insertion split existing daemon action assertions into wrong test|V20 caught; restore test block boundary
+B15|2026-07-10|FastFlowLM usage emits `decoding_duration`; eval parsed only `decode_duration`|V29; accept both aliases
+B16|2026-07-10|first live v2 probe omitted closing XML tags + invented libraries/config/files/error behavior|V27,V29; explicit skeleton + anti-invention list
+B17|2026-07-10|second live v2 probe stopped after valid `</task>` ∵ descriptive skeleton treated as optional sequence|V27; literal all-tags template + final-tag completion rule
+B18|2026-07-10|literal-template probe passed structure but trap/vague inputs gained inferred CLI/browser/file details; CSV got 2 constraints|V29; entailment-only content + exact safe fillers
+B19|2026-07-10|entailment wording fixed vague case but CSV/CLI still gained conventional schema/args/I/O details|V29; clause-copy rules + grounded example + final unsupported-detail audit
+B20|2026-07-10|3 live prompt-only revisions still invented conventional details on 4B trap inputs|V33; deterministic source-clause grounding before output surfaces
+B21|2026-07-10|CLI prompt test pinned prose from first v2 draft after contract-preserving tune|V20 caught; assert stable final-tag rule
+B22|2026-07-10|V27 sentence check treated dots/question marks inside identifiers/regex as boundaries|V27; split only terminal punctuation before whitespace/end
+B23|2026-07-10|cold probe force-restart returned `already_running` while killed FLM socket still closing; service then vanished|V34
+B24|2026-07-10|live v2 p50 11.22s but ratio 61.69% ∵ discarded raw 4-section draft still decoded median 121 tokens|V35; 1 short task draft + deterministic V33 finalizer
+B25|2026-07-10|broad V35 patch changed runtime/system branches instead of retry branches|V20 caught; restore + scope conditions by surrounding logic
+B26|2026-07-10|default v2 input ≥ routing threshold still made compression subcalls; 1 huge clause could exceed V27|V27,V35; bypass routing + bound grounded sections
+B27|2026-07-10|upgraded 2.2 cfg retained `detail_level=balanced` ∴ v1 selector missed new concise-default identity|V24,V30; `prompt_version=v1` authoritative legacy XML path
+B28|2026-07-10|2.2 persisted identity cfg lacked `prompt_version` + kept `balanced` ∴ upgrade bypassed v2 path|V36; narrow legacy-identity migration
 ```

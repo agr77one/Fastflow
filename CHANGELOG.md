@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+## 2.3.0
+
+**Prompt mode, faster and better grounded.** The default `prompt:` path now emits a compact copy-paste-ready agent prompt in a few seconds without filling gaps with conventional-but-unstated requirements.
+
+### Changed
+
+- **Prompt v2 is the new default.** One short local-model draft is finalized into exactly four ordered sections (`<task>`, `<context>`, `<constraints>`, `<output_format>`) using only source clauses plus fixed scope guards. The finalizer prevents raw-model guesses about libraries, files, arguments, formats, tests, platforms, defaults, or error behavior from surfacing. The legacy prompt remains available immediately through Dashboard → Config → Prompt builder → **v1 — legacy rollback**.
+- **Prompt decode is bounded.** Prompt short/medium/long strategies now cap at 240/320/420 tokens, and default v2 makes exactly one draft call rather than entering anti-echo/rescue retries before its grounded finalizer.
+- **FastFlowLM stays warm.** The daemon performs a best-effort background warmup on startup and at a configurable keepalive interval (15 minutes by default; `0` disables periodic warmups). Failures are logged and never block daemon startup. The dashboard exposes both controls.
+
+### Measured release gate
+
+- Fixed set: 12 realistic requests covering implementation, debugging, review, refactor, data, vague, long, and trap inputs; one warmup plus five timed generations per style/input on FastFlowLM `qwen3.5:4b`.
+- Speed: warm p50 **18.18 s → 3.38 s**, p90 **22.69 s → 4.67 s**, median completion tokens **222 → 26**. v2 is **18.59%** of v1 p50; no ordinary v2 input exceeded 25 seconds.
+- Quality: manual GPT-5 source review scored v2 median **7/7** versus v1 **0.5/7**; v2 passed 12/12, clean-section rate was 100%, and invented-requirement failures were **0** (v1: 12).
+- Warm-model probe: first post-restart request **20.88 s** wall versus immediate warm request **3.70 s** (5.65× wall-time improvement).
+- Evidence: `data/benchmarks/prompt_v2_ab_2026-07-10.json`, `prompt_v1_frozen_2026-07-10.json`, `prompt_v2_judge_2026-07-10.json`, and `prompt_v2_cold_warm_2026-07-10.json`.
+
+### Fixed / internal
+
+- FastFlowLM force-restart now waits for the old socket to close before spawning the replacement, preventing a dying instance from being mistaken for `already_running`.
+- Added a reproducible speed/quality evaluator with usage-duration aliases, manual/LLM judgment rescoring, frozen-v1 replay/export, cold/warm probing, and five-output side-by-side review evidence.
+
 ## 2.2.1
 
 **Maintenance.** Ships the History visibility controls and clears the remaining SPEC audit backlog.

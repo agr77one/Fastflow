@@ -232,10 +232,9 @@ def _act_start(_args: dict) -> str:
 
 
 def _act_warmup(_args: dict) -> str:
+    if grammar_fix.CONFIGURED_LLM_PROVIDER == "fastflowlm":
+        return grammar_fix.warm_configured_fastflowlm()
     result = grammar_fix.start_llm_server(force_restart=False)
-    if grammar_fix.LLM_PROVIDER == "fastflowlm":
-        grammar_fix._warmup_request(grammar_fix.FLM_MODEL)
-        return "warmed_up"
     return result
 
 
@@ -1035,6 +1034,72 @@ def _watch_parent(parent_pid: int) -> None:
 
 
 _SCHED_INTERVAL_SECONDS = 300
+_KEEP_WARM_DISABLED_POLL_SECONDS = 60
+
+
+def _keep_warm_settings(cfg: dict) -> tuple[bool, int]:
+    server_cfg = cfg.get("server") if isinstance(cfg.get("server"), dict) else {}
+    warm_on_start = bool(server_cfg.get("warm_on_start", True))
+    try:
+        minutes = max(0, min(int(server_cfg.get("keep_warm_minutes", 15)), 1440))
+    except (TypeError, ValueError):
+        minutes = 15
+    return warm_on_start, minutes * 60
+
+
+def _warm_model_once(
+    cfg: dict,
+    reason: str,
+    *,
+    warm_fn: Callable[[], str] | None = None,
+) -> str:
+    llm_cfg = cfg.get("llm") if isinstance(cfg.get("llm"), dict) else {}
+    provider = str(llm_cfg.get("provider") or "fastflowlm").strip().lower()
+    if provider != "fastflowlm":
+        return "skipped_provider"
+    warm = warm_fn or grammar_fix.warm_configured_fastflowlm
+    try:
+        result = warm()
+        log.info("model warmup reason=%s result=%s", reason, result)
+        return result
+    except Exception as exc:
+        log.warning("model warmup reason=%s failed: %s", reason, exc)
+        return "failed"
+
+
+def _load_keep_warm_config(load_config_fn: Callable[[], dict]) -> dict:
+    try:
+        return load_config_fn()
+    except Exception as exc:
+        log.warning("model warmup config load failed: %s", exc)
+        return {
+            "llm": {"provider": "disabled"},
+            "server": {"warm_on_start": False, "keep_warm_minutes": 0},
+        }
+
+
+def _model_warm_scheduler(
+    *,
+    wait: Callable[[float], bool] | None = None,
+    load_config_fn: Callable[[], dict] | None = None,
+    warm_fn: Callable[[], str] | None = None,
+) -> None:
+    """Best-effort startup/keepalive worker; all failures stay off the main thread."""
+    wait = wait or _shutdown_event.wait
+    load_cfg = load_config_fn or grammar_fix.load_config
+    cfg = _load_keep_warm_config(load_cfg)
+    warm_on_start, _interval_seconds = _keep_warm_settings(cfg)
+    if warm_on_start:
+        _warm_model_once(cfg, "startup", warm_fn=warm_fn)
+
+    while True:
+        cfg = _load_keep_warm_config(load_cfg)
+        _warm_on_start, interval_seconds = _keep_warm_settings(cfg)
+        delay = interval_seconds or _KEEP_WARM_DISABLED_POLL_SECONDS
+        if wait(delay):
+            return
+        if interval_seconds:
+            _warm_model_once(cfg, "idle_interval", warm_fn=warm_fn)
 
 
 def _meeting_scheduler() -> None:
@@ -1106,6 +1171,8 @@ def main() -> int:
 
     # After-hours meeting digest scheduler (no-op unless meetings.enabled + in window).
     threading.Thread(target=_meeting_scheduler, daemon=True).start()
+    # FastFlowLM warmup is isolated from startup: model load/network errors only log.
+    threading.Thread(target=_model_warm_scheduler, name="ffp-model-warm", daemon=True).start()
 
     server = ThreadingHTTPServer((HOST, args.port), Handler)
     server.timeout = 1.0

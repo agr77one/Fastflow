@@ -311,6 +311,12 @@
           <span class="muted small" id="provider-start-status"></span>
         </div>
         <label class="check-row"><input type="checkbox" id="cfg-autostart"> Launch Flowkey when I sign in (per-user)</label>
+        <label class="check-row"><input type="checkbox" id="cfg-warm-on-start"> Warm FastFlowLM when Flowkey starts</label>
+        <div class="form-row">
+          <label for="cfg-keep-warm">Keep warm (min; 0 = off)</label>
+          <input type="number" id="cfg-keep-warm" min="0" max="1440">
+        </div>
+        <p class="muted small" id="warm-model-note">FastFlowLM-only; warmups run in the background.</p>
       </div>
       <div class="card">
         <h2 id="models-title">Installed models</h2>
@@ -360,6 +366,13 @@
       <div class="card">
         <h2>Prompt builder</h2>
         <p class="muted small">Controls the <code>prompt:</code> output shape without editing the locked built-in system prompt. Custom modes remain the fully custom escape hatch.</p>
+        <div class="form-row">
+          <label for="pb-version">Prompt engine</label>
+          <select id="pb-version">
+            <option value="v2">v2 — faster, dense</option>
+            <option value="v1">v1 — legacy rollback</option>
+          </select>
+        </div>
         <div class="form-row">
           <label for="pb-target">Target</label>
           <select id="pb-target">

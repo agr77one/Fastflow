@@ -19,7 +19,7 @@ log = logging.getLogger("ffp.config")
 
 _config_lock = threading.Lock()
 
-CLAUDE_PROMPT_SYSTEM_PROMPT = (
+CLAUDE_PROMPT_SYSTEM_PROMPT_V1 = (
     "Rewrite the user text as a Claude-ready prompt. "
     "Structure: <task> (one primary deliverable, one sentence), "
     "<context> (background facts only, no instructions), "
@@ -29,6 +29,20 @@ CLAUDE_PROMPT_SYSTEM_PROMPT = (
     "Base every constraint on what the user actually asked for — never invent "
     "requirements they did not state. Return only the prompt."
 )
+CLAUDE_PROMPT_SYSTEM_PROMPT_V2 = (
+    "Restate the user's requested coding deliverable as one concise imperative sentence. "
+    "Use only details the user explicitly stated. Do not solve, infer, explain, or add requirements. "
+    "Return only that sentence with no preamble, under 40 tokens."
+)
+# Compatibility import for integrations that previously consumed the sole
+# prompt constant. The unversioned name always denotes the current default.
+CLAUDE_PROMPT_SYSTEM_PROMPT = CLAUDE_PROMPT_SYSTEM_PROMPT_V2
+
+_LEGACY_PROMPT_BUILDER_IDENTITY = {
+    **ffp_prompt_builder.DEFAULT_PROMPT_BUILDER_CONFIG,
+    "detail_level": "balanced",
+}
+_LEGACY_PROMPT_BUILDER_IDENTITY.pop("prompt_version")
 
 DEFAULT_CONFIG = {
     "enabled": True,
@@ -63,6 +77,8 @@ DEFAULT_CONFIG = {
     "history_store_text": False,
     "server": {
         "auto_start": True,
+        "warm_on_start": True,
+        "keep_warm_minutes": 15,
         "performance_mode": "balanced",
         "startup_timeout_seconds": 25,
         "serve_extra_args": [],
@@ -119,7 +135,7 @@ DEFAULT_CONFIG = {
         "prompt": {
             "label": "Prompt fix (Claude)",
             "description": "Rewrite rough text into a Claude-ready prompt (use prompt: prefix).",
-            "system_prompt": CLAUDE_PROMPT_SYSTEM_PROMPT,
+            "system_prompt": CLAUDE_PROMPT_SYSTEM_PROMPT_V2,
         },
         "summarize": {
             "label": "Summarize",
@@ -159,12 +175,30 @@ def load_config(config_path: Path) -> dict:
         log.warning("config file root is not an object (%s), using defaults", config_path)
         return copy.deepcopy(DEFAULT_CONFIG)
     has_llm_block = isinstance(loaded.get("llm"), dict)
+    raw_prompt_builder = loaded.get("prompt_builder")
     merged = copy.deepcopy(DEFAULT_CONFIG)
     deep_merge(merged, loaded)
     normalize_llm_config(merged, prefer_legacy=not has_llm_block)
+    _migrate_legacy_prompt_builder_identity(merged, raw_prompt_builder)
     normalize_prompt_builder_config(merged)
     _enforce_builtin_mode_prompts(merged)
     return merged
+
+
+def _migrate_legacy_prompt_builder_identity(cfg: dict, raw_value) -> None:
+    if not isinstance(raw_value, dict) or "prompt_version" in raw_value:
+        return
+    if any(
+        key not in _LEGACY_PROMPT_BUILDER_IDENTITY
+        or value != _LEGACY_PROMPT_BUILDER_IDENTITY[key]
+        for key, value in raw_value.items()
+    ):
+        return
+    prompt_builder = cfg.get("prompt_builder")
+    if not isinstance(prompt_builder, dict):
+        return
+    prompt_builder["prompt_version"] = "v2"
+    prompt_builder["detail_level"] = "concise"
 
 
 def _enforce_builtin_mode_prompts(cfg: dict) -> None:
@@ -330,10 +364,12 @@ _LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
 
 _PATCH_SERVER_KEYS = frozenset({
     "auto_start",
+    "keep_warm_minutes",
     "log_file",
     "log_to_file",
     "performance_mode",
     "startup_timeout_seconds",
+    "warm_on_start",
 })
 _PATCH_ROUTING_KEYS = frozenset({
     "chunk_size_chars",
@@ -393,6 +429,34 @@ def _filter_notifications_patch(value: dict) -> dict:
                 filtered_cats[cat_id] = {"enabled": bool(cat_val["enabled"])}
         if filtered_cats:
             out["categories"] = filtered_cats
+    return out
+
+
+def _filter_server_patch(value: dict) -> dict:
+    value = {key: item for key, item in value.items() if key in _PATCH_SERVER_KEYS}
+    out: dict = {}
+    for flag in ("auto_start", "log_to_file", "warm_on_start"):
+        if flag in value:
+            out[flag] = bool(value[flag])
+    if "keep_warm_minutes" in value:
+        try:
+            out["keep_warm_minutes"] = max(0, min(int(value["keep_warm_minutes"]), 1440))
+        except (TypeError, ValueError):
+            pass
+    if "startup_timeout_seconds" in value:
+        try:
+            out["startup_timeout_seconds"] = max(
+                5,
+                min(int(value["startup_timeout_seconds"]), 300),
+            )
+        except (TypeError, ValueError):
+            pass
+    if value.get("performance_mode") in {"balanced", "max"}:
+        out["performance_mode"] = value["performance_mode"]
+    if "log_file" in value:
+        log_file = str(value["log_file"] or "").strip()
+        if log_file:
+            out["log_file"] = log_file[:120]
     return out
 
 
@@ -526,7 +590,7 @@ def filter_config_patch(patch: dict) -> dict:
         elif key in ("flm_model", "flm_timeout_seconds", "history_filename", "history_store_text"):
             out[key] = value
         elif key == "server" and isinstance(value, dict):
-            filtered = {k: v for k, v in value.items() if k in _PATCH_SERVER_KEYS}
+            filtered = _filter_server_patch(value)
             if filtered:
                 out[key] = filtered
         elif key == "routing" and isinstance(value, dict):

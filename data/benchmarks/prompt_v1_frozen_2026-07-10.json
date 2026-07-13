@@ -1,0 +1,2294 @@
+{
+  "schema_version": 1,
+  "kind": "prompt_v1_frozen_baseline",
+  "created_at": "2026-07-10T11:08:24-04:00",
+  "exported_at": "2026-07-10T15:22:18-04:00",
+  "source_artifact": "data\\benchmarks\\prompt_v2_ab_2026-07-10.json",
+  "protocol": {
+    "fixed_input_count": 12,
+    "warmups_per_style_input": 1,
+    "timed_runs_per_style_input": 5
+  },
+  "style": {
+    "label": "current",
+    "system_prompt": "Rewrite the user text as a Claude-ready prompt. Structure: <task> (one primary deliverable, one sentence), <context> (background facts only, no instructions), <constraints> (concrete + testable: length, format, tone), <output_format> (exact shape — Markdown headers, JSON keys, etc.). Keep each section short. No meta-framing, no preamble. Base every constraint on what the user actually asked for — never invent requirements they did not state. Return only the prompt.",
+    "caps": [
+      700,
+      900,
+      1200
+    ]
+  },
+  "summary": {
+    "speed": {
+      "runs": 60,
+      "successful_runs": 60,
+      "wall_seconds": {
+        "median": 18.1794,
+        "p90": 22.6921,
+        "min": 14.205,
+        "max": 30.4958
+      },
+      "ttft_seconds": {
+        "median": 1.1731,
+        "p90": 1.3191,
+        "min": 1.1539,
+        "max": 1.6105
+      },
+      "completion_tokens": {
+        "median": 222.0,
+        "p90": 274.7,
+        "min": 165.0,
+        "max": 389.0
+      },
+      "decode_tokens_per_second": {
+        "median": 13.9355,
+        "p90": 14.0698,
+        "min": 13.2411,
+        "max": 14.1003
+      },
+      "seconds_per_output_token": {
+        "median": 0.0825,
+        "p90": 0.0858,
+        "min": 0.0784,
+        "max": 0.0887
+      }
+    },
+    "quality": {
+      "median_score": 0.5,
+      "scored_outputs": 12,
+      "pending_judge": 0,
+      "passed_outputs": 0,
+      "pass_rate": 0.0,
+      "clean_section_pass_rate": 0.0,
+      "invented_requirement_failures": 12
+    },
+    "protocol": {
+      "expected_timed_runs": 60,
+      "successful_timed_runs": 60,
+      "warmup_errors": 0
+    },
+    "ordinary_over_25s": 4
+  },
+  "cases": [
+    {
+      "name": "implement_csv_validator",
+      "category": "implement",
+      "trap": false,
+      "input": "build a python script that reads a folder of CSVs, validates rows against a schema, and writes an error report with file and line numbers",
+      "v1": {
+        "label": "current",
+        "max_tokens": 700,
+        "warmups": 1,
+        "warmup_errors": [],
+        "samples": [
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nGenerate a Python script that iterates through a specified directory of CSV files, validates each row against a provided schema definition, and outputs a detailed error report containing the filename and line number for every validation failure.\n\n<context>\nThe user has existing CSV data in various files within a folder that needs to be checked for consistency with specific column names, types, or required fields defined by a schema. The goal is to automate this checking process without manually inspecting each file.\n\n<constraints>\n- Output must be valid Python 3 code enclosed in markdown code blocks.\n- Include comments explaining the logic of validation and error reporting.\n- Do not include external dependencies beyond the standard library (e.g., no pandas, only csv module).\n- The script should accept arguments for the input folder path and a JSON schema definition file path via `sys.argv`.\n\n<output_format>\nA single code block containing the complete Python script with necessary imports, class/function definitions, and main execution logic.",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 146,
+              "completion_tokens": 206,
+              "total_tokens": 352,
+              "kv_token_occupancy_rate_percentage": 1.07421875,
+              "load_duration": 1.1e-06,
+              "prefill_duration_ttft": 1.210723456,
+              "decoding_duration": 15.304176,
+              "prefill_speed_tps": 120.58905712651857,
+              "decoding_speed_tps": 13.460378396066536
+            },
+            "wall_seconds": 17.5524,
+            "ttft_seconds": 1.2107,
+            "completion_tokens": 206,
+            "decode_duration_seconds": 15.3042,
+            "decode_tokens_per_second": 13.4604,
+            "seconds_per_output_token": 0.085206
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nGenerate a Python script that iterates through a specified directory of CSV files, validates each row against a provided schema definition, and outputs a detailed error report containing the filename and line number for every validation failure.\n\n<context>\nThe user has existing CSV data in various files within a folder that needs to be checked for consistency with specific column names, types (e.g., integers vs strings), or required values defined by a schema dictionary. The goal is to automate this checking process without manually inspecting each file.\n\n<constraints>\n- Output must be valid Python 3 code enclosed in markdown code blocks.\n- Include a `main` function that accepts the folder path and schema as arguments, with default examples for demonstration.\n- Error report should be printed to standard output or saved to a JSON/CSV file (choose one clear method).\n- Do not include external dependencies beyond the Python Standard Library (`os`, `csv`, `json`).\n- Keep comments concise explaining validation logic.\n\n<output_format>\nMarkdown code block with language set to 'python'. No additional text outside the code block unless necessary for clarity.",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 146,
+              "completion_tokens": 233,
+              "total_tokens": 379,
+              "kv_token_occupancy_rate_percentage": 1.1566162109375,
+              "load_duration": 7e-07,
+              "prefill_duration_ttft": 1.167560192,
+              "decoding_duration": 16.683994,
+              "prefill_speed_tps": 125.04708622337134,
+              "decoding_speed_tps": 13.96548092740863
+            },
+            "wall_seconds": 18.9528,
+            "ttft_seconds": 1.1676,
+            "completion_tokens": 233,
+            "decode_duration_seconds": 16.684,
+            "decode_tokens_per_second": 13.9655,
+            "seconds_per_output_token": 0.081342
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nGenerate a Python script that iterates through a specified directory of CSV files, validates each row against a provided schema definition, and outputs a detailed error report containing the filename and line number for every validation failure.\n\n<context>\nThe user has existing CSV data in various files within a specific folder. A JSON file or dictionary will define the expected column names and data types (the schema). The goal is to identify discrepancies between actual rows and the schema, such as missing columns, incorrect types, or null values where not allowed.\n\n<constraints>\n- Code must be written in Python 3 using standard libraries only (`csv`, `json`, `os`).\n- Output format: A single `.py` file containing a main function that accepts arguments for the folder path and schema definition.\n- Error report output: Print to console or write to a log file; each error line must explicitly state `[File: name] Line N`.\n- No external dependencies (e.g., pandas, pydantic) allowed unless specified otherwise by user context (none here).\n\n<output_format>\nMarkdown code block with the Python script. Include brief comments explaining key validation logic steps. Do not include execution instructions or explanations outside the code block.</task>",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 146,
+              "completion_tokens": 256,
+              "total_tokens": 402,
+              "kv_token_occupancy_rate_percentage": 1.226806640625,
+              "load_duration": 7e-07,
+              "prefill_duration_ttft": 1.170802944,
+              "decoding_duration": 18.18958,
+              "prefill_speed_tps": 124.70074554236857,
+              "decoding_speed_tps": 14.073991812895075
+            },
+            "wall_seconds": 20.5566,
+            "ttft_seconds": 1.1708,
+            "completion_tokens": 256,
+            "decode_duration_seconds": 18.1896,
+            "decode_tokens_per_second": 14.074,
+            "seconds_per_output_token": 0.080299
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nGenerate a Python script that iterates through a specified directory of CSV files, validates each row against a provided schema definition, and outputs a detailed error report containing the filename and line number for every validation failure.\n\n<context>\nThe user has existing CSV data in various files within a specific folder. A JSON file or dictionary will define the expected schema (column names, types). The goal is to identify invalid entries without altering the source data.\n\n<constraints>\n- Output must be valid Python 3 code enclosed in a markdown code block with `python` syntax highlighting.\n- The script must accept command-line arguments for the input folder path and an optional schema file path (defaulting to a hardcoded example if not provided).\n- Error reporting should print directly to stdout, formatted as: `[FILENAME]:LINE_NUMBER - ERROR_DESCRIPTION`.\n- Do not include external dependencies beyond `csv`, `json`, `os`, and `argparse` modules.\n- Keep the code concise; do not add extensive comments or unit tests unless requested.\n\n<output_format>\nA single Markdown block containing only the Python script, starting with ```python and ending with ```.",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 146,
+              "completion_tokens": 240,
+              "total_tokens": 386,
+              "kv_token_occupancy_rate_percentage": 1.177978515625,
+              "load_duration": 7e-07,
+              "prefill_duration_ttft": 1.17034112,
+              "decoding_duration": 17.592856,
+              "prefill_speed_tps": 124.74995324440108,
+              "decoding_speed_tps": 13.641901008000067
+            },
+            "wall_seconds": 19.8939,
+            "ttft_seconds": 1.1703,
+            "completion_tokens": 240,
+            "decode_duration_seconds": 17.5929,
+            "decode_tokens_per_second": 13.6419,
+            "seconds_per_output_token": 0.082891
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nGenerate a Python script that iterates through a specified directory of CSV files, validates each row against a provided schema definition, and outputs a detailed error report containing the filename and line number for every validation failure.\n\n<context>\nThe user has existing CSV data in various files within a specific folder. A JSON file or dictionary will define the expected column names and data types (the schema). The goal is to identify rows that do not match this schema, such as missing columns, incorrect types, or null values where they are forbidden.\n\n<constraints>\n- Output must be a single Python script with no external dependencies beyond standard library (`csv`, `json`, `os`).\n- Include a command-line argument for the input folder path and an optional JSON file path for the schema (defaulting to hardcoded example if not provided).\n- The error report should be printed to stdout in a clear, tab-separated format: `filename\\tline_number\\terror_description`.\n- Code must include docstrings explaining usage.\n\n<output_format>\nMarkdown code block containing the Python script with comments indicating where user inputs (folder path, schema) would go.",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 146,
+              "completion_tokens": 236,
+              "total_tokens": 382,
+              "kv_token_occupancy_rate_percentage": 1.165771484375,
+              "load_duration": 1e-06,
+              "prefill_duration_ttft": 1.161729152,
+              "decoding_duration": 16.773741,
+              "prefill_speed_tps": 125.67473214272925,
+              "decoding_speed_tps": 14.069610351083876
+            },
+            "wall_seconds": 19.0305,
+            "ttft_seconds": 1.1617,
+            "completion_tokens": 236,
+            "decode_duration_seconds": 16.7737,
+            "decode_tokens_per_second": 14.0696,
+            "seconds_per_output_token": 0.080638
+          }
+        ],
+        "speed": {
+          "runs": 5,
+          "successful_runs": 5,
+          "wall_seconds": {
+            "median": 19.0305,
+            "p90": 20.2915,
+            "min": 17.5524,
+            "max": 20.5566
+          },
+          "ttft_seconds": {
+            "median": 1.1703,
+            "p90": 1.1947,
+            "min": 1.1617,
+            "max": 1.2107
+          },
+          "completion_tokens": {
+            "median": 236.0,
+            "p90": 249.6,
+            "min": 206.0,
+            "max": 256.0
+          },
+          "decode_tokens_per_second": {
+            "median": 13.9655,
+            "p90": 14.0722,
+            "min": 13.4604,
+            "max": 14.074
+          },
+          "seconds_per_output_token": {
+            "median": 0.0813,
+            "p90": 0.0843,
+            "min": 0.0803,
+            "max": 0.0852
+          }
+        },
+        "representative_output": "<task>\nGenerate a Python script that iterates through a specified directory of CSV files, validates each row against a provided schema definition, and outputs a detailed error report containing the filename and line number for every validation failure.\n\n<context>\nThe user has existing CSV data in various files within a folder that needs to be checked for consistency with specific column names, types, or required fields defined by a schema. The goal is to automate this checking process without manually inspecting each file.\n\n<constraints>\n- Output must be valid Python 3 code enclosed in markdown code blocks.\n- Include comments explaining the logic of validation and error reporting.\n- Do not include external dependencies beyond the standard library (e.g., no pandas, only csv module).\n- The script should accept arguments for the input folder path and a JSON schema definition file path via `sys.argv`.\n\n<output_format>\nA single code block containing the complete Python script with necessary imports, class/function definitions, and main execution logic.",
+        "quality": {
+          "rubric": {
+            "r1": false,
+            "r2": false,
+            "r3": false,
+            "r4": false,
+            "r5": false,
+            "r6": false,
+            "r7": true
+          },
+          "score": 1,
+          "passed": false,
+          "hard_fail": true,
+          "pending_judge": false,
+          "invented_requirement": true,
+          "constraint_item_count": 0,
+          "token_count": 206,
+          "token_count_source": "usage.completion_tokens",
+          "estimated_tokens": 198,
+          "judge_notes": "Invents Python 3, Markdown fences, comments, standard-library-only, argv, and JSON schema file."
+        }
+      }
+    },
+    {
+      "name": "debug_async_cache_race",
+      "category": "debug",
+      "trap": false,
+      "input": "debug an intermittent async cache test failure: two refreshes sometimes run at once and the older response overwrites the newer value; keep the public API unchanged",
+      "v1": {
+        "label": "current",
+        "max_tokens": 700,
+        "warmups": 1,
+        "warmup_errors": [],
+        "samples": [
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nDebug an intermittent async cache test failure where two simultaneous refreshes cause the older response to overwrite the newer value, while keeping the public API unchanged.\n\n<context>\nThe system uses an asynchronous caching mechanism for data refresh operations. Under specific concurrency conditions, multiple requests can trigger a refresh simultaneously before any has completed or committed its result to storage. This race condition results in stale (older) data overwriting fresh updates when two refreshes occur at nearly the same time. The public API contract must remain stable and unmodified by this fix.\n\n<constraints>\n- Output length: 200 - 400 words total.\n- Format: Single Markdown code block containing a Python script that implements the fix using `asyncio.Semaphore` or similar concurrency control to serialize refreshes atomically without changing API signatures.\n- Tone: Technical, direct, no fluff.\n- Testability: The solution must be testable via standard async unit tests (e.g., `pytest`).\n\n<output_format>\n```python\n# Implementation of the fix within a class or function that mirrors existing public API structure.\n```",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 148,
+              "completion_tokens": 234,
+              "total_tokens": 382,
+              "kv_token_occupancy_rate_percentage": 1.165771484375,
+              "load_duration": 6e-07,
+              "prefill_duration_ttft": 1.178722816,
+              "decoding_duration": 16.676432,
+              "prefill_speed_tps": 125.55962944896451,
+              "decoding_speed_tps": 14.03177850034108
+            },
+            "wall_seconds": 18.9198,
+            "ttft_seconds": 1.1787,
+            "completion_tokens": 234,
+            "decode_duration_seconds": 16.6764,
+            "decode_tokens_per_second": 14.0318,
+            "seconds_per_output_token": 0.080854
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nDebug an intermittent async cache test failure where two concurrent refreshes cause the older response to overwrite the newer value, while keeping the public API unchanged.\n\n<context>\nThe system uses an asynchronous caching mechanism for data refresh operations. Under specific load conditions, multiple refresh requests can be processed simultaneously before a lock or check is acquired. This race condition results in stale (older) data being written over fresh (newer) data when two updates occur at nearly the same time. The public API contract must remain stable and unmodified to ensure backward compatibility for all clients.\n\n<constraints>\n- Output length: 200 - 400 words total.\n- Format: Single Markdown code block containing a Python script with `if __name__ == \"__main__\":` entry point.\n- Tone: Technical, direct, and solution-oriented; no fluff or explanations outside the code.\n- Testability: The provided fix must be verifiable by running the existing test suite without altering API signatures.\n\n<output_format>\nA Python script inside a Markdown ```python block that implements the race condition fix using atomic operations (e.g., `functools.lru_cache` with maxsize=1 or explicit locking via `threading.Lock`) to ensure only one refresh runs at a time per key, preserving API behavior.",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 148,
+              "completion_tokens": 274,
+              "total_tokens": 422,
+              "kv_token_occupancy_rate_percentage": 1.287841796875,
+              "load_duration": 5e-07,
+              "prefill_duration_ttft": 1.16808192,
+              "decoding_duration": 19.634374,
+              "prefill_speed_tps": 126.7034421695355,
+              "decoding_speed_tps": 13.95511769308255
+            },
+            "wall_seconds": 22.0284,
+            "ttft_seconds": 1.1681,
+            "completion_tokens": 274,
+            "decode_duration_seconds": 19.6344,
+            "decode_tokens_per_second": 13.9551,
+            "seconds_per_output_token": 0.080396
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nDebug an intermittent async cache test failure where two concurrent refreshes cause the older response to overwrite the newer value, while keeping the public API unchanged.\n\n<context>\nThe system uses an asynchronous caching mechanism for data refresh operations. Under specific race conditions, multiple requests can trigger simultaneous cache updates within a single execution context. The current implementation lacks synchronization logic to ensure atomicity during concurrent writes, leading to stale or overwritten values in the cache layer without affecting the external interface exposed by the API endpoints.\n\n<constraints>\n- Output must be exactly 200 words (195 - 204 characters allowed for whitespace).\n- Use only Markdown headers (`###`) and code blocks (` ``` `) where appropriate; no other formatting styles.\n- Tone: Technical, direct, problem-solving focused; avoid fluff or conversational fillers.\n- Do not include any meta-commentary about the prompt itself (e.g., \"Here is your rewritten prompt\").\n\n<output_format>\nA single Markdown document containing:\n1. A `### Problem Analysis` header with a concise paragraph explaining the root cause in 2 - 3 sentences.\n2. A `### Proposed Solution` header with a bulleted list of exactly three technical steps to fix the issue, each under 40 characters long (excluding bullets).",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 148,
+              "completion_tokens": 273,
+              "total_tokens": 421,
+              "kv_token_occupancy_rate_percentage": 1.2847900390625,
+              "load_duration": 6e-07,
+              "prefill_duration_ttft": 1.15969664,
+              "decoding_duration": 20.283122,
+              "prefill_speed_tps": 127.61958161748232,
+              "decoding_speed_tps": 13.45946644702921
+            },
+            "wall_seconds": 22.6705,
+            "ttft_seconds": 1.1597,
+            "completion_tokens": 273,
+            "decode_duration_seconds": 20.2831,
+            "decode_tokens_per_second": 13.4595,
+            "seconds_per_output_token": 0.083042
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nDebug an intermittent async cache test failure where two concurrent refreshes cause the older response to overwrite the newer value, while keeping the public API unchanged.\n\n<context>\nThe system uses an asynchronous caching mechanism for data refresh operations. A specific unit test occasionally fails due to race conditions when multiple refresh requests execute simultaneously within a short timeframe. The underlying implementation currently lacks synchronization logic to handle concurrent updates, leading to stale or overwritten cache entries in edge cases. The public API contract must remain stable and unmodified regardless of internal fixes.\n\n<constraints>\n- Output length: 200 - 400 words total.\n- Format: Single Markdown code block containing the debugging solution steps only (no explanations).\n- Tone: Direct, technical, imperative instructions suitable for a developer implementation guide.\n- No meta-commentary or conversational filler outside the prompt structure.\n\n<output_format>\nMarkdown headers (#) for sections like \"Root Cause\", \"Fix Strategy\", and \"Implementation Steps\". Use bullet points (-) for actionable items. Ensure all code snippets are in ```language blocks if applicable (e.g., pseudo-code or SQL).",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 148,
+              "completion_tokens": 234,
+              "total_tokens": 382,
+              "kv_token_occupancy_rate_percentage": 1.165771484375,
+              "load_duration": 9e-07,
+              "prefill_duration_ttft": 1.161499904,
+              "decoding_duration": 16.632057,
+              "prefill_speed_tps": 127.42144832755835,
+              "decoding_speed_tps": 14.069215852254475
+            },
+            "wall_seconds": 18.8746,
+            "ttft_seconds": 1.1615,
+            "completion_tokens": 234,
+            "decode_duration_seconds": 16.6321,
+            "decode_tokens_per_second": 14.0692,
+            "seconds_per_output_token": 0.080661
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nDebug an intermittent async cache test failure where two concurrent refreshes cause the older response to overwrite the newer value, while keeping the public API unchanged.\n\n<context>\nThe system uses an asynchronous caching mechanism for data refresh operations. Under specific load conditions, multiple refresh requests can be initiated simultaneously before a previous one completes. The current implementation does not handle race conditions effectively, leading to stale or overwritten cache entries when concurrent updates occur. The public API contract must remain stable and unmodified by the fix.\n\n<constraints>\n- Output length: 200 - 400 words total.\n- Format: Single Markdown code block containing a Python script with detailed comments explaining the logic, not an explanation text outside it.\n- Tone: Technical, direct, focused on implementation details and debugging steps.\n- Content requirements: Must include specific async handling (e.g., `asyncio.Semaphore` or similar), cache key validation logic to prevent overwrites without changing API signatures, and a test case demonstrating the race condition fix.\n\n<output_format>\nA Markdown code block with Python 3 syntax highlighting containing the debugging script. The script must include:\n1. A class representing the async cache handler.\n2. A method `refresh_data` that implements concurrency control to prevent overwrites of newer responses by older ones (e.g., using a token bucket or semaphore).\n3. A unit test function simulating concurrent refreshes and verifying the latest value is retained in the cache without altering any public API methods.\n\n</output_format>",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 148,
+              "completion_tokens": 318,
+              "total_tokens": 466,
+              "kv_token_occupancy_rate_percentage": 1.422119140625,
+              "load_duration": 5e-07,
+              "prefill_duration_ttft": 1.16202304,
+              "decoding_duration": 22.611108,
+              "prefill_speed_tps": 127.36408393417052,
+              "decoding_speed_tps": 14.063883998961927
+            },
+            "wall_seconds": 25.1499,
+            "ttft_seconds": 1.162,
+            "completion_tokens": 318,
+            "decode_duration_seconds": 22.6111,
+            "decode_tokens_per_second": 14.0639,
+            "seconds_per_output_token": 0.079088
+          }
+        ],
+        "speed": {
+          "runs": 5,
+          "successful_runs": 5,
+          "wall_seconds": {
+            "median": 22.0284,
+            "p90": 24.1581,
+            "min": 18.8746,
+            "max": 25.1499
+          },
+          "ttft_seconds": {
+            "median": 1.162,
+            "p90": 1.1745,
+            "min": 1.1597,
+            "max": 1.1787
+          },
+          "completion_tokens": {
+            "median": 273.0,
+            "p90": 300.4,
+            "min": 234.0,
+            "max": 318.0
+          },
+          "decode_tokens_per_second": {
+            "median": 14.0318,
+            "p90": 14.0671,
+            "min": 13.4595,
+            "max": 14.0692
+          },
+          "seconds_per_output_token": {
+            "median": 0.0807,
+            "p90": 0.0822,
+            "min": 0.0791,
+            "max": 0.083
+          }
+        },
+        "representative_output": "<task>\nDebug an intermittent async cache test failure where two simultaneous refreshes cause the older response to overwrite the newer value, while keeping the public API unchanged.\n\n<context>\nThe system uses an asynchronous caching mechanism for data refresh operations. Under specific concurrency conditions, multiple requests can trigger a refresh simultaneously before any has completed or committed its result to storage. This race condition results in stale (older) data overwriting fresh updates when two refreshes occur at nearly the same time. The public API contract must remain stable and unmodified by this fix.\n\n<constraints>\n- Output length: 200 - 400 words total.\n- Format: Single Markdown code block containing a Python script that implements the fix using `asyncio.Semaphore` or similar concurrency control to serialize refreshes atomically without changing API signatures.\n- Tone: Technical, direct, no fluff.\n- Testability: The solution must be testable via standard async unit tests (e.g., `pytest`).\n\n<output_format>\n```python\n# Implementation of the fix within a class or function that mirrors existing public API structure.\n```",
+        "quality": {
+          "rubric": {
+            "r1": false,
+            "r2": false,
+            "r3": false,
+            "r4": false,
+            "r5": false,
+            "r6": false,
+            "r7": false
+          },
+          "score": 0,
+          "passed": false,
+          "hard_fail": true,
+          "pending_judge": false,
+          "invented_requirement": true,
+          "constraint_item_count": 0,
+          "token_count": 234,
+          "token_count_source": "usage.completion_tokens",
+          "estimated_tokens": 213,
+          "judge_notes": "Invents word count, Python, asyncio.Semaphore, pytest, and output shape."
+        }
+      }
+    },
+    {
+      "name": "review_auth_middleware",
+      "category": "review",
+      "trap": false,
+      "input": "review the new TypeScript auth middleware for regressions and missing tests; report findings by severity with file and line references",
+      "v1": {
+        "label": "current",
+        "max_tokens": 700,
+        "warmups": 1,
+        "warmup_errors": [],
+        "samples": [
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nAnalyze the provided TypeScript authentication middleware code for regressions and missing test coverage, then generate a report detailing findings by severity level with specific file paths and line numbers.\n\n<context>\nThe user has supplied a new implementation of an auth middleware in TypeScript that requires validation against existing patterns or requirements to ensure stability and completeness. The goal is to identify potential issues (regressions) where functionality may have been broken, as well as gaps where critical scenarios lack corresponding tests.\n\n<constraints>\n- Output must be exactly 300 words long (counting spaces).\n- Report findings in a bulleted list format with no numbering.\n- Use professional but concise technical tone; avoid fluff or explanations outside the report structure.\n- Each finding must include: [Severity] - Description, File Path:line_number.\n\n<output_format>\nMarkdown header for title (e.g., `## Auth Middleware Review Report`).\nA single bulleted list containing all findings sorted by severity (Critical > High > Medium).\nNo introduction or conclusion paragraphs outside the report structure.",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 140,
+              "completion_tokens": 223,
+              "total_tokens": 363,
+              "kv_token_occupancy_rate_percentage": 1.1077880859375,
+              "load_duration": 1.1e-06,
+              "prefill_duration_ttft": 1.164959744,
+              "decoding_duration": 15.855805,
+              "prefill_speed_tps": 120.17582643611075,
+              "decoding_speed_tps": 14.064249654937104
+            },
+            "wall_seconds": 18.0689,
+            "ttft_seconds": 1.165,
+            "completion_tokens": 223,
+            "decode_duration_seconds": 15.8558,
+            "decode_tokens_per_second": 14.0642,
+            "seconds_per_output_token": 0.081026
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nAnalyze the provided TypeScript authentication middleware code for regressions and missing test coverage, then report findings organized by severity level with specific file paths and line numbers.\n\n<context>\nThe user has a new TypeScript implementation of an auth middleware that requires validation against existing patterns to ensure no functionality was broken (regressions) and that all critical logic is covered by tests. The output must be structured as a technical review report suitable for engineering stakeholders.\n\n<constraints>\n- Total response length: 300 - 500 words.\n- Format: Markdown with clear headers (`## Severity Level`, `### Missing Tests`, etc.).\n- Tone: Professional, concise, and objective (no fluff).\n- Data requirement: Every finding must include a file path and line number reference where applicable.\n\n<output_format>\nUse the following structure exactly:\n\n# Auth Middleware Review Report\n\n## 1. Regression Analysis\n[Summary of potential regressions found]\n\n## 2. Missing Test Coverage\n[List of untested functions/modules with file/line refs]\n\n## 3. Recommendations\n[Brief actionable next steps based on findings]",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 140,
+              "completion_tokens": 238,
+              "total_tokens": 378,
+              "kv_token_occupancy_rate_percentage": 1.153564453125,
+              "load_duration": 1.3e-06,
+              "prefill_duration_ttft": 1.154849664,
+              "decoding_duration": 16.903436,
+              "prefill_speed_tps": 121.22790036158334,
+              "decoding_speed_tps": 14.079977585622236
+            },
+            "wall_seconds": 19.179,
+            "ttft_seconds": 1.1548,
+            "completion_tokens": 238,
+            "decode_duration_seconds": 16.9034,
+            "decode_tokens_per_second": 14.08,
+            "seconds_per_output_token": 0.080584
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nAnalyze the provided TypeScript authentication middleware code for regressions and missing test coverage, then output a structured report detailing findings by severity level with specific file paths and line numbers.\n\n<context>\nThe user has supplied a new implementation of an auth middleware in TypeScript that requires validation against existing patterns or requirements to ensure stability and completeness. The goal is to identify potential issues like logic errors (regressions) or gaps where functionality exists but lacks corresponding tests.\n\n<constraints>\n- Output must be exactly 300 words long, including all text and code blocks.\n- Report findings in a Markdown table with columns: Severity, Issue Description, File Path, Line Number.\n- Use professional yet concise technical tone; avoid fluff or conversational fillers.\n- Do not include any introductory remarks or concluding summaries outside the report structure.\n\n<output_format>\nMarkdown code block containing only the analysis report in a table format as specified above.",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 140,
+              "completion_tokens": 197,
+              "total_tokens": 337,
+              "kv_token_occupancy_rate_percentage": 1.0284423828125,
+              "load_duration": 5e-07,
+              "prefill_duration_ttft": 1.156205568,
+              "decoding_duration": 14.467548,
+              "prefill_speed_tps": 121.08573412440097,
+              "decoding_speed_tps": 13.616681969881835
+            },
+            "wall_seconds": 16.5843,
+            "ttft_seconds": 1.1562,
+            "completion_tokens": 197,
+            "decode_duration_seconds": 14.4675,
+            "decode_tokens_per_second": 13.6167,
+            "seconds_per_output_token": 0.084184
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nAnalyze the provided TypeScript authentication middleware code for regressions and missing test coverage, then generate a report detailing findings by severity level with specific file paths and line numbers.\n\n<context>\nThe user has supplied a new implementation of an auth middleware in TypeScript that requires validation against existing patterns or requirements to ensure stability and completeness. The goal is to identify potential issues (regressions) where functionality might be broken, as well as gaps where critical scenarios are not covered by tests.\n\n<constraints>\n- Output must be exactly 300 words or less.\n- Use a bulleted list for the findings section; do not use tables.\n- Maintain a professional, technical tone suitable for engineering review.\n- Do not include any introductory text, explanations of methodology, or concluding remarks outside the report itself.\n\n<output_format>\nMarkdown format with two main headers: `## Analysis Findings` and `## Recommendations`. Under each header, provide concise bullet points summarizing specific issues found (e.g., \"Regression in token validation at auth.ts:42\") and actionable suggestions where applicable.",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 140,
+              "completion_tokens": 228,
+              "total_tokens": 368,
+              "kv_token_occupancy_rate_percentage": 1.123046875,
+              "load_duration": 9e-07,
+              "prefill_duration_ttft": 1.155902592,
+              "decoding_duration": 16.202568,
+              "prefill_speed_tps": 121.11747215460869,
+              "decoding_speed_tps": 14.071843426301312
+            },
+            "wall_seconds": 18.4342,
+            "ttft_seconds": 1.1559,
+            "completion_tokens": 228,
+            "decode_duration_seconds": 16.2026,
+            "decode_tokens_per_second": 14.0718,
+            "seconds_per_output_token": 0.080852
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nAnalyze the provided TypeScript authentication middleware code for regressions and missing test coverage, then generate a report detailing findings by severity level with specific file paths and line numbers.\n\n<context>\nThe user has supplied a new implementation of an auth middleware in TypeScript that requires validation against existing patterns or requirements to ensure stability and completeness. The goal is to identify potential issues (regressions) where functionality might be broken, as well as gaps where critical scenarios are not covered by tests.\n\n<constraints>\n- Output must be exactly 300 words or less.\n- Use a bulleted list for the findings section; do not use tables.\n- Maintain a professional, technical tone suitable for engineering review.\n- Each finding must include: Severity (High/Medium/Low), Description, File Path, and Line Number reference.\n\n<output_format>\nMarkdown format with the following structure:\n1. `## Analysis Summary` (brief intro)\n2. `## Findings by Severity` (bulleted list of findings)",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 140,
+              "completion_tokens": 215,
+              "total_tokens": 355,
+              "kv_token_occupancy_rate_percentage": 1.0833740234375,
+              "load_duration": 9e-07,
+              "prefill_duration_ttft": 1.159690752,
+              "decoding_duration": 15.316078,
+              "prefill_speed_tps": 120.72183878206867,
+              "decoding_speed_tps": 14.037536241327578
+            },
+            "wall_seconds": 17.494,
+            "ttft_seconds": 1.1597,
+            "completion_tokens": 215,
+            "decode_duration_seconds": 15.3161,
+            "decode_tokens_per_second": 14.0375,
+            "seconds_per_output_token": 0.081367
+          }
+        ],
+        "speed": {
+          "runs": 5,
+          "successful_runs": 5,
+          "wall_seconds": {
+            "median": 18.0689,
+            "p90": 18.8811,
+            "min": 16.5843,
+            "max": 19.179
+          },
+          "ttft_seconds": {
+            "median": 1.1562,
+            "p90": 1.1629,
+            "min": 1.1548,
+            "max": 1.165
+          },
+          "completion_tokens": {
+            "median": 223.0,
+            "p90": 234.0,
+            "min": 197.0,
+            "max": 238.0
+          },
+          "decode_tokens_per_second": {
+            "median": 14.0642,
+            "p90": 14.0767,
+            "min": 13.6167,
+            "max": 14.08
+          },
+          "seconds_per_output_token": {
+            "median": 0.081,
+            "p90": 0.0831,
+            "min": 0.0806,
+            "max": 0.0842
+          }
+        },
+        "representative_output": "<task>\nAnalyze the provided TypeScript authentication middleware code for regressions and missing test coverage, then generate a report detailing findings by severity level with specific file paths and line numbers.\n\n<context>\nThe user has supplied a new implementation of an auth middleware in TypeScript that requires validation against existing patterns or requirements to ensure stability and completeness. The goal is to identify potential issues (regressions) where functionality may have been broken, as well as gaps where critical scenarios lack corresponding tests.\n\n<constraints>\n- Output must be exactly 300 words long (counting spaces).\n- Report findings in a bulleted list format with no numbering.\n- Use professional but concise technical tone; avoid fluff or explanations outside the report structure.\n- Each finding must include: [Severity] - Description, File Path:line_number.\n\n<output_format>\nMarkdown header for title (e.g., `## Auth Middleware Review Report`).\nA single bulleted list containing all findings sorted by severity (Critical > High > Medium).\nNo introduction or conclusion paragraphs outside the report structure.",
+        "quality": {
+          "rubric": {
+            "r1": false,
+            "r2": false,
+            "r3": false,
+            "r4": false,
+            "r5": false,
+            "r6": false,
+            "r7": false
+          },
+          "score": 0,
+          "passed": false,
+          "hard_fail": true,
+          "pending_judge": false,
+          "invented_requirement": true,
+          "constraint_item_count": 0,
+          "token_count": 223,
+          "token_count_source": "usage.completion_tokens",
+          "estimated_tokens": 205,
+          "judge_notes": "Invents exact length, bullet format, severity set, title, and report structure."
+        }
+      }
+    },
+    {
+      "name": "refactor_invoice_service",
+      "category": "refactor",
+      "trap": false,
+      "input": "refactor InvoiceService so calculation and persistence are separate, preserve current behavior, and do not add dependencies",
+      "v1": {
+        "label": "current",
+        "max_tokens": 700,
+        "warmups": 1,
+        "warmup_errors": [],
+        "samples": [
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nRefactor the InvoiceService to separate calculation logic from persistence while preserving existing behavior and avoiding new dependencies.\n\n<context>\nThe current implementation mixes invoice calculation with database operations in a single service class. The goal is to isolate the mathematical rules for generating invoices into a dedicated component, leaving only data access responsibilities within the original service or an appropriate repository layer without introducing external libraries or frameworks.\n\n<constraints>\n- Output must be exactly 200 words (195 - 204 characters allowed if strictly enforced by platform, but here meaning ~200 tokens/words).\n- Use only standard TypeScript interfaces and types; no third-party packages like `lodash`, `date-fns`, or ORM libraries.\n- Preserve all existing unit test expectations without modification to test code.\n- Do not introduce new classes beyond what is necessary for separation of concerns (e.g., a simple calculation utility).\n\n<output_format>\nProvide the refactored TypeScript code in a single Markdown block with clear comments explaining the separation of concerns. Include no additional text outside the code block.",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 138,
+              "completion_tokens": 224,
+              "total_tokens": 362,
+              "kv_token_occupancy_rate_percentage": 1.104736328125,
+              "load_duration": 8e-07,
+              "prefill_duration_ttft": 1.244666752,
+              "decoding_duration": 16.03299,
+              "prefill_speed_tps": 110.87305078106561,
+              "decoding_speed_tps": 13.971193146131819
+            },
+            "wall_seconds": 18.3546,
+            "ttft_seconds": 1.2447,
+            "completion_tokens": 224,
+            "decode_duration_seconds": 16.033,
+            "decode_tokens_per_second": 13.9712,
+            "seconds_per_output_token": 0.08194
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nRefactor the InvoiceService to separate calculation logic from persistence while preserving existing behavior and avoiding new dependencies.\n\n<context>\nThe current InvoiceService handles both calculating invoice totals (taxes, discounts, etc.) and persisting those results to a database within a single class. The goal is to extract the calculation logic into its own component or method without introducing external libraries or frameworks that are not currently used by the application.\n\n<constraints>\n- Output must be exactly 150 words (±10).\n- Use only standard JavaScript/TypeScript features; no third-party packages.\n- Maintain backward compatibility: existing API calls must return identical results.\n- Do not alter the public interface of `InvoiceService`.\n\n<output_format>\nProvide a concise technical summary in Markdown with two sections: \"Refactoring Plan\" and \"Implementation Notes\".",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 138,
+              "completion_tokens": 178,
+              "total_tokens": 316,
+              "kv_token_occupancy_rate_percentage": 0.96435546875,
+              "load_duration": 7e-07,
+              "prefill_duration_ttft": 1.154303744,
+              "decoding_duration": 12.664427,
+              "prefill_speed_tps": 119.55258805779287,
+              "decoding_speed_tps": 14.05511674551087
+            },
+            "wall_seconds": 14.7097,
+            "ttft_seconds": 1.1543,
+            "completion_tokens": 178,
+            "decode_duration_seconds": 12.6644,
+            "decode_tokens_per_second": 14.0551,
+            "seconds_per_output_token": 0.082639
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nRefactor the InvoiceService to separate calculation logic from persistence while preserving existing behavior and avoiding new dependencies.\n\n<context>\nThe current implementation mixes invoice calculation with database operations in a single service class. The goal is to isolate the mathematical rules for generating invoices into a distinct component, leaving only data access responsibilities within the original service or a dedicated repository layer. No external libraries should be introduced during this refactoring.\n\n<constraints>\n- Output must be exactly 200 words (195 - 204 characters allowed if strictly word-counted, but here we assume ~200 tokens/words for clarity).\n- Use only standard JavaScript/TypeScript syntax compatible with Node.js environments.\n- Do not introduce any new npm packages or external dependencies.\n- Maintain backward compatibility: all public methods must behave identically before and after refactoring.\n\n<output_format>\nProvide the complete TypeScript code for both the calculation module (e.g., `InvoiceCalculator`) and the updated service (`InvoiceService`). Use clear class names, JSDoc comments explaining separation of concerns, and ensure type safety throughout.",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 138,
+              "completion_tokens": 231,
+              "total_tokens": 369,
+              "kv_token_occupancy_rate_percentage": 1.1260986328125,
+              "load_duration": 7e-07,
+              "prefill_duration_ttft": 1.169320448,
+              "decoding_duration": 16.797702,
+              "prefill_speed_tps": 118.01726398955438,
+              "decoding_speed_tps": 13.751881060873684
+            },
+            "wall_seconds": 19.0467,
+            "ttft_seconds": 1.1693,
+            "completion_tokens": 231,
+            "decode_duration_seconds": 16.7977,
+            "decode_tokens_per_second": 13.7519,
+            "seconds_per_output_token": 0.082453
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nRefactor the InvoiceService to separate calculation logic from persistence while preserving existing behavior and avoiding new dependencies.\n\n<context>\nThe current implementation mixes invoice calculation with database operations in a single service class. The goal is to isolate the mathematical rules for generating invoices into a dedicated component, leaving only data access responsibilities within the original service or its immediate layer. No external libraries should be introduced during this refactoring.\n\n<constraints>\n- Output must be exactly 200 words (±10).\n- Use Markdown code blocks for all examples and pseudo-code.\n- Maintain a professional, technical tone suitable for senior engineering review.\n- Do not include any explanatory text outside the requested structure.\n\n<output_format>\nA single Markdown document containing:\n1. A brief introduction to the refactoring approach (2 sentences).\n2. The new class hierarchy using Python syntax examples only (no implementation details beyond signatures and comments).",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 138,
+              "completion_tokens": 193,
+              "total_tokens": 331,
+              "kv_token_occupancy_rate_percentage": 1.0101318359375,
+              "load_duration": 7e-07,
+              "prefill_duration_ttft": 1.199867776,
+              "decoding_duration": 13.731442,
+              "prefill_speed_tps": 115.0126728630472,
+              "decoding_speed_tps": 14.055333736981156
+            },
+            "wall_seconds": 15.8883,
+            "ttft_seconds": 1.1999,
+            "completion_tokens": 193,
+            "decode_duration_seconds": 13.7314,
+            "decode_tokens_per_second": 14.0553,
+            "seconds_per_output_token": 0.082323
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nRefactor the InvoiceService to separate calculation logic from persistence while preserving current behavior and avoiding new dependencies.\n\n<context>\nThe existing InvoiceService handles both calculating invoice totals (taxes, discounts) and saving them to a database. The goal is to extract the calculation logic into a dedicated service or method, leaving only data access in the original service. No external libraries should be introduced; use only existing internal classes if available.\n\n<constraints>\n- Output must be exactly 200 words (±10).\n- Use Markdown code blocks for all examples and pseudo-code.\n- Maintain a professional, technical tone suitable for senior developers reviewing PRs.\n- Do not include any explanatory text outside the prompt structure itself.\n\n<output_format>\nReturn only the refactored service implementation in a single Markdown block with clear separation between `calculateInvoice` and `persistInvoice`.",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 138,
+              "completion_tokens": 185,
+              "total_tokens": 323,
+              "kv_token_occupancy_rate_percentage": 0.9857177734375,
+              "load_duration": 9e-07,
+              "prefill_duration_ttft": 1.31558976,
+              "decoding_duration": 13.222926,
+              "prefill_speed_tps": 104.89592135469343,
+              "decoding_speed_tps": 13.99085194910718
+            },
+            "wall_seconds": 15.5106,
+            "ttft_seconds": 1.3156,
+            "completion_tokens": 185,
+            "decode_duration_seconds": 13.2229,
+            "decode_tokens_per_second": 13.9909,
+            "seconds_per_output_token": 0.083841
+          }
+        ],
+        "speed": {
+          "runs": 5,
+          "successful_runs": 5,
+          "wall_seconds": {
+            "median": 15.8883,
+            "p90": 18.7699,
+            "min": 14.7097,
+            "max": 19.0467
+          },
+          "ttft_seconds": {
+            "median": 1.1999,
+            "p90": 1.2872,
+            "min": 1.1543,
+            "max": 1.3156
+          },
+          "completion_tokens": {
+            "median": 193.0,
+            "p90": 228.2,
+            "min": 178.0,
+            "max": 231.0
+          },
+          "decode_tokens_per_second": {
+            "median": 13.9909,
+            "p90": 14.0552,
+            "min": 13.7519,
+            "max": 14.0553
+          },
+          "seconds_per_output_token": {
+            "median": 0.0825,
+            "p90": 0.0834,
+            "min": 0.0819,
+            "max": 0.0838
+          }
+        },
+        "representative_output": "<task>\nRefactor the InvoiceService to separate calculation logic from persistence while preserving existing behavior and avoiding new dependencies.\n\n<context>\nThe current implementation mixes invoice calculation with database operations in a single service class. The goal is to isolate the mathematical rules for generating invoices into a dedicated component, leaving only data access responsibilities within the original service or an appropriate repository layer without introducing external libraries or frameworks.\n\n<constraints>\n- Output must be exactly 200 words (195 - 204 characters allowed if strictly enforced by platform, but here meaning ~200 tokens/words).\n- Use only standard TypeScript interfaces and types; no third-party packages like `lodash`, `date-fns`, or ORM libraries.\n- Preserve all existing unit test expectations without modification to test code.\n- Do not introduce new classes beyond what is necessary for separation of concerns (e.g., a simple calculation utility).\n\n<output_format>\nProvide the refactored TypeScript code in a single Markdown block with clear comments explaining the separation of concerns. Include no additional text outside the code block.",
+        "quality": {
+          "rubric": {
+            "r1": false,
+            "r2": false,
+            "r3": false,
+            "r4": false,
+            "r5": false,
+            "r6": false,
+            "r7": false
+          },
+          "score": 0,
+          "passed": false,
+          "hard_fail": true,
+          "pending_judge": false,
+          "invented_requirement": true,
+          "constraint_item_count": 0,
+          "token_count": 224,
+          "token_count_source": "usage.completion_tokens",
+          "estimated_tokens": 207,
+          "judge_notes": "Invents database/repository design, TypeScript, test policy, word count, and class limits."
+        }
+      }
+    },
+    {
+      "name": "data_monthly_rollup",
+      "category": "data",
+      "trap": false,
+      "input": "combine these monthly sales CSVs, keep the original rows, summarize revenue by region, and reconcile the summary total to the source total",
+      "v1": {
+        "label": "current",
+        "max_tokens": 700,
+        "warmups": 1,
+        "warmup_errors": [],
+        "samples": [
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nGenerate a Markdown report that merges multiple monthly sales CSVs into a single dataset, calculates regional revenue summaries, and verifies the total against the source data.\n\n<context>\nThe user has several separate CSV files containing monthly sales records with columns for date, region, product ID, quantity sold, and unit price. The goal is to aggregate these files without losing individual row details while producing a high-level summary by region that matches the sum of all original transactions.\n\n<constraints>\n- Output must be valid Markdown with clear headers (e.g., `## 1. Data Merge`, `## 2. Regional Summary`, `## 3. Reconciliation Check`).\n- Include a sample merged table showing at least one row from each source file to demonstrate retention of original data.\n- Present the regional summary as a bulleted list or small table with totals per region and an overall grand total.\n- The reconciliation section must explicitly state: \"Source Total\" vs \"Summary Total\" and confirm they match (or note any discrepancy).\n- Tone should be professional, analytical, and concise.\n\n<output_format>\nMarkdown document with three main sections as specified above. No JSON or code blocks unless illustrating the merged data structure conceptually.",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 144,
+              "completion_tokens": 256,
+              "total_tokens": 400,
+              "kv_token_occupancy_rate_percentage": 1.220703125,
+              "load_duration": 6e-07,
+              "prefill_duration_ttft": 1.163815552,
+              "decoding_duration": 18.429308,
+              "prefill_speed_tps": 123.73094667152206,
+              "decoding_speed_tps": 13.890917662236694
+            },
+            "wall_seconds": 20.7516,
+            "ttft_seconds": 1.1638,
+            "completion_tokens": 256,
+            "decode_duration_seconds": 18.4293,
+            "decode_tokens_per_second": 13.8909,
+            "seconds_per_output_token": 0.081061
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nGenerate a Markdown report that merges provided monthly sales CSVs, preserves all original rows, calculates regional revenue summaries, and verifies the summary total against the source data.\n\n<context>\nThe user has multiple CSV files containing monthly sales data with columns for region and revenue. The goal is to aggregate this data by region while ensuring no records are lost during processing. A final reconciliation step must confirm that the sum of regional totals exactly matches the grand total from the combined dataset, highlighting any discrepancies if they exist.\n\n<constraints>\n- Output length: Maximum 500 words for explanations; tables can be longer but must fit in a single code block or clearly separated section.\n- Format: Use Markdown with headers (`#`, `##`), data tables (using standard table syntax), and a dedicated \"Reconciliation Check\" section at the end.\n- Tone: Professional, analytical, and concise. Avoid unnecessary fluff; focus on clarity of results.\n- Testability: The reconciliation logic must be explicitly stated so it can be independently verified by summing regional totals vs. global total in any spreadsheet or script.\n\n<output_format>\n1. Title section with a brief overview of the merge operation performed (if applicable).\n2. A data table showing all original rows combined from the source CSVs (columns: Date, Region, Revenue).\n3. A summary table aggregating revenue by region only (columns: Region, Total Revenue).\n4. A \"Reconciliation Check\" section with two lines of math: `Sum of Regional Totals = [X]` and `Grand Total from Source = [Y]`, followed by a status line (`MATCHED` or `DISCREPANCY DETECTED`).",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 144,
+              "completion_tokens": 357,
+              "total_tokens": 501,
+              "kv_token_occupancy_rate_percentage": 1.5289306640625,
+              "load_duration": 8e-07,
+              "prefill_duration_ttft": 1.16649728,
+              "decoding_duration": 25.78559,
+              "prefill_speed_tps": 123.44649444874831,
+              "decoding_speed_tps": 13.84494207811417
+            },
+            "wall_seconds": 28.4029,
+            "ttft_seconds": 1.1665,
+            "completion_tokens": 357,
+            "decode_duration_seconds": 25.7856,
+            "decode_tokens_per_second": 13.8449,
+            "seconds_per_output_token": 0.07956
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nGenerate a Markdown report that merges multiple monthly sales CSVs into a single dataset, calculates regional revenue summaries, and verifies the total against the source data.\n\n<context>\nThe user has access to several separate CSV files containing monthly sales records with columns for region, date, and revenue. The goal is to aggregate these files without losing individual row details while producing a high-level summary by geographic area.\n\n<constraints>\n- Output must be valid Markdown using headers (#) and tables (|).\n- Include three distinct sections: \"Combined Data Preview\" (first 5 rows), \"Regional Revenue Summary\", and \"Reconciliation Check\".\n- The Reconciliation section must explicitly state the sum of individual regions versus the total row count/sum to confirm accuracy.\n- Tone should be professional and analytical, suitable for a business audit or financial review.\n\n<output_format>\nMarkdown document with exactly three headers: `## Combined Data Preview`, `## Regional Revenue Summary`, and `## Reconciliation Check`. Use standard table formatting for data presentation.",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 144,
+              "completion_tokens": 216,
+              "total_tokens": 360,
+              "kv_token_occupancy_rate_percentage": 1.0986328125,
+              "load_duration": 9e-07,
+              "prefill_duration_ttft": 1.17877312,
+              "decoding_duration": 15.858891,
+              "prefill_speed_tps": 122.16091252572845,
+              "decoding_speed_tps": 13.620120095408941
+            },
+            "wall_seconds": 17.9436,
+            "ttft_seconds": 1.1788,
+            "completion_tokens": 216,
+            "decode_duration_seconds": 15.8589,
+            "decode_tokens_per_second": 13.6201,
+            "seconds_per_output_token": 0.083072
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nGenerate a Markdown report that merges multiple monthly sales CSVs into a single dataset, calculates regional revenue summaries, and verifies the total against the source data.\n\n<context>\nThe user has several separate CSV files containing monthly sales records with columns for region, date, product ID, quantity sold, and unit price. The goal is to aggregate these files without losing individual row details while producing a high-level summary by geographic region that matches the sum of all original transactions.\n\n<constraints>\n- Output must be valid Markdown with clear headers (e.g., `## 1. Data Merged`, `## 2. Regional Summary`, `## 3. Reconciliation Check`).\n- The merged dataset section should display a sample of combined rows or indicate successful concatenation if the full list is too long, but explicitly state that original row integrity is preserved.\n- The regional summary must show total revenue per region with at least two decimal places precision.\n- The reconciliation check must compare the sum of all regions to the grand total and declare \"PASSED\" or \"FAILED\".\n- Tone: Professional, analytical, concise. No conversational filler before or after the report.\n\n<output_format>\nMarkdown document containing exactly three sections with headers as specified above. Use tables for data presentation where appropriate. Ensure no JSON output is generated unless requested (it was not).",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 144,
+              "completion_tokens": 281,
+              "total_tokens": 425,
+              "kv_token_occupancy_rate_percentage": 1.2969970703125,
+              "load_duration": 8e-07,
+              "prefill_duration_ttft": 1.24151744,
+              "decoding_duration": 20.819726,
+              "prefill_speed_tps": 115.9870939871775,
+              "decoding_speed_tps": 13.49681547201918
+            },
+            "wall_seconds": 23.2901,
+            "ttft_seconds": 1.2415,
+            "completion_tokens": 281,
+            "decode_duration_seconds": 20.8197,
+            "decode_tokens_per_second": 13.4968,
+            "seconds_per_output_token": 0.082883
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nGenerate a Markdown report that merges multiple monthly sales CSVs into a single dataset, calculates regional revenue summaries, and verifies the total against the source data.\n\n<context>\nThe user has several separate CSV files containing monthly sales records with columns for region, date, and revenue. The goal is to aggregate these files without losing individual row details while producing a high-level summary by region that mathematically equals the sum of all original rows.\n\n<constraints>\n- Output must be valid Markdown with clear headers (e.g., `## 1. Data Merge`, `## 2. Regional Summary`, `## 3. Reconciliation`).\n- The merged dataset section should display a sample of combined rows to prove integrity, not the full list if too large (or all if under threshold).\n- Revenue summaries must be grouped by region with clear totals per region and an overall total.\n- A reconciliation table must explicitly show: `Sum of Regional Totals` vs `Total from Merged Rows`, confirming they match exactly.\n- Tone should be professional, analytical, and concise.\n\n<output_format>\nUse Markdown headers for sections. Include a code block or table for the merged sample data and summary tables. Ensure no JSON output is used unless specifically requested (it was not).",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 144,
+              "completion_tokens": 266,
+              "total_tokens": 410,
+              "kv_token_occupancy_rate_percentage": 1.251220703125,
+              "load_duration": 1.3e-06,
+              "prefill_duration_ttft": 1.551676288,
+              "decoding_duration": 20.088912,
+              "prefill_speed_tps": 92.80286172678822,
+              "decoding_speed_tps": 13.241135209313475
+            },
+            "wall_seconds": 22.8554,
+            "ttft_seconds": 1.5517,
+            "completion_tokens": 266,
+            "decode_duration_seconds": 20.0889,
+            "decode_tokens_per_second": 13.2411,
+            "seconds_per_output_token": 0.085923
+          }
+        ],
+        "speed": {
+          "runs": 5,
+          "successful_runs": 5,
+          "wall_seconds": {
+            "median": 22.8554,
+            "p90": 26.3578,
+            "min": 17.9436,
+            "max": 28.4029
+          },
+          "ttft_seconds": {
+            "median": 1.1788,
+            "p90": 1.4276,
+            "min": 1.1638,
+            "max": 1.5517
+          },
+          "completion_tokens": {
+            "median": 266.0,
+            "p90": 326.6,
+            "min": 216.0,
+            "max": 357.0
+          },
+          "decode_tokens_per_second": {
+            "median": 13.6201,
+            "p90": 13.8725,
+            "min": 13.2411,
+            "max": 13.8909
+          },
+          "seconds_per_output_token": {
+            "median": 0.0829,
+            "p90": 0.0848,
+            "min": 0.0796,
+            "max": 0.0859
+          }
+        },
+        "representative_output": "<task>\nGenerate a Markdown report that merges multiple monthly sales CSVs into a single dataset, calculates regional revenue summaries, and verifies the total against the source data.\n\n<context>\nThe user has several separate CSV files containing monthly sales records with columns for date, region, product ID, quantity sold, and unit price. The goal is to aggregate these files without losing individual row details while producing a high-level summary by region that matches the sum of all original transactions.\n\n<constraints>\n- Output must be valid Markdown with clear headers (e.g., `## 1. Data Merge`, `## 2. Regional Summary`, `## 3. Reconciliation Check`).\n- Include a sample merged table showing at least one row from each source file to demonstrate retention of original data.\n- Present the regional summary as a bulleted list or small table with totals per region and an overall grand total.\n- The reconciliation section must explicitly state: \"Source Total\" vs \"Summary Total\" and confirm they match (or note any discrepancy).\n- Tone should be professional, analytical, and concise.\n\n<output_format>\nMarkdown document with three main sections as specified above. No JSON or code blocks unless illustrating the merged data structure conceptually.",
+        "quality": {
+          "rubric": {
+            "r1": false,
+            "r2": false,
+            "r3": false,
+            "r4": false,
+            "r5": false,
+            "r6": false,
+            "r7": false
+          },
+          "score": 0,
+          "passed": false,
+          "hard_fail": true,
+          "pending_judge": false,
+          "invented_requirement": true,
+          "constraint_item_count": 0,
+          "token_count": 256,
+          "token_count_source": "usage.completion_tokens",
+          "estimated_tokens": 248,
+          "judge_notes": "Invents columns, sample tables, Markdown layout, and presentation details."
+        }
+      }
+    },
+    {
+      "name": "vague_dashboard_speed",
+      "category": "vague",
+      "trap": false,
+      "input": "make the dashboard faster",
+      "v1": {
+        "label": "current",
+        "max_tokens": 700,
+        "warmups": 1,
+        "warmup_errors": [],
+        "samples": [
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nOptimize the provided dashboard code to improve its rendering performance.\n\n<context>\nThe user has a web-based dashboard with multiple data visualizations and interactive elements that currently experience lag or slow load times. The goal is specifically to increase speed without altering the core functionality or design aesthetic.\n\n</constraints>\n- Output must be a single, self-contained code block (HTML/CSS/JS) containing optimized implementations of common dashboard patterns (e.g., lightweight charting libraries, efficient DOM updates).\n- Do not include lengthy explanations; focus on performance techniques like virtualization for large lists, debounced search inputs, and lazy loading.\n- The response must be under 500 words.\n\n<output_format>\nMarkdown code block with a brief introductory sentence followed by the optimized implementation details.",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 122,
+              "completion_tokens": 166,
+              "total_tokens": 288,
+              "kv_token_occupancy_rate_percentage": 0.87890625,
+              "load_duration": 7e-07,
+              "prefill_duration_ttft": 1.350409984,
+              "decoding_duration": 12.189752,
+              "prefill_speed_tps": 90.3429339574551,
+              "decoding_speed_tps": 13.617996494104228
+            },
+            "wall_seconds": 14.2816,
+            "ttft_seconds": 1.3504,
+            "completion_tokens": 166,
+            "decode_duration_seconds": 12.1898,
+            "decode_tokens_per_second": 13.618,
+            "seconds_per_output_token": 0.086034
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nOptimize the provided dashboard code to improve its rendering performance without altering visual output.\n\n<context>\nThe user has a web-based dashboard with multiple data visualization components that currently experience lag during initial load and interaction. The goal is specifically to increase speed, not change design or add features.\n\n</context>\n\n<constraints>\n- Output must be exactly 300 words (±15).\n- Use only standard HTML/CSS/JS libraries; no external build tools required for the solution.\n- Prioritize virtual DOM usage and lazy loading of heavy charts.\n- Tone: Direct, technical, and action-oriented.\n\n</constraints>\n\n<output_format>\nA single Markdown code block containing a complete `index.html` file with embedded CSS/JS that implements the optimized dashboard structure described in the constraints.",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 122,
+              "completion_tokens": 172,
+              "total_tokens": 294,
+              "kv_token_occupancy_rate_percentage": 0.897216796875,
+              "load_duration": 7e-07,
+              "prefill_duration_ttft": 1.173108096,
+              "decoding_duration": 12.765522,
+              "prefill_speed_tps": 103.99723641494671,
+              "decoding_speed_tps": 13.473792924409985
+            },
+            "wall_seconds": 14.7636,
+            "ttft_seconds": 1.1731,
+            "completion_tokens": 172,
+            "decode_duration_seconds": 12.7655,
+            "decode_tokens_per_second": 13.4738,
+            "seconds_per_output_token": 0.085835
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nOptimize the provided dashboard code to improve its rendering performance without altering visual output.\n\n<context>\nThe user has a web-based dashboard with interactive charts and data tables that currently experiences lag when loading or scrolling through large datasets. The goal is specifically to increase speed, not change design or functionality.\n\n<constraints>\n- Output must be valid JavaScript/TypeScript code suitable for direct insertion into an existing project.\n- Do not include explanations, comments about \"optimization,\" or meta-text; only the optimized code block.\n- Maintain all original UI elements and data logic exactly as they were before optimization.\n- Focus on performance techniques such as virtual scrolling, memoization (React), debouncing inputs, or efficient rendering strategies appropriate for web dashboards.\n\n<output_format>\nA single Markdown code block containing only the optimized implementation of the dashboard component(s).",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 122,
+              "completion_tokens": 180,
+              "total_tokens": 302,
+              "kv_token_occupancy_rate_percentage": 0.921630859375,
+              "load_duration": 9e-07,
+              "prefill_duration_ttft": 1.155158784,
+              "decoding_duration": 13.487424,
+              "prefill_speed_tps": 105.61318642061245,
+              "decoding_speed_tps": 13.345765655472832
+            },
+            "wall_seconds": 15.5392,
+            "ttft_seconds": 1.1552,
+            "completion_tokens": 180,
+            "decode_duration_seconds": 13.4874,
+            "decode_tokens_per_second": 13.3458,
+            "seconds_per_output_token": 0.086329
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nOptimize the provided dashboard code to improve its rendering performance.\n\n<context>\nThe user has a web-based dashboard with multiple data visualizations and interactive elements that currently experience lag or slow load times. The goal is specifically to increase speed without altering the core functionality or design aesthetic.\n\n</constraints>\n- Output must be valid JavaScript/TypeScript code suitable for direct integration into an existing project.\n- Do not include lengthy explanations; focus on implementation details like memoization, virtualization, debouncing, and efficient state management patterns.\n- Maintain backward compatibility with the original logic where possible.\n\n<output_format>\nProvide a single Markdown code block containing the optimized solution. Include brief comments explaining key performance improvements (e.g., \"Implemented React.memo to prevent unnecessary re-renders\").",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 122,
+              "completion_tokens": 165,
+              "total_tokens": 287,
+              "kv_token_occupancy_rate_percentage": 0.8758544921875,
+              "load_duration": 8e-07,
+              "prefill_duration_ttft": 1.501880448,
+              "decoding_duration": 12.316232,
+              "prefill_speed_tps": 81.23149892687064,
+              "decoding_speed_tps": 13.396954523104146
+            },
+            "wall_seconds": 14.6382,
+            "ttft_seconds": 1.5019,
+            "completion_tokens": 165,
+            "decode_duration_seconds": 12.3162,
+            "decode_tokens_per_second": 13.397,
+            "seconds_per_output_token": 0.088716
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nOptimize a web dashboard to improve its loading and interaction speed.\n\n<context>\nThe user is experiencing performance issues with their current dashboard implementation, specifically regarding initial load times and responsiveness during data rendering or filtering. The existing codebase uses standard HTML/CSS/JS without specific optimization techniques like lazy loading, virtualization for large lists, or asset compression.\n\n<constraints>\n- Provide a concise technical summary of 3 key optimizations (max 150 words).\n- Output must be in plain text with no Markdown formatting other than bullet points.\n- Tone: Direct and actionable for a developer audience.\n- Do not include code snippets; focus on architectural changes.\n\n<output_format>\nThree numbered items detailing specific optimization strategies, each followed by a brief explanation of the expected performance gain.",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 122,
+              "completion_tokens": 168,
+              "total_tokens": 290,
+              "kv_token_occupancy_rate_percentage": 0.885009765625,
+              "load_duration": 7e-07,
+              "prefill_duration_ttft": 1.370741504,
+              "decoding_duration": 12.226004,
+              "prefill_speed_tps": 89.00292261085573,
+              "decoding_speed_tps": 13.741202767478237
+            },
+            "wall_seconds": 14.7931,
+            "ttft_seconds": 1.3707,
+            "completion_tokens": 168,
+            "decode_duration_seconds": 12.226,
+            "decode_tokens_per_second": 13.7412,
+            "seconds_per_output_token": 0.088054
+          }
+        ],
+        "speed": {
+          "runs": 5,
+          "successful_runs": 5,
+          "wall_seconds": {
+            "median": 14.7636,
+            "p90": 15.2408,
+            "min": 14.2816,
+            "max": 15.5392
+          },
+          "ttft_seconds": {
+            "median": 1.3504,
+            "p90": 1.4494,
+            "min": 1.1552,
+            "max": 1.5019
+          },
+          "completion_tokens": {
+            "median": 168.0,
+            "p90": 176.8,
+            "min": 165.0,
+            "max": 180.0
+          },
+          "decode_tokens_per_second": {
+            "median": 13.4738,
+            "p90": 13.6919,
+            "min": 13.3458,
+            "max": 13.7412
+          },
+          "seconds_per_output_token": {
+            "median": 0.0863,
+            "p90": 0.0885,
+            "min": 0.0858,
+            "max": 0.0887
+          }
+        },
+        "representative_output": "<task>\nOptimize the provided dashboard code to improve its rendering performance.\n\n<context>\nThe user has a web-based dashboard with multiple data visualizations and interactive elements that currently experience lag or slow load times. The goal is specifically to increase speed without altering the core functionality or design aesthetic.\n\n</constraints>\n- Output must be a single, self-contained code block (HTML/CSS/JS) containing optimized implementations of common dashboard patterns (e.g., lightweight charting libraries, efficient DOM updates).\n- Do not include lengthy explanations; focus on performance techniques like virtualization for large lists, debounced search inputs, and lazy loading.\n- The response must be under 500 words.\n\n<output_format>\nMarkdown code block with a brief introductory sentence followed by the optimized implementation details.",
+        "quality": {
+          "rubric": {
+            "r1": false,
+            "r2": false,
+            "r3": false,
+            "r4": false,
+            "r5": false,
+            "r6": false,
+            "r7": true
+          },
+          "score": 1,
+          "passed": false,
+          "hard_fail": true,
+          "pending_judge": false,
+          "invented_requirement": true,
+          "constraint_item_count": 0,
+          "token_count": 166,
+          "token_count_source": "usage.completion_tokens",
+          "estimated_tokens": 154,
+          "judge_notes": "Invents dashboard technology, functionality, design, libraries, virtualization, lazy loading, and format."
+        }
+      }
+    },
+    {
+      "name": "long_webhook_import",
+      "category": "long",
+      "trap": false,
+      "input": "Add a webhook import endpoint to the existing Python service. It receives JSON events with event_id, account_id, happened_at, and payload. Reject malformed JSON with 400, authenticate using the existing X-Webhook-Key middleware, and make duplicate event_id requests return the original result without inserting twice. Store accepted events with the repository layer already used by the billing importer. Return JSON with id, status, and duplicate. Add focused unit tests and one HTTP integration test. Do not change the database schema or introduce a queue.",
+      "v1": {
+        "label": "current",
+        "max_tokens": 900,
+        "warmups": 1,
+        "warmup_errors": [],
+        "samples": [
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nImplement a webhook import endpoint in the existing Python service that validates JSON input, authenticates via X-Webhook-Key middleware, deduplicates events by ID using the current repository layer, and returns a specific JSON response with status indicators.\n\n<context>\nThe application is an existing Python service handling billing imports. A separate HTTP integration test suite already exists for other endpoints. The database schema is fixed and cannot be altered to add new tables or columns. No message queues are available; all processing must happen synchronously within the request lifecycle. The repository layer used by the billing importer should be reused directly without modification or abstraction changes.\n\n<constraints>\n- Response length: Keep implementation concise (under 150 lines of code).\n- Format: Python file with endpoint definition, middleware integration, deduplication logic, and test cases at the bottom.\n- Tone: Professional technical documentation style for comments; no conversational filler.\n- Tests: Include focused unit tests for JSON validation and duplicate detection; include exactly one HTTP integration test verifying the full flow.\n- Output shape: Markdown code block with `python` syntax highlighting containing the complete implementation file content.\n\n<output_format>\nMarkdown header (`# Webhook Import Endpoint Implementation`) followed by a single Python code block showing the full service update including endpoint, middleware usage, deduplication logic, and tests.",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 225,
+              "completion_tokens": 281,
+              "total_tokens": 506,
+              "kv_token_occupancy_rate_percentage": 1.544189453125,
+              "load_duration": 6e-07,
+              "prefill_duration_ttft": 1.28251904,
+              "decoding_duration": 20.04594,
+              "prefill_speed_tps": 175.43599196780735,
+              "decoding_speed_tps": 14.017801110848382
+            },
+            "wall_seconds": 22.674,
+            "ttft_seconds": 1.2825,
+            "completion_tokens": 281,
+            "decode_duration_seconds": 20.0459,
+            "decode_tokens_per_second": 14.0178,
+            "seconds_per_output_token": 0.08069
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nImplement a webhook import endpoint in the existing Python service that validates JSON input, authenticates via X-Webhook-Key middleware, deduplicates events by ID using the current repository layer, and returns a specific JSON response.\n\n<context>\nThe application currently uses an existing Python service with a repository layer for billing imports. Authentication is handled by an X-Webhook-Key middleware. The database schema must remain unchanged, and no message queues should be introduced. Events are defined by event_id, account_id, happened_at, and payload fields within JSON requests.\n\n<constraints>\n- Response length: Keep implementation concise (under 150 lines of code).\n- Format: Python file with endpoint definition at the top followed by test cases below it.\n- Tone: Professional technical documentation style for comments; clear variable names in code.\n- Output format: Markdown block containing the full Python script, including imports, class definitions, and both unit tests (focused on logic) and one HTTP integration test using `requests`.\n\n<output_format>\n```python\n# Implementation of webhook endpoint with tests below it...\n```",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 225,
+              "completion_tokens": 231,
+              "total_tokens": 456,
+              "kv_token_occupancy_rate_percentage": 1.3916015625,
+              "load_duration": 1.4e-06,
+              "prefill_duration_ttft": 1.610471424,
+              "decoding_duration": 16.444914,
+              "prefill_speed_tps": 139.71064413000104,
+              "decoding_speed_tps": 14.04689620146387
+            },
+            "wall_seconds": 19.1657,
+            "ttft_seconds": 1.6105,
+            "completion_tokens": 231,
+            "decode_duration_seconds": 16.4449,
+            "decode_tokens_per_second": 14.0469,
+            "seconds_per_output_token": 0.082968
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nImplement a webhook import endpoint in the existing Python service that validates JSON input, authenticates via X-Webhook-Key middleware, deduplicates events by ID using the current repository layer, and returns a specific JSON response.\n\n<context>\nThe service currently handles billing imports through an existing repository layer and uses X-Webhook-Key for authentication. The database schema is fixed and no queuing systems are available. Events must be stored without duplication based on event_id.\n\n<constraints>\n- Response length: 150 - 250 words total (excluding code blocks).\n- Format: Markdown with a single code block containing the endpoint implementation, tests, and documentation comments.\n- Tone: Technical, concise, imperative.\n- No schema changes or queue introductions allowed in the solution.\n\n<output_format>\nMarkdown file named `webhook_import.py` (simulated) containing:\n1. Endpoint definition with docstring explaining deduplication logic.\n2. Unit tests for JSON validation and duplicate detection using pytest fixtures.\n3. One HTTP integration test verifying authentication and response structure (`id`, `status`, `duplicate`).",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 225,
+              "completion_tokens": 237,
+              "total_tokens": 462,
+              "kv_token_occupancy_rate_percentage": 1.409912109375,
+              "load_duration": 7e-07,
+              "prefill_duration_ttft": 1.264426752,
+              "decoding_duration": 16.865724,
+              "prefill_speed_tps": 177.94625085566048,
+              "decoding_speed_tps": 14.052168765479621
+            },
+            "wall_seconds": 19.2516,
+            "ttft_seconds": 1.2644,
+            "completion_tokens": 237,
+            "decode_duration_seconds": 16.8657,
+            "decode_tokens_per_second": 14.0522,
+            "seconds_per_output_token": 0.08123
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nImplement a webhook import endpoint in the existing Python service that validates JSON input, authenticates via X-Webhook-Key middleware, deduplicates events by ID using the current repository layer, and returns a specific JSON response.\n\n<context>\nThe service currently handles billing imports through an existing repository layer and uses an X-Webhook-Key header for authentication. The database schema is fixed and no message queues are available. Events must be stored without duplication based on event_id.\n\n<constraints>\n- Code length: Maximum 150 lines total (excluding tests).\n- Format: Python file with endpoint, middleware integration, deduplication logic, and response serialization.\n- Tone: Professional, concise implementation notes only; no explanatory fluff in code comments beyond function docstrings.\n- Output shape: Single `.py` file content block ready for copy-paste into a project directory.\n\n<output_format>\nMarkdown code block containing the complete Python implementation with imports, class definitions (WebhookHandler), and method signatures matching the described behavior.",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 225,
+              "completion_tokens": 216,
+              "total_tokens": 441,
+              "kv_token_occupancy_rate_percentage": 1.3458251953125,
+              "load_duration": 9e-07,
+              "prefill_duration_ttft": 1.296210816,
+              "decoding_duration": 15.523699,
+              "prefill_speed_tps": 173.5828749634504,
+              "decoding_speed_tps": 13.914209493497651
+            },
+            "wall_seconds": 17.838,
+            "ttft_seconds": 1.2962,
+            "completion_tokens": 216,
+            "decode_duration_seconds": 15.5237,
+            "decode_tokens_per_second": 13.9142,
+            "seconds_per_output_token": 0.082583
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nImplement a webhook import endpoint in the existing Python service that validates JSON input, authenticates via X-Webhook-Key middleware, deduplicates events by ID using the current repository layer, and returns a specific JSON response with status indicators.\n\n<context>\nThe service currently handles billing imports through an existing repository layer and uses an X-Webhook-Key header for authentication. The database schema is fixed and no message queues are available. Events must be stored without duplication based on event_id.\n\n<constraints>\n- Response format: JSON containing `id`, `status` (success/failure), and `duplicate` (boolean).\n- Error handling: Return HTTP 400 for malformed JSON; return existing result for duplicate IDs instead of inserting twice.\n- Testing requirements: Include focused unit tests for logic branches and exactly one HTTP integration test.\n- Scope restrictions: Do not alter database schema or introduce queuing mechanisms.\n\n<output_format>\nMarkdown code block containing the full implementation file, test files, and a brief README explaining usage.",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 225,
+              "completion_tokens": 216,
+              "total_tokens": 441,
+              "kv_token_occupancy_rate_percentage": 1.3458251953125,
+              "load_duration": 8e-07,
+              "prefill_duration_ttft": 1.257849856,
+              "decoding_duration": 15.650229,
+              "prefill_speed_tps": 178.87667508704632,
+              "decoding_speed_tps": 13.801714978100321
+            },
+            "wall_seconds": 17.9323,
+            "ttft_seconds": 1.2578,
+            "completion_tokens": 216,
+            "decode_duration_seconds": 15.6502,
+            "decode_tokens_per_second": 13.8017,
+            "seconds_per_output_token": 0.08302
+          }
+        ],
+        "speed": {
+          "runs": 5,
+          "successful_runs": 5,
+          "wall_seconds": {
+            "median": 19.1657,
+            "p90": 21.305,
+            "min": 17.838,
+            "max": 22.674
+          },
+          "ttft_seconds": {
+            "median": 1.2825,
+            "p90": 1.4848,
+            "min": 1.2578,
+            "max": 1.6105
+          },
+          "completion_tokens": {
+            "median": 231.0,
+            "p90": 263.4,
+            "min": 216.0,
+            "max": 281.0
+          },
+          "decode_tokens_per_second": {
+            "median": 14.0178,
+            "p90": 14.0501,
+            "min": 13.8017,
+            "max": 14.0522
+          },
+          "seconds_per_output_token": {
+            "median": 0.0826,
+            "p90": 0.083,
+            "min": 0.0807,
+            "max": 0.083
+          }
+        },
+        "representative_output": "<task>\nImplement a webhook import endpoint in the existing Python service that validates JSON input, authenticates via X-Webhook-Key middleware, deduplicates events by ID using the current repository layer, and returns a specific JSON response with status indicators.\n\n<context>\nThe application is an existing Python service handling billing imports. A separate HTTP integration test suite already exists for other endpoints. The database schema is fixed and cannot be altered to add new tables or columns. No message queues are available; all processing must happen synchronously within the request lifecycle. The repository layer used by the billing importer should be reused directly without modification or abstraction changes.\n\n<constraints>\n- Response length: Keep implementation concise (under 150 lines of code).\n- Format: Python file with endpoint definition, middleware integration, deduplication logic, and test cases at the bottom.\n- Tone: Professional technical documentation style for comments; no conversational filler.\n- Tests: Include focused unit tests for JSON validation and duplicate detection; include exactly one HTTP integration test verifying the full flow.\n- Output shape: Markdown code block with `python` syntax highlighting containing the complete implementation file content.\n\n<output_format>\nMarkdown header (`# Webhook Import Endpoint Implementation`) followed by a single Python code block showing the full service update including endpoint, middleware usage, deduplication logic, and tests.",
+        "quality": {
+          "rubric": {
+            "r1": false,
+            "r2": false,
+            "r3": false,
+            "r4": false,
+            "r5": false,
+            "r6": false,
+            "r7": false
+          },
+          "score": 0,
+          "passed": false,
+          "hard_fail": true,
+          "pending_judge": false,
+          "invented_requirement": true,
+          "constraint_item_count": 0,
+          "token_count": 281,
+          "token_count_source": "usage.completion_tokens",
+          "estimated_tokens": 260,
+          "judge_notes": "Invents line limit, file layout, comments, header, synchronous architecture details, and repository constraints."
+        }
+      }
+    },
+    {
+      "name": "trap_rename_cli",
+      "category": "trap",
+      "trap": true,
+      "input": "write a CLI that renames files from a mapping in a text file",
+      "v1": {
+        "label": "current",
+        "max_tokens": 700,
+        "warmups": 1,
+        "warmup_errors": [],
+        "samples": [
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nGenerate a Python CLI script that reads a file mapping and renames target files accordingly.\n\n<context>\nThe user provides an input text file containing lines in the format \"source:target\" or similar key-value pairs defining filename mappings. The tool must parse this configuration, locate existing source files, and rename them to their corresponding targets if they exist. No external dependencies are required beyond standard library modules like `argparse`, `os`, and `sys`.\n\n<constraints>\n- Output length: approximately 100 lines of code plus a brief usage example.\n- Format: A single Python script with a shebang line, followed by argument parsing logic, file reading/writing functions, and the main execution block.\n- Tone: Professional and concise; avoid excessive comments or verbose explanations.\n- Testability: The solution must be runnable via `python rename_files.py` with arguments like `--input mappings.txt --output-dir ./`.\n\n<output_format>\nMarkdown code block containing the Python script, followed by a separate Markdown section showing example usage commands.",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 132,
+              "completion_tokens": 221,
+              "total_tokens": 353,
+              "kv_token_occupancy_rate_percentage": 1.0772705078125,
+              "load_duration": 8e-07,
+              "prefill_duration_ttft": 1.270931328,
+              "decoding_duration": 15.870487,
+              "prefill_speed_tps": 103.86084369146968,
+              "decoding_speed_tps": 13.925218551894469
+            },
+            "wall_seconds": 18.2086,
+            "ttft_seconds": 1.2709,
+            "completion_tokens": 221,
+            "decode_duration_seconds": 15.8705,
+            "decode_tokens_per_second": 13.9252,
+            "seconds_per_output_token": 0.082392
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nGenerate a Python CLI script that reads a file mapping and renames target files accordingly.\n\n<context>\nThe user provides an input text file containing lines in the format \"source:target\" or similar key-value pairs defining filename mappings. The tool must parse this configuration, locate existing source files in the current directory (or specified path), and rename them to their corresponding targets if they exist. No external libraries beyond standard Python are required.\n\n<constraints>\n- Output must be a single executable Python script with no dependencies outside `os`, `sys`, and `argparse`.\n- The CLI must accept at least two arguments: the input mapping file path and an optional output directory (defaults to current working directory).\n- Error handling should gracefully skip non-existent source files without crashing.\n- Code length must be under 150 lines.\n- Comments explaining the logic are required but minimal.\n\n<output_format>\nMarkdown code block with language set to `python`. Include a brief usage example below the script using standard markdown headers (`##`).</task>",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 132,
+              "completion_tokens": 221,
+              "total_tokens": 353,
+              "kv_token_occupancy_rate_percentage": 1.0772705078125,
+              "load_duration": 9e-07,
+              "prefill_duration_ttft": 1.153891712,
+              "decoding_duration": 15.76361,
+              "prefill_speed_tps": 114.39548323924524,
+              "decoding_speed_tps": 14.019631290040795
+            },
+            "wall_seconds": 17.9677,
+            "ttft_seconds": 1.1539,
+            "completion_tokens": 221,
+            "decode_duration_seconds": 15.7636,
+            "decode_tokens_per_second": 14.0196,
+            "seconds_per_output_token": 0.081302
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nGenerate a Python CLI script that reads a file mapping and renames target files accordingly.\n\n<context>\nThe user provides an input text file where each line contains \"source:target\" pairs separated by colons, defining the desired filename for existing files in the current directory. The script must verify if source files exist before attempting to rename them and should handle errors gracefully without crashing on missing entries.\n\n<constraints>\n- Output a single Python file named `rename_files.py`.\n- Use standard library only (`argparse`, `os`, `sys`).\n- Include usage instructions printed to stderr or stdout upon execution.\n- Do not include external dependencies, tests, or documentation files in the output.\n\n<output_format>\nMarkdown code block with language set to python containing the full script content.</task>",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 132,
+              "completion_tokens": 169,
+              "total_tokens": 301,
+              "kv_token_occupancy_rate_percentage": 0.9185791015625,
+              "load_duration": 8e-07,
+              "prefill_duration_ttft": 1.161757696,
+              "decoding_duration": 12.279122,
+              "prefill_speed_tps": 113.62093873316591,
+              "decoding_speed_tps": 13.763199030028368
+            },
+            "wall_seconds": 14.3104,
+            "ttft_seconds": 1.1618,
+            "completion_tokens": 169,
+            "decode_duration_seconds": 12.2791,
+            "decode_tokens_per_second": 13.7632,
+            "seconds_per_output_token": 0.084677
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nGenerate a Python CLI script that reads a file mapping and renames target files accordingly.\n\n<context>\nThe user provides an input text file containing lines in the format \"source_path destination_name\". The script must parse this file, locate existing source files on the filesystem, and rename them to their corresponding destinations if they exist. No additional features like dry-run modes or error reporting are requested beyond basic functionality.\n\n<constraints>\n- Output length: 100-250 words.\n- Format: Single Python script with a `main()` function entry point.\n- Tone: Direct, functional code without extensive comments explaining obvious logic.\n- Language: English (Python).\n\n<output_format>\nMarkdown code block containing the complete Python source file named `file_renamer.py`.",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 132,
+              "completion_tokens": 167,
+              "total_tokens": 299,
+              "kv_token_occupancy_rate_percentage": 0.9124755859375,
+              "load_duration": 8e-07,
+              "prefill_duration_ttft": 1.185564928,
+              "decoding_duration": 12.459702,
+              "prefill_speed_tps": 111.33932598923845,
+              "decoding_speed_tps": 13.403209803894185
+            },
+            "wall_seconds": 14.4573,
+            "ttft_seconds": 1.1856,
+            "completion_tokens": 167,
+            "decode_duration_seconds": 12.4597,
+            "decode_tokens_per_second": 13.4032,
+            "seconds_per_output_token": 0.086571
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nGenerate a Python CLI script that reads a file mapping and renames target files accordingly.\n\n<context>\nThe user provides an input text file containing lines in the format \"source:target\" or similar key-value pairs defining filename mappings. The tool must parse this configuration, locate existing source files, and rename them to their corresponding targets if they exist. No external dependencies are required beyond standard library modules like `argparse`, `os`, and `sys`.\n\n<constraints>\n- Length: Keep the script under 50 lines of code (excluding comments).\n- Format: Use a single Python file with no shebang line, utilizing only standard libraries.\n- Tone: Professional and concise; include brief usage examples in docstrings but avoid verbose explanations.\n- Output format: Return the complete source code block wrapped in triple backticks with `python` syntax highlighting.\n\n<output_format>\nMarkdown code block containing the full Python script.",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 132,
+              "completion_tokens": 196,
+              "total_tokens": 328,
+              "kv_token_occupancy_rate_percentage": 1.0009765625,
+              "load_duration": 8e-07,
+              "prefill_duration_ttft": 1.182166656,
+              "decoding_duration": 14.416469,
+              "prefill_speed_tps": 111.6593834972791,
+              "decoding_speed_tps": 13.595562131059971
+            },
+            "wall_seconds": 16.5712,
+            "ttft_seconds": 1.1822,
+            "completion_tokens": 196,
+            "decode_duration_seconds": 14.4165,
+            "decode_tokens_per_second": 13.5956,
+            "seconds_per_output_token": 0.084547
+          }
+        ],
+        "speed": {
+          "runs": 5,
+          "successful_runs": 5,
+          "wall_seconds": {
+            "median": 16.5712,
+            "p90": 18.1122,
+            "min": 14.3104,
+            "max": 18.2086
+          },
+          "ttft_seconds": {
+            "median": 1.1822,
+            "p90": 1.2368,
+            "min": 1.1539,
+            "max": 1.2709
+          },
+          "completion_tokens": {
+            "median": 196.0,
+            "p90": 221.0,
+            "min": 167.0,
+            "max": 221.0
+          },
+          "decode_tokens_per_second": {
+            "median": 13.7632,
+            "p90": 13.9818,
+            "min": 13.4032,
+            "max": 14.0196
+          },
+          "seconds_per_output_token": {
+            "median": 0.0845,
+            "p90": 0.0858,
+            "min": 0.0813,
+            "max": 0.0866
+          }
+        },
+        "representative_output": "<task>\nGenerate a Python CLI script that reads a file mapping and renames target files accordingly.\n\n<context>\nThe user provides an input text file containing lines in the format \"source:target\" or similar key-value pairs defining filename mappings. The tool must parse this configuration, locate existing source files, and rename them to their corresponding targets if they exist. No external dependencies are required beyond standard library modules like `argparse`, `os`, and `sys`.\n\n<constraints>\n- Output length: approximately 100 lines of code plus a brief usage example.\n- Format: A single Python script with a shebang line, followed by argument parsing logic, file reading/writing functions, and the main execution block.\n- Tone: Professional and concise; avoid excessive comments or verbose explanations.\n- Testability: The solution must be runnable via `python rename_files.py` with arguments like `--input mappings.txt --output-dir ./`.\n\n<output_format>\nMarkdown code block containing the Python script, followed by a separate Markdown section showing example usage commands.",
+        "quality": {
+          "rubric": {
+            "r1": false,
+            "r2": false,
+            "r3": false,
+            "r4": false,
+            "r5": false,
+            "r6": false,
+            "r7": false
+          },
+          "score": 0,
+          "passed": false,
+          "hard_fail": true,
+          "pending_judge": false,
+          "invented_requirement": true,
+          "constraint_item_count": 0,
+          "token_count": 221,
+          "token_count_source": "usage.completion_tokens",
+          "estimated_tokens": 213,
+          "judge_notes": "Invents Python, mapping syntax, dependencies, arguments, output directory, filename, and usage format."
+        }
+      }
+    },
+    {
+      "name": "plan_postgres_migration",
+      "category": "plan",
+      "trap": false,
+      "input": "plan a zero-downtime migration from users.full_name to first_name and last_name for a Postgres app; planning only, no code changes",
+      "v1": {
+        "label": "current",
+        "max_tokens": 700,
+        "warmups": 1,
+        "warmup_errors": [],
+        "samples": [
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nGenerate a zero-downtime migration plan for renaming the `users.full_name` column to `first_name` and `last_name` in a PostgreSQL database.\n\n<context>\nThe application uses PostgreSQL. The goal is to split the existing single-column full name into two separate columns without disrupting active services or causing data loss during execution. No code changes are required; only database schema planning is needed.\n\n<constraints>\n- Length: Maximum 500 words total, excluding headers and lists.\n- Format: Numbered steps for migration phases (Preparation, Execution, Validation).\n- Tone: Professional technical documentation suitable for a DevOps lead.\n- Content requirements must include data validation checks and rollback procedures if execution fails mid-process.\n\n<output_format>\nMarkdown with clear section headers (e.g., ## Phase 1), bullet points for specific actions within phases, and a final \"Rollback Plan\" subsection under Execution or Validation.",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 147,
+              "completion_tokens": 198,
+              "total_tokens": 345,
+              "kv_token_occupancy_rate_percentage": 1.0528564453125,
+              "load_duration": 5e-07,
+              "prefill_duration_ttft": 1.166185088,
+              "decoding_duration": 14.427471,
+              "prefill_speed_tps": 126.05203197384736,
+              "decoding_speed_tps": 13.723818956212076
+            },
+            "wall_seconds": 16.5508,
+            "ttft_seconds": 1.1662,
+            "completion_tokens": 198,
+            "decode_duration_seconds": 14.4275,
+            "decode_tokens_per_second": 13.7238,
+            "seconds_per_output_token": 0.08359
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nGenerate a zero-downtime migration plan for renaming the `users.full_name` column to `first_name` and `last_name` in a PostgreSQL database.\n\n<context>\nThe application is built on PostgreSQL. The goal is to split the existing single-column field into two separate columns without disrupting service availability during execution. No code changes are required; only database schema modifications are needed.\n\n<constraints>\n- Length: Maximum 500 words total, excluding headers and lists.\n- Format: Numbered steps with clear prerequisites for each phase (Preparation, Execution, Verification).\n- Tone: Professional technical documentation suitable for a DevOps engineer or DBA.\n- Content requirements: Must explicitly mention locking strategies to prevent downtime, data validation checks before migration execution, and rollback procedures if integrity issues arise.\n\n<output_format>\nMarkdown with clear section headers (e.g., ## Phase 1). Use bullet points for sub-steps within phases.",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 147,
+              "completion_tokens": 200,
+              "total_tokens": 347,
+              "kv_token_occupancy_rate_percentage": 1.0589599609375,
+              "load_duration": 7e-07,
+              "prefill_duration_ttft": 1.164395776,
+              "decoding_duration": 14.282586,
+              "prefill_speed_tps": 126.24573450874489,
+              "decoding_speed_tps": 14.003066391478406
+            },
+            "wall_seconds": 16.4292,
+            "ttft_seconds": 1.1644,
+            "completion_tokens": 200,
+            "decode_duration_seconds": 14.2826,
+            "decode_tokens_per_second": 14.0031,
+            "seconds_per_output_token": 0.082146
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nGenerate a zero-downtime migration plan for renaming the `users.full_name` column to `first_name` and `last_name` in a PostgreSQL database.\n\n<context>\nThe application uses PostgreSQL. The goal is to split the existing single-column full name into two separate columns without disrupting active services or causing downtime during execution. No code changes are required; only database schema modifications are needed.\n\n<constraints>\n- Length: Keep the plan concise, under 500 words.\n- Format: Use a numbered list for steps and bold text for key actions (e.g., **CREATE EXTENSION**, **ALTER TABLE**).\n- Tone: Professional, technical, and directive.\n- Content Requirements: Must include prerequisites (extensions), data migration strategy (copying values), validation checks, rollback procedures if necessary, and final cleanup.\n\n<output_format>\nMarkdown with a clear title `# Zero-Downtime Migration Plan` followed by the numbered steps.",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 147,
+              "completion_tokens": 202,
+              "total_tokens": 349,
+              "kv_token_occupancy_rate_percentage": 1.0650634765625,
+              "load_duration": 6e-07,
+              "prefill_duration_ttft": 1.166479744,
+              "decoding_duration": 14.484612,
+              "prefill_speed_tps": 126.02019088297172,
+              "decoding_speed_tps": 13.945834379270911
+            },
+            "wall_seconds": 16.6204,
+            "ttft_seconds": 1.1665,
+            "completion_tokens": 202,
+            "decode_duration_seconds": 14.4846,
+            "decode_tokens_per_second": 13.9458,
+            "seconds_per_output_token": 0.082279
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nGenerate a zero-downtime migration plan for renaming the `users.full_name` column to `first_name` and `last_name` in a PostgreSQL database.\n\n<context>\nThe application uses PostgreSQL. The goal is to split the existing single-column full name into two separate columns without disrupting active services or causing data loss during execution. No code changes are required; only database schema planning is needed.\n\n<constraints>\n- Length: Maximum 500 words total, excluding headers and lists.\n- Format: Numbered steps with clear prerequisites, actions, and verification points for each phase (Preparation, Execution, Validation).\n- Tone: Professional technical documentation suitable for a DevOps engineer or DBA.\n\n<output_format>\nMarkdown text with numbered sections labeled \"Phase 1\", \"Phase 2\", etc., followed by a bulleted list of rollback procedures if applicable.",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 147,
+              "completion_tokens": 186,
+              "total_tokens": 333,
+              "kv_token_occupancy_rate_percentage": 1.0162353515625,
+              "load_duration": 9e-07,
+              "prefill_duration_ttft": 1.193710976,
+              "decoding_duration": 13.333325,
+              "prefill_speed_tps": 123.14538691147963,
+              "decoding_speed_tps": 13.950008718755448
+            },
+            "wall_seconds": 15.4323,
+            "ttft_seconds": 1.1937,
+            "completion_tokens": 186,
+            "decode_duration_seconds": 13.3333,
+            "decode_tokens_per_second": 13.95,
+            "seconds_per_output_token": 0.082969
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nGenerate a zero-downtime migration plan for renaming the `users.full_name` column to `first_name` and `last_name` in a PostgreSQL database.\n\n<context>\nThe application uses PostgreSQL. The goal is to split the existing single-column full name into two separate columns without disrupting active services or causing downtime during execution. This is a planning exercise only; no actual SQL scripts, code changes, or deployment steps are being executed yet.\n\n<constraints>\n- Length: Keep the plan concise (under 500 words).\n- Format: Use Markdown with clear numbered sections for each phase of the migration.\n- Tone: Professional and technical, suitable for a DevOps lead review.\n- Content Requirements: Must include pre-migration checks, data validation steps, execution strategy (e.g., application-level routing or temporary views), rollback procedures, and post-migration verification. Do not invent specific database names beyond what is provided in the context.\n\n<output_format>\nMarkdown document with headers like `## Phase 1`, `## Phase 2`, etc. No JSON or code blocks unless illustrating a conceptual step (e.g., a pseudo-SQL comment).",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 147,
+              "completion_tokens": 244,
+              "total_tokens": 391,
+              "kv_token_occupancy_rate_percentage": 1.1932373046875,
+              "load_duration": 1.3e-06,
+              "prefill_duration_ttft": 1.471837696,
+              "decoding_duration": 17.388704,
+              "prefill_speed_tps": 99.87514275487071,
+              "decoding_speed_tps": 14.032098079304816
+            },
+            "wall_seconds": 20.0138,
+            "ttft_seconds": 1.4718,
+            "completion_tokens": 244,
+            "decode_duration_seconds": 17.3887,
+            "decode_tokens_per_second": 14.0321,
+            "seconds_per_output_token": 0.082024
+          }
+        ],
+        "speed": {
+          "runs": 5,
+          "successful_runs": 5,
+          "wall_seconds": {
+            "median": 16.5508,
+            "p90": 18.6564,
+            "min": 15.4323,
+            "max": 20.0138
+          },
+          "ttft_seconds": {
+            "median": 1.1665,
+            "p90": 1.3606,
+            "min": 1.1644,
+            "max": 1.4718
+          },
+          "completion_tokens": {
+            "median": 200.0,
+            "p90": 227.2,
+            "min": 186.0,
+            "max": 244.0
+          },
+          "decode_tokens_per_second": {
+            "median": 13.95,
+            "p90": 14.0205,
+            "min": 13.7238,
+            "max": 14.0321
+          },
+          "seconds_per_output_token": {
+            "median": 0.0823,
+            "p90": 0.0833,
+            "min": 0.082,
+            "max": 0.0836
+          }
+        },
+        "representative_output": "<task>\nGenerate a zero-downtime migration plan for renaming the `users.full_name` column to `first_name` and `last_name` in a PostgreSQL database.\n\n<context>\nThe application uses PostgreSQL. The goal is to split the existing single-column full name into two separate columns without disrupting active services or causing data loss during execution. No code changes are required; only database schema planning is needed.\n\n<constraints>\n- Length: Maximum 500 words total, excluding headers and lists.\n- Format: Numbered steps for migration phases (Preparation, Execution, Validation).\n- Tone: Professional technical documentation suitable for a DevOps lead.\n- Content requirements must include data validation checks and rollback procedures if execution fails mid-process.\n\n<output_format>\nMarkdown with clear section headers (e.g., ## Phase 1), bullet points for specific actions within phases, and a final \"Rollback Plan\" subsection under Execution or Validation.",
+        "quality": {
+          "rubric": {
+            "r1": false,
+            "r2": false,
+            "r3": false,
+            "r4": false,
+            "r5": false,
+            "r6": false,
+            "r7": true
+          },
+          "score": 1,
+          "passed": false,
+          "hard_fail": true,
+          "pending_judge": false,
+          "invented_requirement": true,
+          "constraint_item_count": 0,
+          "token_count": 198,
+          "token_count_source": "usage.completion_tokens",
+          "estimated_tokens": 183,
+          "judge_notes": "Invents word limit, phase format, DevOps audience, validation checks, and rollback content."
+        }
+      }
+    },
+    {
+      "name": "explain_regex",
+      "category": "explain",
+      "trap": false,
+      "input": "explain what ^(?P<slug>[a-z0-9]+(?:-[a-z0-9]+)*)$ accepts and show three examples",
+      "v1": {
+        "label": "current",
+        "max_tokens": 700,
+        "warmups": 1,
+        "warmup_errors": [],
+        "samples": [
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nExplain the regex pattern `^(?P<slug>[a-z0-9]+(?:-[a-z0-9]+)*)$` and provide three valid examples.\n\n<context>\nThe user is asking for a breakdown of a specific regular expression used to validate URL slugs, including its components and usage examples.\n\n<constraints>\n1. Length: Keep the explanation concise (under 150 words).\n2. Format: Use Markdown code blocks for the regex and examples; use bullet points or numbered lists for clarity.\n3. Tone: Direct, technical but accessible, no fluff or introductions/conclusions outside the requested content.\n\n<output_format>\n- A brief paragraph explaining the regex logic (anchors, named group, character classes).\n- Three distinct valid slug examples in a code block labeled \"Examples:\".",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 148,
+              "completion_tokens": 178,
+              "total_tokens": 326,
+              "kv_token_occupancy_rate_percentage": 0.994873046875,
+              "load_duration": 6e-07,
+              "prefill_duration_ttft": 1.165640448,
+              "decoding_duration": 12.810598,
+              "prefill_speed_tps": 126.96882666858177,
+              "decoding_speed_tps": 13.89474558486653
+            },
+            "wall_seconds": 14.8508,
+            "ttft_seconds": 1.1656,
+            "completion_tokens": 178,
+            "decode_duration_seconds": 12.8106,
+            "decode_tokens_per_second": 13.8947,
+            "seconds_per_output_token": 0.083431
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nExplain the regex pattern `^(?P<slug>[a-z0-9]+(?:-[a-z0-9]+)*)$` and provide three valid examples.\n\n<context>\nThe user is asking for a breakdown of a specific regular expression used to validate URL slugs, likely in Python or similar environments where named groups are common. The pattern enforces lowercase letters and numbers only, with optional hyphens separating word parts.\n\n<constraints>\n- Length: Keep the explanation concise (under 150 words).\n- Format: Use a clear heading for the explanation followed by a bulleted list for examples.\n- Tone: Direct, technical but accessible.\n- Content requirements: Must explicitly mention what characters are allowed and how hyphens work; must provide exactly three distinct valid examples that match the pattern (e.g., `abc`, `my-slug`, `a1b2c3d4-e5f6`).\n\n<output_format>\nMarkdown with a main heading (`#`) for the explanation and a sub-heading (`##`) or bullet list for the examples. No JSON, no code blocks unless necessary to illustrate (but plain text is preferred per constraints).",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 148,
+              "completion_tokens": 251,
+              "total_tokens": 399,
+              "kv_token_occupancy_rate_percentage": 1.2176513671875,
+              "load_duration": 1e-06,
+              "prefill_duration_ttft": 1.172203264,
+              "decoding_duration": 18.164878,
+              "prefill_speed_tps": 126.25796612693956,
+              "decoding_speed_tps": 13.817874251618976
+            },
+            "wall_seconds": 20.5085,
+            "ttft_seconds": 1.1722,
+            "completion_tokens": 251,
+            "decode_duration_seconds": 18.1649,
+            "decode_tokens_per_second": 13.8179,
+            "seconds_per_output_token": 0.081707
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nExplain the regex pattern `^(?P<slug>[a-z0-9]+(?:-[a-z0-9]+)*)$` and provide three valid examples.\n\n<context>\nThe user is asking for a breakdown of a specific regular expression used to validate URL slugs, including its components and usage examples.\n\n<constraints>\n1. The explanation must be concise (under 5 sentences).\n2. Provide exactly three distinct example strings that match the pattern.\n3. Do not include invalid examples or code blocks unless requested in the original text (none present).\n4. Maintain a neutral, instructional tone suitable for technical documentation or learning materials.\n\n<output_format>\n- A brief paragraph explaining the regex components and logic.\n- A bulleted list of exactly three valid example strings.",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 148,
+              "completion_tokens": 171,
+              "total_tokens": 319,
+              "kv_token_occupancy_rate_percentage": 0.9735107421875,
+              "load_duration": 6e-07,
+              "prefill_duration_ttft": 1.172502656,
+              "decoding_duration": 12.183659,
+              "prefill_speed_tps": 126.22572686095475,
+              "decoding_speed_tps": 14.03519254765748
+            },
+            "wall_seconds": 14.205,
+            "ttft_seconds": 1.1725,
+            "completion_tokens": 171,
+            "decode_duration_seconds": 12.1837,
+            "decode_tokens_per_second": 14.0352,
+            "seconds_per_output_token": 0.08307
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nExplain the regex pattern `^(?P<slug>[a-z0-9]+(?:-[a-z0-9]+)*)$` and provide three valid examples.\n\n<context>\nThe user is asking for a breakdown of a specific regular expression used to validate URL slugs, including its components and usage examples.\n\n<constraints>\n1. Length: Keep the explanation concise (under 150 words).\n2. Format: Use Markdown code blocks for the regex and examples; use bullet points or numbered lists for clarity.\n3. Tone: Direct, technical but accessible (educational).\n4. Content Requirements: Must explicitly explain each part of the regex (`^`, `(?P<slug>...)`, `[a-z0-9]+`, `(?:-[a-z0-9]+)*`), and provide exactly three examples that match the pattern.\n\n<output_format>\nMarkdown text with a clear heading for the explanation, followed by a section for examples using code blocks. No JSON or other structured data formats unless implied (none here).",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 148,
+              "completion_tokens": 224,
+              "total_tokens": 372,
+              "kv_token_occupancy_rate_percentage": 1.13525390625,
+              "load_duration": 9e-07,
+              "prefill_duration_ttft": 1.169048704,
+              "decoding_duration": 15.904137,
+              "prefill_speed_tps": 126.59866051226554,
+              "decoding_speed_tps": 14.084385716747786
+            },
+            "wall_seconds": 18.1502,
+            "ttft_seconds": 1.169,
+            "completion_tokens": 224,
+            "decode_duration_seconds": 15.9041,
+            "decode_tokens_per_second": 14.0844,
+            "seconds_per_output_token": 0.081028
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nExplain the regex pattern `^(?P<slug>[a-z0-9]+(?:-[a-z0-9]+)*)$` and provide three valid examples.\n\n<context>\nThe user is asking for an explanation of a specific regular expression used to validate \"slugs\" (URL-friendly identifiers). The pattern uses named capture groups, lowercase letters, numbers, hyphens as separators, and anchors to enforce start/end boundaries.\n\n<constraints>\n- Length: Keep the explanation concise (under 100 words) and list exactly three examples.\n- Format: Use a clear heading for the explanation followed by a bulleted or numbered list for examples.\n- Tone: Informative and direct, suitable for technical documentation or learning purposes.\n\n<output_format>\nMarkdown with headers (`##`) and bullet points (`*` or `-`). No JSON, no code blocks unless necessary to show the regex itself clearly (but plain text is preferred per constraints).",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 148,
+              "completion_tokens": 204,
+              "total_tokens": 352,
+              "kv_token_occupancy_rate_percentage": 1.07421875,
+              "load_duration": 5e-07,
+              "prefill_duration_ttft": 1.171853056,
+              "decoding_duration": 15.002036,
+              "prefill_speed_tps": 126.29569828932546,
+              "decoding_speed_tps": 13.598154277192776
+            },
+            "wall_seconds": 17.1781,
+            "ttft_seconds": 1.1719,
+            "completion_tokens": 204,
+            "decode_duration_seconds": 15.002,
+            "decode_tokens_per_second": 13.5982,
+            "seconds_per_output_token": 0.084206
+          }
+        ],
+        "speed": {
+          "runs": 5,
+          "successful_runs": 5,
+          "wall_seconds": {
+            "median": 17.1781,
+            "p90": 19.5652,
+            "min": 14.205,
+            "max": 20.5085
+          },
+          "ttft_seconds": {
+            "median": 1.1719,
+            "p90": 1.1724,
+            "min": 1.1656,
+            "max": 1.1725
+          },
+          "completion_tokens": {
+            "median": 204.0,
+            "p90": 240.2,
+            "min": 171.0,
+            "max": 251.0
+          },
+          "decode_tokens_per_second": {
+            "median": 13.8947,
+            "p90": 14.0647,
+            "min": 13.5982,
+            "max": 14.0844
+          },
+          "seconds_per_output_token": {
+            "median": 0.0831,
+            "p90": 0.0839,
+            "min": 0.081,
+            "max": 0.0842
+          }
+        },
+        "representative_output": "<task>\nExplain the regex pattern `^(?P<slug>[a-z0-9]+(?:-[a-z0-9]+)*)$` and provide three valid examples.\n\n<context>\nThe user is asking for a breakdown of a specific regular expression used to validate URL slugs, including its components and usage examples.\n\n<constraints>\n1. Length: Keep the explanation concise (under 150 words).\n2. Format: Use Markdown code blocks for the regex and examples; use bullet points or numbered lists for clarity.\n3. Tone: Direct, technical but accessible, no fluff or introductions/conclusions outside the requested content.\n\n<output_format>\n- A brief paragraph explaining the regex logic (anchors, named group, character classes).\n- Three distinct valid slug examples in a code block labeled \"Examples:\".",
+        "quality": {
+          "rubric": {
+            "r1": false,
+            "r2": false,
+            "r3": false,
+            "r4": false,
+            "r5": false,
+            "r6": false,
+            "r7": true
+          },
+          "score": 1,
+          "passed": false,
+          "hard_fail": true,
+          "pending_judge": false,
+          "invented_requirement": true,
+          "constraint_item_count": 0,
+          "token_count": 178,
+          "token_count_source": "usage.completion_tokens",
+          "estimated_tokens": 172,
+          "judge_notes": "Invents URL-slug purpose, word limit, Markdown layout, tone, and explanation components."
+        }
+      }
+    },
+    {
+      "name": "fix_timezone_boundary",
+      "category": "debug",
+      "trap": false,
+      "input": "fix the weekly report bug where Sunday 11:30 PM America/New_York appears in next week; weeks start Monday local time and existing report JSON must not change shape",
+      "v1": {
+        "label": "current",
+        "max_tokens": 700,
+        "warmups": 1,
+        "warmup_errors": [],
+        "samples": [
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nFix a weekly report bug where Sunday 11:30 PM America/New_York incorrectly appears in the next week by ensuring weeks start on Monday local time.\n\n<context>\nThe existing report JSON structure must remain unchanged; only the date logic needs correction to align with local timezone boundaries and Monday-starting weeks.\n\n<constraints>\n- Output length: 150 - 250 words.\n- Format: Single code block containing a corrected function or script snippet (e.g., Python).\n- Tone: Technical, direct, no explanations outside the code.\n- Testability: The logic must handle edge cases like Sunday evenings crossing into Monday mornings correctly without altering JSON keys or nesting levels.\n\n<output_format>\nMarkdown header `## Solution`, followed immediately by a single fenced code block with language specified as `python`. No additional text before or after the solution section.</task>",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 154,
+              "completion_tokens": 188,
+              "total_tokens": 342,
+              "kv_token_occupancy_rate_percentage": 1.043701171875,
+              "load_duration": 7e-07,
+              "prefill_duration_ttft": 1.177465344,
+              "decoding_duration": 13.390206,
+              "prefill_speed_tps": 130.78941200667728,
+              "decoding_speed_tps": 14.040112601703065
+            },
+            "wall_seconds": 15.499,
+            "ttft_seconds": 1.1775,
+            "completion_tokens": 188,
+            "decode_duration_seconds": 13.3902,
+            "decode_tokens_per_second": 14.0401,
+            "seconds_per_output_token": 0.082441
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nFix a weekly report bug where Sunday 11:30 PM America/New_York incorrectly appears in the next week by ensuring weeks start on Monday local time, while preserving the existing JSON structure.\n\n<context>\nThe current implementation calculates week boundaries based on UTC or incorrect timezone offsets, causing end-of-week timestamps (Sunday late night) to roll over into the following week's data. The report must adhere to a Monday-start calendar for all local timezones and output valid JSON without altering schema keys or nesting levels.\n\n<constraints>\n- Output length: 150 - 250 words total.\n- Format: Single code block containing only the corrected logic snippet (Python/JavaScript).\n- Tone: Technical, concise, no explanatory prose outside the code.\n- Testability: Ensure `assert` statements verify that a Sunday timestamp maps to its own week ID and Monday timestamps do not shift forward incorrectly.\n\n<output_format>\nMarkdown code block with language specified as `python`. No surrounding text or headers.",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 154,
+              "completion_tokens": 214,
+              "total_tokens": 368,
+              "kv_token_occupancy_rate_percentage": 1.123046875,
+              "load_duration": 5e-07,
+              "prefill_duration_ttft": 1.170463616,
+              "decoding_duration": 15.562893,
+              "prefill_speed_tps": 131.57179590621294,
+              "decoding_speed_tps": 13.75065677056316
+            },
+            "wall_seconds": 17.7389,
+            "ttft_seconds": 1.1705,
+            "completion_tokens": 214,
+            "decode_duration_seconds": 15.5629,
+            "decode_tokens_per_second": 13.7507,
+            "seconds_per_output_token": 0.082892
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nFix a weekly report bug where Sunday 11:30 PM America/New_York incorrectly appears in the next week by ensuring weeks start on Monday local time, while preserving the existing JSON structure.\n\n<context>\nThe current implementation calculates week boundaries based on UTC or incorrect timezone offsets, causing end-of-week timestamps (Sunday late night) to roll over into the following week's data. The report must adhere to a Monday-start calendar for all local timezones and output valid JSON without altering schema keys or nesting levels.\n\n<constraints>\n- Output length: Keep under 200 words.\n- Format: Return only the prompt text, no markdown code blocks around the prompt itself unless specified in constraints (none here).\n- Tone: Direct technical instruction suitable for an LLM developer context.\n- Testability: Ensure logic handles timezone conversion explicitly and validates week boundaries against Monday start rules before JSON serialization.\n\n<output_format>\nMarkdown headers for sections, followed by a code block containing the final prompt ready for Claude to execute.",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 154,
+              "completion_tokens": 216,
+              "total_tokens": 370,
+              "kv_token_occupancy_rate_percentage": 1.129150390625,
+              "load_duration": 1e-06,
+              "prefill_duration_ttft": 1.29701696,
+              "decoding_duration": 15.914568,
+              "prefill_speed_tps": 118.73399095721925,
+              "decoding_speed_tps": 13.572470204657769
+            },
+            "wall_seconds": 18.2696,
+            "ttft_seconds": 1.297,
+            "completion_tokens": 216,
+            "decode_duration_seconds": 15.9146,
+            "decode_tokens_per_second": 13.5725,
+            "seconds_per_output_token": 0.084581
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nFix a weekly report bug where Sunday 11:30 PM America/New_York incorrectly appears in the next week by ensuring weeks start on Monday local time, while preserving the existing JSON structure.\n\n<context>\nThe current implementation calculates week boundaries based on UTC or incorrect timezone offsets, causing dates at the end of a US Eastern Standard Time (EST) Sunday to roll over into Monday's slot of the following calendar week in reports. The output must remain valid JSON with identical keys and nesting levels as previous versions; only date logic needs correction.\n\n<constraints>\n- Output length: 150 - 250 words total.\n- Format: Single code block containing fixed Python function or script snippet (no full app).\n- Tone: Technical, direct, no explanations outside the code.\n- Testability: Ensure `datetime` objects are normalized to local timezone before week calculation; verify JSON keys match pre-fix state via diff check.\n\n<output_format>\nMarkdown code block with language set to python. Include a brief comment header explaining the fix but keep it under 2 lines. Do not include test cases or usage examples in the output, only the corrected logic.</output_format>",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 154,
+              "completion_tokens": 249,
+              "total_tokens": 403,
+              "kv_token_occupancy_rate_percentage": 1.2298583984375,
+              "load_duration": 6e-07,
+              "prefill_duration_ttft": 1.173075328,
+              "decoding_duration": 17.71206,
+              "prefill_speed_tps": 131.27886702941552,
+              "decoding_speed_tps": 14.05821795996626
+            },
+            "wall_seconds": 20.1445,
+            "ttft_seconds": 1.1731,
+            "completion_tokens": 249,
+            "decode_duration_seconds": 17.7121,
+            "decode_tokens_per_second": 14.0582,
+            "seconds_per_output_token": 0.080902
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nFix a weekly report bug where Sunday 11:30 PM America/New_York incorrectly appears in the next week by ensuring weeks start on Monday local time, while preserving the existing JSON structure.\n\n<context>\nThe user's weekly report currently displays dates spanning into the following week when it should only cover the current week starting from Monday. The issue specifically affects timestamps near Sunday 11:30 PM America/New_York which are being misinterpreted as belonging to a new week. The output must remain valid JSON with no changes to keys, nesting levels, or overall shape of existing data structures.\n\n<constraints>\n- Output length: Keep the response concise (under 200 words).\n- Format: Return only the prompt text in Markdown; do not include explanations or meta-commentary.\n- Tone: Professional and technical.\n- Testability: The fix must be verifiable by checking if Sunday 11:30 PM America/New_York stays within its correct week boundary without altering JSON keys or structure.\n\n<output_format>\nMarkdown code block containing the rewritten prompt with clearly labeled sections for Task, Context, Constraints, and Output Format.",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 154,
+              "completion_tokens": 244,
+              "total_tokens": 398,
+              "kv_token_occupancy_rate_percentage": 1.214599609375,
+              "load_duration": 8e-07,
+              "prefill_duration_ttft": 1.209659392,
+              "decoding_duration": 17.783904,
+              "prefill_speed_tps": 127.30856389696845,
+              "decoding_speed_tps": 13.720271994270774
+            },
+            "wall_seconds": 20.1842,
+            "ttft_seconds": 1.2097,
+            "completion_tokens": 244,
+            "decode_duration_seconds": 17.7839,
+            "decode_tokens_per_second": 13.7203,
+            "seconds_per_output_token": 0.082722
+          }
+        ],
+        "speed": {
+          "runs": 5,
+          "successful_runs": 5,
+          "wall_seconds": {
+            "median": 18.2696,
+            "p90": 20.1683,
+            "min": 15.499,
+            "max": 20.1842
+          },
+          "ttft_seconds": {
+            "median": 1.1775,
+            "p90": 1.2621,
+            "min": 1.1705,
+            "max": 1.297
+          },
+          "completion_tokens": {
+            "median": 216.0,
+            "p90": 247.0,
+            "min": 188.0,
+            "max": 249.0
+          },
+          "decode_tokens_per_second": {
+            "median": 13.7507,
+            "p90": 14.051,
+            "min": 13.5725,
+            "max": 14.0582
+          },
+          "seconds_per_output_token": {
+            "median": 0.0827,
+            "p90": 0.0839,
+            "min": 0.0809,
+            "max": 0.0846
+          }
+        },
+        "representative_output": "<task>\nFix a weekly report bug where Sunday 11:30 PM America/New_York incorrectly appears in the next week by ensuring weeks start on Monday local time.\n\n<context>\nThe existing report JSON structure must remain unchanged; only the date logic needs correction to align with local timezone boundaries and Monday-starting weeks.\n\n<constraints>\n- Output length: 150 - 250 words.\n- Format: Single code block containing a corrected function or script snippet (e.g., Python).\n- Tone: Technical, direct, no explanations outside the code.\n- Testability: The logic must handle edge cases like Sunday evenings crossing into Monday mornings correctly without altering JSON keys or nesting levels.\n\n<output_format>\nMarkdown header `## Solution`, followed immediately by a single fenced code block with language specified as `python`. No additional text before or after the solution section.</task>",
+        "quality": {
+          "rubric": {
+            "r1": false,
+            "r2": false,
+            "r3": false,
+            "r4": false,
+            "r5": false,
+            "r6": false,
+            "r7": true
+          },
+          "score": 1,
+          "passed": false,
+          "hard_fail": true,
+          "pending_judge": false,
+          "invented_requirement": true,
+          "constraint_item_count": 0,
+          "token_count": 188,
+          "token_count_source": "usage.completion_tokens",
+          "estimated_tokens": 175,
+          "judge_notes": "Invents Python, length, code-only format, and additional boundary behavior."
+        }
+      }
+    },
+    {
+      "name": "api_retry_policy",
+      "category": "implement",
+      "trap": false,
+      "input": "add retry handling to the Go API client for 429 and 503 responses only, honor Retry-After when present, cap attempts at three, and test the retry timing with a fake clock",
+      "v1": {
+        "label": "current",
+        "max_tokens": 700,
+        "warmups": 1,
+        "warmup_errors": [],
+        "samples": [
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nImplement retry logic in a Go API client that specifically handles 429 and 503 status codes, respects the `Retry-After` header if available, limits total attempts to three, and validates timing using a fake clock.\n\n<context>\nThe existing Go API client currently lacks explicit handling for rate limiting (429) and service unavailable (503) errors. The server may include a `Retry-After` HTTP header indicating the number of seconds before retrying. A testing environment requires mocking time to verify that exponential backoff or fixed delays occur correctly without waiting real seconds.\n\n<constraints>\n- Code must be written in Go (Golang).\n- Maximum file size: 50 lines for the core logic function.\n- Output format: Single code block with comments explaining the fake clock usage and retry limits.\n- Tone: Professional, concise technical documentation style within comments.\n\n<output_format>\nMarkdown code block containing the complete Go implementation of `ExecuteWithRetry`.",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 160,
+              "completion_tokens": 211,
+              "total_tokens": 371,
+              "kv_token_occupancy_rate_percentage": 1.1322021484375,
+              "load_duration": 6e-07,
+              "prefill_duration_ttft": 1.17775488,
+              "decoding_duration": 15.315206,
+              "prefill_speed_tps": 135.85169776583732,
+              "decoding_speed_tps": 13.777157160014694
+            },
+            "wall_seconds": 17.535,
+            "ttft_seconds": 1.1778,
+            "completion_tokens": 211,
+            "decode_duration_seconds": 15.3152,
+            "decode_tokens_per_second": 13.7772,
+            "seconds_per_output_token": 0.083104
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nImplement retry logic in a Go API client that specifically handles 429 and 503 status codes, respects the `Retry-After` header if available, limits total attempts to three, and validates timing using a fake clock.\n\n<context>\nThe existing Go API client currently lacks explicit handling for rate limiting (429) or service unavailable (503) errors. The server may include a `Retry-After` header indicating seconds until the next attempt. A testing environment requires mocking time to verify retry delays without waiting for real network responses.\n\n<constraints>\n- Code must be written in Go using standard libraries and common patterns (e.g., context, net/http).\n- Retry logic must only trigger on status codes 429 or 503; other errors should pass through immediately.\n- If `Retry-After` header exists, the client must wait exactly that many seconds before retrying.\n- Maximum number of retries is strictly three (total attempts = initial + 3).\n- A fake clock implementation must be provided to allow testing of delay logic without real time passage.\n\n<output_format>\nReturn a single Markdown code block containing the complete Go file (`api_client.go`). Include:\n1. `RetryableError` struct definition with status code and retry-after header parsing.\n2. `Client` struct with fields for max retries, fake clock interface, and HTTP client wrapper.\n3. `DoRequestWithContext` method implementing the loop logic (check status -> if 429/503 & attempts < 3 -> wait via fake clock -> retry).\n4. A simple `FakeClock` implementation demonstrating how to set a deadline or sleep duration for testing purposes.\n\nEnsure all variable names are descriptive and comments explain the \"why\" of the Retry-After handling and attempt capping.</output_format>",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 160,
+              "completion_tokens": 389,
+              "total_tokens": 549,
+              "kv_token_occupancy_rate_percentage": 1.6754150390625,
+              "load_duration": 8e-07,
+              "prefill_duration_ttft": 1.179211648,
+              "decoding_duration": 27.594688,
+              "prefill_speed_tps": 135.68387004264056,
+              "decoding_speed_tps": 14.096916044131392
+            },
+            "wall_seconds": 30.4958,
+            "ttft_seconds": 1.1792,
+            "completion_tokens": 389,
+            "decode_duration_seconds": 27.5947,
+            "decode_tokens_per_second": 14.0969,
+            "seconds_per_output_token": 0.078395
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nImplement retry logic in a Go API client that specifically handles 429 and 503 status codes, respects the Retry-After header, limits total attempts to three, and uses a fake clock for timing validation.\n\n<context>\nThe existing Go API client currently lacks automatic retry mechanisms for transient failures. The backend returns HTTP 429 (Too Many Requests) or 503 (Service Unavailable) on rate limiting or temporary unavailability. A `Retry-After` header may be present in these responses indicating the delay before subsequent requests. The testing environment requires a deterministic way to verify retry timing without waiting for real network delays, necessitating a mocked clock implementation.\n\n<constraints>\n- Code must be written in Go (Golang).\n- Maximum file size: 50 lines of code per function/file.\n- Output format: A single Markdown code block containing the complete `retry.go` implementation.\n- Tone: Professional and concise, suitable for a production repository.\n\n<output_format>\nMarkdown header (`## retry.go`) followed by a Go language syntax highlighted code block with no additional text outside the prompt structure.",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 160,
+              "completion_tokens": 240,
+              "total_tokens": 400,
+              "kv_token_occupancy_rate_percentage": 1.220703125,
+              "load_duration": 7e-07,
+              "prefill_duration_ttft": 1.185682176,
+              "decoding_duration": 17.506476,
+              "prefill_speed_tps": 134.94341336881158,
+              "decoding_speed_tps": 13.709212522268903
+            },
+            "wall_seconds": 19.8265,
+            "ttft_seconds": 1.1857,
+            "completion_tokens": 240,
+            "decode_duration_seconds": 17.5065,
+            "decode_tokens_per_second": 13.7092,
+            "seconds_per_output_token": 0.08261
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nImplement retry logic in a Go API client that specifically handles 429 and 503 status codes, respects the Retry-After header, limits total attempts to three, and uses a fake clock for timing validation.\n\n<context>\nThe existing Go API client currently lacks automatic retry mechanisms for transient failures. The target environment requires precise control over backoff timing via a mockable clock unit test fixture. Only HTTP 429 (Too Many Requests) and 503 (Service Unavailable) codes should trigger retries; other errors must fail immediately.\n\n<constraints>\n- Code length: Maximum 150 lines for the core retry logic implementation.\n- Format: Go source code with a dedicated `TestRetryWithFakeClock` function in `_test.go`.\n- Tone: Professional, concise, and production-ready.\n- Testability: The test must verify that exactly three attempts occur before failure when using the fake clock.\n\n<output_format>\nMarkdown code blocks for Go files (`client.go`, `retry_test.go`). No JSON or other formats.",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 160,
+              "completion_tokens": 225,
+              "total_tokens": 385,
+              "kv_token_occupancy_rate_percentage": 1.1749267578125,
+              "load_duration": 9e-07,
+              "prefill_duration_ttft": 1.1883104,
+              "decoding_duration": 16.111425,
+              "prefill_speed_tps": 134.64495471890174,
+              "decoding_speed_tps": 13.965245159878782
+            },
+            "wall_seconds": 18.3342,
+            "ttft_seconds": 1.1883,
+            "completion_tokens": 225,
+            "decode_duration_seconds": 16.1114,
+            "decode_tokens_per_second": 13.9652,
+            "seconds_per_output_token": 0.081485
+          },
+          {
+            "ok": true,
+            "error": "",
+            "output": "<task>\nImplement retry logic in a Go API client that specifically handles 429 and 503 status codes, respects the Retry-After header when available, limits total attempts to three, and validates timing behavior using a fake clock.\n\n<context>\nThe existing Go API client currently lacks explicit error handling for rate limiting (429) or service unavailability (503). The server may include a \"Retry-After\" header indicating seconds before the next attempt. A testing utility with a mockable time source is available to verify timing constraints without waiting for real delays.\n\n<constraints>\n- Code must be written in Go (Golang 1.21+).\n- Retry logic must only trigger on HTTP status codes 429 and 503; other errors should pass through immediately.\n- If \"Retry-After\" header exists, the client must wait exactly that many seconds before retrying; if missing, use a default of 1 second.\n- Maximum number of retries is strictly three (total attempts = initial + 3). After the third attempt fails or succeeds, stop and return the final result/error.\n- Timing validation must be demonstrated using `time.Fake` or equivalent to prove that delays are calculated correctly without real-world latency.\n- Output should include a complete, runnable example with comments explaining each constraint check.\n\n<output_format>\nReturn only the Go source code file content (e.g., `api_client.go`). Do not include explanations outside of the code block. Use standard imports and ensure all functions are exported where necessary for testing integration.</output_format>",
+            "model": "qwen3.5:4b",
+            "usage": {
+              "prompt_tokens": 160,
+              "completion_tokens": 335,
+              "total_tokens": 495,
+              "kv_token_occupancy_rate_percentage": 1.5106201171875,
+              "load_duration": 9e-07,
+              "prefill_duration_ttft": 1.183184256,
+              "decoding_duration": 23.758302,
+              "prefill_speed_tps": 135.22830378162166,
+              "decoding_speed_tps": 14.100334274730576
+            },
+            "wall_seconds": 26.456,
+            "ttft_seconds": 1.1832,
+            "completion_tokens": 335,
+            "decode_duration_seconds": 23.7583,
+            "decode_tokens_per_second": 14.1003,
+            "seconds_per_output_token": 0.078973
+          }
+        ],
+        "speed": {
+          "runs": 5,
+          "successful_runs": 5,
+          "wall_seconds": {
+            "median": 19.8265,
+            "p90": 28.8799,
+            "min": 17.535,
+            "max": 30.4958
+          },
+          "ttft_seconds": {
+            "median": 1.1832,
+            "p90": 1.1873,
+            "min": 1.1778,
+            "max": 1.1883
+          },
+          "completion_tokens": {
+            "median": 240.0,
+            "p90": 367.4,
+            "min": 211.0,
+            "max": 389.0
+          },
+          "decode_tokens_per_second": {
+            "median": 13.9652,
+            "p90": 14.0989,
+            "min": 13.7092,
+            "max": 14.1003
+          },
+          "seconds_per_output_token": {
+            "median": 0.0815,
+            "p90": 0.0829,
+            "min": 0.0784,
+            "max": 0.0831
+          }
+        },
+        "representative_output": "<task>\nImplement retry logic in a Go API client that specifically handles 429 and 503 status codes, respects the `Retry-After` header if available, limits total attempts to three, and validates timing using a fake clock.\n\n<context>\nThe existing Go API client currently lacks explicit handling for rate limiting (429) and service unavailable (503) errors. The server may include a `Retry-After` HTTP header indicating the number of seconds before retrying. A testing environment requires mocking time to verify that exponential backoff or fixed delays occur correctly without waiting real seconds.\n\n<constraints>\n- Code must be written in Go (Golang).\n- Maximum file size: 50 lines for the core logic function.\n- Output format: Single code block with comments explaining the fake clock usage and retry limits.\n- Tone: Professional, concise technical documentation style within comments.\n\n<output_format>\nMarkdown code block containing the complete Go implementation of `ExecuteWithRetry`.",
+        "quality": {
+          "rubric": {
+            "r1": false,
+            "r2": false,
+            "r3": false,
+            "r4": false,
+            "r5": false,
+            "r6": false,
+            "r7": true
+          },
+          "score": 1,
+          "passed": false,
+          "hard_fail": true,
+          "pending_judge": false,
+          "invented_requirement": true,
+          "constraint_item_count": 0,
+          "token_count": 211,
+          "token_count_source": "usage.completion_tokens",
+          "estimated_tokens": 185,
+          "judge_notes": "Invents file-size limit, comments, function name, output format, and backoff behavior."
+        }
+      }
+    }
+  ]
+}

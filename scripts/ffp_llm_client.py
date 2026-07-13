@@ -8,6 +8,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass
 
+import ffp_config
 import ffp_prompt_builder
 
 log = logging.getLogger("ffp.llm")
@@ -90,20 +91,16 @@ def select_runtime(runtime: LlmRuntimeConfig, mode: str, input_text: str) -> tup
     model = runtime.model
 
     if is_prompt_mode(mode):
-        # Prompt-mode output is structurally LARGER than the input — short
-        # bullet-point input expands into a full Claude-style XML prompt
-        # (<task> + <context> + <constraints> + <output_format>). Pre-v1.2.2
-        # caps (140/220/300) truncated the output mid-section. Roughly 5x the
-        # grammar-mode budget; clamps high enough that even one-line inputs
-        # produce a complete structured prompt.
+        # Prompt v2 targets a complete four-section result in <=220 tokens.
+        # These caps leave repair room while bounding decode-driven latency.
         if text_len <= 350:
-            max_tokens = 700
+            max_tokens = 240
             strategy = "prompt_short"
         elif text_len <= 1200:
-            max_tokens = 900
+            max_tokens = 320
             strategy = "prompt_medium"
         else:
-            max_tokens = 1200
+            max_tokens = 420
             strategy = "prompt_long"
     else:
         if text_len <= 350:
@@ -293,7 +290,8 @@ def call_flm(
         system_prompt = ffp_prompt_builder.build_system_prompt(
             prompt_settings,
             prompt_intent,
-            legacy_system_prompt=system_prompt,
+            prompt_v1_system_prompt=ffp_config.CLAUDE_PROMPT_SYSTEM_PROMPT_V1,
+            prompt_v2_system_prompt=system_prompt or ffp_config.CLAUDE_PROMPT_SYSTEM_PROMPT_V2,
         )
     if not system_prompt:
         raise RuntimeError(f"No system_prompt configured for mode '{mode}'.")
@@ -325,7 +323,11 @@ def call_flm(
             "Return only corrected text."
         )
 
-    if routing_enabled and len(masked_input or "") >= long_threshold:
+    if (
+        routing_enabled
+        and len(masked_input or "") >= long_threshold
+        and not (is_prompt_mode(mode) and prompt_settings.uses_prompt_v2_contract())
+    ):
         chunks = split_chunks(masked_input, chunk_size, runtime.routing_cfg)[:max_chunks]
         if mode == "grammar":
             out_parts: list[str] = []
@@ -389,14 +391,15 @@ def call_flm(
     if not text:
         raise RuntimeError("Local LLM returned no usable text.")
 
-    if is_prompt_mode(mode):
+    if is_prompt_mode(mode) and not prompt_settings.uses_prompt_v2_contract():
         stripped = strip_prompt_scaffold_labels(text, prompt_settings)
         if stripped:
             text = stripped
         out_norm = re.sub(r"\s+", " ", str(text).lower()).strip()
         in_norm = re.sub(r"\s+", " ", str(masked_input).lower()).strip()
         reuse_ratio = line_reuse_ratio(masked_input, text)
-        near_verbatim = (
+        target_structured = has_target_structure(text, prompt_settings)
+        near_verbatim = not target_structured and (
             (out_norm == in_norm)
             or (reuse_ratio >= 0.85)
             or is_weak_prompt_echo(masked_input, text, prompt_settings)
@@ -408,7 +411,7 @@ def call_flm(
                     model,
                     anti_echo_prompt,
                     masked_input,
-                    max(max_tokens, 240),
+                    max_tokens,
                     remaining_timeout(),
                 )
                 if retried and retried.strip():
@@ -417,7 +420,7 @@ def call_flm(
             except Exception as exc:
                 log.debug("anti-echo retry failed, keeping original prompt text: %s", exc)
 
-    if is_prompt_mode(mode):
+    if is_prompt_mode(mode) and not prompt_settings.uses_prompt_v2_contract():
         overlap_ratio = word_overlap_ratio(masked_input, text)
         reuse_ratio = line_reuse_ratio(masked_input, text)
         near_copy = overlap_ratio >= 0.9 or reuse_ratio >= 0.9
@@ -429,7 +432,7 @@ def call_flm(
                     model,
                     rescue_prompt,
                     masked_input,
-                    max(max_tokens, 220),
+                    max_tokens,
                     remaining_timeout(),
                 )
                 if rescued and rescued.strip():
@@ -441,9 +444,21 @@ def call_flm(
                 log.warning("prompt-rescue call failed, using deterministic prompt shaping: %s", exc)
                 text = force_prompt_shape(masked_input, prompt_settings)
 
-    if is_prompt_mode(mode) and is_weak_prompt_echo(masked_input, text, prompt_settings):
+    if (
+        is_prompt_mode(mode)
+        and not prompt_settings.uses_prompt_v2_contract()
+        and is_weak_prompt_echo(masked_input, text, prompt_settings)
+    ):
         log.warning("prompt mode still weak after retries; using deterministic prompt shape")
         text = force_prompt_shape(masked_input, prompt_settings)
+
+    if is_prompt_mode(mode) and prompt_settings.uses_prompt_v2_contract():
+        text = ffp_prompt_builder.ground_prompt_v2_output(
+            text,
+            prompt_settings,
+            prompt_intent,
+            masked_input,
+        )
 
     if is_prompt_mode(mode) and prompt_settings.requires_contract_gate():
         result = ffp_prompt_builder.validate(text, prompt_settings)

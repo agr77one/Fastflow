@@ -102,3 +102,50 @@ def test_bad_filter_rejected_before_subprocess(monkeypatch):
     out = ffp_flm_server.flm_list("bogus", "x", 0)
     assert "bad filter" in out["error"]
     assert called["n"] == 0  # rejected without shelling out
+
+
+def test_v34_force_restart_waits_for_old_port_before_spawning(monkeypatch, tmp_path):
+    reachability = iter([True, False, True])
+    stopped = []
+    spawned = []
+
+    class _Proc:
+        pid = 4321
+        returncode = None
+
+        @staticmethod
+        def poll():
+            return None
+
+    settings = ffp_flm_server.FlmServerSettings(
+        base_url="http://127.0.0.1:52625",
+        model="qwen3.5:4b",
+        timeout_seconds=60,
+        performance_mode="balanced",
+        startup_timeout_seconds=5,
+        extra_args=[],
+        log_to_file=False,
+        log_file="flm.log",
+        pid_path=tmp_path / "flm.pid",
+        logs_dir=tmp_path,
+        no_window=0,
+    )
+    monkeypatch.setattr(
+        ffp_flm_server,
+        "is_flm_server_reachable",
+        lambda _url: next(reachability),
+    )
+    monkeypatch.setattr(ffp_flm_server, "popen_hidden", lambda *a, **k: spawned.append((a, k)) or _Proc())
+    monkeypatch.setattr(ffp_flm_server, "write_pid", lambda *_args: None)
+    monkeypatch.setattr(ffp_flm_server.time, "sleep", lambda _seconds: None)
+
+    result = ffp_flm_server.start_flm_server(
+        settings,
+        lambda *_args: ("", settings.model),
+        force_restart=True,
+        stop_callback=lambda force: stopped.append(force) or True,
+    )
+
+    assert result == "started"
+    assert stopped == [True]
+    assert len(spawned) == 1

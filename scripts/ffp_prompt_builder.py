@@ -7,14 +7,16 @@ from dataclasses import dataclass
 from typing import Any
 
 TARGET_AGENTS = frozenset({"claude_code", "generic_chat"})
+PROMPT_VERSIONS = frozenset({"v1", "v2"})
 DETAIL_LEVELS = frozenset({"concise", "balanced", "detailed"})
 ACTION_MODES = frozenset({"plan", "implement", "review", "debug", "explain"})
 STRUCTURES = frozenset({"agent_default", "markdown", "xml", "checklist"})
 USER_SUFFIX_MAX_CHARS = 500
 
 DEFAULT_PROMPT_BUILDER_CONFIG = {
+    "prompt_version": "v2",
     "target_agent": "claude_code",
-    "detail_level": "balanced",
+    "detail_level": "concise",
     "action_mode": "implement",
     "structure": "agent_default",
     "include_acceptance_criteria": False,
@@ -25,11 +27,145 @@ DEFAULT_PROMPT_BUILDER_CONFIG = {
     "user_suffix": "",
 }
 
+_PROMPT_V2_XML_RE = re.compile(
+    r"\A\s*<task>\s*(?P<task>.*?)\s*</task>\s*"
+    r"<context>\s*(?P<context>.*?)\s*</context>\s*"
+    r"<constraints>\s*(?P<constraints>.*?)\s*</constraints>\s*"
+    r"<output_format>\s*(?P<output_format>.*?)\s*</output_format>\s*\Z",
+    flags=re.IGNORECASE | re.DOTALL,
+)
+_IMPERATIVE_STARTS = frozenset(
+    {
+        "add",
+        "analyze",
+        "assess",
+        "build",
+        "check",
+        "combine",
+        "convert",
+        "create",
+        "debug",
+        "develop",
+        "design",
+        "diagnose",
+        "document",
+        "explain",
+        "extract",
+        "fix",
+        "generate",
+        "improve",
+        "implement",
+        "integrate",
+        "investigate",
+        "make",
+        "migrate",
+        "optimize",
+        "plan",
+        "produce",
+        "refactor",
+        "remove",
+        "rename",
+        "replace",
+        "resolve",
+        "review",
+        "separate",
+        "summarize",
+        "test",
+        "troubleshoot",
+        "update",
+        "validate",
+        "write",
+    }
+)
+_CLAUSE_VERB_FORMS = {
+    "add": "Add",
+    "adds": "Add",
+    "authenticate": "Authenticate",
+    "authenticates": "Authenticate",
+    "build": "Build",
+    "builds": "Build",
+    "cap": "Cap",
+    "caps": "Cap",
+    "check": "Check",
+    "checks": "Check",
+    "combine": "Combine",
+    "combines": "Combine",
+    "create": "Create",
+    "creates": "Create",
+    "debug": "Debug",
+    "do": "Do",
+    "explain": "Explain",
+    "fix": "Fix",
+    "fixes": "Fix",
+    "generate": "Generate",
+    "generates": "Generate",
+    "handle": "Handle",
+    "handles": "Handle",
+    "honor": "Honor",
+    "honors": "Honor",
+    "keep": "Keep",
+    "keeps": "Keep",
+    "make": "Make",
+    "makes": "Make",
+    "plan": "Plan",
+    "process": "Process",
+    "processes": "Process",
+    "preserve": "Preserve",
+    "preserves": "Preserve",
+    "prevent": "Prevent",
+    "prevents": "Prevent",
+    "read": "Read",
+    "reads": "Read",
+    "reconcile": "Reconcile",
+    "reconciles": "Reconcile",
+    "refactor": "Refactor",
+    "reject": "Reject",
+    "rejects": "Reject",
+    "rename": "Rename",
+    "renames": "Rename",
+    "report": "Report",
+    "reports": "Report",
+    "return": "Return",
+    "returns": "Return",
+    "review": "Review",
+    "show": "Show",
+    "shows": "Show",
+    "store": "Store",
+    "stores": "Store",
+    "summarize": "Summarize",
+    "summarizes": "Summarize",
+    "test": "Test",
+    "tests": "Test",
+    "use": "Use",
+    "uses": "Use",
+    "validate": "Validate",
+    "validates": "Validate",
+    "write": "Write",
+    "writes": "Write",
+}
+_CLAUSE_VERBS_PATTERN = "|".join(
+    re.escape(verb) for verb in sorted(_CLAUSE_VERB_FORMS, key=len, reverse=True)
+)
+_CLAUSE_SPLIT_RE = re.compile(
+    rf"(?:;\s*|,\s*(?:and\s+)?|\s+and\s+)(?=(?:{_CLAUSE_VERBS_PATTERN})\b)",
+    flags=re.IGNORECASE,
+)
+_RELATIVE_SPLIT_RE = re.compile(
+    rf"\s+(?:that|which)\s+(?=(?:{_CLAUSE_VERBS_PATTERN})\b)",
+    flags=re.IGNORECASE,
+)
+_SAFE_SCOPE_GUARDS = (
+    "Preserve all stated requirements.",
+    "Do not add unstated requirements.",
+    "Leave unspecified choices to the implementer.",
+)
+
 
 @dataclass(frozen=True)
 class PromptBuilderSettings:
+    prompt_version: str = "v2"
     target_agent: str = "claude_code"
-    detail_level: str = "balanced"
+    detail_level: str = "concise"
     action_mode: str = "implement"
     structure: str = "agent_default"
     include_acceptance_criteria: bool = False
@@ -43,6 +179,7 @@ class PromptBuilderSettings:
     def from_config(cls, value: Any) -> PromptBuilderSettings:
         cfg = value if isinstance(value, dict) else {}
         defaults = DEFAULT_PROMPT_BUILDER_CONFIG
+        prompt_version = _enum(cfg.get("prompt_version"), PROMPT_VERSIONS, defaults["prompt_version"])
         target_agent = _enum(cfg.get("target_agent"), TARGET_AGENTS, defaults["target_agent"])
         detail_level = _enum(cfg.get("detail_level"), DETAIL_LEVELS, defaults["detail_level"])
         action_mode = _enum(cfg.get("action_mode"), ACTION_MODES, defaults["action_mode"])
@@ -50,6 +187,7 @@ class PromptBuilderSettings:
         allow_suffix = _bool(cfg.get("allow_user_suffix"), defaults["allow_user_suffix"])
         user_suffix = _clean_suffix(cfg.get("user_suffix") if allow_suffix else "")
         return cls(
+            prompt_version=prompt_version,
             target_agent=target_agent,
             detail_level=detail_level,
             action_mode=action_mode,
@@ -70,6 +208,7 @@ class PromptBuilderSettings:
 
     def to_dict(self) -> dict:
         return {
+            "prompt_version": self.prompt_version,
             "target_agent": self.target_agent,
             "detail_level": self.detail_level,
             "action_mode": self.action_mode,
@@ -85,8 +224,14 @@ class PromptBuilderSettings:
     def is_identity_default(self) -> bool:
         return self.to_dict() == DEFAULT_PROMPT_BUILDER_CONFIG
 
+    def is_v1_rollback_default(self) -> bool:
+        return self.prompt_version == "v1"
+
+    def uses_prompt_v2_contract(self) -> bool:
+        return self.prompt_version == "v2" and self.is_identity_default()
+
     def requires_contract_gate(self) -> bool:
-        return not self.is_identity_default()
+        return not self.is_v1_rollback_default()
 
 
 @dataclass(frozen=True)
@@ -109,6 +254,8 @@ def resolve_intent(settings: PromptBuilderSettings, input_text: str = "") -> Pro
 
 
 def effective_structure(settings: PromptBuilderSettings) -> str:
+    if settings.is_v1_rollback_default():
+        return "xml"
     if settings.structure != "agent_default":
         return settings.structure
     if settings.target_agent == "claude_code":
@@ -120,17 +267,21 @@ def build_system_prompt(
     settings: PromptBuilderSettings,
     intent: PromptIntent,
     *,
-    legacy_system_prompt: str = "",
+    prompt_v1_system_prompt: str = "",
+    prompt_v2_system_prompt: str = "",
+    legacy_system_prompt: str | None = None,
 ) -> str:
     """Build the generator system prompt.
 
-    The default path intentionally returns the existing Claude prompt verbatim so
-    upgrades do not silently re-baseline prompt-mode behavior. If that legacy
-    prompt is missing, return empty and let the caller's missing-prompt guard
-    fail closed instead of synthesizing a subtly different default.
+    Identity settings select the versioned built-in verbatim. ``legacy_system_prompt``
+    remains a compatibility alias for callers that only know the current prompt.
     """
+    if legacy_system_prompt is not None and not prompt_v2_system_prompt:
+        prompt_v2_system_prompt = legacy_system_prompt
     if settings.is_identity_default():
-        return legacy_system_prompt
+        return prompt_v2_system_prompt
+    if settings.is_v1_rollback_default():
+        return prompt_v1_system_prompt
 
     shape = effective_structure(settings)
     parts = [
@@ -149,6 +300,13 @@ def build_system_prompt(
 
 
 def build_retry_prompt(settings: PromptBuilderSettings, *, rescue: bool = False) -> str:
+    if settings.uses_prompt_v2_contract():
+        strength = " after the previous output broke the contract" if rescue else ""
+        return (
+            f"Rewrite the request{strength}. Return only four separate sibling XML sections in order: "
+            "<task>, <context>, <constraints>, <output_format>. Task: one imperative sentence. "
+            "Constraints: 3-5 '- ' bullets. Output format: one line. No preamble, fence, or invented fact."
+        )
     shape = effective_structure(settings)
     strength = "stronger " if rescue else ""
     return (
@@ -175,6 +333,18 @@ def render_fallback(
     return text.strip()
 
 
+def ground_prompt_v2_output(
+    model_output: str,
+    settings: PromptBuilderSettings,
+    intent: PromptIntent,
+    source_text: str,
+) -> str:
+    """Prevent semantic model inventions from reaching the default v2 output."""
+    if not settings.uses_prompt_v2_contract():
+        return str(model_output or "").strip()
+    return _render_prompt_v2_fallback(intent, _normalize_text(source_text))
+
+
 def validate(text: str, settings: PromptBuilderSettings) -> PromptRenderResult:
     shape = effective_structure(settings)
     if shape == "xml":
@@ -197,6 +367,8 @@ def has_target_structure(text: str, settings: PromptBuilderSettings | None = Non
     lowered = str(text or "").lower()
     shape = effective_structure(settings)
     if shape == "xml":
+        if settings.uses_prompt_v2_contract():
+            return bool(_PROMPT_V2_XML_RE.fullmatch(str(text or "")))
         return any(tag in lowered for tag in ("<task>", "<context>", "<constraints>", "<output_format>"))
     if shape == "checklist":
         return bool(re.search(r"(?im)^\s*-\s+\[[ x]\]\s+\S+", str(text or "")))
@@ -303,7 +475,9 @@ def _detail_instruction(detail_level: str) -> str:
 
 
 def _render_xml(settings: PromptBuilderSettings, intent: PromptIntent, cleaned: str) -> str:
-    if settings.is_identity_default():
+    if settings.uses_prompt_v2_contract():
+        return _render_prompt_v2_fallback(intent, cleaned)
+    if settings.is_v1_rollback_default():
         return (
             "<task>\n"
             f"Produce a copy-paste-ready Claude prompt for: {cleaned}\n"
@@ -326,6 +500,155 @@ def _render_xml(settings: PromptBuilderSettings, intent: PromptIntent, cleaned: 
     if settings.include_output_format:
         sections.append(("output_format", _fallback_output(settings)))
     return "\n".join(f"<{name}>\n{body}\n</{name}>" for name, body in sections)
+
+
+def _render_prompt_v2_fallback(intent: PromptIntent, cleaned: str) -> str:
+    task = _prompt_v2_task(intent, cleaned)
+    constraints = _prompt_v2_constraints(cleaned)
+    constraint_body = "\n".join(f"- {item}" for item in constraints)
+    return (
+        "<task>\n"
+        f"{task}\n"
+        "</task>\n"
+        "<context>\n"
+        "No additional context stated.\n"
+        "</context>\n"
+        "<constraints>\n"
+        f"{constraint_body}\n"
+        "</constraints>\n"
+        "<output_format>\n"
+        f"{_prompt_v2_output_format(cleaned)}\n"
+        "</output_format>"
+    )
+
+
+def _source_sentences(cleaned: str) -> list[str]:
+    return [
+        part.strip(" \t\r\n.;")
+        for part in re.split(r"(?<=[.!?])\s+|[\r\n]+", cleaned)
+        if part.strip(" \t\r\n.;")
+    ]
+
+
+def _strip_request_prefix(text: str) -> str:
+    cleaned = re.sub(r"^(?:task|request|prompt)\s*:\s*", "", text, flags=re.IGNORECASE)
+    return re.sub(
+        r"^(?:please\s+|can you\s+|could you\s+|i (?:need|want) you to\s+)",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    ).strip()
+
+
+def _imperative_clause(text: str) -> str:
+    cleaned = _strip_request_prefix(text).strip(" \t\r\n.;")
+    first = re.match(r"([A-Za-z]+)(.*)", cleaned, flags=re.DOTALL)
+    if not first:
+        return cleaned
+    verb = _CLAUSE_VERB_FORMS.get(first.group(1).lower())
+    if verb:
+        return verb + first.group(2)
+    return cleaned[:1].upper() + cleaned[1:]
+
+
+def _prompt_v2_task(intent: PromptIntent, cleaned: str) -> str:
+    sentences = _source_sentences(cleaned)
+    source = _strip_request_prefix(sentences[0] if sentences else cleaned)
+    source = _truncate_words(source, 240)
+    task = _imperative_clause(source)
+    first = re.match(r"[A-Za-z]+", task)
+    if not first or first.group(0).lower() not in _IMPERATIVE_STARTS:
+        action = {
+            "plan": "Plan",
+            "implement": "Implement",
+            "review": "Review",
+            "debug": "Debug",
+            "explain": "Explain",
+        }.get(intent.action_mode, "Implement")
+        task = f"{action} the requested deliverable: {task}"
+    return task.rstrip(".!? ") + "."
+
+
+def _prompt_v2_constraints(cleaned: str) -> list[str]:
+    clauses: list[str] = []
+    for sentence in _source_sentences(cleaned):
+        for relative_part in _RELATIVE_SPLIT_RE.split(sentence, maxsplit=1):
+            for part in _CLAUSE_SPLIT_RE.split(relative_part):
+                clause = _imperative_clause(part)
+                if not clause:
+                    continue
+                clause = clause.rstrip(".!? ") + "."
+                if clause.lower() not in {item.lower() for item in clauses}:
+                    clauses.append(clause)
+    for guard in _SAFE_SCOPE_GUARDS:
+        if len(clauses) >= 3:
+            break
+        if guard.lower() not in {item.lower() for item in clauses}:
+            clauses.append(guard)
+    if len(clauses) > 5:
+        tail = "; ".join(item.rstrip(".") for item in clauses[4:]) + "."
+        clauses = [*clauses[:4], tail]
+    clauses = clauses[:5]
+    fitted: list[str] = []
+    remaining = 380
+    for index, clause in enumerate(clauses):
+        remaining_items = len(clauses) - index - 1
+        budget = max(48, remaining - (remaining_items * 48))
+        item = _truncate_words(clause, budget).rstrip(".!? ") + "."
+        fitted.append(item)
+        remaining = max(0, remaining - len(item))
+    return fitted
+
+
+def _truncate_words(text: str, max_chars: int) -> str:
+    cleaned = str(text or "").strip()
+    if len(cleaned) <= max_chars:
+        return cleaned
+    shortened = cleaned[:max_chars].rsplit(" ", 1)[0].rstrip(" ,;:.!?")
+    return shortened or cleaned[:max_chars].rstrip(" ,;:.!?")
+
+
+def _display_phrase(value: str) -> str:
+    cleaned = value.strip(" \t\r\n.;")
+    for source, replacement in {
+        "api": "API",
+        "cli": "CLI",
+        "csv": "CSV",
+        "go": "Go",
+        "json": "JSON",
+        "postgres": "Postgres",
+        "python": "Python",
+    }.items():
+        cleaned = re.sub(rf"\b{source}\b", replacement, cleaned, flags=re.IGNORECASE)
+    return cleaned[:1].upper() + cleaned[1:] if cleaned else cleaned
+
+
+def _prompt_v2_output_format(cleaned: str) -> str:
+    source = _strip_request_prefix((_source_sentences(cleaned) or [cleaned])[0])
+    create = re.match(
+        r"^(?:build|create|develop|generate|produce|write)\s+((?:a|an|the)\s+)?(.+)$",
+        source,
+        flags=re.IGNORECASE,
+    )
+    if create:
+        phrase = _RELATIVE_SPLIT_RE.split(create.group(2), maxsplit=1)[0]
+        phrase = _CLAUSE_SPLIT_RE.split(phrase, maxsplit=1)[0]
+        article = create.group(1) or ""
+        return _display_phrase(_truncate_words(article + phrase, 120)) + "."
+    add = re.match(r"^add\s+((?:a|an|the)\s+)?(.+)$", source, flags=re.IGNORECASE)
+    if add:
+        phrase = re.split(r"\s+to\s+|[,;]", add.group(2), maxsplit=1)[0]
+        return _display_phrase(_truncate_words((add.group(1) or "") + phrase, 120)) + "."
+    verb = (re.match(r"[A-Za-z]+", source) or [""])[0].lower()
+    return {
+        "combine": "Combined data and summary.",
+        "debug": "Debugging result.",
+        "explain": "Explanation.",
+        "fix": "Fix.",
+        "plan": "Plan.",
+        "refactor": "Refactor.",
+        "review": "Review.",
+    }.get(verb, "No output format specified.")
 
 
 def _render_markdown(settings: PromptBuilderSettings, intent: PromptIntent, cleaned: str) -> str:
@@ -399,7 +722,9 @@ def _fallback_output(settings: PromptBuilderSettings) -> str:
 def _validate_xml(text: str, settings: PromptBuilderSettings) -> tuple[bool, list[str]]:
     raw = str(text or "").strip()
     errors: list[str] = []
-    if settings.is_identity_default():
+    if settings.uses_prompt_v2_contract():
+        return _validate_prompt_v2_xml(raw)
+    if settings.is_v1_rollback_default():
         lower = raw.lower()
         for tag in ("task", "output_format"):
             if f"<{tag}>" not in lower:
@@ -437,6 +762,52 @@ def _validate_xml(text: str, settings: PromptBuilderSettings) -> tuple[bool, lis
     if "<think" in lower:
         errors.append("contains think residue")
     return not errors, errors
+
+
+def _validate_prompt_v2_xml(raw: str) -> tuple[bool, list[str]]:
+    errors: list[str] = []
+    match = _PROMPT_V2_XML_RE.fullmatch(raw)
+    if not match:
+        errors.append("requires exactly four ordered sibling sections")
+        return False, errors
+    sections = {name: match.group(name).strip() for name in match.groupdict()}
+    for name, body in sections.items():
+        if not body:
+            errors.append(f"empty <{name}>")
+
+    task = re.sub(r"\s+", " ", sections["task"]).strip()
+    sentences = [part.strip() for part in re.split(r"[.!?]+(?=\s|$)", task) if part.strip()]
+    first = re.match(r"[A-Za-z]+", task)
+    if (
+        "\n" in sections["task"]
+        or len(sentences) != 1
+        or not re.search(r"[.!?]\s*$", task)
+        or not first
+        or first.group(0).lower() not in _IMPERATIVE_STARTS
+    ):
+        errors.append("<task> must be one imperative sentence")
+
+    constraint_items = [
+        match.group(1).strip()
+        for line in sections["constraints"].splitlines()
+        if (match := re.match(r"\s*(?:[-*•]|\d+[.)])\s+(.+?)\s*$", line))
+    ]
+    if len(constraint_items) not in range(3, 6):
+        errors.append("<constraints> must contain 3-5 bullet items")
+    if "\n" in sections["output_format"]:
+        errors.append("<output_format> must be one line")
+    lowered = raw.lower()
+    if re.search(r"(?im)^\s*```", raw):
+        errors.append("wrapped in code fence")
+    if "<think" in lowered:
+        errors.append("contains think residue")
+    if _estimate_token_count(raw) > 220:
+        errors.append("exceeds 220-token target")
+    return not errors, errors
+
+
+def _estimate_token_count(text: str) -> int:
+    return len(re.findall(r"\w+|[^\w\s]", str(text or ""), flags=re.UNICODE))
 
 
 def _validate_markdown(

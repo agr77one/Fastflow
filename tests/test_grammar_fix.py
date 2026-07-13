@@ -217,6 +217,67 @@ def test_start_llm_server_launches_ollama_when_selected_provider_is_ollama(fresh
     assert calls[0][0] == ["ollama", "serve"]
 
 
+def test_v31_warm_configured_fastflow_starts_profile_during_fallback(fresh_modules, monkeypatch):
+    grammar_fix = fresh_modules("grammar_fix")
+    cfg = {
+        "llm": {"provider": "fastflowlm"},
+        "providers": {
+            "fastflowlm": {
+                "base_url": "http://127.0.0.1:52625",
+                "model": "qwen3.5:4b",
+                "auth_bearer": "flm",
+                "timeout_seconds": 60,
+                "auto_start": True,
+            }
+        },
+        "server": {
+            "performance_mode": "balanced",
+            "startup_timeout_seconds": 25,
+            "serve_extra_args": [],
+            "log_to_file": False,
+            "log_file": "flm_server.log",
+        },
+    }
+    starts = []
+    warmups = []
+    refreshes = []
+    monkeypatch.setattr(grammar_fix, "load_config", lambda: cfg)
+    monkeypatch.setattr(grammar_fix.ffp_flm_server, "is_flm_server_reachable", lambda _url: False)
+    monkeypatch.setattr(
+        grammar_fix.ffp_flm_server,
+        "start_flm_server",
+        lambda settings, call_api: starts.append((settings, call_api)) or "started",
+    )
+    monkeypatch.setattr(
+        grammar_fix.ffp_flm_server,
+        "warmup_request",
+        lambda model, timeout, call_api: warmups.append((model, timeout, call_api)),
+    )
+    monkeypatch.setattr(grammar_fix, "refresh_runtime_config", lambda: refreshes.append(True))
+
+    result = grammar_fix.warm_configured_fastflowlm()
+
+    assert result == "warmed_up"
+    assert starts[0][0].base_url == "http://127.0.0.1:52625"
+    assert starts[0][0].model == "qwen3.5:4b"
+    assert warmups[0][:2] == ("qwen3.5:4b", 60)
+    assert refreshes == [True]
+
+
+def test_v31_warm_configured_fastflow_honors_provider_and_autostart(fresh_modules, monkeypatch):
+    grammar_fix = fresh_modules("grammar_fix")
+    monkeypatch.setattr(grammar_fix, "load_config", lambda: {"llm": {"provider": "ollama"}})
+    assert grammar_fix.warm_configured_fastflowlm() == "skipped_provider"
+
+    cfg = {
+        "llm": {"provider": "fastflowlm"},
+        "providers": {"fastflowlm": {"auto_start": False}},
+    }
+    monkeypatch.setattr(grammar_fix, "load_config", lambda: cfg)
+    monkeypatch.setattr(grammar_fix.ffp_flm_server, "is_flm_server_reachable", lambda _url: False)
+    assert grammar_fix.warm_configured_fastflowlm() == "skipped_auto_start"
+
+
 def test_save_config_writes_utf8_json_with_newline(fresh_modules):
     grammar_fix = fresh_modules("grammar_fix")
     payload = {"message": "hello 🙂", "server": {"auto_start": True}}
@@ -316,20 +377,28 @@ def test_split_chunks_merges_tiny_trailing_chunk(fresh_modules):
 
 
 @pytest.mark.parametrize(
-    ("mode", "text", "strategy"),
+    ("mode", "text", "max_tokens", "strategy"),
     [
-        ("prompt", "tiny", "prompt_short"),
-        ("prompt", "x" * 600, "prompt_medium"),
-        ("grammar", "x" * 800, "grammar_medium"),
-        ("grammar", "x" * 1500, "grammar_long"),
+        ("prompt", "tiny", 240, "prompt_short"),
+        ("prompt", "x" * 600, 320, "prompt_medium"),
+        ("prompt", "x" * 1500, 420, "prompt_long"),
+        ("grammar", "x" * 800, 220, "grammar_medium"),
+        ("grammar", "x" * 1500, 180, "grammar_long"),
     ],
 )
-def test_select_runtime_picks_expected_strategy(fresh_modules, mode, text, strategy):
+def test_select_runtime_picks_expected_strategy_and_cap(
+    fresh_modules,
+    mode,
+    text,
+    max_tokens,
+    strategy,
+):
     grammar_fix = fresh_modules("grammar_fix")
 
-    _, _, selected = grammar_fix._select_runtime(mode, text)
+    _, selected_tokens, selected_strategy = grammar_fix._select_runtime(mode, text)
 
-    assert selected == strategy
+    assert selected_tokens == max_tokens
+    assert selected_strategy == strategy
 
 
 def test_dict_protect_returns_original_when_no_words(fresh_modules):
@@ -427,28 +496,130 @@ def test_call_flm_short_grammar_uses_tight_prompt_and_restores_dictionary(fresh_
     assert "Fix grammar and punctuation only." in calls[0][1]
 
 
-def test_call_flm_prompt_retries_on_near_verbatim_output(fresh_modules, monkeypatch):
+def test_v35_default_prompt_uses_one_short_draft_call(fresh_modules, monkeypatch):
     grammar_fix = fresh_modules("grammar_fix")
     monkeypatch.setattr(grammar_fix, "is_flm_server_reachable", lambda: True)
-    responses = iter(
-        [
-            ("Task: Build a plan", grammar_fix.FLM_MODEL),
-            ("Create a concrete execution plan with deliverables.", grammar_fix.FLM_MODEL),
-        ]
-    )
     prompts = []
 
     def fake_call(model, system_prompt, user_content, max_tokens, timeout_seconds):
         prompts.append(system_prompt)
-        return next(responses)
+        return ("Task: Build a plan", grammar_fix.FLM_MODEL)
 
     monkeypatch.setattr(grammar_fix, "_call_flm_api", fake_call)
 
     text, _, _, strategy = grammar_fix.call_flm("prompt", "Task: Build a plan")
 
     assert strategy == "prompt_short"
-    assert text == "Create a concrete execution plan with deliverables."
-    assert any("meta-framing" in prompt for prompt in prompts)
+    assert text.startswith("<task>\nBuild a plan.")
+    assert prompts == [grammar_fix.ffp_config.CLAUDE_PROMPT_SYSTEM_PROMPT_V2]
+    assert "under 40 tokens" in prompts[0]
+
+
+def test_v27_v35_long_default_prompt_is_one_call_and_bounded(fresh_modules, monkeypatch):
+    grammar_fix = fresh_modules("grammar_fix")
+    monkeypatch.setattr(grammar_fix, "is_flm_server_reachable", lambda: True)
+    calls = []
+    source = "build a tool that " + ("processes records while preserving stated behavior " * 60)
+
+    def fake_call(model, system_prompt, user_content, max_tokens, timeout_seconds):
+        calls.append((user_content, max_tokens))
+        return "Build the requested tool.", model
+
+    monkeypatch.setattr(grammar_fix, "_call_flm_api", fake_call)
+
+    text, _, _, strategy = grammar_fix.call_flm("prompt", source)
+    settings = grammar_fix.ffp_prompt_builder.PromptBuilderSettings.from_config({})
+
+    assert strategy == "prompt_long"
+    assert calls == [(source, 420)]
+    assert grammar_fix.ffp_prompt_builder.validate(text, settings).valid is True
+
+
+def test_prompt_retries_never_exceed_selected_strategy_cap(fresh_modules, monkeypatch):
+    grammar_fix = fresh_modules("grammar_fix")
+    grammar_fix.PROMPT_BUILDER_CFG = {
+        **grammar_fix.ffp_prompt_builder.DEFAULT_PROMPT_BUILDER_CONFIG,
+        "target_agent": "generic_chat",
+    }
+    monkeypatch.setattr(grammar_fix, "is_flm_server_reachable", lambda: True)
+    caps = []
+
+    def fake_call(model, system_prompt, user_content, max_tokens, timeout_seconds):
+        caps.append(max_tokens)
+        return (user_content, model)
+
+    monkeypatch.setattr(grammar_fix, "_call_flm_api", fake_call)
+
+    text, _, _, strategy = grammar_fix.call_flm("prompt", "fix the failing test")
+
+    assert strategy == "prompt_short"
+    assert caps == [240, 240, 240]
+    assert grammar_fix.ffp_prompt_builder.validate(
+        text,
+        grammar_fix.ffp_prompt_builder.PromptBuilderSettings.from_config(
+            grammar_fix.PROMPT_BUILDER_CFG
+        ),
+    ).valid
+
+
+def test_v32_prompt_v1_rollback_structure_skips_overlap_retry(fresh_modules, monkeypatch):
+    grammar_fix = fresh_modules("grammar_fix")
+    grammar_fix.PROMPT_BUILDER_CFG = {
+        **grammar_fix.ffp_prompt_builder.DEFAULT_PROMPT_BUILDER_CONFIG,
+        "prompt_version": "v1",
+    }
+    monkeypatch.setattr(grammar_fix, "is_flm_server_reachable", lambda: True)
+    prompts = []
+
+    def fake_call(model, system_prompt, user_content, max_tokens, timeout_seconds):
+        prompts.append((system_prompt, max_tokens))
+        return (
+            "<task>\nBuild the requested change.\n</task>\n"
+            "<output_format>\nReturn the result.\n</output_format>",
+            model,
+        )
+
+    monkeypatch.setattr(grammar_fix, "_call_flm_api", fake_call)
+
+    text, _, _, strategy = grammar_fix.call_flm("prompt", "build the requested change")
+
+    assert strategy == "prompt_short"
+    assert prompts == [(grammar_fix.ffp_config.CLAUDE_PROMPT_SYSTEM_PROMPT_V1, 240)]
+    assert "<output_format>" in text
+
+
+def test_v33_default_prompt_surfaces_grounded_source_not_model_inventions(fresh_modules, monkeypatch):
+    grammar_fix = fresh_modules("grammar_fix")
+    monkeypatch.setattr(grammar_fix, "is_flm_server_reachable", lambda: True)
+    calls = []
+    invented = (
+        "<task>\nWrite a CLI with two required arguments.\n</task>\n"
+        "<context>\nThe tool runs in the current directory.\n</context>\n"
+        "<constraints>\n- Require two arguments.\n- Print to stdout.\n- Add error handling.\n"
+        "</constraints>\n<output_format>\nA Python file.\n</output_format>"
+    )
+
+    def fake_call(model, system_prompt, user_content, max_tokens, timeout_seconds):
+        calls.append(max_tokens)
+        return invented, model
+
+    monkeypatch.setattr(grammar_fix, "_call_flm_api", fake_call)
+
+    text, _, _, _ = grammar_fix.call_flm(
+        "prompt",
+        "write a CLI that renames files from a mapping in a text file",
+    )
+
+    assert calls == [240]
+    assert grammar_fix.ffp_prompt_builder.validate(
+        text,
+        grammar_fix.ffp_prompt_builder.PromptBuilderSettings.from_config({}),
+    ).valid
+    assert "two required arguments" not in text
+    assert "stdout" not in text
+    assert "error handling" not in text
+    assert "- Write a CLI." in text
+    assert "- Rename files from a mapping in a text file." in text
 
 
 def test_prompt_mode_cli_writes_output_file(fresh_modules, monkeypatch, tmp_path: Path):
@@ -456,9 +627,8 @@ def test_prompt_mode_cli_writes_output_file(fresh_modules, monkeypatch, tmp_path
     monkeypatch.setattr(grammar_fix, "is_flm_server_reachable", lambda: True)
 
     def fake_call(model, system_prompt, user_content, max_tokens, timeout_seconds):
-        # v1.3.0 tightened the prompt-mode system prompt; "Claude-ready" is the
-        # remaining signal that the prompt-mode path was selected.
-        assert "Claude-ready" in system_prompt
+        assert "under 40 tokens" in system_prompt
+        assert max_tokens == 240
         return ("<task>Refine onboarding email</task>", model)
 
     monkeypatch.setattr(grammar_fix, "_call_flm_api", fake_call)

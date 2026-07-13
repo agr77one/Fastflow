@@ -24,6 +24,8 @@ def test_seed_defaults_safe():
     shipped = json.loads(SHIPPED_SEED.read_text(encoding="utf-8"))
     assert shipped.get("history_store_text") is False
     assert (shipped.get("server") or {}).get("performance_mode") == "balanced"
+    assert (shipped.get("server") or {}).get("warm_on_start") is True
+    assert (shipped.get("server") or {}).get("keep_warm_minutes") == 15
 
 
 def test_shipped_seed_keys_do_not_silently_drift_from_schema():
