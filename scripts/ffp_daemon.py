@@ -340,16 +340,92 @@ def _act_models_not_installed(_args: dict) -> dict:
 
 def _act_model_recommendations(_args: dict) -> dict:
     """Hardware-aware model suggestions for the active provider: detected
-    RAM/VRAM, a size budget, and candidate models tagged fits yes/tight/no."""
+    RAM/VRAM, a size budget, and candidate models tagged fits yes/tight/no.
+
+    On FastFlowLM the catalog's own per-model metadata (measured footprint,
+    install state, minimum FLM version) is forwarded so fit is decided from real
+    numbers rather than guessed from the tag name."""
     import ffp_hardware
     provider = grammar_fix.LLM_PROVIDER
     if provider == "ollama":
-        candidates = list(ffp_hardware.OLLAMA_CATALOG)
+        candidates: list = list(ffp_hardware.OLLAMA_CATALOG)
     else:
         listing = grammar_fix._provider_list("all")
-        names = listing.get("models") or []
-        candidates = [(n, ffp_hardware.parse_params_b(n)) for n in names]
-    return ffp_hardware.recommend_models(provider, candidates)
+        details = listing.get("details") or []
+        if details:
+            candidates = [dict(entry) for entry in details if isinstance(entry, dict)]
+        else:
+            # Older FLM without per-model JSON metadata: fall back to tag parsing.
+            candidates = [(n, ffp_hardware.parse_params_b(n)) for n in (listing.get("models") or [])]
+    out = ffp_hardware.recommend_models(provider, candidates)
+    out["active_model"] = _active_model_health(listing if provider != "ollama" else None)
+    return out
+
+
+def _active_model_health(listing: dict | None = None) -> dict:
+    """Report whether the configured active model is actually usable.
+
+    A FastFlowLM upgrade can invalidate an already-pulled model (FLM 0.9.45
+    rejects models stamped for 0.9.43), and FLM then reports them as
+    NOT installed. Nothing used to surface that, so the next hotkey failed with
+    an opaque provider error. This gives the dashboard a specific, actionable
+    state: which model is configured, whether it is installed, and the remedy.
+
+    ``listing`` may be a already-fetched provider listing to avoid a second CLI
+    call; it is only trusted when it carries per-model ``details`` (whose
+    ``installed`` flags are authoritative and filter-independent). Without
+    details we must re-list with the ``installed`` filter, because an
+    ``all`` listing includes not-yet-pulled suggestions and would report a
+    missing model as installed."""
+    provider = grammar_fix.LLM_PROVIDER
+    model = str(grammar_fix.FLM_MODEL or "")
+    health = {"provider": provider, "model": model, "installed": None, "status": "unknown", "detail": ""}
+    if not model:
+        health.update(status="unknown", detail="no active model configured")
+        return health
+
+    details = list((listing or {}).get("details") or [])
+    if not details:
+        try:
+            listing = grammar_fix._provider_list("installed")
+        except Exception as exc:
+            health.update(status="unknown", detail=f"could not list models: {exc}")
+            return health
+        if listing.get("error"):
+            health.update(status="unknown", detail=str(listing.get("error")))
+            return health
+        details = list(listing.get("details") or [])
+    elif listing and listing.get("error"):
+        health.update(status="unknown", detail=str(listing.get("error")))
+        return health
+
+    entry = next((d for d in details if isinstance(d, dict) and d.get("name") == model), None)
+    if entry is not None:
+        installed = bool(entry.get("installed"))
+        health["installed"] = installed
+        health["flm_min_version"] = entry.get("flm_min_version") or ""
+        if installed:
+            health.update(status="ok", detail="")
+        else:
+            health.update(
+                status="not_installed",
+                detail=f"'{model}' is in the catalog but not installed for this "
+                       f"{provider} version - run a pull to (re)install it.",
+            )
+        return health
+
+    # No per-model metadata (Ollama, or an older FLM): the names here are
+    # installed-only, so absence genuinely means "not installed".
+    names = set((listing or {}).get("models") or [])
+    if model in names:
+        health.update(installed=True, status="ok", detail="")
+    else:
+        health.update(
+            installed=False,
+            status="not_installed",
+            detail=f"'{model}' is not installed for {provider} - pull it or pick another model.",
+        )
+    return health
 
 
 def _act_pull_model(args: dict) -> str:

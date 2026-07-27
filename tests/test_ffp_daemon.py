@@ -243,6 +243,135 @@ def test_stream_action_survives_client_disconnect_and_persists_partial(daemon_mo
     assert threads[0]["history"][1]["content"] == "partial"  # both streamed chunks saved
 
 
+# ---------- active-model health (2.4.1) -------------------------------------------------
+
+def test_active_model_health_ok_when_installed(daemon_module, monkeypatch):
+    import grammar_fix
+    monkeypatch.setattr(grammar_fix, "FLM_MODEL", "llama3.2:3b", raising=False)
+    monkeypatch.setattr(grammar_fix, "LLM_PROVIDER", "fastflowlm", raising=False)
+    monkeypatch.setattr(grammar_fix, "_provider_list", lambda kind: {
+        "models": ["llama3.2:3b"],
+        "details": [{"name": "llama3.2:3b", "installed": True, "flm_min_version": "0.9.21"}],
+    })
+    health = daemon_module._active_model_health()
+    assert health["status"] == "ok"
+    assert health["installed"] is True
+    assert health["detail"] == ""
+
+
+def test_active_model_health_flags_model_invalidated_by_provider_upgrade(daemon_module, monkeypatch):
+    # The real 0.9.45 case: the configured model is still in the catalog but FLM
+    # reports it as not installed because the local weights are stale-format.
+    import grammar_fix
+    monkeypatch.setattr(grammar_fix, "FLM_MODEL", "qwen3.5:4b", raising=False)
+    monkeypatch.setattr(grammar_fix, "LLM_PROVIDER", "fastflowlm", raising=False)
+    monkeypatch.setattr(grammar_fix, "_provider_list", lambda kind: {
+        "models": ["llama3.2:3b"],
+        "details": [
+            {"name": "qwen3.5:4b", "installed": False, "flm_min_version": "0.9.45"},
+            {"name": "llama3.2:3b", "installed": True, "flm_min_version": "0.9.21"},
+        ],
+    })
+    health = daemon_module._active_model_health()
+    assert health["status"] == "not_installed"
+    assert health["installed"] is False
+    assert "qwen3.5:4b" in health["detail"]
+    assert health["flm_min_version"] == "0.9.45"
+
+
+def test_active_model_health_flags_model_absent_from_catalog(daemon_module, monkeypatch):
+    import grammar_fix
+    monkeypatch.setattr(grammar_fix, "FLM_MODEL", "ghost:1b", raising=False)
+    monkeypatch.setattr(grammar_fix, "LLM_PROVIDER", "ollama", raising=False)
+    monkeypatch.setattr(grammar_fix, "_provider_list", lambda kind: {"models": ["llama3.2:3b"]})
+    health = daemon_module._active_model_health()
+    assert health["status"] == "not_installed"
+    assert health["installed"] is False
+
+
+def test_active_model_health_uses_installed_filter_without_details(daemon_module, monkeypatch):
+    # Regression guard: on Ollama a `list_models("all")` result is
+    # installed + not-yet-pulled SUGGESTIONS, so checking membership against it
+    # would report a never-pulled model as installed (a silent false "OK").
+    # Without per-model details the health check must re-list with "installed".
+    import grammar_fix
+    asked = []
+
+    def fake_list(kind):
+        asked.append(kind)
+        if kind == "installed":
+            return {"models": ["llama3.2:3b"]}                      # actually pulled
+        return {"models": ["llama3.2:3b", "qwen2.5:3b"]}            # + suggestions
+
+    monkeypatch.setattr(grammar_fix, "FLM_MODEL", "qwen2.5:3b", raising=False)
+    monkeypatch.setattr(grammar_fix, "LLM_PROVIDER", "ollama", raising=False)
+    monkeypatch.setattr(grammar_fix, "_provider_list", fake_list)
+    # Even when handed an "all" listing, it must not trust it for the verdict.
+    health = daemon_module._active_model_health({"models": ["llama3.2:3b", "qwen2.5:3b"]})
+    assert asked == ["installed"]
+    assert health["status"] == "not_installed"
+    assert health["installed"] is False
+
+
+def test_active_model_health_reuses_flm_details_without_extra_call(daemon_module, monkeypatch):
+    # FLM details carry authoritative, filter-independent `installed` flags, so
+    # a passed-in listing is reused rather than triggering another CLI call.
+    import grammar_fix
+    calls = []
+    monkeypatch.setattr(grammar_fix, "FLM_MODEL", "qwen3.5:4b", raising=False)
+    monkeypatch.setattr(grammar_fix, "LLM_PROVIDER", "fastflowlm", raising=False)
+    monkeypatch.setattr(grammar_fix, "_provider_list", lambda kind: calls.append(kind) or {"models": []})
+    health = daemon_module._active_model_health({
+        "models": [],
+        "details": [{"name": "qwen3.5:4b", "installed": True, "flm_min_version": "0.9.45"}],
+    })
+    assert calls == []                      # no redundant subprocess call
+    assert health["status"] == "ok"
+
+
+def test_active_model_health_unknown_when_provider_unreachable(daemon_module, monkeypatch):
+    import grammar_fix
+    monkeypatch.setattr(grammar_fix, "FLM_MODEL", "qwen3.5:4b", raising=False)
+    monkeypatch.setattr(grammar_fix, "LLM_PROVIDER", "fastflowlm", raising=False)
+    monkeypatch.setattr(grammar_fix, "_provider_list", lambda kind: {"error": "flm CLI not found", "models": []})
+    health = daemon_module._active_model_health()
+    assert health["status"] == "unknown"          # never claim "broken" on a listing failure
+    assert "flm CLI not found" in health["detail"]
+
+
+def test_active_model_health_survives_listing_exception(daemon_module, monkeypatch):
+    import grammar_fix
+
+    def boom(kind):
+        raise RuntimeError("provider exploded")
+
+    monkeypatch.setattr(grammar_fix, "FLM_MODEL", "qwen3.5:4b", raising=False)
+    monkeypatch.setattr(grammar_fix, "LLM_PROVIDER", "fastflowlm", raising=False)
+    monkeypatch.setattr(grammar_fix, "_provider_list", boom)
+    health = daemon_module._active_model_health()
+    assert health["status"] == "unknown"
+    assert "provider exploded" in health["detail"]
+
+
+def test_model_recommendations_forwards_flm_metadata_and_health(daemon_module, monkeypatch):
+    import grammar_fix
+    monkeypatch.setattr(grammar_fix, "FLM_MODEL", "qwen3.5:4b", raising=False)
+    monkeypatch.setattr(grammar_fix, "LLM_PROVIDER", "fastflowlm", raising=False)
+    monkeypatch.setattr(grammar_fix, "_provider_list", lambda kind: {
+        "models": ["qwen3.6-moe:35b-a3b"],
+        "details": [
+            {"name": "qwen3.6-moe:35b-a3b", "installed": True, "footprint_gb": 24.3},
+            {"name": "qwen3.5:4b", "installed": False, "footprint_gb": 5.2},
+        ],
+    })
+    out = daemon_module._act_model_recommendations({})
+    names = [m["name"] for m in out["models"]]
+    # Both listed - the MoE is no longer filtered out by a 35B misread.
+    assert "qwen3.6-moe:35b-a3b" in names
+    assert out["active_model"]["status"] == "not_installed"
+    assert "usable_memory_gb" in out
+
+
 def test_chat_send_stream_requires_api_header(daemon_server):
     daemon_module, base_url = daemon_server
     body = json.dumps({"args": {"message": "hi"}}).encode("utf-8")

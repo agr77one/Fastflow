@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+## 2.4.1
+
+**Model picker fixes.** The Models card is one card again, the picker follows the app's styling, no model is hidden from it, and an active model invalidated by a FastFlowLM upgrade is now called out instead of failing silently.
+
+### Fixed
+
+- **No model is hidden from the picker any more.** Suggestions used to drop every candidate the size heuristic judged unfit, which made real catalog models invisible — `qwen3.6-moe:35b-a3b` never appeared and had to be pulled by hand. Every model FastFlowLM offers is now listed; oversized ones are shown with a "too large" marker and still ask for confirmation before downloading.
+- **Mixture-of-Experts models are sized correctly.** `…:35b-a3b` was read as a 35B model when only ~3B parameters are active per token. Sizing now prefers FastFlowLM's own measured **footprint** (so `gemma4-it:e4b`, which reads as "4B" by name but is really 8B / 9.1 GB, is also judged correctly) and falls back to active-parameter counts for MoE tags. Fit labels now show the real memory cost, e.g. "~24.3 GB needs most of ~25.6 GB usable".
+- **A model broken by a FastFlowLM upgrade is now reported.** FLM 0.9.45 rejects models whose local weights were stamped for an older version and reports them as not installed; nothing surfaced that, so the next hotkey failed with an opaque provider error. Config → Models now shows a warning naming the model and the remedy.
+
+### Changed
+
+- **"Installed models" and "Pull a new model" are a single "Models" card** with `Installed` / `Add a model` / `FastFlowLM runtime` sections, instead of two separate cards.
+- **The model picker is styled by the app.** It replaced a native `<datalist>` dropdown and a native `<select size>` list box — browsers draw datalist popups in their own chrome and ignore page CSS entirely, so that control could never match the dashboard. The new combobox and list are ordinary elements: they follow the light/dark theme, and support arrow-key/Enter/Escape navigation and type-to-filter.
+
 ## 2.4.0
 
 **Streaming chat.** The dashboard Chat tab renders replies token-by-token instead of waiting for the whole answer, so the response starts appearing at warm time-to-first-token rather than after the full completion.

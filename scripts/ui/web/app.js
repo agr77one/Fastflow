@@ -175,7 +175,9 @@ function applyProviderCaps() {
   $("cfg-warm-on-start").disabled = !isFlm;
   $("cfg-keep-warm").disabled = !isFlm;
   $("warm-model-note").hidden = !isFlm;
-  $("models-title").textContent = `Installed models — ${PROVIDER_LABELS[sel]}`;
+  // The card covers both the installed list and the pull form (each has its own
+  // subhead), so the heading is just "Models — <provider>".
+  $("models-title").textContent = `Models — ${PROVIDER_LABELS[sel]}`;
   $("pull-hint").hidden = isFlm;
   $("pull-name").placeholder = isFlm ? "model name, e.g. qwen3.5:4b" : "model name, e.g. llama3.2:3b";
   const note = $("provider-note");
@@ -954,68 +956,209 @@ async function loadServerStatus() {
 
 // Set by loadModels() from model_recommendations: {max_params_b, summary}.
 let modelBudget = null;
+// Full candidate list [{name, fits, fit_reason, footprint_gb, installed, ...}].
+let modelOptions = [];
+// Name selected in the installed-models list (replaces the old <select>.value).
+let selectedModel = "";
 
 // Mirrors ffp_hardware.parse_params_b: 'qwen3.5:4b' -> 4, 'mistral:7b' -> 7.
+// NOTE: total params. MoE tags ('...35b-a3b') are 35 here; the daemon supplies
+// the authoritative fit via model_recommendations, so this is only a fallback
+// for a free-typed name the catalog has never heard of.
 function parseParamsB(name) {
   const m = /(\d+(?:\.\d+)?)\s*b\b/i.exec(name || "");
   return m ? parseFloat(m[1]) : null;
 }
 
-async function loadModels() {
+// 'qwen3.6-moe:35b-a3b' -> 3 (active params); null when the tag isn't MoE.
+function parseActiveParamsB(name) {
+  const m = /\ba(\d+(?:\.\d+)?)\s*b\b/i.exec(name || "");
+  if (!m) return null;
+  const active = parseFloat(m[1]);
+  const total = parseParamsB(name);
+  return total !== null && active < total ? active : null;
+}
+
+function renderInstalledModels(names, active, errorMessage) {
   const list = $("models-list");
-  const suggestions = $("pull-suggestions");
   list.replaceChildren();
-  suggestions.replaceChildren();
-  const installedNames = new Set();
+  if (errorMessage) {
+    const li = document.createElement("li");
+    li.className = "combo-empty";
+    li.textContent = `Could not list models: ${errorMessage}`;
+    list.append(li);
+    return;
+  }
+  if (!names.length) selectedModel = "";
+  if (!names.includes(selectedModel)) selectedModel = active && names.includes(active) ? active : (names[0] || "");
+  for (const name of names) {
+    const li = document.createElement("li");
+    li.className = "model-row";
+    li.setAttribute("role", "option");
+    li.setAttribute("aria-selected", String(name === selectedModel));
+    const label = document.createElement("span");
+    label.textContent = name;
+    li.append(label);
+    if (name === active) {
+      const tag = document.createElement("span");
+      tag.className = "tag active";
+      tag.textContent = "★ active";
+      li.append(tag);
+    }
+    li.addEventListener("click", () => {
+      selectedModel = name;
+      for (const row of list.children) {
+        row.setAttribute("aria-selected", String(row === li));
+      }
+    });
+    list.append(li);
+  }
+}
+
+function renderModelAlert(health) {
+  const el = $("model-alert");
+  if (!health || health.status !== "not_installed") {
+    el.hidden = true;
+    el.textContent = "";
+    return;
+  }
+  // A provider upgrade can invalidate an already-pulled model (FLM 0.9.45
+  // rejects weights stamped for 0.9.43) and then reports it as not installed.
+  // Without this the next hotkey just fails with an opaque provider error.
+  el.hidden = false;
+  el.textContent =
+    `⚠ Active model "${health.model}" is not installed for the current ` +
+    `${health.provider} version. Hotkeys and chat will fail until you ` +
+    `re-download it below (or pick another installed model).`;
+}
+
+async function loadModels() {
+  let installedNames = [];
+  let activeName = "";
   try {
     const installed = await action("models_installed");
-    for (const name of installed.models || []) {
-      installedNames.add(name);
-      const opt = document.createElement("option");
-      opt.value = name;
-      opt.textContent = name + (name === installed.active ? "   ★ active" : "");
-      opt.selected = name === installed.active;
-      list.append(opt);
-    }
+    installedNames = installed.models || [];
+    activeName = installed.active || "";
+    renderInstalledModels(installedNames, activeName, "");
   } catch (e) {
-    const opt = document.createElement("option");
-    opt.textContent = `(error: ${e.message})`;
-    list.append(opt);
+    renderInstalledModels([], "", e.message);
   }
-  // Hardware-aware suggestions: detected RAM/VRAM caps the model size, so
-  // the datalist only offers models this machine can actually run. The input
-  // still accepts any free-typed name (oversized ones get a confirm).
+
+  // Hardware-aware fit info. Every candidate is listed — oversized ones are
+  // shown with a warning rather than hidden, because silently filtering them
+  // made a catalog model invisible and forced users to pull it by hand.
   let rec = null;
   try {
     rec = await action("model_recommendations");
     modelBudget = rec.budget || null;
+    const usable = rec.usable_memory_gb;
     $("hw-summary").textContent = modelBudget
-      ? `This machine: ${modelBudget.summary}. Larger models are hidden from suggestions.`
+      ? `This machine: ${modelBudget.summary}` + (usable ? ` (~${usable} GB usable for weights).` : ".")
       : "";
+    renderModelAlert(rec.active_model);
   } catch {
     modelBudget = null;
     $("hw-summary").textContent = "";
+    renderModelAlert(null);
   }
+
+  const installedSet = new Set(installedNames);
   if (rec && (rec.models || []).length) {
-    for (const m of rec.models) {
-      if (m.fits === "no" || installedNames.has(m.name)) continue;
-      const opt = document.createElement("option");
-      opt.value = m.name;
-      if (m.fits === "tight") opt.label = `${m.name} — tight fit`;
-      suggestions.append(opt);
-    }
+    modelOptions = rec.models.filter((m) => !installedSet.has(m.name));
   } else {
     try {
       const avail = await action("models_not_installed");
-      for (const name of avail.models || []) {
-        const opt = document.createElement("option");
-        opt.value = name;
-        suggestions.append(opt);
-      }
+      modelOptions = (avail.models || []).map((name) => ({ name, fits: "unknown", fit_reason: "" }));
     } catch {
-      /* suggestions stay empty when the provider is unreachable */
+      modelOptions = [];
     }
   }
+  renderComboOptions();
+}
+
+// ---- Pull combobox (replaces <datalist>, which browsers refuse to style) ----
+
+let comboIndex = -1;
+
+function fitLabel(m) {
+  if (m.fits === "tight") return "tight";
+  if (m.fits === "no") return "too large";
+  return "";
+}
+
+function renderComboOptions() {
+  const box = $("pull-options");
+  const query = $("pull-name").value.trim().toLowerCase();
+  const matches = modelOptions.filter((m) => !query || m.name.toLowerCase().includes(query));
+  box.replaceChildren();
+  comboIndex = -1;
+  if (!matches.length) {
+    const li = document.createElement("li");
+    li.className = "combo-empty";
+    li.textContent = modelOptions.length ? "No match — any name can still be typed." : "No suggestions available.";
+    box.append(li);
+    return;
+  }
+  for (const m of matches) {
+    const li = document.createElement("li");
+    li.className = "combo-option" + (m.fits === "no" ? " oversized" : "");
+    li.setAttribute("role", "option");
+    li.dataset.name = m.name;
+    const label = document.createElement("span");
+    label.textContent = m.name;
+    li.append(label);
+    const tag = fitLabel(m);
+    if (tag) {
+      const fit = document.createElement("span");
+      fit.className = `fit ${m.fits}`;
+      fit.textContent = tag;
+      if (m.fit_reason) fit.title = m.fit_reason;
+      li.append(fit);
+    } else if (m.footprint_gb) {
+      const fit = document.createElement("span");
+      fit.className = "fit";
+      fit.textContent = `${m.footprint_gb} GB`;
+      if (m.fit_reason) fit.title = m.fit_reason;
+      li.append(fit);
+    }
+    li.addEventListener("mousedown", (e) => {
+      e.preventDefault(); // keep focus in the input so blur doesn't race the click
+      $("pull-name").value = m.name;
+      closeCombo();
+    });
+    box.append(li);
+  }
+}
+
+function openCombo() {
+  renderComboOptions();
+  $("pull-options").hidden = false;
+  $("pull-name").setAttribute("aria-expanded", "true");
+}
+
+function closeCombo() {
+  $("pull-options").hidden = true;
+  $("pull-name").setAttribute("aria-expanded", "false");
+  comboIndex = -1;
+}
+
+function moveCombo(delta) {
+  const rows = [...$("pull-options").querySelectorAll(".combo-option")];
+  if (!rows.length) return;
+  if ($("pull-options").hidden) openCombo();
+  comboIndex = (comboIndex + delta + rows.length) % rows.length;
+  rows.forEach((r, i) => r.classList.toggle("highlighted", i === comboIndex));
+  rows[comboIndex].scrollIntoView({ block: "nearest" });
+}
+
+function commitCombo() {
+  const rows = [...$("pull-options").querySelectorAll(".combo-option")];
+  if (comboIndex >= 0 && rows[comboIndex]) {
+    $("pull-name").value = rows[comboIndex].dataset.name || "";
+    closeCombo();
+    return true;
+  }
+  return false;
 }
 
 async function loadAutostart() {
@@ -1111,8 +1254,11 @@ async function saveConfig() {
 }
 
 async function setActiveModel() {
-  const name = $("models-list").value;
-  if (!name) return;
+  const name = selectedModel;
+  if (!name) {
+    setStatus("config-status", "Pick an installed model first.", false);
+    return;
+  }
   try {
     await action("apply_config_patch", { patch: { llm: { model: name } } });
     setStatus("config-status", `✅ Active model: ${name}`);
@@ -1124,8 +1270,11 @@ async function setActiveModel() {
 }
 
 async function removeModel() {
-  const name = $("models-list").value;
-  if (!name) return;
+  const name = selectedModel;
+  if (!name) {
+    setStatus("config-status", "Pick an installed model first.", false);
+    return;
+  }
   if (!(await confirmDialog(`Remove model '${name}' from local storage?`, "Remove"))) return;
   setStatus("config-status", `Removing ${name}…`);
   try {
@@ -1145,10 +1294,19 @@ async function pullModel() {
     setText("pull-status", "Type or pick a model name first.");
     return;
   }
-  const params = parseParamsB(name);
-  if (modelBudget && params && params > modelBudget.max_params_b * 1.5) {
-    const msg = `'${name}' looks like a ${params}B model — likely too big for this machine (${modelBudget.summary}). Pull anyway?`;
-    if (!(await confirmDialog(msg, "Pull anyway"))) return;
+  closeCombo();
+  // Prefer the daemon's authoritative verdict (it knows the real footprint and
+  // MoE active-param count); fall back to tag parsing for an unknown name.
+  const known = modelOptions.find((m) => m.name === name);
+  if (known && known.fits === "no") {
+    const msg = `'${name}' is likely too big for this machine — ${known.fit_reason}. Download anyway?`;
+    if (!(await confirmDialog(msg, "Download anyway"))) return;
+  } else if (!known) {
+    const effective = parseActiveParamsB(name) ?? parseParamsB(name);
+    if (modelBudget && effective && effective > modelBudget.max_params_b * 1.5) {
+      const msg = `'${name}' looks like a ${effective}B model — likely too big for this machine (${modelBudget.summary}). Download anyway?`;
+      if (!(await confirmDialog(msg, "Download anyway"))) return;
+    }
   }
   try {
     const state = await action("pull_start", { model: name });
@@ -1913,6 +2071,25 @@ document.addEventListener("DOMContentLoaded", () => {
   $("model-set-active").addEventListener("click", setActiveModel);
   $("model-remove").addEventListener("click", removeModel);
   $("pull-btn").addEventListener("click", pullModel);
+  // Pull combobox: typing filters, ▾ toggles, arrows/Enter/Escape navigate.
+  $("pull-name").addEventListener("input", openCombo);
+  $("pull-name").addEventListener("focus", openCombo);
+  $("pull-name").addEventListener("blur", () => setTimeout(closeCombo, 120));
+  $("pull-name").addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown") { e.preventDefault(); moveCombo(1); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); moveCombo(-1); }
+    else if (e.key === "Escape") { closeCombo(); }
+    else if (e.key === "Enter") {
+      // Enter picks the highlighted row; with nothing highlighted it submits.
+      if (commitCombo()) e.preventDefault();
+      else pullModel();
+    }
+  });
+  $("pull-toggle").addEventListener("mousedown", (e) => {
+    e.preventDefault();
+    if ($("pull-options").hidden) { $("pull-name").focus(); openCombo(); }
+    else closeCombo();
+  });
   $("cfg-provider").addEventListener("change", onProviderChanged);
   $("provider-start").addEventListener("click", startProviderServer);
   $("flm-check").addEventListener("click", () => loadFlmVersion(true));

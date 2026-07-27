@@ -479,6 +479,130 @@ input[type="text"], input[type="number"], textarea, select {
 }
 textarea { resize: vertical; font-family: Consolas, monospace; }
 select[size] { padding: 4px; }
+
+/* ---- Models card: styled list + combobox ----
+   Replaces a native <select size> listbox and a <datalist> dropdown. Native
+   datalist popups are drawn by browser chrome and cannot be styled by CSS at
+   all, so the picker never matched the app; these are plain elements we own. */
+.subhead {
+  margin: 16px 0 6px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.subhead:first-of-type { margin-top: 4px; }
+
+.model-alert {
+  margin: 0 0 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--warn);
+  border-left-width: 4px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--warn) 10%, transparent);
+}
+
+.model-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  max-height: 168px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg);
+}
+.model-list:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--ring);
+}
+.model-list:empty::after {
+  content: "No models installed yet.";
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  display: block;
+  padding: 6px 8px;
+}
+.model-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-family: Consolas, monospace;
+}
+.model-row:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.model-row[aria-selected="true"] {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  font-weight: 700;
+}
+.model-row .tag {
+  margin-left: auto;
+  font-family: inherit;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.model-row .tag.active { color: var(--accent); font-weight: 700; }
+
+.combo { position: relative; flex: 1; min-width: 0; max-width: 320px; }
+.combo input.mono { max-width: none; padding-right: 30px; }
+.combo-toggle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 28px;
+  border: 0;
+  border-radius: 0 9px 9px 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.combo-toggle:hover { color: var(--text); }
+.combo-options {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+}
+.combo-option {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-family: Consolas, monospace;
+  font-size: 0.9rem;
+}
+.combo-option:hover,
+.combo-option.highlighted { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.combo-option .fit {
+  margin-left: auto;
+  font-family: inherit;
+  font-size: 0.78rem;
+  white-space: nowrap;
+  color: var(--text-muted);
+}
+.combo-option .fit.tight { color: var(--warn); }
+.combo-option .fit.no { color: var(--warn); }
+.combo-option.oversized { opacity: 0.72; }
+.combo-empty { padding: 8px; color: var(--text-muted); font-size: 0.9rem; }
 input:focus, textarea:focus, select:focus {
   outline: none;
   border-color: var(--accent);
@@ -542,7 +666,7 @@ input[type="number"] { max-width: 120px; }
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--card);
+  background: var(--surface);
   color: var(--text);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
   font-size: 12px;
