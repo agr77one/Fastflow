@@ -2,9 +2,17 @@
 
 ## Unreleased
 
+## 2.4.0
+
+**Streaming chat.** The dashboard Chat tab renders replies token-by-token instead of waiting for the whole answer, so the response starts appearing at warm time-to-first-token rather than after the full completion.
+
 ### Added
 
-- **The Chat tab streams replies as they generate.** Instead of a blank "Thinking…" wait until the whole answer lands, the assistant's reply now fills in token-by-token over a Server-Sent-Events stream — first text typically appears at ~1.6 s (warm TTFT) rather than after the full completion. Prompt-mode/grammar hotkeys and the AHK paste path are unchanged (they still return whole output). A daemon without the streaming endpoint, or any failure to open the stream, transparently falls back to the previous one-shot request, so nothing regresses. Works on both FastFlowLM and Ollama (shared OpenAI-compatible SSE). A mid-stream provider drop still saves the partial reply and shows the error.
+- **The Chat tab streams replies as they generate.** Instead of a blank "Thinking…" wait until the whole answer lands, the assistant's reply now fills in token-by-token over a Server-Sent-Events stream — first text typically appears at ~1.6 s (warm TTFT) rather than after the full completion. Measured live on FastFlowLM `qwen3.5:4b`: first token at **1.52–1.58 s** versus a ~2 s (short) to tens-of-seconds (long) full-completion wait. Prompt-mode/grammar hotkeys and the AHK paste path are unchanged (they still return whole output). A daemon without the streaming endpoint, or any failure to open the stream, transparently falls back to the previous one-shot request, so nothing regresses. Works on both FastFlowLM and Ollama (shared OpenAI-compatible SSE). A mid-stream provider drop or a client disconnect still saves the partial reply.
+
+### Internal
+
+- Streaming persistence re-reads the thread store under the daemon write-lock (atomic read-modify-write), so a concurrent chat write or thread delete during a multi-second stream is never clobbered by a stale snapshot; a client disconnect (`GeneratorExit`) still persists the partial turn. Both were caught by an adversarial review pass and pinned by discriminating tests (SPEC V37 / T27).
 
 ## 2.3.0
 
