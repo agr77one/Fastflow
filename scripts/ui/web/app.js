@@ -1376,6 +1376,61 @@ async function deleteChatThread(id) {
   }
 }
 
+// Parse one SSE frame (text between blank-line separators) into {event, data}.
+// Returns null for frames without a JSON data payload.
+function parseSseFrame(frame) {
+  let event = "message";
+  const dataLines = [];
+  for (const line of frame.split("\n")) {
+    if (line.startsWith("event:")) event = line.slice(6).trim();
+    else if (line.startsWith("data:")) dataLines.push(line.slice(5).replace(/^ /, ""));
+  }
+  if (!dataLines.length) return null;
+  try { return { event, data: JSON.parse(dataLines.join("\n")) }; }
+  catch (e) { return null; }
+}
+
+// Stream chat_send_stream: call onDelta(text) per token chunk; resolve with the
+// terminal metadata ({thread_id, title, notes_used, error}). Throws only when the
+// stream can't be opened (old daemon / transport) so the caller can fall back to
+// the one-shot chat_send action; a mid-stream failure resolves with .error set.
+async function streamChat(args, onDelta) {
+  const res = await fetch("/action/chat_send_stream", {
+    method: "POST",
+    headers: { "Content-Type": "application/json; charset=utf-8", "X-FFP-API": API_HEADER },
+    body: JSON.stringify({ args }),
+  });
+  if (!res.ok || !res.body) throw new Error(`stream unavailable (HTTP ${res.status})`);
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  const result = { thread_id: args.thread_id, title: "", notes_used: [], error: "" };
+  let buf = "";
+  try {
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      let sep;
+      while ((sep = buf.indexOf("\n\n")) >= 0) {
+        const evt = parseSseFrame(buf.slice(0, sep));
+        buf = buf.slice(sep + 2);
+        if (!evt) continue;
+        if (evt.event === "done" || evt.event === "error") {
+          Object.assign(result, evt.data);
+          if (evt.event === "error") result.error = evt.data.error || "stream failed";
+        } else if (evt.data && typeof evt.data.delta === "string") {
+          onDelta(evt.data.delta);
+        }
+      }
+    }
+  } catch (e) {
+    // Reader broke after the stream opened (and the turn was already persisted
+    // server-side) — surface a partial, never re-send via the fallback path.
+    result.error = result.error || e.message || "stream interrupted";
+  }
+  return result;
+}
+
 async function sendChat() {
   const input = $("chat-input");
   const message = input.value.trim();
@@ -1383,7 +1438,7 @@ async function sendChat() {
   const btn = $("chat-send");
   btn.disabled = true;
   setStatus("chat-status", "Thinking…");
-  // Optimistically show the user's message; the reply lands when the model returns.
+  // Optimistically show the user's message; the reply streams in below it.
   const box = $("chat-transcript");
   const userDiv = document.createElement("div");
   userDiv.className = "chat-msg chat-msg-user";
@@ -1392,23 +1447,38 @@ async function sendChat() {
   $("chat-placeholder").hidden = true;
   box.scrollTop = box.scrollHeight;
   input.value = "";
+  const useNotes = $("chat-use-notes").checked;
+
+  // Assistant bubble, filled incrementally as tokens arrive.
+  const reply = document.createElement("div");
+  reply.className = "chat-msg chat-msg-assistant";
+  box.append(reply);
+  const showNotes = (notes) =>
+    setStatus("chat-status", notes && notes.length ? `📚 Grounded in: ${notes.join(", ")}` : "");
+
   try {
-    const res = await action("chat_send", {
-      thread_id: chatThreadId,
-      message,
-      use_notes: $("chat-use-notes").checked,
+    const out = await streamChat({ thread_id: chatThreadId, message, use_notes: useNotes }, (delta) => {
+      reply.textContent += delta;
+      box.scrollTop = box.scrollHeight;
     });
-    chatThreadId = res.thread_id || chatThreadId;
-    const reply = document.createElement("div");
-    reply.className = "chat-msg chat-msg-assistant";
-    reply.textContent = res.reply || "(no reply)";
-    box.append(reply);
-    box.scrollTop = box.scrollHeight;
-    setStatus("chat-status",
-      res.notes_used && res.notes_used.length ? `📚 Grounded in: ${res.notes_used.join(", ")}` : "");
+    chatThreadId = out.thread_id || chatThreadId;
+    if (!reply.textContent) reply.textContent = "(no reply)";
+    if (out.error) setStatus("chat-status", `Send failed: ${out.error}`, false);
+    else showNotes(out.notes_used);
     loadChatThreads();
-  } catch (e) {
-    setStatus("chat-status", `Send failed: ${e.message}`, false);
+  } catch (streamErr) {
+    // Streaming endpoint unavailable — fall back to the one-shot JSON action.
+    try {
+      const res = await action("chat_send", { thread_id: chatThreadId, message, use_notes: useNotes });
+      chatThreadId = res.thread_id || chatThreadId;
+      reply.textContent = res.reply || "(no reply)";
+      box.scrollTop = box.scrollHeight;
+      showNotes(res.notes_used);
+      loadChatThreads();
+    } catch (e) {
+      if (!reply.textContent) reply.remove();
+      setStatus("chat-status", `Send failed: ${e.message}`, false);
+    }
   } finally {
     btn.disabled = false;
     input.focus();

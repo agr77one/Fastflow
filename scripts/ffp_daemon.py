@@ -18,6 +18,7 @@ Stdlib only. No external dependencies.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import logging
 import logging.handlers
@@ -27,7 +28,7 @@ import sys
 import threading
 import time
 import traceback
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -829,6 +830,37 @@ _WRITE_ACTIONS = {
     "notify_gate",  # writes the notifications log + updates dedupe state
 }
 
+def _stream_chat_send(args: dict) -> Iterator[dict]:
+    """Streaming counterpart of ``chat_send``: yields delta/done/error events.
+
+    The final write is serialized with the daemon ``_write_lock`` (streaming is
+    handled outside the do_POST write-lock wrapper, so it passes the lock down)."""
+    import ffp_chat
+    return ffp_chat.stream_send(
+        thread_id=str(args.get("thread_id") or ""),
+        message=str(args.get("message") or ""),
+        use_notes=bool(args.get("use_notes")),
+        save_lock=_write_lock,
+    )
+
+
+# Actions that stream a text/event-stream response instead of a single JSON body.
+# The client (dashboard) reads them with a fetch() body reader; the AHK paste
+# path never uses these. Each factory yields event dicts:
+#   {"type": "delta", "delta": str}        one token chunk
+#   {"type": "done",  thread_id, title, notes_used}     success terminator
+#   {"type": "error", error, thread_id, title, notes_used}   mid-stream failure
+_STREAM_ACTIONS: dict[str, Callable[[dict], Iterator[dict]]] = {
+    "chat_send_stream": _stream_chat_send,
+}
+
+
+def _sse_frame(event: str | None, data: dict) -> bytes:
+    """Encode one Server-Sent-Events frame: optional ``event:`` line + JSON ``data:``."""
+    prefix = f"event: {event}\n" if event else ""
+    return (prefix + "data: " + json.dumps(data, ensure_ascii=False) + "\n\n").encode("utf-8")
+
+
 _shutdown_event = threading.Event()
 _started_at = time.time()
 
@@ -854,6 +886,46 @@ class Handler(BaseHTTPRequestHandler):
     def _host_allowed(self) -> bool:
         host = (self.headers.get("Host") or "").split(":", 1)[0].strip().lower()
         return host in _ALLOWED_HOSTNAMES
+
+    def _stream_action(self, name: str, args: dict) -> None:
+        """Run a streaming action, forwarding its events as text/event-stream frames.
+
+        Sends a 200 event-stream response, then flushes one SSE frame per event
+        from the factory so the dashboard renders tokens as they arrive. A client
+        disconnect (BrokenPipe) ends quietly; any other mid-stream error is sent
+        as a final ``event: error`` frame. Never falls through to ``_send_json``
+        — the response is already committed once headers are sent."""
+        factory = _STREAM_ACTIONS[name]
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("X-Accel-Buffering", "no")
+        self.send_header("X-FFP-API", API_VERSION)
+        self.end_headers()
+        start = time.time()
+        frames = 0
+        try:
+            for event in factory(args):
+                kind = str(event.get("type") or "")
+                if kind == "delta":
+                    self.wfile.write(_sse_frame(None, {"delta": event.get("delta", "")}))
+                elif kind in ("done", "error"):
+                    self.wfile.write(_sse_frame(kind, {k: v for k, v in event.items() if k != "type"}))
+                else:
+                    continue
+                self.wfile.flush()
+                frames += 1
+        except (BrokenPipeError, ConnectionError):
+            log.info("action=%s stream client disconnected after %d frame(s)", name, frames)
+            return
+        except Exception as e:
+            log.warning("action=%s stream_error=%s", name, e)
+            log.debug("traceback:\n%s", traceback.format_exc())
+            with contextlib.suppress(Exception):
+                self.wfile.write(_sse_frame("error", {"error": str(e)}))
+                self.wfile.flush()
+        elapsed = (time.time() - start) * 1000.0
+        log.info("action=%s status=stream frames=%d elapsed_ms=%.1f", name, frames, elapsed)
 
     def _send_static(self, filename: str, content_type: str) -> None:
         try:
@@ -909,8 +981,9 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(404, {"ok": False, "error": f"POST {self.path} not found"})
             return
         action_name = self.path[len("/action/"):].split("?", 1)[0]
+        stream_factory = _STREAM_ACTIONS.get(action_name)
         handler = ACTIONS.get(action_name)
-        if handler is None:
+        if handler is None and stream_factory is None:
             self._send_json(404, _err(f"unknown action: {action_name}", 0.0))
             return
 
@@ -942,6 +1015,13 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(400, _err(f"invalid JSON body: {e}", 0.0))
             return
         args = payload.get("args") or {}
+
+        if stream_factory is not None:
+            # Event-stream response: commits its own headers/body and never
+            # returns JSON. It serializes its final write via _write_lock itself
+            # (passed down by the factory), so it stays outside the wrapper below.
+            self._stream_action(action_name, args)
+            return
 
         start = time.time()
         try:

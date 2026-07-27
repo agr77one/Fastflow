@@ -10,12 +10,14 @@ existing ``data/chat_threads.jsonl`` format, so popup-era threads carry over.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import time
 import urllib.error
 import urllib.request
 import uuid
+from collections.abc import Iterator
 
 import paths as _paths
 
@@ -240,6 +242,69 @@ def _default_llm_call(messages: list[dict]) -> str:
     return str((choices[0].get("message") or {}).get("content") or "").strip()
 
 
+def _parse_sse_delta(raw_line: str | bytes) -> Iterator[str]:
+    """Yield the assistant text delta(s) carried by one OpenAI-style SSE line.
+
+    The streaming ``/v1/chat/completions`` response is a sequence of
+    ``data: {json}`` lines (plus blank separators and a final ``data: [DONE]``),
+    identical on FastFlowLM and Ollama's OpenAI-compatible endpoint. Non-data
+    lines, the terminator, and malformed JSON yield nothing, so a partial or
+    noisy stream degrades to fewer tokens rather than an exception.
+    """
+    line = raw_line.decode("utf-8", errors="replace") if isinstance(raw_line, bytes) else str(raw_line)
+    line = line.strip()
+    if not line or not line.startswith("data:"):
+        return
+    data = line[len("data:"):].strip()
+    if not data or data == "[DONE]":
+        return
+    try:
+        obj = json.loads(data)
+    except (ValueError, TypeError):
+        return
+    for choice in obj.get("choices") or []:
+        delta = (choice.get("delta") or {}).get("content")
+        if delta:
+            yield str(delta)
+
+
+def _default_llm_stream(messages: list[dict]) -> Iterator[str]:
+    """Yield reply text deltas from the active provider's streaming chat endpoint.
+
+    Mirrors :func:`_default_llm_call` (same provider-resolved endpoint/model/auth
+    from ``grammar_fix``) but sets ``stream: True`` and iterates the SSE body so
+    the daemon can forward tokens to the dashboard as they arrive. Raises
+    RuntimeError on transport failure; a mid-stream drop simply ends iteration.
+    """
+    import grammar_fix
+
+    base_url = str(getattr(grammar_fix, "FLM_BASE_URL", "http://127.0.0.1:52625") or "").rstrip("/")
+    model = str(getattr(grammar_fix, "FLM_MODEL", "qwen3.5:4b") or "qwen3.5:4b")
+    bearer = str(getattr(grammar_fix, "LLM_AUTH_BEARER", "flm") or "")
+    timeout = int(getattr(grammar_fix, "FLM_TIMEOUT_SECONDS", 240) or 240)
+
+    body = json.dumps(
+        {
+            "model": model,
+            "messages": messages,
+            "temperature": TEMPERATURE,
+            "max_tokens": MAX_TOKENS,
+            "stream": True,
+        }
+    ).encode("utf-8")
+    headers = {"Content-Type": "application/json", "Accept": "text/event-stream"}
+    if bearer:
+        headers["Authorization"] = f"Bearer {bearer}"
+    req = urllib.request.Request(base_url + "/v1/chat/completions", data=body, headers=headers, method="POST")
+    try:
+        resp = urllib.request.urlopen(req, timeout=max(2, timeout))
+    except urllib.error.URLError as e:
+        raise RuntimeError(f"LLM unreachable at {base_url}: {getattr(e, 'reason', e)}") from e
+    with resp:
+        for raw in resp:  # http.client yields lines as they flush off the socket
+            yield from _parse_sse_delta(raw)
+
+
 def _derive_title(text: str) -> str:
     text = (text or "").strip()
     if not text:
@@ -248,6 +313,76 @@ def _derive_title(text: str) -> str:
     if not first:
         return "New chat"
     return (first[:TITLE_MAX_CHARS] + "…") if len(first) > TITLE_MAX_CHARS else first
+
+
+def _build_send_context(thread_id: str, message: str, use_notes: bool) -> tuple[str, list[dict], list[str]]:
+    """Resolve the target thread id and assemble the model request.
+
+    Returns ``(thread_id, messages, notes_used)`` — the resolved/new thread id,
+    the system+grounding+window+turn message list, and the grounding titles.
+    Only *reads* the thread store (for the sliding-window history); the write
+    happens later in :func:`_persist_turn`, which re-reads under the lock so the
+    read-here/write-later split can never clobber a concurrent write. Shared by
+    :func:`send` and :func:`stream_send` so both build identical requests.
+    """
+    threads = load_threads()
+    idx = _thread_index(threads, str(thread_id or "")) if thread_id else -1
+    if idx < 0:
+        thread_id = str(thread_id or "") or uuid.uuid4().hex
+        history: list[dict] = []
+    else:
+        thread_id = threads[idx].get("thread_id")
+        history = list(threads[idx].get("history") or [])
+
+    # Build the request: system + optional notes grounding + sliding window + new turn.
+    messages: list[dict] = [{"role": "system", "content": SYSTEM_PROMPT}]
+    notes_used: list[str] = []
+    if use_notes:
+        ctx, titles = retrieve_notes_context(message)
+        if ctx:
+            messages.append({"role": "system", "content": ctx})
+            notes_used = titles
+    for m in history[-(CONTEXT_WINDOW_TURNS * 2):]:
+        role = str(m.get("role") or "")
+        content = str(m.get("content") or "")
+        if role in ("user", "assistant") and content:
+            messages.append({"role": role, "content": content})
+    messages.append({"role": "user", "content": message})
+    return thread_id, messages, notes_used
+
+
+def _persist_turn(thread_id: str, message: str, reply: str, save_lock=None) -> str:
+    """Append the user+assistant turn to ``thread_id`` and save; return its title.
+
+    The whole read-modify-write is wrapped in ``save_lock`` so it is atomic
+    against concurrent writers: it re-loads the current thread list *inside* the
+    lock (rather than trusting a snapshot captured before a multi-second stream),
+    resolves the thread by id, appends the turn, and rewrites. Without the
+    re-read, a stream that started before a concurrent delete/append would
+    overwrite the file with its stale snapshot and silently lose that write. The
+    one-shot ``chat_send`` action passes no lock because ``do_POST`` already holds
+    ``_write_lock`` across its whole handler; streaming passes the daemon's
+    ``_write_lock`` here because it runs outside that wrapper.
+    """
+    with (save_lock or contextlib.nullcontext()):
+        threads = load_threads()
+        idx = _thread_index(threads, str(thread_id or ""))
+        if idx < 0:
+            thread = {"thread_id": thread_id, "title": "New chat", "updated_at": _now_iso(), "history": []}
+            threads.insert(0, thread)
+            idx = 0
+        thread = threads[idx]
+        history: list[dict] = list(thread.get("history") or [])
+        history.append({"role": "user", "content": message})
+        history.append({"role": "assistant", "content": reply})
+        if not thread.get("title") or thread.get("title") == "New chat":
+            thread["title"] = _derive_title(message)
+        thread["history"] = history
+        thread["updated_at"] = _now_iso()
+        threads.pop(idx)
+        threads.insert(0, thread)
+        save_threads(threads[:MAX_THREADS])
+        return thread["title"]
 
 
 def send(thread_id: str = "", message: str = "", use_notes: bool = False, llm_call=None) -> dict:
@@ -262,42 +397,71 @@ def send(thread_id: str = "", message: str = "", use_notes: bool = False, llm_ca
         raise ValueError("empty chat message")
     llm_call = llm_call or _default_llm_call
 
-    threads = load_threads()
-    idx = _thread_index(threads, str(thread_id or "")) if thread_id else -1
-    if idx < 0:
-        thread_id = str(thread_id or "") or uuid.uuid4().hex
-        thread = {"thread_id": thread_id, "title": "New chat", "updated_at": _now_iso(), "history": []}
-        threads.insert(0, thread)
-        idx = 0
-    thread = threads[idx]
-    thread_id = thread.get("thread_id")
-    history: list[dict] = list(thread.get("history") or [])
-
-    # Build the request: system + optional notes grounding + sliding window + new turn.
-    messages: list[dict] = [{"role": "system", "content": SYSTEM_PROMPT}]
-    notes_used: list[str] = []
-    if use_notes:
-        ctx, titles = retrieve_notes_context(message)
-        if ctx:
-            messages.append({"role": "system", "content": ctx})
-            notes_used = titles
-    window = history[-(CONTEXT_WINDOW_TURNS * 2):]
-    for m in window:
-        role = str(m.get("role") or "")
-        content = str(m.get("content") or "")
-        if role in ("user", "assistant") and content:
-            messages.append({"role": role, "content": content})
-    messages.append({"role": "user", "content": message})
-
+    thread_id, messages, notes_used = _build_send_context(thread_id, message, use_notes)
     reply = str(llm_call(messages) or "").strip()
+    title = _persist_turn(thread_id, message, reply)
+    return {"thread_id": thread_id, "title": title, "reply": reply, "notes_used": notes_used}
 
-    history.append({"role": "user", "content": message})
-    history.append({"role": "assistant", "content": reply})
-    if not thread.get("title") or thread.get("title") == "New chat":
-        thread["title"] = _derive_title(message)
-    thread["history"] = history
-    thread["updated_at"] = _now_iso()
-    threads.pop(idx)
-    threads.insert(0, thread)
-    save_threads(threads[:MAX_THREADS])
-    return {"thread_id": thread_id, "title": thread["title"], "reply": reply, "notes_used": notes_used}
+
+def stream_send(
+    thread_id: str = "",
+    message: str = "",
+    use_notes: bool = False,
+    llm_stream=None,
+    save_lock=None,
+) -> Iterator[dict]:
+    """Streaming twin of :func:`send`: yield reply deltas, then a terminal event.
+
+    Yields ``{"type": "delta", "delta": text}`` for each token chunk as it
+    arrives, then exactly one terminal event:
+    ``{"type": "done", thread_id, title, notes_used}`` on success, or
+    ``{"type": "error", error, thread_id, title, notes_used}`` if the provider
+    stream failed mid-flight. Whatever text arrived before a failure — a provider
+    drop *or* a client disconnect (``GeneratorExit`` thrown in when the daemon
+    stops iterating) — is still persisted, so the transcript never loses a
+    partial reply.
+
+    ``llm_stream(messages) -> Iterator[str]`` is injectable for tests; defaults
+    to the live provider's streaming endpoint. ``save_lock`` serializes the final
+    write with the daemon's other writers.
+    """
+    message = str(message or "").strip()
+    if not message:
+        raise ValueError("empty chat message")
+    llm_stream = llm_stream or _default_llm_stream
+
+    thread_id, messages, notes_used = _build_send_context(thread_id, message, use_notes)
+    parts: list[str] = []
+    err: Exception | None = None
+    try:
+        for delta in llm_stream(messages):
+            delta = str(delta or "")
+            if not delta:
+                continue
+            parts.append(delta)
+            yield {"type": "delta", "delta": delta}
+    except GeneratorExit:
+        # The daemon abandoned the stream (client disconnected). We cannot yield
+        # anymore, but we still persist the partial reply — matching the contract
+        # and the non-streaming path — then let the generator close.
+        partial = "".join(parts).strip()
+        if partial:
+            with contextlib.suppress(Exception):
+                _persist_turn(thread_id, message, partial, save_lock=save_lock)
+        raise
+    except Exception as exc:  # transport drop / provider error mid-stream
+        err = exc
+        log.warning("chat stream failed after %d chunk(s): %s", len(parts), exc)
+
+    reply = "".join(parts).strip()
+    title = _persist_turn(thread_id, message, reply, save_lock=save_lock) if reply else "New chat"
+
+    terminal = {
+        "type": "error" if err else "done",
+        "thread_id": thread_id,
+        "title": title,
+        "notes_used": notes_used,
+    }
+    if err:
+        terminal["error"] = str(err) or "chat stream failed"
+    yield terminal

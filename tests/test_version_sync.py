@@ -32,4 +32,4 @@ def test_v18_release_version_is_synchronized():
         ),
     }
 
-    assert set(versions.values()) == {"2.3.0"}, versions
+    assert set(versions.values()) == {"2.4.0"}, versions

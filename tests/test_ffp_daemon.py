@@ -123,6 +123,140 @@ def test_actions_count_and_expected_names(daemon_module):
     assert "model_stats" not in daemon_module.ACTIONS
 
 
+# ---------- streaming chat (Phase 3: SSE) ----------------------------------------------
+
+def test_stream_actions_registered_separately(daemon_module):
+    # chat_send_stream streams text/event-stream, so it lives in _STREAM_ACTIONS,
+    # NOT ACTIONS (keeping the ACTIONS count/JSON contract unchanged) and NOT
+    # _WRITE_ACTIONS (it serializes its own final write via the passed lock).
+    assert "chat_send_stream" in daemon_module._STREAM_ACTIONS
+    assert "chat_send_stream" not in daemon_module.ACTIONS
+    assert "chat_send_stream" not in daemon_module._WRITE_ACTIONS
+    # The non-streaming one-shot action stays registered for the fallback path.
+    assert "chat_send" in daemon_module.ACTIONS
+
+
+def test_sse_frame_format(daemon_module):
+    # Delta frame: no event line, just a JSON data line + blank separator.
+    assert daemon_module._sse_frame(None, {"delta": "hi"}) == b'data: {"delta": "hi"}\n\n'
+    # Named event frame: event line then data line.
+    frame = daemon_module._sse_frame("done", {"thread_id": "t1"}).decode("utf-8")
+    assert frame.startswith("event: done\n")
+    assert 'data: {"thread_id": "t1"}' in frame
+    assert frame.endswith("\n\n")
+
+
+def test_chat_send_stream_end_to_end(daemon_server, monkeypatch):
+    daemon_module, base_url = daemon_server
+    import ffp_chat
+
+    captured = {}
+
+    def fake_stream_send(thread_id="", message="", use_notes=False, save_lock=None):
+        captured["args"] = (thread_id, message, use_notes)
+        captured["lock"] = save_lock
+        yield {"type": "delta", "delta": "Hel"}
+        yield {"type": "delta", "delta": "lo"}
+        yield {"type": "done", "thread_id": "tid-1", "title": "greet", "notes_used": []}
+
+    monkeypatch.setattr(ffp_chat, "stream_send", fake_stream_send)
+
+    body = json.dumps({"args": {"thread_id": "", "message": "hi there", "use_notes": False}}).encode("utf-8")
+    req = urllib.request.Request(
+        f"{base_url}/action/chat_send_stream",
+        data=body,
+        headers={"X-FFP-API": "1", "Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=5) as resp:
+        assert resp.status == 200
+        assert resp.headers.get("Content-Type", "").startswith("text/event-stream")
+        raw = resp.read().decode("utf-8")
+
+    # The daemon passed the streaming request through and used its write-lock.
+    assert captured["args"] == ("", "hi there", False)
+    assert captured["lock"] is daemon_module._write_lock
+    # Two delta frames then a done frame, in order.
+    assert '{"delta": "Hel"}' in raw
+    assert '{"delta": "lo"}' in raw
+    assert "event: done" in raw
+    assert raw.index('"Hel"') < raw.index('"lo"') < raw.index("event: done")
+
+
+def test_chat_send_stream_reports_midstream_error(daemon_server, monkeypatch):
+    daemon_module, base_url = daemon_server
+    import ffp_chat
+
+    def failing_stream_send(thread_id="", message="", use_notes=False, save_lock=None):
+        yield {"type": "delta", "delta": "part"}
+        raise RuntimeError("provider blew up")
+
+    monkeypatch.setattr(ffp_chat, "stream_send", failing_stream_send)
+
+    body = json.dumps({"args": {"message": "hi"}}).encode("utf-8")
+    req = urllib.request.Request(
+        f"{base_url}/action/chat_send_stream",
+        data=body,
+        headers={"X-FFP-API": "1", "Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=5) as resp:
+        raw = resp.read().decode("utf-8")
+    # Partial token delivered, then an error frame carrying the message.
+    assert '{"delta": "part"}' in raw
+    assert "event: error" in raw
+    assert "provider blew up" in raw
+
+
+def test_stream_action_survives_client_disconnect_and_persists_partial(daemon_module, monkeypatch, tmp_path):
+    # When the client disconnects, wfile.write raises BrokenPipeError; _stream_action
+    # must swallow it and return, and abandoning the loop must finalize the real
+    # stream_send generator (GeneratorExit) so the partial reply is still persisted.
+    import ffp_chat
+    monkeypatch.setattr(ffp_chat, "THREADS_PATH", tmp_path / "chat_threads.jsonl")
+    monkeypatch.setattr(ffp_chat, "_default_llm_stream", lambda messages: iter(["par", "tial"]))
+
+    class FakeWfile:
+        def __init__(self):
+            self.writes = 0
+
+        def write(self, data):
+            self.writes += 1
+            if self.writes >= 2:  # first frame lands, then the client is gone
+                raise BrokenPipeError("client disconnected")
+
+        def flush(self):
+            pass
+
+    handler = daemon_module.Handler.__new__(daemon_module.Handler)
+    handler.send_response = lambda *a, **k: None
+    handler.send_header = lambda *a, **k: None
+    handler.end_headers = lambda: None
+    handler.wfile = FakeWfile()
+
+    # Must not raise despite the broken pipe.
+    handler._stream_action("chat_send_stream", {"message": "hi there"})
+
+    threads = ffp_chat.load_threads()
+    assert len(threads) == 1
+    assert threads[0]["history"][0]["content"] == "hi there"
+    assert threads[0]["history"][1]["content"] == "partial"  # both streamed chunks saved
+
+
+def test_chat_send_stream_requires_api_header(daemon_server):
+    daemon_module, base_url = daemon_server
+    body = json.dumps({"args": {"message": "hi"}}).encode("utf-8")
+    req = urllib.request.Request(
+        f"{base_url}/action/chat_send_stream",
+        data=body,
+        headers={"Content-Type": "application/json"},  # missing X-FFP-API
+        method="POST",
+    )
+    with pytest.raises(urllib.error.HTTPError) as exc:
+        urllib.request.urlopen(req, timeout=5)
+    assert exc.value.code == 403
+
+
 def test_v31_model_warm_scheduler_runs_startup_and_idle_interval(daemon_module):
     cfg = {
         "llm": {"provider": "fastflowlm"},

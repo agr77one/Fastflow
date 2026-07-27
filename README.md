@@ -4,7 +4,11 @@ Flowkey is a Windows desktop assistant that adds local-LLM hotkeys for grammar f
 
 Everything runs locally through [FastFlowLM](https://fastflowlm.com) (AMD Ryzen AI NPU) or, on machines without the NPU, through [Ollama](https://ollama.com) (CPU/GPU) as a secondary provider. No cloud service, analytics, or telemetry is used by the app.
 
-Current version: `2.3.0`
+Current version: `2.4.0`
+
+## What's new in 2.4
+
+- **Chat streams as it thinks.** The dashboard **Chat** tab now fills the reply in token-by-token over a live stream instead of waiting on a blank "Thinking…" until the whole answer is ready — the first words typically appear in ~1.6 s (warm) rather than after the full response. It works on both FastFlowLM and Ollama, and if anything interrupts the stream the partial reply is kept and the error is shown. Grammar, `prompt:`, and the other hotkeys are unchanged (they still paste the finished result).
 
 ## What's new in 2.3
 
