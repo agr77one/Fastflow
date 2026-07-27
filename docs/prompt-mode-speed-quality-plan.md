@@ -1,8 +1,8 @@
 # Prompt Mode Speed + Quality Refresh Plan ("prompt v2")
 
-Date: 2026-07-09
-Status: PLAN ONLY — do not implement. Includes measured baseline + the exact
-measurement harness to build.
+Date: 2026-07-09 (Phases 0–2 shipped in 2.3.0; Phase 3 done post-2.3.0; Phase 4 deferred)
+Status: Phases 0–2 SHIPPED (2.3.0). Phase 3 (streaming Chat tab) DONE on
+`feat/streaming-chat`. Phase 4 (faster route) trigger not met → deferred.
 Target release: **2.3.0** (re-baselines the default `prompt:` output — see Risk)
 
 ## Problem
@@ -143,11 +143,24 @@ like the 2.2.0 prompt-builder eval.
   and likely hits the goal alone.
 - **Phase 2 — Warm-model guarantee.** Ensure FLM stays loaded so nobody eats the
   cold-load tax; verify with a cold-vs-warm measurement.
-- **Phase 3 (optional) — Streaming.** SSE from daemon → dashboard Chat/preview
-  for perceived latency; AHK paste path stays whole-output.
-- **Phase 4 (optional) — Faster route.** Only if p50 still > 15 s after 1–2:
-  evaluate an iGPU/LM-Studio decode route behind the provider split, gated on the
-  same quality eval.
+- **Phase 3 (optional) — Streaming. ✅ DONE (post-2.3.0, `feat/streaming-chat`).**
+  The surface that actually benefits is the **Chat tab** (replies up to 1024
+  tokens, formerly a blank wait) — `prompt:` has no live dashboard surface and the
+  AHK paste path pastes at the end, so streaming there is moot. Delivered as a
+  `text/event-stream` response over a `fetch()` POST (keeps the `X-FFP-API` CSRF
+  gate that `EventSource` cannot send): `ffp_chat.stream_send` generator →
+  daemon `_STREAM_ACTIONS`/`_sse_frame`/`_stream_action` → `app.js` fetch-reader,
+  with a transparent fallback to the one-shot `chat_send` on any older daemon.
+  Measured live on FastFlowLM `qwen3.5:4b`: first token **1.58 s** vs **2.10 s**
+  total — text flows in instead of a blank wait. AHK/grammar/prompt paths
+  untouched. See SPEC V37 / T27.
+- **Phase 4 (optional) — Faster route. ⏸ TRIGGER NOT MET — deferred.** The plan
+  gates this on "p50 still > 15 s after phases 1–2," but 2.3.0 put prompt p50 at
+  **3.38 s warm** and Phase 3 streaming already delivers the *perceived* speed
+  this phase was chasing. A second NPU-decode provider (LM Studio/Lemonade) also
+  can't co-serve the NPU with FastFlowLM (both wedge — see the benchmark
+  evidence), so it would add real complexity for no measured need. Revisit only
+  if a concrete slow surface appears.
 
 ## Integration with the existing prompt-builder (2.2.0)
 

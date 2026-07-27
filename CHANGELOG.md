@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- **The Chat tab streams replies as they generate.** Instead of a blank "Thinking…" wait until the whole answer lands, the assistant's reply now fills in token-by-token over a Server-Sent-Events stream — first text typically appears at ~1.6 s (warm TTFT) rather than after the full completion. Prompt-mode/grammar hotkeys and the AHK paste path are unchanged (they still return whole output). A daemon without the streaming endpoint, or any failure to open the stream, transparently falls back to the previous one-shot request, so nothing regresses. Works on both FastFlowLM and Ollama (shared OpenAI-compatible SSE). A mid-stream provider drop still saves the partial reply and shows the error.
+
 ## 2.3.0
 
 **Prompt mode, faster and better grounded.** The default `prompt:` path now emits a compact copy-paste-ready agent prompt in a few seconds without filling gaps with conventional-but-unstated requirements.

@@ -88,6 +88,7 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - V34: FastFlowLM force restart → old port observed closed before new spawn; ⊥ return `already_running` from dying instance
 - V35: default v2 → exactly 1 short LLM draft call; ⊥ anti-echo/rescue calls; V33 finalizer supplies surfaced 4-section contract
 - V36: pre-2.3 prompt_builder identity cfg (⊥ `prompt_version`, legacy default fields) → migrate v2+concise; any custom field → preserve
+- V37: `chat_send_stream` streams reply deltas as `text/event-stream` (SSE `data:`/`event:` frames), persists the full-or-partial turn exactly once under the daemon write-lock; CSRF `X-FFP-API` + Host gates still apply; dashboard falls back to `chat_send` iff the stream ⊥ opens (never after tokens arrive); `send()`/AHK/grammar/prompt paths unchanged (⊥ streamed)
 
 ## §T tasks
 
@@ -119,6 +120,7 @@ T23|x|prompt-v2 fixed A/B speed+quality harness + tests|V29
 T24|x|prompt-v2 default + v1 rollback selector + 240/320/420 caps|V24,V27,V28,V30,V32
 T25|x|FastFlowLM startup+idle keep-warm + cold/warm measurement support|V31
 T26|x|2.3.0 release evidence + version/docs rebaseline after A/B gate passes|V18,V29,V33,V34,V35,V36
+T27|x|streaming Chat tab (SSE): `ffp_chat.stream_send` + daemon `_STREAM_ACTIONS`/`_sse_frame`/`_stream_action` + `app.js` fetch-reader w/ `chat_send` fallback; live FLM first-token 1.58s|V37
 ```
 
 ## §B bugs
