@@ -91,6 +91,9 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - V37: `chat_send_stream` streams reply deltas as `text/event-stream` (SSE `data:`/`event:` frames), persists the full-or-partial turn exactly once under the daemon write-lock; CSRF `X-FFP-API` + Host gates still apply; dashboard falls back to `chat_send` iff the stream ⊥ opens (never after tokens arrive); `send()`/AHK/grammar/prompt paths unchanged (⊥ streamed)
 - V38: `recommend_models` returns EVERY candidate tagged yes/tight/no/unknown + `fit_reason`; UI ⊥ hide any (oversized → marked + confirm-before-pull). Fit signal precedence: provider `footprint_gb` → effective params (MoE active `a<N>b` < total, else total) vs budget
 - V39: configured active model ⊥ installed → `model_recommendations.active_model.status="not_installed"` + dashboard warning naming model/remedy; listing error/exception → `"unknown"` (⊥ claim broken)
+- V41: `flm bench` start → refuse iff catalog `footprint_gb` + 32k-context headroom > usable mem, w/ plain-language reason; unknown footprint ∨ lookup failure → allow (⊥ block on a guess)
+- V42: benchmark running → keep-warm tick ⊥ warms (`skipped_benchmark_running`); ∵ bench 10-20min > 15min keepalive ∴ collision is the norm
+- V43: provider 200-response carrying `error` ∧ ⊥ `choices` → raise that message verbatim (⊥ generic "no usable text"); `error` + `choices` → ignore, return completion
 - V40: model picker + installed list = app-styled elements (⊥ native `<datalist>`/`<select size>`, ∵ browser chrome ignores page CSS); theme-aware + keyboard-navigable (↑↓/Enter/Esc)
 
 ## §T tasks
@@ -124,6 +127,7 @@ T24|x|prompt-v2 default + v1 rollback selector + 240/320/420 caps|V24,V27,V28,V3
 T25|x|FastFlowLM startup+idle keep-warm + cold/warm measurement support|V31
 T26|x|2.3.0 release evidence + version/docs rebaseline after A/B gate passes|V18,V29,V33,V34,V35,V36
 T27|x|streaming Chat tab (SSE): `ffp_chat.stream_send` + daemon `_STREAM_ACTIONS`/`_sse_frame`/`_stream_action` + `app.js` fetch-reader w/ `chat_send` fallback; live FLM first-token 1.58s|V37
+T29|x|bench memory guard + keep-warm/bench mutual exclusion + provider-error surfacing (2.4.2)|V41,V42,V43
 T28|x|model picker 2.4.1: footprint/MoE sizing + never-hide + active-model health + merged single Models card + app-styled combobox|V38,V39,V40
 ```
 
@@ -164,5 +168,8 @@ B30|2026-07-27|FLM 0.9.45 invalidated locally-pulled `qwen3.5:4b` (stamped 0.9.4
 B31|2026-07-27|model picker ⊥ followed app styling ∵ native `<datalist>` popup drawn by browser chrome (page CSS inert) + native `<select size>`|V40; custom app-styled combobox + list
 B32|2026-07-27|`app.js` set `models-title` = "Installed models — <provider>" ∴ overwrote merged card heading at runtime|V40 caught in browser; title → "Models — <provider>"
 B33|2026-07-27|new CSS block referenced undefined `--muted`/`--card`/`--bad` (pre-existing pattern elsewhere in stylesheet: 6+2+3 refs, never defined ∴ inert)|use defined tokens `--text-muted`/`--surface`/`--warn`; pre-existing refs left for separate cleanup
+B35|2026-07-27|`flm bench qwen3.6-moe:35b-a3b` died 4s in w/ driver `0xc01e0200` (page-in failed): 24.3GB weights + 32k-sweep KV > 25.6GB usable; ⊥ preflight ∴ user saw only a hex code|V41; catalog-footprint preflight w/ explanation
+B36|2026-07-27|keep-warm thread ⊥ aware of benchmarks: warms/reloads active model on 15min tick during a 10-20min bench ∴ NPU+mem contention mid-run|V42; `ffp_benchmark.is_running()` gate in `_warm_model_once`
+B37|2026-07-27|FLM returns HTTP **200** + `{"error":"Failed to load <model> model!"}`; `_call_openai_compatible`/`ffp_chat` read only `choices` ∴ real cause discarded → "Local LLM returned no usable text"|V43; surface the error body
 B34|2026-07-27|self-caught: `_active_model_health` tested membership vs `_provider_list("all")`; ollama "all" = installed+suggested (`ffp_provider_runtime:80`) ∴ never-pulled model → false `installed=True` (⊥ warn)|V39; trust `details` (unfiltered, authoritative) else re-list w/ `installed` filter
 ```

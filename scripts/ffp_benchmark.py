@@ -51,6 +51,17 @@ def status() -> dict:
         return dict(_job)
 
 
+def is_running() -> bool:
+    """True while a benchmark occupies the accelerator.
+
+    The daemon's keep-warm thread checks this before warming: a warmup restarts
+    the serve server and reloads the active model, which on a shared-memory NPU
+    competes with an in-flight `flm bench` (a run takes 10-20 min, longer than
+    the default 15-minute keepalive interval, so a tick WILL land mid-run)."""
+    with _lock:
+        return _job["state"] == "running"
+
+
 def _slug(text: str) -> str:
     return "".join(c if c.isalnum() else "-" for c in str(text)).strip("-") or "model"
 

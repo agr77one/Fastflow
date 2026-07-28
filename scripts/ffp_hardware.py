@@ -254,6 +254,81 @@ def usable_memory_gb(hw: dict | None = None) -> float:
     return max(2.0, round(mem - _OS_HEADROOM_GB, 1))
 
 
+# `flm bench` sweeps 1k-32k context x 8 iterations, so it needs room for a large
+# KV cache ON TOP of the weights. Reserve for the 32k worst case; without this a
+# model that merely *loads* (weights < usable) still dies once the sweep grows
+# the cache, surfacing as an opaque driver page-in failure.
+_BENCH_CONTEXT_HEADROOM_GB = 4.0
+
+
+def available_memory_gb() -> float:
+    """Physical memory currently free, in GB (0.0 when it can't be read)."""
+    if os.name != "nt":
+        return 0.0
+    import ctypes
+
+    class MEMORYSTATUSEX(ctypes.Structure):
+        _fields_ = [
+            ("dwLength", ctypes.c_ulong),
+            ("dwMemoryLoad", ctypes.c_ulong),
+            ("ullTotalPhys", ctypes.c_ulonglong),
+            ("ullAvailPhys", ctypes.c_ulonglong),
+            ("ullTotalPageFile", ctypes.c_ulonglong),
+            ("ullAvailPageFile", ctypes.c_ulonglong),
+            ("ullTotalVirtual", ctypes.c_ulonglong),
+            ("ullAvailVirtual", ctypes.c_ulonglong),
+            ("ullAvailExtendedVirtual", ctypes.c_ulonglong),
+        ]
+
+    stat = MEMORYSTATUSEX()
+    stat.dwLength = ctypes.sizeof(stat)
+    if ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(stat)):
+        return round(stat.ullAvailPhys / 2**30, 1)
+    return 0.0
+
+
+def benchmark_fit(
+    model: str,
+    footprint_gb: float | None,
+    hw: dict | None = None,
+    *,
+    available_gb: float | None = None,
+) -> dict:
+    """Can this model be benchmarked on this machine? -> {ok, error, needed_gb, usable_gb}.
+
+    Benchmarking is stricter than merely running a model: the context sweep adds
+    a large KV cache to the resident weights. Compared against
+    :func:`usable_memory_gb` (stable, matches what the dashboard shows) rather
+    than instantaneous free memory, because the benchmark stops the serve server
+    first and thereby reclaims whatever the active model was holding.
+
+    An unknown footprint never blocks the run — we only refuse on evidence."""
+    hw = hw or detect_hardware()
+    usable = usable_memory_gb(hw)
+    try:
+        footprint = float(footprint_gb) if footprint_gb is not None else None
+    except (TypeError, ValueError):
+        footprint = None
+    if not footprint or footprint <= 0:
+        return {"ok": True, "error": "", "needed_gb": None, "usable_gb": usable}
+    needed = round(footprint + _BENCH_CONTEXT_HEADROOM_GB, 1)
+    if needed <= usable:
+        return {"ok": True, "error": "", "needed_gb": needed, "usable_gb": usable}
+    free = available_memory_gb() if available_gb is None else float(available_gb)
+    detail = f"{free:g} GB free right now" if free else "free memory unknown"
+    return {
+        "ok": False,
+        "needed_gb": needed,
+        "usable_gb": usable,
+        "error": (
+            f"'{model}' is too large to benchmark on this machine: it needs about "
+            f"{needed:g} GB (~{footprint:g} GB of weights plus room for the 32k-context "
+            f"sweep) but only ~{usable:g} GB is usable ({detail}). Benchmark a smaller "
+            f"model, or run this one on a machine with more memory."
+        ),
+    }
+
+
 def _normalize_candidate(candidate: object) -> dict:
     """Accept either a legacy ``(name, params_b)`` tuple or a metadata dict."""
     if isinstance(candidate, dict):

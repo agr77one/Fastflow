@@ -238,6 +238,12 @@ def _default_llm_call(messages: list[dict]) -> str:
 
     choices = payload.get("choices") or []
     if not choices:
+        # FastFlowLM reports load failures as HTTP 200 + {"error": ...} (e.g.
+        # "Failed to load <model> model!"); prefer that over a generic message.
+        provider_error = payload.get("error")
+        if provider_error:
+            detail = provider_error.get("message") if isinstance(provider_error, dict) else provider_error
+            raise RuntimeError(str(detail).strip() or "LLM returned an error.")
         raise RuntimeError("LLM returned no choices.")
     return str((choices[0].get("message") or {}).get("content") or "").strip()
 
