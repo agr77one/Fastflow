@@ -564,6 +564,14 @@ def _call_openai_compatible(
     )
     with urllib.request.urlopen(req, timeout=max(2, timeout_seconds)) as resp:
         payload = json.loads(resp.read().decode("utf-8"))
+    # FastFlowLM reports load failures as HTTP 200 with an {"error": ...} body
+    # (e.g. "Failed to load <model> model!" when the weights don't fit in
+    # memory). Surfacing it beats the generic "returned no usable text" that
+    # discards the one message explaining what actually went wrong.
+    provider_error = payload.get("error")
+    if provider_error and not payload.get("choices"):
+        detail = provider_error.get("message") if isinstance(provider_error, dict) else provider_error
+        raise RuntimeError(str(detail).strip() or "local LLM returned an error")
     choices = payload.get("choices") or []
     content = ""
     if choices:

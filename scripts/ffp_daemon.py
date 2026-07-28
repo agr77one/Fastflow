@@ -524,6 +524,29 @@ def _act_flm_update_check(args: dict) -> dict:
     )
 
 
+def _bench_memory_precheck(model: str, listing: dict | None = None) -> dict:
+    """Refuse a FastFlowLM benchmark that cannot fit in memory.
+
+    `flm bench` loads the weights and then sweeps context to 32k. When the total
+    exceeds what the machine can page in, the driver fails with an opaque
+    `0xc01e0200` ("could not page-in all of the required allocations") that tells
+    the user nothing. Checking the catalog's measured footprint up front turns
+    that into a plain explanation. Unknown footprint -> allow (never block on a
+    guess); any lookup failure -> allow, since refusing a runnable benchmark is
+    worse than letting the driver decide."""
+    import ffp_hardware
+    try:
+        if listing is None:
+            listing = grammar_fix._provider_list("all")
+        details = listing.get("details") or []
+        entry = next((d for d in details if isinstance(d, dict) and d.get("name") == model), None)
+        footprint = entry.get("footprint_gb") if entry else None
+    except Exception as exc:
+        log.warning("bench memory precheck skipped (%s)", exc)
+        return {"ok": True, "error": ""}
+    return ffp_hardware.benchmark_fit(model, footprint)
+
+
 def _act_bench_start(args: dict) -> dict:
     """Kick off a benchmark on a background thread. FastFlowLM: `flm bench`
     (10-20 min; serve stopped for the run and restarted after). Ollama: timed
@@ -541,6 +564,10 @@ def _act_bench_start(args: dict) -> dict:
             provider="ollama",
             base_url=grammar_fix.LLM_BASE_URL,
         )
+    fit = _bench_memory_precheck(model)
+    if not fit["ok"]:
+        log.warning("bench_start refused for %s: %s", model, fit["error"])
+        return {"ok": False, "error": fit["error"], "model": model}
     return ffp_benchmark.start_benchmark(
         model,
         _NO_WINDOW,
@@ -1203,16 +1230,35 @@ def _keep_warm_settings(cfg: dict) -> tuple[bool, int]:
     return warm_on_start, minutes * 60
 
 
+def _benchmark_in_progress() -> bool:
+    """True while a benchmark holds the accelerator (import kept lazy + safe)."""
+    try:
+        import ffp_benchmark
+        return ffp_benchmark.is_running()
+    except Exception:
+        return False
+
+
 def _warm_model_once(
     cfg: dict,
     reason: str,
     *,
     warm_fn: Callable[[], str] | None = None,
+    benchmark_running_fn: Callable[[], bool] | None = None,
 ) -> str:
     llm_cfg = cfg.get("llm") if isinstance(cfg.get("llm"), dict) else {}
     provider = str(llm_cfg.get("provider") or "fastflowlm").strip().lower()
     if provider != "fastflowlm":
         return "skipped_provider"
+    # A benchmark deliberately stops the serve server and drives the NPU on its
+    # own; warming would restart the server and reload the active model
+    # alongside it. On shared NPU/system memory that either wedges the run or
+    # blows past the memory ceiling. A bench takes 10-20 min vs the 15-minute
+    # default keepalive, so this collision is the norm, not an edge case.
+    running = benchmark_running_fn or _benchmark_in_progress
+    if running():
+        log.info("model warmup reason=%s result=skipped_benchmark_running", reason)
+        return "skipped_benchmark_running"
     warm = warm_fn or grammar_fix.warm_configured_fastflowlm
     try:
         result = warm()

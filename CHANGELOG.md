@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 2.4.2
+
+**Clear failures instead of cryptic ones.** A benchmark that cannot fit in memory is now refused with an explanation, keep-warm no longer fights an in-progress benchmark, and errors the local server reports are passed through instead of being replaced by a generic message.
+
+### Fixed
+
+- **Benchmarks that can't fit are refused up front.** Running `flm bench` on a model too large for the machine failed with a raw driver code — `Failed to submit command to hw queue (0xc01e0200): … the video memory manager could not page-in all of the required allocations` — which said nothing about the cause. The Benchmark tab now checks the model's measured footprint plus room for the 1k–32k context sweep against available memory first, and explains: *"needs about 28.3 GB (~24.3 GB of weights plus room for the 32k-context sweep) but only ~25.6 GB is usable"*. A model with no published footprint is never blocked.
+- **Keep-warm no longer collides with a benchmark.** The background warmup reloaded the active model on its own schedule with no knowledge of benchmarks. Since a benchmark takes 10–20 minutes and the default keepalive is 15, a warmup reliably landed mid-run and competed for the same NPU memory. Warmups are now skipped while a benchmark is running (and logged as such).
+- **Errors from the local server are shown as-is.** FastFlowLM reports some failures as an HTTP 200 response carrying an error message — for example `Failed to load <model> model!` when a model's weights don't fit. Both the hotkey path and chat only looked for a completion, so that message was discarded and replaced with "Local LLM returned no usable text". The real message now reaches you. A warning alongside a valid completion is ignored as before.
+
 ## 2.4.1
 
 **Model picker fixes.** The Models card is one card again, the picker follows the app's styling, no model is hidden from it, and an active model invalidated by a FastFlowLM upgrade is now called out instead of failing silently.
