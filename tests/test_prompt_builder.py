@@ -139,7 +139,14 @@ def test_v33_default_v2_grounding_removes_model_inventions_and_splits_source_cla
     assert "<output_format>\nA Python script.\n</output_format>" in grounded
 
 
-def test_v33_sparse_request_uses_only_fixed_scope_guards():
+def test_v33_sparse_request_uses_clarify_shape_without_inventing():
+    """Sparse request -> clarify shape (V44), still inventing nothing (V33).
+
+    Superseded the previous expectation that a sparse request be padded with the
+    fixed scope guards. That padding produced an output repeating the request as
+    task, constraint and output_format — structurally valid but carrying no
+    information the user had not typed (see B38). The anti-invention guarantee
+    this test was protecting is asserted below and unchanged."""
     settings = ffp_prompt_builder.PromptBuilderSettings.from_config({})
     source = "make the dashboard faster"
     intent = ffp_prompt_builder.resolve_intent(settings, source)
@@ -147,11 +154,17 @@ def test_v33_sparse_request_uses_only_fixed_scope_guards():
 
     assert ffp_prompt_builder.validate(grounded, settings).valid is True
     assert "<task>\nMake the dashboard faster.\n</task>" in grounded
-    assert "- Make the dashboard faster." in grounded
-    assert "- Preserve all stated requirements." in grounded
-    assert "- Do not add unstated requirements." in grounded
-    assert "browser" not in grounded.lower()
-    assert "<output_format>\nNo output format specified.\n</output_format>" in grounded
+    # Still no invention: the model's draft is discarded and nothing concrete is
+    # conjured (no browser, profiler, framework, or metric the user never named).
+    for invented in ("browser", "profiler", "webpack", "lighthouse", "redis"):
+        assert invented not in grounded.lower()
+    # The request is no longer echoed into constraints or output_format, and the
+    # guard padding is replaced by named unknowns.
+    constraints = grounded.split("<constraints>")[1].split("</constraints>")[0]
+    assert "- Make the dashboard faster." not in constraints
+    assert "- Preserve all stated requirements." not in constraints
+    assert "unspecified" in constraints
+    assert "No output format specified." not in grounded
 
 
 def test_v27_task_sentence_allows_identifiers_and_regex_punctuation():

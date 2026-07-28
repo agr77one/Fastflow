@@ -160,6 +160,73 @@ _SAFE_SCOPE_GUARDS = (
     "Leave unspecified choices to the implementer.",
 )
 
+# Fewer real source clauses than this and the deterministic render has nothing to
+# decompose: it would emit the request as the task, again as the single
+# constraint, and again as the output format, padded with the scope guards above.
+# That output is structurally valid but carries no information the user did not
+# already type, so an underspecified request gets the clarify shape instead.
+_MIN_SOURCE_CLAUSES = 2
+
+# Dimensions a request can leave open. Deliberately abstract: naming concrete
+# artifacts (an agenda, a database, a web UI) would invent requirements, which
+# the v2 contract forbids. These only assert what was NOT stated.
+_CLARIFY_UNKNOWNS = (
+    "Target platform and language are unspecified - confirm before choosing.",
+    "The scope of the deliverable is not defined - agree it with the requester first.",
+    "No data source, storage, or integration was named - do not assume one.",
+    "Success criteria were not stated - establish them before implementing.",
+)
+
+# Article agreement is deterministic; the typo map is a fixed, audited list of
+# common slips. Applied to surfaced text because the v2 render copies the user's
+# own words, so their typos would otherwise be repeated in every section.
+_TYPO_FIXES = {
+    "perfrom": "perform",
+    "recieve": "receive",
+    "seperate": "separate",
+    "occured": "occurred",
+    "definately": "definitely",
+    "sucessful": "successful",
+    "sucessfully": "successfully",
+    "acommodate": "accommodate",
+    "existance": "existence",
+    "managment": "management",
+    "enviroment": "environment",
+    "sheduler": "scheduler",
+    "shedule": "schedule",
+    "teh": "the",
+    "adn": "and",
+    "wich": "which",
+    "alot": "a lot",
+}
+_TYPO_RE = re.compile(r"\b(" + "|".join(sorted(_TYPO_FIXES, key=len, reverse=True)) + r")\b", re.IGNORECASE)
+# "a app" -> "an app". Only before a vowel SOUND we can detect safely, so the
+# well-known exceptions (a user, a unique, a one-off, a European) are excluded.
+_ARTICLE_A_RE = re.compile(r"\ba(?=\s+(?![uU]ni|[uU]se|[uU]ser|[uU]til|[oO]ne\b|[eE]uro)[aeiouAEIOU])", re.ASCII)
+# "an schedule" -> "a schedule".
+_ARTICLE_AN_RE = re.compile(r"\ban(?=\s+[b-df-hj-np-tv-zB-DF-HJ-NP-TV-Z])", re.ASCII)
+
+
+def _match_case(original: str, replacement: str) -> str:
+    if original.isupper():
+        return replacement.upper()
+    if original[:1].isupper():
+        return replacement[:1].upper() + replacement[1:]
+    return replacement
+
+
+def normalize_source_language(text: str) -> str:
+    """Fix article agreement and a fixed list of common typos.
+
+    The v2 render surfaces the user's own wording, so "develop a app that allows
+    to perfrom ..." would otherwise appear verbatim in three sections. This only
+    corrects spelling/agreement; it never changes meaning or adds requirements."""
+    cleaned = str(text or "")
+    cleaned = _TYPO_RE.sub(lambda m: _match_case(m.group(0), _TYPO_FIXES[m.group(0).lower()]), cleaned)
+    cleaned = _ARTICLE_A_RE.sub(lambda m: _match_case(m.group(0), "an"), cleaned)
+    cleaned = _ARTICLE_AN_RE.sub(lambda m: _match_case(m.group(0), "a"), cleaned)
+    return cleaned
+
 
 @dataclass(frozen=True)
 class PromptBuilderSettings:
@@ -503,6 +570,9 @@ def _render_xml(settings: PromptBuilderSettings, intent: PromptIntent, cleaned: 
 
 
 def _render_prompt_v2_fallback(intent: PromptIntent, cleaned: str) -> str:
+    cleaned = normalize_source_language(cleaned)
+    if is_underspecified(cleaned):
+        return _render_prompt_v2_clarify(intent, cleaned)
     task = _prompt_v2_task(intent, cleaned)
     constraints = _prompt_v2_constraints(cleaned)
     constraint_body = "\n".join(f"- {item}" for item in constraints)
@@ -518,6 +588,34 @@ def _render_prompt_v2_fallback(intent: PromptIntent, cleaned: str) -> str:
         "</constraints>\n"
         "<output_format>\n"
         f"{_prompt_v2_output_format(cleaned)}\n"
+        "</output_format>"
+    )
+
+
+def _render_prompt_v2_clarify(intent: PromptIntent, cleaned: str) -> str:
+    """Render for a request with nothing to decompose.
+
+    Instead of repeating the request as task, constraint, and output format (an
+    echo that passes the structural contract while telling the reader nothing),
+    this names what the request left open and instructs the agent to settle those
+    before building. It adds no requirements: every bullet asserts only that
+    something was *not* stated."""
+    task = _prompt_v2_task(intent, cleaned)
+    unknowns = list(_CLARIFY_UNKNOWNS[:4])
+    constraint_body = "\n".join(f"- {item}" for item in unknowns)
+    return (
+        "<task>\n"
+        f"{task}\n"
+        "</task>\n"
+        "<context>\n"
+        "The request states the goal only; no further detail was given.\n"
+        "</context>\n"
+        "<constraints>\n"
+        f"{constraint_body}\n"
+        "</constraints>\n"
+        "<output_format>\n"
+        "State assumptions and open questions first, then propose a minimal scope "
+        "for approval before implementing.\n"
         "</output_format>"
     )
 
@@ -569,7 +667,12 @@ def _prompt_v2_task(intent: PromptIntent, cleaned: str) -> str:
     return task.rstrip(".!? ") + "."
 
 
-def _prompt_v2_constraints(cleaned: str) -> list[str]:
+def source_clauses(cleaned: str) -> list[str]:
+    """Distinct requirement clauses actually present in the source (no padding).
+
+    This is the signal for whether the request can be decomposed at all: a
+    multi-requirement request yields several, while "develop an app that does
+    what a proper PM would" yields exactly one."""
     clauses: list[str] = []
     for sentence in _source_sentences(cleaned):
         for relative_part in _RELATIVE_SPLIT_RE.split(sentence, maxsplit=1):
@@ -580,6 +683,19 @@ def _prompt_v2_constraints(cleaned: str) -> list[str]:
                 clause = clause.rstrip(".!? ") + "."
                 if clause.lower() not in {item.lower() for item in clauses}:
                     clauses.append(clause)
+    return clauses
+
+
+def is_underspecified(cleaned: str) -> bool:
+    """True when the source cannot be decomposed into distinct requirements.
+
+    Such a request has no structure to surface, so the ordinary render would
+    repeat it as task, constraint, and output format (see _MIN_SOURCE_CLAUSES)."""
+    return len(source_clauses(cleaned)) < _MIN_SOURCE_CLAUSES
+
+
+def _prompt_v2_constraints(cleaned: str) -> list[str]:
+    clauses = source_clauses(cleaned)
     for guard in _SAFE_SCOPE_GUARDS:
         if len(clauses) >= 3:
             break

@@ -94,6 +94,9 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - V41: `flm bench` start → refuse iff catalog `footprint_gb` + 32k-context headroom > usable mem, w/ plain-language reason; unknown footprint ∨ lookup failure → allow (⊥ block on a guess)
 - V42: benchmark running → keep-warm tick ⊥ warms (`skipped_benchmark_running`); ∵ bench 10-20min > 15min keepalive ∴ collision is the norm
 - V43: provider 200-response carrying `error` ∧ ⊥ `choices` → raise that message verbatim (⊥ generic "no usable text"); `error` + `choices` → ignore, return completion
+- V44: source ⊥ decomposable (real clauses < 2) → clarify shape: unknowns named, ⊥ request echoed into constraints/output_format, ⊥ scope-guard padding; still ⊥ invention (V33 holds)
+- V45: surfaced v2 text → article agreement + fixed typo map normalized (∵ render copies user wording verbatim); ⊥ meaning change
+- V46: A/B rubric = 8 items; R8 = ⊥ section restates `<task>` (coverage-of-task ≥ 0.8), boilerplate-excluded set-wise on constraints; R8 false ⇒ disqualifying ∀ other scores; gate pass ≥ 7/8 ∧ R8 ∧ ⊥ invented
 - V40: model picker + installed list = app-styled elements (⊥ native `<datalist>`/`<select size>`, ∵ browser chrome ignores page CSS); theme-aware + keyboard-navigable (↑↓/Enter/Esc)
 
 ## §T tasks
@@ -127,6 +130,7 @@ T24|x|prompt-v2 default + v1 rollback selector + 240/320/420 caps|V24,V27,V28,V3
 T25|x|FastFlowLM startup+idle keep-warm + cold/warm measurement support|V31
 T26|x|2.3.0 release evidence + version/docs rebaseline after A/B gate passes|V18,V29,V33,V34,V35,V36
 T27|x|streaming Chat tab (SSE): `ffp_chat.stream_send` + daemon `_STREAM_ACTIONS`/`_sse_frame`/`_stream_action` + `app.js` fetch-reader w/ `chat_send` fallback; live FLM first-token 1.58s|V37
+T30|x|clarify shape for underspecified requests + typo/article normalization + R8 echo gate + reported input in fixed set (2.4.3)|V44,V45,V46
 T29|x|bench memory guard + keep-warm/bench mutual exclusion + provider-error surfacing (2.4.2)|V41,V42,V43
 T28|x|model picker 2.4.1: footprint/MoE sizing + never-hide + active-model health + merged single Models card + app-styled combobox|V38,V39,V40
 ```
@@ -168,6 +172,9 @@ B30|2026-07-27|FLM 0.9.45 invalidated locally-pulled `qwen3.5:4b` (stamped 0.9.4
 B31|2026-07-27|model picker ⊥ followed app styling ∵ native `<datalist>` popup drawn by browser chrome (page CSS inert) + native `<select size>`|V40; custom app-styled combobox + list
 B32|2026-07-27|`app.js` set `models-title` = "Installed models — <provider>" ∴ overwrote merged card heading at runtime|V40 caught in browser; title → "Models — <provider>"
 B33|2026-07-27|new CSS block referenced undefined `--muted`/`--card`/`--bad` (pre-existing pattern elsewhere in stylesheet: 6+2+3 refs, never defined ∴ inert)|use defined tokens `--text-muted`/`--surface`/`--warn`; pre-existing refs left for separate cleanup
+B38|2026-07-28|vague 1-clause request ("develop a app ... a proper PM would") → deterministic render echoed it as task ∧ sole constraint ∧ output_format + 2 scope guards, typos kept; scored 5/7 machine (7/7 lenient judge), ⊥ hard-fail ∴ gate green on a pure echo. `is_weak_prompt_echo` ⊥ fires ∵ V32 exempts structured output, and V33 finalizer always emits structure|V44,V45,V46; clarify shape + normalization + R8
+B39|2026-07-28|self-caught: first R8 metric = coverage-of-candidate ∴ flagged good CSV decomposition (bullets legitimately reuse task words)|invert → coverage-of-TASK
+B40|2026-07-28|2nd R8 metric flagged long/debug cases ∵ task = sentence 1 ∴ one bullet legitimately restates it|judge constraints set-wise: fail iff ∅ remains after dropping restatements ∧ boilerplate
 B35|2026-07-27|`flm bench qwen3.6-moe:35b-a3b` died 4s in w/ driver `0xc01e0200` (page-in failed): 24.3GB weights + 32k-sweep KV > 25.6GB usable; ⊥ preflight ∴ user saw only a hex code|V41; catalog-footprint preflight w/ explanation
 B36|2026-07-27|keep-warm thread ⊥ aware of benchmarks: warms/reloads active model on 15min tick during a 10-20min bench ∴ NPU+mem contention mid-run|V42; `ffp_benchmark.is_running()` gate in `_warm_model_once`
 B37|2026-07-27|FLM returns HTTP **200** + `{"error":"Failed to load <model> model!"}`; `_call_openai_compatible`/`ffp_chat` read only `choices` ∴ real cause discarded → "Local LLM returned no usable text"|V43; surface the error body
