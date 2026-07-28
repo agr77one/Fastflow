@@ -92,6 +92,15 @@ FIXED_CASES = (
         "input": "make the dashboard faster",
     },
     {
+        # Reported 2026-07-28. Harder than the case above: one clause, an
+        # unparseable semantic core ("a proper PM would"), and typos. The old
+        # render echoed it into task + constraints + output_format and still
+        # scored 5/7 machine-checkable with no hard fail, which is why R8 exists.
+        "name": "vague_unparseable_scheduler",
+        "category": "vague",
+        "input": "develop a app that allows to perfrom a full schedule for my meeting a proper PM would",
+    },
+    {
         "name": "long_webhook_import",
         "category": "long",
         "input": (
@@ -300,6 +309,72 @@ def _constraint_items(text: str) -> list[str]:
     return items
 
 
+def _content_words(text: str) -> set[str]:
+    return {w for w in re.findall(r"[a-z0-9']+", str(text or "").lower()) if w not in _STOPWORDS}
+
+
+_STOPWORDS = frozenset(
+    "a an the and or of to for in on with that which is are be my your it its this these those "
+    "from into at as by all any".split()
+)
+# A section covering at least this much of <task> is restating it, not refining it.
+_R8_TASK_COVERAGE = 0.8
+
+
+# Padding phrases the renderer appends purely to reach the 3-item minimum. Held
+# here rather than imported from ffp_prompt_builder ON PURPOSE: this gate must
+# judge the shipped output independently, so it cannot silently follow a change
+# in the code it is checking. Clarify-shape bullets ("... is unspecified -
+# confirm before choosing") are NOT listed: they state something real about the
+# request, whereas these say nothing situational at all.
+_BOILERPLATE_CONSTRAINTS = frozenset({
+    "preserve all stated requirements",
+    "do not add unstated requirements",
+    "leave unspecified choices to the implementer",
+})
+
+
+def _is_boilerplate(item: str) -> bool:
+    return re.sub(r"[^a-z ]", "", str(item or "").lower()).strip() in _BOILERPLATE_CONSTRAINTS
+
+
+def _section_repeats_task(sections: dict[str, str]) -> str:
+    """Name of the section proving the output is a restatement, or "" if none.
+
+    This is the check the original rubric lacked. An output can carry all four
+    tags, invent nothing, and still be worthless if the request is pasted into
+    task, constraints and output_format — exactly what an underspecified request
+    produced. Structure alone is not evidence of conversion.
+
+    Coverage is measured against the TASK, not the candidate section: genuine
+    decomposition necessarily reuses the task's words ("Write an error report
+    with file and line numbers." shares every word with its task line) but each
+    part covers only a fraction of the whole, while a restatement covers nearly
+    all of it.
+
+    Constraints are judged as a set, not individually. A long request legitimately
+    yields one bullet restating its opening sentence (the task is derived from that
+    same sentence) alongside several distinct ones. The failure is when NOTHING
+    remains after discarding restatements and padding — then the section adds
+    nothing the task did not already say."""
+    task_words = _content_words(sections.get("task", ""))
+    if len(task_words) < 3:
+        return ""
+
+    def restates(text: str) -> bool:
+        words = _content_words(text)
+        return bool(words) and len(words & task_words) / len(task_words) >= _R8_TASK_COVERAGE
+
+    # output_format must name an artifact/shape, never re-quote the request.
+    if restates(sections.get("output_format", "")):
+        return "output_format"
+
+    items = _constraint_items(sections.get("constraints", ""))
+    if items and not [i for i in items if not restates(i) and not _is_boilerplate(i)]:
+        return "constraints"
+    return ""
+
+
 def score_output(
     text: str,
     *,
@@ -331,15 +406,21 @@ def score_output(
         else None
     )
     r3 = (len(constraint_items) in range(3, 6) and judged_r3) if judged_r3 is not None else None
-    rubric = {"r1": r1, "r2": r2, "r3": r3, "r4": judged_r4, "r5": r5, "r6": r6, "r7": r7}
+    # R8: no section may simply restate <task> (machine-checkable, no judge).
+    echoed_section = _section_repeats_task(sections) if sections else ""
+    r8 = bool(sections) and not echoed_section
+    rubric = {"r1": r1, "r2": r2, "r3": r3, "r4": judged_r4, "r5": r5, "r6": r6, "r7": r7, "r8": r8}
     pending = any(value is None for value in rubric.values()) or invented is None
     score = None if any(value is None for value in rubric.values()) else sum(bool(v) for v in rubric.values())
     hard_fail = invented is True
     return {
         "rubric": rubric,
         "score": score,
-        "passed": bool(score is not None and score >= 6 and not hard_fail),
+        # R8 is disqualifying on its own: an output that merely restates the
+        # request is not a converted prompt no matter what else it scores.
+        "passed": bool(score is not None and score >= 7 and not hard_fail and r8),
         "hard_fail": hard_fail,
+        "echoed_section": echoed_section,
         "pending_judge": pending,
         "invented_requirement": invented,
         "constraint_item_count": len(constraint_items),

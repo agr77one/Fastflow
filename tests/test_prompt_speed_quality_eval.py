@@ -44,15 +44,16 @@ def test_fixed_set_covers_required_spread():
     assert len({case["name"] for case in cases}) == len(cases)
 
 
-def test_machine_rubric_and_manual_judgment_combine_to_seven():
+def test_machine_rubric_and_manual_judgment_combine_to_eight():
     result = prompt_eval.score_output(
         GOOD_OUTPUT,
         completion_tokens=92,
         judgment={"r3": True, "r4": True, "invented_requirement": False},
     )
 
-    assert result["rubric"] == {key: True for key in ("r1", "r2", "r3", "r4", "r5", "r6", "r7")}
-    assert result["score"] == 7
+    # r8 (2.4.3): no section may restate <task>; see test_prompt_clarify_shape.
+    assert result["rubric"] == {key: True for key in ("r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8")}
+    assert result["score"] == 8
     assert result["passed"] is True
     assert result["pending_judge"] is False
     assert result["constraint_item_count"] == 3
@@ -68,7 +69,7 @@ def test_quality_stays_pending_without_semantic_judge_and_invention_hard_fails()
 
     assert pending["score"] is None
     assert pending["pending_judge"] is True
-    assert invented["score"] == 7
+    assert invented["score"] == 8
     assert invented["hard_fail"] is True
     assert invented["passed"] is False
 

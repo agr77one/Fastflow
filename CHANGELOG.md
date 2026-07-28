@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## 2.4.3
+
+**`prompt:` handles vague requests properly.** A request too thin to break into requirements now produces a prompt that names what is missing, instead of handing the request back reworded.
+
+### Fixed
+
+- **A vague request no longer returns itself.** Given *"develop a app that allows to perfrom a full schedule for my meeting a proper PM would"*, `prompt:` emitted that same sentence as the task, again as its only real constraint, and again as the output format, padded with two generic scope lines. It was structurally correct and invented nothing, so every automated check passed — but it told the reader nothing they had not just typed. When a request cannot be decomposed into distinct requirements, the output now names the open questions (platform, scope, data source, success criteria) and instructs the agent to settle them before building. It still adds no requirements: each line asserts only that something was *not* specified.
+- **Typos and article agreement are corrected in the output.** Because the prompt is built from your own wording, "a app" and "perfrom" were repeated in every section. Surfaced text now fixes article agreement and a fixed list of common misspellings, without changing meaning. Well-known exceptions ("a user", "a unique", "a one-off") are preserved.
+
+### Measurement
+
+- **New rubric item R8 — no section may restate the task.** The eight-item rubric now fails any output whose constraints contain nothing beyond a restatement of the task plus boilerplate, or whose output format re-quotes the request. R8 is disqualifying on its own, so a structurally valid echo can no longer pass the release gate at any score. It is machine-checkable — no judge required.
+- The reported request is now a permanent case in the fixed evaluation set, and R8 was validated against all 14 cases with **zero false verdicts** (it fails the old echo and clears every legitimate output, including multi-clause requests whose first bullet naturally restates the opening sentence).
+
 ## 2.4.2
 
 **Clear failures instead of cryptic ones.** A benchmark that cannot fit in memory is now refused with an explanation, keep-warm no longer fights an in-progress benchmark, and errors the local server reports are passed through instead of being replaced by a generic message.

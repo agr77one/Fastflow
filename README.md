@@ -4,10 +4,11 @@ Flowkey is a Windows desktop assistant that adds local-LLM hotkeys for grammar f
 
 Everything runs locally through [FastFlowLM](https://fastflowlm.com) (AMD Ryzen AI NPU) or, on machines without the NPU, through [Ollama](https://ollama.com) (CPU/GPU) as a secondary provider. No cloud service, analytics, or telemetry is used by the app.
 
-Current version: `2.4.2`
+Current version: `2.4.3`
 
 ## What's new in 2.4
 
+- **`prompt:` handles vague requests properly.** If a request is too thin to break into concrete requirements, the generated prompt now names what's missing — platform, scope, data source, success criteria — and tells the coding agent to settle those before building, rather than handing your sentence back to you reworded. It still never invents requirements you didn't state. Typos and article agreement in your wording are cleaned up on the way out.
 - **Benchmarks fail clearly, not cryptically.** Starting a benchmark on a model too large for your machine used to end in a raw graphics-driver error code. Flowkey now checks the model's memory footprint (plus room for the context sweep) first and tells you what it needs versus what's available. Background model warmups also pause while a benchmark runs, instead of competing with it for the same memory, and errors reported by the local server are passed through verbatim rather than replaced with a generic message.
 - **The model picker shows every model, sized honestly.** Config → **Models** is now one card, styled like the rest of the dashboard (the old picker used a native browser dropdown that ignored the app's theme). Nothing is hidden from it: models too big for your machine are marked rather than silently dropped, and Mixture-of-Experts models are sized by the parameters actually active per token plus FastFlowLM's own measured memory footprint — so a 35B-total / 3B-active model is no longer mistaken for a 35B one. If a FastFlowLM upgrade invalidates your active model, the card now says so instead of letting the next hotkey fail with an opaque error.
 - **Chat streams as it thinks.** The dashboard **Chat** tab now fills the reply in token-by-token over a live stream instead of waiting on a blank "Thinking…" until the whole answer is ready — the first words typically appear in ~1.6 s (warm) rather than after the full response. It works on both FastFlowLM and Ollama, and if anything interrupts the stream the partial reply is kept and the error is shown. Grammar, `prompt:`, and the other hotkeys are unchanged (they still paste the finished result).
