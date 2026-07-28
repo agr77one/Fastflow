@@ -55,11 +55,17 @@ OLLAMA_CATALOG: tuple[tuple[str, float], ...] = (
 
 _PARAMS_RE = re.compile(r"(\d+(?:\.\d+)?)\s*b\b", re.IGNORECASE)
 _PARAMS_M_RE = re.compile(r"(\d+(?:\.\d+)?)\s*m\b", re.IGNORECASE)
+# Mixture-of-Experts tags publish ACTIVE params as "a<N>b" alongside the total:
+# "qwen3.6-moe:35b-a3b" is 35B total but only ~3B active per token, so it decodes
+# like a 3B model. Sizing it by the 35B total is what hid it from the picker.
+_ACTIVE_PARAMS_RE = re.compile(r"\ba(\d+(?:\.\d+)?)\s*b\b", re.IGNORECASE)
 
 
 def parse_params_b(name: str) -> float | None:
-    """Best-effort parameter count (in billions) from a model name/tag.
-    'qwen3.5:4b' -> 4.0, 'gemma4-it:e4b' -> 4.0, 'embed-gemma:300m' -> 0.3."""
+    """Best-effort TOTAL parameter count (in billions) from a model name/tag.
+    'qwen3.5:4b' -> 4.0, 'gemma4-it:e4b' -> 4.0, 'embed-gemma:300m' -> 0.3.
+    For MoE tags this is the total ('...:35b-a3b' -> 35.0); see
+    :func:`parse_active_params_b` for the active count that governs speed."""
     text = str(name or "")
     match = _PARAMS_RE.search(text)
     if match:
@@ -68,6 +74,29 @@ def parse_params_b(name: str) -> float | None:
     if match:
         return round(float(match.group(1)) / 1000, 3)
     return None
+
+
+def parse_active_params_b(name: str) -> float | None:
+    """Active params for a MoE tag, or None when the tag isn't MoE-shaped.
+
+    'qwen3.6-moe:35b-a3b' -> 3.0; 'qwen3.5:4b' -> None. Only returns a value when
+    an 'a<N>b' group is present AND smaller than the parsed total, so an ordinary
+    tag that merely happens to contain 'a<digits>b' can't be misread."""
+    text = str(name or "")
+    match = _ACTIVE_PARAMS_RE.search(text)
+    if not match:
+        return None
+    active = float(match.group(1))
+    total = parse_params_b(text)
+    if total is None or active >= total:
+        return None
+    return active
+
+
+def effective_params_b(name: str) -> float | None:
+    """Params that govern how this model actually performs: active for MoE,
+    total otherwise. This is what a size budget should be compared against."""
+    return parse_active_params_b(name) or parse_params_b(name)
 
 
 def system_memory_gb() -> float:
@@ -209,22 +238,109 @@ def model_budget(provider: str, hw: dict | None = None) -> dict:
     return {"max_params_b": max_b, "basis": basis, "summary": summary}
 
 
-def recommend_models(provider: str, candidates: list[tuple[str, float | None]],
-                     hw: dict | None = None) -> dict:
-    """Tag candidate (name, params_b) pairs with whether they fit this
-    machine. Unparseable sizes are kept but marked unknown."""
+# Memory the OS, the app, and the browser need to keep running alongside a model.
+_OS_HEADROOM_GB = 6.0
+# Below this share of usable memory a model is comfortable; above it, "tight".
+_COMFORT_SHARE = 0.85
+
+
+def usable_memory_gb(hw: dict | None = None) -> float:
+    """Memory available for model weights, after OS/app headroom.
+
+    On Ryzen AI laptops the iGPU's "dedicated" VRAM is a UMA carve-out of the
+    same DIMMs, so it is counted back in (matching :func:`model_budget`)."""
+    hw = hw or detect_hardware()
+    mem = float(hw.get("ram_gb") or 0) + float(hw.get("vram_gb") or 0)
+    return max(2.0, round(mem - _OS_HEADROOM_GB, 1))
+
+
+def _normalize_candidate(candidate: object) -> dict:
+    """Accept either a legacy ``(name, params_b)`` tuple or a metadata dict."""
+    if isinstance(candidate, dict):
+        info = dict(candidate)
+        name = str(info.get("name") or "")
+    else:
+        name, params = candidate  # type: ignore[misc]
+        name = str(name or "")
+        info = {"name": name, "params_b": params}
+    if "params_b" not in info or info.get("params_b") is None:
+        info["params_b"] = parse_params_b(name)
+    info["name"] = name
+    info["active_params_b"] = parse_active_params_b(name)
+    return info
+
+
+def recommend_models(provider: str, candidates: list, hw: dict | None = None) -> dict:
+    """Tag candidates with whether they fit this machine.
+
+    Candidates are either legacy ``(name, params_b)`` tuples or dicts carrying
+    provider metadata (``footprint_gb``, ``installed``, ``flm_min_version``, …).
+
+    Fit is decided from the best signal available, in order:
+
+    1. **``footprint_gb``** — FastFlowLM's own measured memory cost. Name-parsing
+       is unreliable in both directions (``gemma4-it:e4b`` reads as 4B but is
+       8B/9.1 GB; ``qwen3.6-moe:35b-a3b`` reads as 35B but is 3B-active/24.3 GB),
+       so when the provider tells us the real number we use it.
+    2. **effective params** — active params for MoE, total otherwise, against the
+       provider size budget.
+
+    Nothing is ever dropped: every candidate is returned with a ``fits`` tag of
+    yes/tight/no/unknown plus a human ``fit_reason``. Callers must render "no"
+    entries (disabled or warned), never hide them — silently filtering oversized
+    models is what made a catalog model invisible and forced a manual pull."""
     hw = hw or detect_hardware()
     budget = model_budget(provider, hw)
     max_b = budget["max_params_b"]
+    usable_gb = usable_memory_gb(hw)
     models = []
-    for name, params in candidates:
-        if params is None:
-            fits = "unknown"
-        elif params <= max_b:
-            fits = "yes"
-        elif params <= max_b * 1.5:
-            fits = "tight"
+    for candidate in candidates:
+        info = _normalize_candidate(candidate)
+        name = info["name"]
+        params = info.get("params_b")
+        active = info.get("active_params_b")
+        footprint = info.get("footprint_gb")
+        try:
+            footprint = float(footprint) if footprint is not None else None
+        except (TypeError, ValueError):
+            footprint = None
+
+        if footprint and footprint > 0:
+            if footprint <= usable_gb * _COMFORT_SHARE:
+                fits, reason = "yes", f"~{footprint:g} GB of ~{usable_gb:g} GB usable"
+            elif footprint <= usable_gb:
+                fits, reason = "tight", f"~{footprint:g} GB needs most of ~{usable_gb:g} GB usable"
+            else:
+                fits, reason = "no", f"~{footprint:g} GB exceeds ~{usable_gb:g} GB usable"
         else:
-            fits = "no"
-        models.append({"name": name, "params_b": params, "fits": fits})
-    return {"hardware": hw, "budget": budget, "provider": provider, "models": models}
+            effective = active or params
+            if effective is None:
+                fits, reason = "unknown", "size unknown"
+            elif effective <= max_b:
+                fits = "yes"
+                reason = f"~{effective:g}B active of ~{max_b:g}B budget" if active else f"~{effective:g}B of ~{max_b:g}B budget"
+            elif effective <= max_b * 1.5:
+                fits, reason = "tight", f"~{effective:g}B just over the ~{max_b:g}B budget"
+            else:
+                fits, reason = "no", f"~{effective:g}B exceeds the ~{max_b:g}B budget"
+
+        entry = {
+            "name": name,
+            "params_b": params,
+            "fits": fits,
+            "fit_reason": reason,
+            "footprint_gb": footprint,
+        }
+        if active:
+            entry["active_params_b"] = active
+        for key in ("installed", "flm_min_version", "parameter_size", "context_length"):
+            if key in info:
+                entry[key] = info[key]
+        models.append(entry)
+    return {
+        "hardware": hw,
+        "budget": budget,
+        "usable_memory_gb": usable_gb,
+        "provider": provider,
+        "models": models,
+    }

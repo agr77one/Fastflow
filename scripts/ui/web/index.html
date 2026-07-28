@@ -319,25 +319,33 @@
         <p class="muted small" id="warm-model-note">FastFlowLM-only; warmups run in the background.</p>
       </div>
       <div class="card">
-        <h2 id="models-title">Installed models</h2>
-        <select id="models-list" size="4"></select>
+        <h2 id="models-title">Models</h2>
+        <p class="model-alert" id="model-alert" hidden></p>
+
+        <h3 class="subhead">Installed</h3>
+        <ul class="model-list" id="models-list" role="listbox" aria-labelledby="models-title" tabindex="0"></ul>
         <div class="card-actions">
           <button class="btn" id="model-set-active">Set as active</button>
           <button class="btn" id="model-remove">Remove…</button>
         </div>
-      </div>
-      <div class="card">
-        <h2>Pull a new model</h2>
+
+        <h3 class="subhead">Add a model</h3>
         <p class="muted small" id="hw-summary"></p>
         <div class="form-row">
-          <input type="text" id="pull-name" class="mono" list="pull-suggestions" placeholder="model name…">
-          <datalist id="pull-suggestions"></datalist>
+          <div class="combo" id="pull-combo">
+            <input type="text" id="pull-name" class="mono" placeholder="model name…"
+                   role="combobox" aria-expanded="false" aria-autocomplete="list"
+                   aria-controls="pull-options" autocomplete="off">
+            <button class="combo-toggle" id="pull-toggle" type="button"
+                    aria-label="Show available models" tabindex="-1">▾</button>
+            <ul class="combo-options" id="pull-options" role="listbox" hidden></ul>
+          </div>
           <button class="btn" id="pull-btn">Download</button>
         </div>
         <p class="muted small" id="pull-hint" hidden>Any name from the <a href="https://ollama.com/library" target="_blank" rel="noopener">Ollama library</a> works — e.g. <code>mistral:7b</code>, <code>qwen2.5:0.5b</code>.</p>
         <p class="muted" id="pull-status"></p>
         <div id="flm-runtime-block">
-          <h2>FastFlowLM runtime</h2>
+          <h3 class="subhead">FastFlowLM runtime</h3>
           <p id="flm-version">FastFlowLM: checking…</p>
           <div class="card-actions">
             <button class="btn" id="flm-check">Check for updates</button>

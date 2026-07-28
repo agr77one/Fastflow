@@ -89,6 +89,9 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - V35: default v2 → exactly 1 short LLM draft call; ⊥ anti-echo/rescue calls; V33 finalizer supplies surfaced 4-section contract
 - V36: pre-2.3 prompt_builder identity cfg (⊥ `prompt_version`, legacy default fields) → migrate v2+concise; any custom field → preserve
 - V37: `chat_send_stream` streams reply deltas as `text/event-stream` (SSE `data:`/`event:` frames), persists the full-or-partial turn exactly once under the daemon write-lock; CSRF `X-FFP-API` + Host gates still apply; dashboard falls back to `chat_send` iff the stream ⊥ opens (never after tokens arrive); `send()`/AHK/grammar/prompt paths unchanged (⊥ streamed)
+- V38: `recommend_models` returns EVERY candidate tagged yes/tight/no/unknown + `fit_reason`; UI ⊥ hide any (oversized → marked + confirm-before-pull). Fit signal precedence: provider `footprint_gb` → effective params (MoE active `a<N>b` < total, else total) vs budget
+- V39: configured active model ⊥ installed → `model_recommendations.active_model.status="not_installed"` + dashboard warning naming model/remedy; listing error/exception → `"unknown"` (⊥ claim broken)
+- V40: model picker + installed list = app-styled elements (⊥ native `<datalist>`/`<select size>`, ∵ browser chrome ignores page CSS); theme-aware + keyboard-navigable (↑↓/Enter/Esc)
 
 ## §T tasks
 
@@ -121,6 +124,7 @@ T24|x|prompt-v2 default + v1 rollback selector + 240/320/420 caps|V24,V27,V28,V3
 T25|x|FastFlowLM startup+idle keep-warm + cold/warm measurement support|V31
 T26|x|2.3.0 release evidence + version/docs rebaseline after A/B gate passes|V18,V29,V33,V34,V35,V36
 T27|x|streaming Chat tab (SSE): `ffp_chat.stream_send` + daemon `_STREAM_ACTIONS`/`_sse_frame`/`_stream_action` + `app.js` fetch-reader w/ `chat_send` fallback; live FLM first-token 1.58s|V37
+T28|x|model picker 2.4.1: footprint/MoE sizing + never-hide + active-model health + merged single Models card + app-styled combobox|V38,V39,V40
 ```
 
 ## §B bugs
@@ -155,4 +159,10 @@ B25|2026-07-10|broad V35 patch changed runtime/system branches instead of retry 
 B26|2026-07-10|default v2 input ≥ routing threshold still made compression subcalls; 1 huge clause could exceed V27|V27,V35; bypass routing + bound grounded sections
 B27|2026-07-10|upgraded 2.2 cfg retained `detail_level=balanced` ∴ v1 selector missed new concise-default identity|V24,V30; `prompt_version=v1` authoritative legacy XML path
 B28|2026-07-10|2.2 persisted identity cfg lacked `prompt_version` + kept `balanced` ∴ upgrade bypassed v2 path|V36; narrow legacy-identity migration
+B29|2026-07-27|`qwen3.6-moe:35b-a3b` invisible in picker: `parse_params_b` read MoE total 35B (⊥ 3B active) → `fits=no` → `app.js` `continue` silently dropped it ∴ manual `flm pull`|V38; footprint-first sizing + MoE active parse + never-hide (marked + confirm)
+B30|2026-07-27|FLM 0.9.45 invalidated locally-pulled `qwen3.5:4b` (stamped 0.9.43) → FLM reports ⊥ installed; ⊥ detection ∴ next hotkey failed opaquely (Ollama absent ∴ ⊥ fallback)|V39; `_active_model_health` + dashboard warning
+B31|2026-07-27|model picker ⊥ followed app styling ∵ native `<datalist>` popup drawn by browser chrome (page CSS inert) + native `<select size>`|V40; custom app-styled combobox + list
+B32|2026-07-27|`app.js` set `models-title` = "Installed models — <provider>" ∴ overwrote merged card heading at runtime|V40 caught in browser; title → "Models — <provider>"
+B33|2026-07-27|new CSS block referenced undefined `--muted`/`--card`/`--bad` (pre-existing pattern elsewhere in stylesheet: 6+2+3 refs, never defined ∴ inert)|use defined tokens `--text-muted`/`--surface`/`--warn`; pre-existing refs left for separate cleanup
+B34|2026-07-27|self-caught: `_active_model_health` tested membership vs `_provider_list("all")`; ollama "all" = installed+suggested (`ffp_provider_runtime:80`) ∴ never-pulled model → false `installed=True` (⊥ warn)|V39; trust `details` (unfiltered, authoritative) else re-list w/ `installed` filter
 ```

@@ -252,6 +252,14 @@ def flm_list(filter_kind: str, model: str, no_window: int) -> dict:
     bare names. The JSON mode (FLM >= 0.9.x) carries an authoritative per-model
     `installed` boolean instead, so we parse that and filter client-side. We
     force UTF-8 decoding because the human-readable variant embeds emoji.
+
+    Also returns ``details``: the per-model metadata the catalog already carries
+    — ``footprint_gb`` (FLM's own measured memory cost, the honest sizing signal
+    that name-parsing cannot supply: ``gemma4-it:e4b`` reads as "4B" but is 8B /
+    9.1 GB, and ``qwen3.6-moe:35b-a3b`` is 35B total / 3B active / 24.3 GB),
+    ``installed``, ``flm_min_version``, ``parameter_size`` and
+    ``context_length``. ``details`` is unfiltered so callers can tell "not in
+    the catalog" from "in the catalog but not installed".
     """
     if filter_kind not in {"installed", "not-installed", "all"}:
         return {"error": f"bad filter: {filter_kind}", "models": [], "active": model}
@@ -276,6 +284,7 @@ def flm_list(filter_kind: str, model: str, no_window: int) -> dict:
         return {"error": "could not parse 'flm list --json' output", "models": [], "active": model}
 
     names: list[str] = []
+    details: list[dict] = []
     for entry in payload.get("models") or []:
         if not isinstance(entry, dict):
             continue
@@ -283,12 +292,28 @@ def flm_list(filter_kind: str, model: str, no_window: int) -> dict:
         if not name:
             continue
         is_installed = bool(entry.get("installed"))
+        info = entry.get("details") if isinstance(entry.get("details"), dict) else {}
+        details.append({
+            "name": name,
+            "installed": is_installed,
+            "footprint_gb": _as_float(entry.get("footprint")),
+            "flm_min_version": str(entry.get("flm_min_version") or "").strip(),
+            "parameter_size": str(info.get("parameter_size") or "").strip(),
+            "context_length": entry.get("default_context_length"),
+        })
         if filter_kind == "installed" and not is_installed:
             continue
         if filter_kind == "not-installed" and is_installed:
             continue
         names.append(name)
-    return {"models": names, "active": model}
+    return {"models": names, "active": model, "details": details}
+
+
+def _as_float(value: object) -> float | None:
+    try:
+        return float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
 
 
 def flm_version(no_window: int) -> str:

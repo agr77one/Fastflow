@@ -4,10 +4,11 @@ Flowkey is a Windows desktop assistant that adds local-LLM hotkeys for grammar f
 
 Everything runs locally through [FastFlowLM](https://fastflowlm.com) (AMD Ryzen AI NPU) or, on machines without the NPU, through [Ollama](https://ollama.com) (CPU/GPU) as a secondary provider. No cloud service, analytics, or telemetry is used by the app.
 
-Current version: `2.4.0`
+Current version: `2.4.1`
 
 ## What's new in 2.4
 
+- **The model picker shows every model, sized honestly.** Config → **Models** is now one card, styled like the rest of the dashboard (the old picker used a native browser dropdown that ignored the app's theme). Nothing is hidden from it: models too big for your machine are marked rather than silently dropped, and Mixture-of-Experts models are sized by the parameters actually active per token plus FastFlowLM's own measured memory footprint — so a 35B-total / 3B-active model is no longer mistaken for a 35B one. If a FastFlowLM upgrade invalidates your active model, the card now says so instead of letting the next hotkey fail with an opaque error.
 - **Chat streams as it thinks.** The dashboard **Chat** tab now fills the reply in token-by-token over a live stream instead of waiting on a blank "Thinking…" until the whole answer is ready — the first words typically appear in ~1.6 s (warm) rather than after the full response. It works on both FastFlowLM and Ollama, and if anything interrupts the stream the partial reply is kept and the error is shown. Grammar, `prompt:`, and the other hotkeys are unchanged (they still paste the finished result).
 
 ## What's new in 2.3

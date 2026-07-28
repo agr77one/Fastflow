@@ -157,10 +157,39 @@ like the 2.2.0 prompt-builder eval.
 - **Phase 4 (optional) — Faster route. ⏸ TRIGGER NOT MET — deferred.** The plan
   gates this on "p50 still > 15 s after phases 1–2," but 2.3.0 put prompt p50 at
   **3.38 s warm** and Phase 3 streaming already delivers the *perceived* speed
-  this phase was chasing. A second NPU-decode provider (LM Studio/Lemonade) also
-  can't co-serve the NPU with FastFlowLM (both wedge — see the benchmark
-  evidence), so it would add real complexity for no measured need. Revisit only
-  if a concrete slow surface appears.
+  this phase was chasing. Revisit only if a concrete slow surface appears.
+
+  **Feasibility note (2026-07-27, FLM 0.9.45).** The original blocker recorded
+  here — "a second runtime can't co-serve the NPU with FastFlowLM (both wedge)" —
+  applies to another *NPU* runtime (Lemonade/LM Studio on the NPU). It does **not**
+  apply to an NPU + **discrete/iGPU** split, which is different hardware with no
+  NPU contention. FLM 0.9.45 adds **per-round KV cache checks**: a conversation
+  can alternate FLM-on-NPU and llama.cpp-on-GPU rounds and the NPU now recognises
+  its own already-cached earlier rounds instead of re-prefilling the whole
+  history from scratch. That makes a hybrid route genuinely practical for the
+  first time. It changes the *feasibility*, not the decision — the speed goal is
+  already met, so this stays deferred rather than becoming newly attractive.
+
+### Does FLM 0.9.45's KV cache work change anything today? (assessed 2026-07-27)
+
+**For prompt mode and the other hotkeys: no.** Per-round KV cache checks pay off
+only when rounds of *one* conversation alternate between backends. Flowkey never
+does that:
+
+- `prompt:`, grammar, summarize, explain, tone are **single-shot and stateless** —
+  one system+user pair, no prior rounds to reuse. `prompt:` is also decode-bound
+  (TTFT ≈1.5 s of a ≈3.4 s total), so prefill is not the cost.
+- **Chat** is multi-turn but always replays its 12-turn window to a *single*
+  backend — ordinary sequential prefix caching, which FLM already did. The new
+  gap-tolerance never triggers.
+- **Provider fallback** is all-or-nothing between FastFlowLM and Ollama, which are
+  separate servers with separate caches — nothing is shared to reuse.
+- **Meetings digests** are one large single-shot prefill.
+
+So there is nothing to change in the prompt pipeline for 0.9.45. The upgrade's
+real impact on users was operational, not architectural: it **invalidates
+already-pulled models** stamped for an older FLM (see 2.4.1 / SPEC V39, which
+added detection for exactly that).
 
 ## Integration with the existing prompt-builder (2.2.0)
 
