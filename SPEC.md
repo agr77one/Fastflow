@@ -115,6 +115,7 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - V53: capture hotkey w/ selection → staged prefill; ⊥ selection → blank composer; stale clipboard ⊥ silent capture
 - V54: note writes + board writes atomic; stale `revision` → conflict, ⊥ overwrite
 - V55: note card/editor controls keyboard reachable; desktop split workspace + ≤720px stacked layout
+- V56: note `due` date-only value renders same calendar day ∀ timezone; ⊥ UTC date shift
 
 ## §T tasks
 
@@ -153,7 +154,7 @@ T28|x|model picker 2.4.1: footprint/MoE sizing + never-hide + active-model healt
 T31|x|Notes schema v2 repository: stable ids, zero-loss migration, CRUD, Trash, indexed query, atomic board store|V7,V48,V49,V50,V51,V52,V54
 T32|x|daemon Notes v2 actions + backward-compatible read/move/delete + staged capture|V1,V2,V3,V7,V48,V50,V53,V54
 T33|x|move vault/categories/extraction/LLM Notes settings → Config single-save; Notes tab config-free|V3,V47
-T34|.|Notes-only card workspace: composer, editor, smart views, filters, tags, archive/Trash, vision board drag/order|V5,V47,V48,V50,V52,V54,V55
+T34|x|Notes-only card workspace: composer, editor, smart views, filters, tags, archive/Trash, vision board drag/order|V5,V47,V48,V50,V52,V54,V55,V56
 T35|.|capture hotkey → Notes quick composer w/ staged selection or blank body|V53
 T36|.|2.5.0 docs/version/migration + full release gates|V18,V20,V47,V48,V49,V50,V51,V52,V53,V54,V55
 ```
@@ -202,4 +203,5 @@ B35|2026-07-27|`flm bench qwen3.6-moe:35b-a3b` died 4s in w/ driver `0xc01e0200`
 B36|2026-07-27|keep-warm thread ⊥ aware of benchmarks: warms/reloads active model on 15min tick during a 10-20min bench ∴ NPU+mem contention mid-run|V42; `ffp_benchmark.is_running()` gate in `_warm_model_once`
 B37|2026-07-27|FLM returns HTTP **200** + `{"error":"Failed to load <model> model!"}`; `_call_openai_compatible`/`ffp_chat` read only `choices` ∴ real cause discarded → "Local LLM returned no usable text"|V43; surface the error body
 B34|2026-07-27|self-caught: `_active_model_health` tested membership vs `_provider_list("all")`; ollama "all" = installed+suggested (`ffp_provider_runtime:80`) ∴ never-pulled model → false `installed=True` (⊥ warn)|V39; trust `details` (unfiltered, authoritative) else re-list w/ `installed` filter
+B41|2026-07-29|Notes due `2026-08-04` parsed as UTC midnight → EDT displayed Aug 3|V56; parse date-only @ local noon
 ```

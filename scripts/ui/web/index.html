@@ -151,34 +151,153 @@
   </section>
 
   <section class="panel" id="tab-notes">
-    <div class="grid">
-      <div class="card card-wide">
-        <h2>Your notes <span class="muted small" id="notes-count"></span></h2>
-        <div class="form-row">
-          <input type="text" id="note-query" placeholder="Search notes… (leave empty to show newest)">
-          <button class="btn" id="note-search-btn">Search</button>
+    <div class="notes-shell">
+      <header class="card notes-toolbar">
+        <div>
+          <p class="eyebrow">Your thinking space</p>
+          <h2>Notes <span class="muted small" id="notes-count"></span></h2>
         </div>
-        <table class="data-table">
-          <thead><tr><th>Title</th><th>Category</th><th id="notes-col3">Modified</th></tr></thead>
-          <tbody id="notes-body"></tbody>
-        </table>
-        <p class="muted small" id="notes-empty" hidden>No notes found.</p>
-        <p class="muted small">Click a note to read it, move it to another bucket, or delete it.</p>
-      </div>
-      <div class="card card-wide note-reader" id="note-reader" hidden>
-        <div class="card-actions reader-head">
-          <h2 id="nr-title" class="nr-title">Note</h2>
-          <button class="btn" id="nr-close" title="Close">✕</button>
+        <div class="notes-toolbar-actions">
+          <input type="search" id="note-query" aria-label="Search notes" placeholder="Search notes, tags, links…">
+          <button class="btn btn-primary" id="note-new" type="button">＋ New note</button>
         </div>
-        <p class="muted small"><a id="nr-source" href="#" target="_blank" rel="noopener" hidden></a></p>
-        <div class="form-row">
-          <label for="nr-bucket">Bucket</label>
-          <select id="nr-bucket"></select>
-          <button class="btn" id="nr-move">Move</button>
-          <button class="btn" id="nr-delete">Delete…</button>
-          <span class="muted small" id="nr-status"></span>
-        </div>
-        <pre class="note-body" id="nr-body"></pre>
+      </header>
+
+      <div class="notes-layout" id="notes-layout">
+        <aside class="card notes-sidebar" aria-label="Notes views">
+          <nav class="notes-view-list" id="notes-view-list">
+            <button class="notes-view-btn active" type="button" data-notes-view="board"><span>◫</span> Vision board</button>
+            <button class="notes-view-btn" type="button" data-notes-view="all"><span>✦</span> All notes</button>
+            <button class="notes-view-btn" type="button" data-notes-view="task"><span>✓</span> Tasks</button>
+            <button class="notes-view-btn" type="button" data-notes-view="idea"><span>◇</span> Ideas</button>
+            <button class="notes-view-btn" type="button" data-notes-view="link"><span>↗</span> Links</button>
+            <button class="notes-view-btn" type="button" data-notes-view="read_later"><span>◷</span> Read later</button>
+            <button class="notes-view-btn" type="button" data-notes-view="pinned"><span>⌖</span> Pinned</button>
+            <button class="notes-view-btn" type="button" data-notes-view="archived"><span>□</span> Archive</button>
+            <button class="notes-view-btn" type="button" data-notes-view="trashed"><span>♲</span> Trash</button>
+          </nav>
+          <div class="notes-facet-block">
+            <h3>Categories</h3>
+            <div id="notes-category-list" class="notes-facet-list"></div>
+          </div>
+          <div class="notes-facet-block">
+            <h3>Tags</h3>
+            <div id="notes-tag-list" class="notes-tag-list"></div>
+          </div>
+        </aside>
+
+        <section class="notes-content" aria-live="polite">
+          <div class="notes-view-head">
+            <div>
+              <p class="eyebrow" id="notes-view-kicker">Arrange what matters</p>
+              <h2 id="notes-view-title">Vision board</h2>
+            </div>
+            <div class="board-add-section" id="board-add-section">
+              <input type="text" id="board-section-title" maxlength="60" aria-label="New board section" placeholder="New section">
+              <button class="btn" id="board-section-add" type="button">Add section</button>
+            </div>
+          </div>
+
+          <div id="notes-board-view">
+            <div class="notes-board" id="notes-board"></div>
+            <div class="notes-unplaced" id="notes-unplaced">
+              <div class="notes-view-head compact">
+                <div>
+                  <p class="eyebrow">Ready when you are</p>
+                  <h3>Unplaced notes</h3>
+                </div>
+              </div>
+              <div class="notes-card-grid" id="notes-unplaced-grid"></div>
+            </div>
+          </div>
+          <div class="notes-card-grid" id="notes-card-grid" hidden></div>
+          <div class="notes-empty card" id="notes-empty" hidden>
+            <span class="notes-empty-icon">✦</span>
+            <h3>Nothing here yet</h3>
+            <p class="muted">Capture a thought, task, idea, or link and it will appear here.</p>
+            <button class="btn btn-primary" id="notes-empty-new" type="button">Create a note</button>
+          </div>
+          <p class="muted small" id="notes-status"></p>
+        </section>
+
+        <aside class="card notes-editor" id="note-editor" hidden aria-label="Note editor">
+          <div class="notes-editor-head">
+            <div>
+              <p class="eyebrow" id="ne-kicker">Quick capture</p>
+              <h2 id="ne-heading">New note</h2>
+            </div>
+            <button class="btn btn-icon" id="ne-close" type="button" aria-label="Close editor">✕</button>
+          </div>
+          <label for="ne-title">Title</label>
+          <input type="text" id="ne-title" maxlength="120" placeholder="What is this about?">
+          <div class="notes-editor-pair">
+            <div>
+              <label for="ne-kind">Type</label>
+              <select id="ne-kind">
+                <option value="note">Note</option>
+                <option value="task">Task</option>
+                <option value="idea">Idea</option>
+                <option value="link">Link</option>
+                <option value="read_later">Read later</option>
+              </select>
+            </div>
+            <div>
+              <label for="ne-status-select">Status</label>
+              <select id="ne-status-select">
+                <option value="active">Active</option>
+                <option value="done">Done</option>
+                <option value="archived">Archived</option>
+              </select>
+            </div>
+          </div>
+          <label for="ne-body">Note</label>
+          <textarea id="ne-body" rows="12" placeholder="Write anything…"></textarea>
+          <div class="notes-editor-pair">
+            <div>
+              <label for="ne-category">Category</label>
+              <select id="ne-category"></select>
+            </div>
+            <div>
+              <label for="ne-color">Color</label>
+              <select id="ne-color">
+                <option value="yellow">Sunlight</option>
+                <option value="peach">Peach</option>
+                <option value="pink">Rose</option>
+                <option value="violet">Violet</option>
+                <option value="blue">Sky</option>
+                <option value="mint">Mint</option>
+                <option value="slate">Slate</option>
+              </select>
+            </div>
+          </div>
+          <label for="ne-tags">Tags</label>
+          <input type="text" id="ne-tags" placeholder="release, research, personal">
+          <div class="notes-editor-pair">
+            <div>
+              <label for="ne-due">Due</label>
+              <input type="date" id="ne-due">
+            </div>
+            <div>
+              <label for="ne-source">Source link</label>
+              <input type="url" id="ne-source" placeholder="https://…">
+            </div>
+          </div>
+          <label class="check-row"><input type="checkbox" id="ne-pinned"> Pin this note</label>
+          <label class="check-row"><input type="checkbox" id="ne-on-board"> Show on Vision Board</label>
+          <div class="form-row" id="ne-board-row">
+            <label for="ne-board-section">Section</label>
+            <select id="ne-board-section"></select>
+          </div>
+          <p class="notes-ai-summary" id="ne-summary" hidden></p>
+          <div class="notes-editor-actions">
+            <button class="btn btn-primary" id="ne-save" type="button">Save note</button>
+            <button class="btn" id="ne-archive" type="button">Archive</button>
+            <button class="btn" id="ne-restore" type="button" hidden>Restore</button>
+            <button class="btn btn-danger" id="ne-trash" type="button">Move to Trash</button>
+            <button class="btn btn-danger" id="ne-delete" type="button" hidden>Delete forever…</button>
+          </div>
+          <p class="muted small" id="ne-status"></p>
+        </aside>
       </div>
     </div>
   </section>

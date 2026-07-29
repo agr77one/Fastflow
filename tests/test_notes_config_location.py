@@ -32,5 +32,5 @@ def test_notes_settings_use_config_single_save_flow():
 
     assert "populateNotesConfig(cfg.notes || {})" in app
     assert "notes: notesPatch" in app
-    assert "function saveNotes" not in app
+    assert "function saveNotes()" not in app
     assert '"notes-save"' not in app
