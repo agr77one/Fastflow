@@ -17,7 +17,7 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - LLM: FastFlowLM NPU @ `:52625` | Ollama @ `:11434`, OpenAI-compat `POST /v1/chat/completions`
 - dashboard: daemon-served `scripts/ui/web/{index.html,app.js,styles.css}`, CSP `default-src 'self'`
 - paths: `scripts/paths.py` → USER_ROOT/{config,data,logs}; `_version.py` = version src of truth
-- version: `2.4.3`; target `2.5.0` = living Notes workspace + vision board; repo `agr77one/Fastflow`
+- version: `2.5.0` = living Notes workspace + vision board; repo `agr77one/Fastflow`
 - run tree = `flowkey-pub2` (worktree, branch `live`=origin/main). old `FastFlowPrompt_Local_Setup`=1.5.0 stale.
 
 ## §I interfaces
@@ -56,7 +56,7 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - data: `data/{meeting_digests,meeting_action_status,meeting_skips,notifications,chat_threads}.jsonl`
 - autostart: HKCU Run `FastFlowPrompt` → bundled `AutoHotkey64.exe` + `grammarFix.ahk`; `FlowkeyGitSync` → `sync.ps1`
 - sched: Windows task `FlowkeyGitSync` daily 12:00 → `sync.ps1` (ff-only pull, guarded)
-- ACTIONS count = 75
+- ACTIONS count = 85
 
 ## §V invariants
 
@@ -156,7 +156,7 @@ T32|x|daemon Notes v2 actions + backward-compatible read/move/delete + staged ca
 T33|x|move vault/categories/extraction/LLM Notes settings → Config single-save; Notes tab config-free|V3,V47
 T34|x|Notes-only card workspace: composer, editor, smart views, filters, tags, archive/Trash, vision board drag/order|V5,V47,V48,V50,V52,V54,V55,V56
 T35|x|capture hotkey → Notes quick composer w/ staged selection or blank body|V53
-T36|.|2.5.0 docs/version/migration + full release gates|V18,V20,V47,V48,V49,V50,V51,V52,V53,V54,V55
+T36|x|2.5.0 docs/version/migration + full release gates|V18,V20,V47,V48,V49,V50,V51,V52,V53,V54,V55
 ```
 
 ## §B bugs
