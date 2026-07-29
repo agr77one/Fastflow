@@ -180,36 +180,6 @@
         </div>
         <pre class="note-body" id="nr-body"></pre>
       </div>
-      <div class="card card-wide">
-        <h2>Vault</h2>
-        <div class="form-row">
-          <label for="notes-vault">Vault directory</label>
-          <input type="text" id="notes-vault">
-        </div>
-      </div>
-      <div class="card card-wide">
-        <h2>Categories <span class="muted small">(one per line — the LLM picks from this list)</span></h2>
-        <textarea id="notes-categories" rows="7" spellcheck="false"></textarea>
-      </div>
-      <div class="card card-wide">
-        <h2>LLM behavior</h2>
-        <div class="form-row">
-          <label for="notes-fetch-timeout">Fetch timeout (s)</label>
-          <input type="number" id="notes-fetch-timeout" min="1" max="120">
-        </div>
-        <div class="form-row">
-          <label for="notes-max-chars">Max extracted chars</label>
-          <input type="number" id="notes-max-chars" min="100" max="100000">
-        </div>
-        <label class="check-row"><input type="checkbox" id="notes-low-conf"> Low-confidence categorizations stay in inbox/ instead of being auto-filed</label>
-        <label class="check-row"><input type="checkbox" id="notes-gen-title"> Generate title via LLM</label>
-        <label class="check-row"><input type="checkbox" id="notes-gen-summary"> Generate summary via LLM</label>
-      </div>
-      <div class="card-actions card-wide">
-        <button class="btn btn-primary" id="notes-save">Save notes settings</button>
-        <button class="btn" id="notes-revert">Revert</button>
-        <span class="muted" id="notes-status"></span>
-      </div>
     </div>
   </section>
 
@@ -291,6 +261,30 @@
         <div class="form-row"><label for="hk-in-note">Capture Note</label><input type="text" id="hk-in-note" class="mono"></div>
         <div class="form-row"><label for="hk-in-ask">Ask in Chat</label><input type="text" id="hk-in-ask" class="mono"></div>
         <p class="muted small">Saving applies to the running app within a second (no restart).</p>
+      </div>
+      <div class="card card-wide" id="config-notes">
+        <h2>Notes &amp; capture</h2>
+        <p class="muted small">Storage, organization, and optional local-model enrichment for the Notes workspace.</p>
+        <h3 class="subhead">Storage</h3>
+        <div class="form-row">
+          <label for="notes-vault">Vault directory</label>
+          <input type="text" id="notes-vault">
+        </div>
+        <h3 class="subhead">Organization</h3>
+        <label for="notes-categories">Categories <span class="muted small">(one per line)</span></label>
+        <textarea id="notes-categories" rows="6" spellcheck="false"></textarea>
+        <h3 class="subhead">Link extraction &amp; enrichment</h3>
+        <div class="form-row">
+          <label for="notes-fetch-timeout">Fetch timeout (s)</label>
+          <input type="number" id="notes-fetch-timeout" min="1" max="120">
+        </div>
+        <div class="form-row">
+          <label for="notes-max-chars">Max extracted chars</label>
+          <input type="number" id="notes-max-chars" min="100" max="100000">
+        </div>
+        <label class="check-row"><input type="checkbox" id="notes-low-conf"> Keep low-confidence categorizations in Inbox</label>
+        <label class="check-row"><input type="checkbox" id="notes-gen-title"> Suggest titles with the local model</label>
+        <label class="check-row"><input type="checkbox" id="notes-gen-summary"> Generate summaries with the local model</label>
       </div>
       <div class="card">
         <h2>LLM provider &amp; server</h2>

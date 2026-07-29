@@ -669,47 +669,35 @@ async function loadNotes() {
   browseNotes();
   try {
     const cfg = await action("config_snapshot");
-    const notes = cfg.notes || {};
-    notesCategories = notes.categories || [];
-    $("notes-vault").value = notes.vault_dir || "";
-    $("notes-categories").value = (notes.categories || []).join("\n");
-    $("notes-fetch-timeout").value = notes.fetch_timeout_seconds ?? 8;
-    $("notes-max-chars").value = notes.max_extracted_chars ?? 2000;
-    $("notes-low-conf").checked = notes.low_confidence_to_inbox !== false;
-    $("notes-gen-title").checked = notes.generate_title !== false;
-    $("notes-gen-summary").checked = notes.generate_summary !== false;
-    setStatus("notes-status", "");
-  } catch (e) {
-    setStatus("notes-status", `Load failed: ${e.message}`, false);
-  }
+    notesCategories = (cfg.notes || {}).categories || [];
+  } catch (_e) {}
 }
 
-async function saveNotes() {
+function populateNotesConfig(notes) {
+  const cfg = notes || {};
+  $("notes-vault").value = cfg.vault_dir || "";
+  $("notes-categories").value = (cfg.categories || []).join("\n");
+  $("notes-fetch-timeout").value = cfg.fetch_timeout_seconds ?? 8;
+  $("notes-max-chars").value = cfg.max_extracted_chars ?? 2000;
+  $("notes-low-conf").checked = cfg.low_confidence_to_inbox !== false;
+  $("notes-gen-title").checked = cfg.generate_title !== false;
+  $("notes-gen-summary").checked = cfg.generate_summary !== false;
+}
+
+function notesConfigPatch() {
   const categories = $("notes-categories").value
     .split("\n")
     .map((line) => line.trim().replace(/^\/+|\/+$/g, ""))
     .filter(Boolean);
-  if (categories.length === 0) {
-    setStatus("notes-status", "⚠ Category list cannot be empty.", false);
-    return;
-  }
-  const patch = {
-    notes: {
-      vault_dir: $("notes-vault").value.trim(),
-      categories,
-      fetch_timeout_seconds: Number($("notes-fetch-timeout").value) || 8,
-      max_extracted_chars: Number($("notes-max-chars").value) || 2000,
-      low_confidence_to_inbox: $("notes-low-conf").checked,
-      generate_title: $("notes-gen-title").checked,
-      generate_summary: $("notes-gen-summary").checked,
-    },
+  return {
+    vault_dir: $("notes-vault").value.trim(),
+    categories,
+    fetch_timeout_seconds: Number($("notes-fetch-timeout").value) || 8,
+    max_extracted_chars: Number($("notes-max-chars").value) || 2000,
+    low_confidence_to_inbox: $("notes-low-conf").checked,
+    generate_title: $("notes-gen-title").checked,
+    generate_summary: $("notes-gen-summary").checked,
   };
-  try {
-    const out = await action("apply_config_patch", { patch });
-    setStatus("notes-status", `✅ Saved (${out}).`);
-  } catch (e) {
-    setStatus("notes-status", `⚠ Save failed: ${e.message}`, false);
-  }
 }
 
 // ---- Config ----------------------------------------------------------------
@@ -884,6 +872,7 @@ async function loadConfig() {
     populatePromptBuilder(cfg.prompt_builder || {});
     const tone = (cfg.tone || {}).preset || "formal";
     document.querySelectorAll('input[name="tone"]').forEach((r) => (r.checked = r.value === tone));
+    populateNotesConfig(cfg.notes || {});
     populateNotifications(cfg.notifications || {});
     populateMeetings(cfg.meetings || {});
     setStatus("config-status", "");
@@ -1195,6 +1184,11 @@ async function loadFlmVersion(force) {
 }
 
 async function saveConfig() {
+  const notesPatch = notesConfigPatch();
+  if (notesPatch.categories.length === 0) {
+    setStatus("config-status", "⚠ Notes categories cannot be empty.", false);
+    return;
+  }
   const hotkeys = {
     grammar_fix: $("hk-in-grammar").value.trim(),
     open_chat: $("hk-in-chat").value.trim(),
@@ -1240,6 +1234,7 @@ async function saveConfig() {
     prompt_builder: promptBuilderPatch(),
     modes: { tone: { preset: tone ? tone.value : "formal" } },
     hotkeys,
+    notes: notesPatch,
     notifications: notificationsPatch(),
     meetings: meetingsPatch(),
   };
@@ -2036,8 +2031,6 @@ document.addEventListener("DOMContentLoaded", () => {
   $("note-query").addEventListener("keydown", (e) => {
     if (e.key === "Enter") browseNotes();
   });
-  $("notes-save").addEventListener("click", saveNotes);
-  $("notes-revert").addEventListener("click", loadNotes);
   $("nr-move").addEventListener("click", moveNoteToBucket);
   $("nr-delete").addEventListener("click", deleteCurrentNote);
   $("nr-close").addEventListener("click", () => { $("note-reader").hidden = true; });
