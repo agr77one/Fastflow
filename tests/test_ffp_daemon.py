@@ -76,11 +76,15 @@ def test_actions_count_and_expected_names(daemon_module):
     # meeting_digests_list/meeting_process/meeting_batch_run/meeting_batch_status/
     # meeting_ask -> 69; meeting_overview -> 70; meeting_actions_list /
     # meeting_action_set_status / meeting_week_summary -> 73; meeting_redigest
-    # (strict re-run of a digest) -> 74; prompt_builder_preview -> 75.
-    assert len(daemon_module.ACTIONS) == 75
+    # (strict re-run of a digest) -> 74; prompt_builder_preview -> 75;
+    # Notes v2 query/CRUD/Trash/board/staging adds 10 -> 85.
+    assert len(daemon_module.ACTIONS) == 85
     for a in ("chat_threads_list", "chat_thread_get", "chat_send",
               "chat_thread_delete", "chat_stage_selection", "chat_take_staged",
-              "note_get", "note_move", "note_delete",
+              "note_get", "note_move", "note_delete", "notes_query",
+              "note_create", "note_update", "note_archive", "note_trash",
+              "note_restore", "notes_board_get", "notes_board_save",
+              "note_stage_capture", "note_take_staged",
               "notify_gate", "notifications_log",
               "quill_status", "quill_search_meetings", "meeting_digest_get",
               "meeting_digests_list", "meeting_process", "meeting_batch_run",

@@ -151,7 +151,7 @@ T30|x|clarify shape for underspecified requests + typo/article normalization + R
 T29|x|bench memory guard + keep-warm/bench mutual exclusion + provider-error surfacing (2.4.2)|V41,V42,V43
 T28|x|model picker 2.4.1: footprint/MoE sizing + never-hide + active-model health + merged single Models card + app-styled combobox|V38,V39,V40
 T31|x|Notes schema v2 repository: stable ids, zero-loss migration, CRUD, Trash, indexed query, atomic board store|V7,V48,V49,V50,V51,V52,V54
-T32|.|daemon Notes v2 actions + backward-compatible read/move/delete + staged capture|V1,V2,V3,V7,V48,V50,V53,V54
+T32|x|daemon Notes v2 actions + backward-compatible read/move/delete + staged capture|V1,V2,V3,V7,V48,V50,V53,V54
 T33|.|move vault/categories/extraction/LLM Notes settings → Config single-save; Notes tab config-free|V3,V47
 T34|.|Notes-only card workspace: composer, editor, smart views, filters, tags, archive/Trash, vision board drag/order|V5,V47,V48,V50,V52,V54,V55
 T35|.|capture hotkey → Notes quick composer w/ staged selection or blank body|V53
