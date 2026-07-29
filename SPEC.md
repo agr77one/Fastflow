@@ -155,7 +155,7 @@ T31|x|Notes schema v2 repository: stable ids, zero-loss migration, CRUD, Trash, 
 T32|x|daemon Notes v2 actions + backward-compatible read/move/delete + staged capture|V1,V2,V3,V7,V48,V50,V53,V54
 T33|x|move vault/categories/extraction/LLM Notes settings → Config single-save; Notes tab config-free|V3,V47
 T34|x|Notes-only card workspace: composer, editor, smart views, filters, tags, archive/Trash, vision board drag/order|V5,V47,V48,V50,V52,V54,V55,V56
-T35|.|capture hotkey → Notes quick composer w/ staged selection or blank body|V53
+T35|x|capture hotkey → Notes quick composer w/ staged selection or blank body|V53
 T36|.|2.5.0 docs/version/migration + full release gates|V18,V20,V47,V48,V49,V50,V51,V52,V53,V54,V55
 ```
 

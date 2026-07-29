@@ -2,6 +2,39 @@
 ; clipboard.ahk — shared selection/clipboard capture for hotkey actions.
 ; ===========================================================================
 
+; Capture only text copied by a fresh synthetic Ctrl+C. This deliberately
+; never falls back to the clipboard's prior text: note capture uses it so a
+; blank selection opens a blank composer instead of silently saving something
+; the user copied earlier. The user's clipboard is restored on every path.
+CaptureSelectedText(&capturedText, &captureSource) {
+    clipSaved := ""
+    try {
+        clipSaved := ClipboardAll()
+        A_Clipboard := ""
+    } catch {
+        capturedText := ""
+        captureSource := "clipboard_busy"
+        return false
+    }
+
+    fromSelection := ""
+    try {
+        Send("^c")
+        if ClipWait(1) {
+            try
+                fromSelection := A_Clipboard
+            catch
+                fromSelection := ""
+        }
+    } finally {
+        RestoreClipboard(clipSaved)
+    }
+
+    capturedText := fromSelection
+    captureSource := (fromSelection != "") ? "selection" : "none"
+    return (fromSelection != "")
+}
+
 ; Returns true when text was captured. Sets capturedText and captureSource
 ; ("selection" or "clipboard"). Restores the user's clipboard on all paths —
 ; including exceptions mid-capture — and retries the restore briefly because

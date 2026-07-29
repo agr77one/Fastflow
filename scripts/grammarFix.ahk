@@ -449,19 +449,9 @@ ShutdownFlowkeyChildren(ExitReason := "", ExitCode := "") {
 ; ----------------------------------------------------------------------------
 ; Note capture (Ctrl+Alt+N).
 ;
-; Capture strategy (in order):
-;   1. Save the existing clipboard contents (so we can restore them and use
-;      them as a fallback).
-;   2. Try Send("^c") to copy whatever's currently selected. Some apps eat
-;      this synthetic Ctrl+C (web inputs, PDF viewers, Citrix sessions);
-;      that's an acceptable failure mode.
-;   3. If the fresh copy produced text → use it. Otherwise fall back to the
-;      clipboard contents from step 1 (lets the user copy manually first,
-;      then press Ctrl+Alt+N).
-;   4. If both are empty → toast and bail.
-;
-; Daemon writes an inbox stub instantly; LLM categorization happens in a
-; background thread and posts a follow-up toast with the final category.
+; A fresh selection is staged for the Notes quick composer. With no selection,
+; the composer still opens blank. The user's previous clipboard is never used
+; as note content, so pressing the hotkey cannot save stale text by accident.
 ; ----------------------------------------------------------------------------
 
 CaptureNote() {
@@ -477,31 +467,29 @@ CaptureNote() {
 CaptureNoteImpl() {
     captured := ""
     source := ""
-    if !CaptureTextFromSelectionOrClipboard(&captured, &source) {
-        if (source = "clipboard_busy")
-            Notify("Flowkey", "📝 Note capture: clipboard busy — try again in a moment.")
-        else
-            Notify("Flowkey", "📝 Note capture: nothing to save (no selection, clipboard empty). Copy text first, then press Ctrl+Alt+N.")
-        return
-    }
+    selectionFound := CaptureSelectedText(&captured, &source)
 
-    ; Best-effort source app (for the YAML frontmatter only).
+    ; Best-effort source app for composer context.
     sourceApp := ""
     try sourceApp := WinGetProcessName("A")
     catch
         sourceApp := ""
 
     body := '{"args":{"text":"' EscapeJson(captured)
-        . '","source_app":"' EscapeJson(sourceApp)
-        . '","url":""}}'
-    result := RunActionViaDaemon("save_note", body)
+        . '","source_app":"' EscapeJson(sourceApp) '"}}'
+    result := RunActionViaDaemon("note_stage_capture", body)
     if (result = "") {
         Notify("Flowkey", "📝 Note capture: daemon unavailable.")
         return
     }
-    ; Daemon shows the final "Saved to inbox/<category>" toast itself once
-    ; the background categorize thread finishes. This is just the AHK ack.
-    Notify("Flowkey", "📝 Note saved from " source " (" StrLen(captured) " chars) — categorizing…")
+
+    OpenWebDashboard("notes")
+    if selectionFound
+        Notify("Flowkey", "📝 Selection ready in Notes (" StrLen(captured) " chars).")
+    else if (source = "clipboard_busy")
+        Notify("Flowkey", "📝 Clipboard busy — opened a blank note.")
+    else
+        Notify("Flowkey", "📝 Blank note ready.")
 }
 
 ; ----------------------------------------------------------------------------
