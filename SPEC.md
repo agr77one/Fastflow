@@ -17,7 +17,7 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - LLM: FastFlowLM NPU @ `:52625` | Ollama @ `:11434`, OpenAI-compat `POST /v1/chat/completions`
 - dashboard: daemon-served `scripts/ui/web/{index.html,app.js,styles.css}`, CSP `default-src 'self'`
 - paths: `scripts/paths.py` → USER_ROOT/{config,data,logs}; `_version.py` = version src of truth
-- version: `2.3.0` (prompt-v2 speed+quality release); `2.2.0` released (`v2.2.0` on `25b8794`); repo `agr77one/Fastflow`
+- version: `2.4.3`; target `2.5.0` = living Notes workspace + vision board; repo `agr77one/Fastflow`
 - run tree = `flowkey-pub2` (worktree, branch `live`=origin/main). old `FastFlowPrompt_Local_Setup`=1.5.0 stale.
 
 ## §I interfaces
@@ -26,6 +26,14 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - api: `POST /action/<name>` ! header `X-FFP-API: 1` → 200 `{ok,result,error,elapsed_ms}`
 - api: `GET /` → dashboard; `GET /healthz` → `{ok,version,api,actions}`
 - action: `config_snapshot` → full cfg; `apply_config_patch {patch}` → merge (whitelist `filter_config_patch`)
+- action: `notes_query {query?,kind?,status?,category?,tag?,sort?,limit?,offset?}` → `{results,count,facets}`
+- action: `note_create {title?,body?,kind?,category?,tags?,color?,due?,source?}` → note
+- action: `note_update {note_id,revision,patch}` → note | conflict
+- action: `note_trash {note_id}` / `note_restore {note_id}` → note; `note_delete {note_id,permanent:true}` → deleted
+- action: `notes_board_get` → `{board,placements}`; `notes_board_save {revision,board}` → board | conflict
+- action: `note_stage_capture {text?,source_app?}` / `note_take_staged` → quick-capture payload
+- data: note Markdown frontmatter schema v2 → stable `note_id`, `kind`, `status`, `tags`, `color`, `pinned`, `due`, `created`, `updated`, `revision`
+- data: `<vault>/.flowkey/board.json` → board sections + placements keyed by `note_id`
 - action: `recent_history {limit?}` → newest history rows; `input_text`/`output_text` iff stored @ write-time
 - action: `prompt_builder_preview {settings?,sample?}` → deterministic local preview (`⊥` LLM call)
 - config: `prompt_builder.prompt_version` ∈ {`v1`,`v2`}; default `v2`; v1 = instant rollback
@@ -98,6 +106,15 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - V45: surfaced v2 text → article agreement + fixed typo map normalized (∵ render copies user wording verbatim); ⊥ meaning change
 - V46: A/B rubric = 8 items; R8 = ⊥ section restates `<task>` (coverage-of-task ≥ 0.8), boilerplate-excluded set-wise on constraints; R8 false ⇒ disqualifying ∀ other scores; gate pass ≥ 7/8 ∧ R8 ∧ ⊥ invented
 - V40: model picker + installed list = app-styled elements (⊥ native `<datalist>`/`<select size>`, ∵ browser chrome ignores page CSS); theme-aware + keyboard-navigable (↑↓/Enter/Esc)
+- V47: Notes tab = notes + organization only; note config controls ∈ Config tab
+- V48: ∀ note API/UI identity = stable `note_id`; file move/rename ⊥ identity change
+- V49: AI enrichment ? fill blank/generated metadata; user-authored body/title ⊥ overwrite
+- V50: default remove → Trash, recoverable; permanent delete ! explicit Trash action + confirm
+- V51: v1 Markdown → schema v2 migration preserves body + unknown frontmatter + source path; migration backup ∃ before rewrite
+- V52: board placement references `note_id`; remove placement ⊥ delete/mutate note
+- V53: capture hotkey w/ selection → staged prefill; ⊥ selection → blank composer; stale clipboard ⊥ silent capture
+- V54: note writes + board writes atomic; stale `revision` → conflict, ⊥ overwrite
+- V55: note card/editor controls keyboard reachable; desktop split workspace + ≤720px stacked layout
 
 ## §T tasks
 
@@ -133,6 +150,12 @@ T27|x|streaming Chat tab (SSE): `ffp_chat.stream_send` + daemon `_STREAM_ACTIONS
 T30|x|clarify shape for underspecified requests + typo/article normalization + R8 echo gate + reported input in fixed set (2.4.3)|V44,V45,V46
 T29|x|bench memory guard + keep-warm/bench mutual exclusion + provider-error surfacing (2.4.2)|V41,V42,V43
 T28|x|model picker 2.4.1: footprint/MoE sizing + never-hide + active-model health + merged single Models card + app-styled combobox|V38,V39,V40
+T31|x|Notes schema v2 repository: stable ids, zero-loss migration, CRUD, Trash, indexed query, atomic board store|V7,V48,V49,V50,V51,V52,V54
+T32|.|daemon Notes v2 actions + backward-compatible read/move/delete + staged capture|V1,V2,V3,V7,V48,V50,V53,V54
+T33|.|move vault/categories/extraction/LLM Notes settings → Config single-save; Notes tab config-free|V3,V47
+T34|.|Notes-only card workspace: composer, editor, smart views, filters, tags, archive/Trash, vision board drag/order|V5,V47,V48,V50,V52,V54,V55
+T35|.|capture hotkey → Notes quick composer w/ staged selection or blank body|V53
+T36|.|2.5.0 docs/version/migration + full release gates|V18,V20,V47,V48,V49,V50,V51,V52,V53,V54,V55
 ```
 
 ## §B bugs
