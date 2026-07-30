@@ -214,4 +214,5 @@ B37|2026-07-27|FLM returns HTTP **200** + `{"error":"Failed to load <model> mode
 B34|2026-07-27|self-caught: `_active_model_health` tested membership vs `_provider_list("all")`; ollama "all" = installed+suggested (`ffp_provider_runtime:80`) ∴ never-pulled model → false `installed=True` (⊥ warn)|V39; trust `details` (unfiltered, authoritative) else re-list w/ `installed` filter
 B41|2026-07-29|Notes due `2026-08-04` parsed as UTC midnight → EDT displayed Aug 3|V56; parse date-only @ local noon
 B42|2026-07-29|Quill `get_transcript` sent `id`; live schema requires `meeting_id`+`include_private_notes`; `call_tool` ignored `isError` ∴ 133-char validation error fed to LLM + cached as digest|V57
+B43|2026-07-29|`fresh_modules` teardown popped `notes` after test collection; later daemon-action tests patched a stale module while action-local `import notes` resolved a new module ∴ tests touched the real vault + became order-dependent|rebind `sys.modules["notes"]` to the isolated test module; V20 full-suite gate
 ```

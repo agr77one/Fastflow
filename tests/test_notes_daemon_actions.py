@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import sys
+
 import ffp_daemon
 import notes
 import pytest
@@ -7,6 +9,10 @@ import pytest
 
 @pytest.fixture
 def vault(tmp_path, monkeypatch):
+    # `fresh_modules` tests intentionally pop/reimport modules. Pytest imports
+    # this file during collection, so keep action-local `import notes` calls
+    # bound to the same isolated module object this fixture patches.
+    monkeypatch.setitem(sys.modules, "notes", notes)
     monkeypatch.setattr(notes, "_vault_dir", lambda: tmp_path / "vault")
     notes._invalidate_index()
     return tmp_path / "vault"
