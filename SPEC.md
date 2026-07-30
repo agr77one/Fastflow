@@ -29,6 +29,7 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - action: `notes_query {query?,kind?,status?,category?,tag?,sort?,limit?,offset?}` → `{results,count,facets}`
 - action: `note_create {title?,body?,kind?,category?,tags?,color?,due?,source?}` → note
 - action: `note_update {note_id,revision,patch}` → note | conflict
+- action: `note_organize {note_id,revision?}` → note; local LLM may update category/suggested metadata only
 - action: `note_trash {note_id}` / `note_restore {note_id}` → note; `note_delete {note_id,permanent:true}` → deleted
 - action: `notes_board_get` → `{board,placements}`; `notes_board_save {revision,board}` → board | conflict
 - action: `note_stage_capture {text?,source_app?}` / `note_take_staged` → quick-capture payload
@@ -51,12 +52,12 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - action: `meeting_actions_list {range:week|month}` → `{range,items:[{id,text,owner,status,...}],counts}`
 - action: `meeting_action_set_status {id,status:pending|accepted|rejected}` → `{ok}`
 - action: `meeting_week_summary {week_offset}` → `{ok,week_label,meeting_count,summary}`
-- mcp: Quill @ `http://127.0.0.1:19532/mcp` — Streamable-HTTP, SSE `data:`, `Mcp-Session-Id` header; init→notifications/initialized→tools/call
+- mcp: Quill @ `http://127.0.0.1:19532/mcp` — Streamable-HTTP, SSE `data:`, `Mcp-Session-Id` header; init→notifications/initialized→tools/call; `get_transcript {meeting_id,include_private_notes:true}`; tool `isError` → typed failure
 - cmd: `flm serve <model> --pmode turbo --host 127.0.0.1 --port 52625`
 - data: `data/{meeting_digests,meeting_action_status,meeting_skips,notifications,chat_threads}.jsonl`
 - autostart: HKCU Run `FastFlowPrompt` → bundled `AutoHotkey64.exe` + `grammarFix.ahk`; `FlowkeyGitSync` → `sync.ps1`
 - sched: Windows task `FlowkeyGitSync` daily 12:00 → `sync.ps1` (ff-only pull, guarded)
-- ACTIONS count = 85
+- ACTIONS count = 86
 
 ## §V invariants
 
@@ -116,6 +117,10 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - V54: note writes + board writes atomic; stale `revision` → conflict, ⊥ overwrite
 - V55: note card/editor controls keyboard reachable; desktop split workspace + ≤720px stacked layout
 - V56: note `due` date-only value renders same calendar day ∀ timezone; ⊥ UTC date shift
+- V57: Quill transcript call matches discovered schema (`meeting_id` + `include_private_notes`); MCP JSON-RPC/tool `isError` ∨ validation payload → typed failure, ⊥ LLM input/cache; poisoned legacy digest → ⊥ idempotency hit, eligible reprocess
+- V58: model-created note category accepted ⟺ config opt-in ∧ `is_new` ∧ high confidence ∧ safe normalized ≤2-segment slug; accepted category atomically deduped+sorted into cfg; otherwise Inbox + suggestion; V49 holds
+- V59: Config → keyboard-accessible section nav + collapsible groups + one selected section visible + sticky Save/Revert; view state local-only persisted; ≤720px responsive
+- V60: future Activity workspace may join Telemetry+History + explicit `Save as note`; Notes remains authored knowledge; V6,V25,V26 hold
 
 ## §T tasks
 
@@ -157,6 +162,10 @@ T33|x|move vault/categories/extraction/LLM Notes settings → Config single-save
 T34|x|Notes-only card workspace: composer, editor, smart views, filters, tags, archive/Trash, vision board drag/order|V5,V47,V48,V50,V52,V54,V55,V56
 T35|x|capture hotkey → Notes quick composer w/ staged selection or blank body|V53
 T36|x|2.5.0 docs/version/migration + full release gates|V18,V20,V47,V48,V49,V50,V51,V52,V53,V54,V55
+T37|x|repair Quill transcript schema/error handling + poison-cache retry + re-digest latest|V12,V14,V20,V23,V57
+T38|.|guarded local-model category creation + sorted category manager + note organize action|V3,V7,V20,V49,V58
+T39|.|compact Config section navigation + collapsible cards + sticky save|V5,V20,V55,V59
+T40|.|Activity workspace: merge Telemetry+History, card/detail UI, explicit Save as note|V5,V6,V25,V26,V60
 ```
 
 ## §B bugs
@@ -204,4 +213,5 @@ B36|2026-07-27|keep-warm thread ⊥ aware of benchmarks: warms/reloads active mo
 B37|2026-07-27|FLM returns HTTP **200** + `{"error":"Failed to load <model> model!"}`; `_call_openai_compatible`/`ffp_chat` read only `choices` ∴ real cause discarded → "Local LLM returned no usable text"|V43; surface the error body
 B34|2026-07-27|self-caught: `_active_model_health` tested membership vs `_provider_list("all")`; ollama "all" = installed+suggested (`ffp_provider_runtime:80`) ∴ never-pulled model → false `installed=True` (⊥ warn)|V39; trust `details` (unfiltered, authoritative) else re-list w/ `installed` filter
 B41|2026-07-29|Notes due `2026-08-04` parsed as UTC midnight → EDT displayed Aug 3|V56; parse date-only @ local noon
+B42|2026-07-29|Quill `get_transcript` sent `id`; live schema requires `meeting_id`+`include_private_notes`; `call_tool` ignored `isError` ∴ 133-char validation error fed to LLM + cached as digest|V57
 ```

@@ -26,6 +26,15 @@ DEFAULT_MCP_URL = "http://127.0.0.1:19532/mcp"
 PROTOCOL_VERSION = "2025-06-18"
 
 
+class QuillToolError(RuntimeError):
+    """Quill accepted the MCP request but rejected the tool invocation."""
+
+    def __init__(self, tool: str, message: str):
+        self.tool = str(tool or "")
+        self.message = str(message or "unknown Quill tool error").strip()
+        super().__init__(f"{self.tool}: {self.message}")
+
+
 def _parse_sse(body: str) -> list[dict]:
     """Extract JSON objects from SSE ``data:`` lines (Quill replies as SSE)."""
     out: list[dict] = []
@@ -93,7 +102,7 @@ class QuillClient:
             return False
 
     def call_tool(self, name: str, arguments: dict) -> str:
-        """Call an MCP tool, return its text content ('' on error/empty)."""
+        """Call an MCP tool; transport failures stay soft, tool failures do not."""
         if not self.session_id and not self.connect():
             return ""
         try:
@@ -101,8 +110,21 @@ class QuillClient:
         except Exception as exc:
             log.warning("Quill tool %s failed: %s", name, exc)
             return ""
-        content = ((res or {}).get("result") or {}).get("content") or []
-        return "\n".join(c.get("text", "") for c in content if isinstance(c, dict) and c.get("type") == "text")
+        response = res or {}
+        if response.get("error"):
+            error = response["error"]
+            message = error.get("message") if isinstance(error, dict) else str(error)
+            raise QuillToolError(name, message or "JSON-RPC error")
+        result = response.get("result") or {}
+        content = result.get("content") or []
+        text = "\n".join(
+            c.get("text", "")
+            for c in content
+            if isinstance(c, dict) and c.get("type") == "text"
+        )
+        if result.get("isError") or _is_validation_error_text(text):
+            raise QuillToolError(name, _tool_error_message(text))
+        return text
 
 
 # ---------- parsing helpers (Quill's XML-ish tool output -> dicts) --------------------
@@ -110,6 +132,28 @@ class QuillClient:
 _MEETING_RE = re.compile(r"<meeting\b([^>]*)>(.*?)</meeting>", re.DOTALL)
 _ATTR_RE = re.compile(r'(\w+)="([^"]*)"')
 _TITLE_RE = re.compile(r"<title>(.*?)</title>", re.DOTALL)
+
+
+def _is_validation_error_text(text: str) -> bool:
+    value = str(text or "").strip().lower()
+    return value.startswith("error:") and (
+        "validation_error" in value
+        or "invalid input parameter" in value
+        or '"invalid input"' in value
+    )
+
+
+def _tool_error_message(text: str) -> str:
+    value = str(text or "").strip()
+    if value.lower().startswith("error:"):
+        value = value[6:].strip()
+    try:
+        payload = json.loads(value)
+    except (json.JSONDecodeError, TypeError):
+        return value or "Quill tool returned an error"
+    if isinstance(payload, dict):
+        return str(payload.get("message") or payload.get("code") or value)
+    return value or "Quill tool returned an error"
 
 
 def _parse_meetings(text: str) -> list[dict]:
@@ -181,4 +225,7 @@ def get_minutes(meeting_id: str, *, url: str = DEFAULT_MCP_URL, client: QuillCli
 
 def get_transcript(meeting_id: str, *, url: str = DEFAULT_MCP_URL, client: QuillClient | None = None) -> str:
     c = client or QuillClient(url)
-    return clean_text(c.call_tool("get_transcript", {"id": meeting_id}))
+    return clean_text(c.call_tool(
+        "get_transcript",
+        {"meeting_id": meeting_id, "include_private_notes": True},
+    ))

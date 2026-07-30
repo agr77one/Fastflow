@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ffp_quill
+import pytest
 
 
 def test_parse_meetings():
@@ -47,3 +48,67 @@ def test_parse_sse():
     )
     objs = ffp_quill._parse_sse(body)
     assert objs == [{"result": {"ok": True}, "id": 1}]
+
+
+def test_call_tool_raises_typed_error_for_mcp_is_error(monkeypatch):
+    client = ffp_quill.QuillClient()
+    client.session_id = "test"
+    monkeypatch.setattr(
+        client,
+        "_post",
+        lambda *args, **kwargs: {
+            "result": {
+                "isError": True,
+                "content": [{
+                    "type": "text",
+                    "text": (
+                        'Error: {"code":"validation_error",'
+                        '"message":"Invalid input parameters"}'
+                    ),
+                }],
+            },
+        },
+    )
+
+    with pytest.raises(ffp_quill.QuillToolError, match="Invalid input parameters"):
+        client.call_tool("get_transcript", {"id": "old-contract"})
+
+
+def test_call_tool_rejects_validation_payload_without_is_error(monkeypatch):
+    client = ffp_quill.QuillClient()
+    client.session_id = "test"
+    monkeypatch.setattr(
+        client,
+        "_post",
+        lambda *args, **kwargs: {
+            "result": {
+                "content": [{
+                    "type": "text",
+                    "text": (
+                        'Error: {"code":"validation_error",'
+                        '"message":"Invalid input parameters"}'
+                    ),
+                }],
+            },
+        },
+    )
+
+    with pytest.raises(ffp_quill.QuillToolError):
+        client.call_tool("get_transcript", {})
+
+
+def test_get_transcript_uses_current_quill_schema():
+    class FakeClient:
+        def __init__(self):
+            self.call = None
+
+        def call_tool(self, name, arguments):
+            self.call = (name, arguments)
+            return "<transcript>real content</transcript>"
+
+    client = FakeClient()
+    assert ffp_quill.get_transcript("meeting-1", client=client) == "real content"
+    assert client.call == (
+        "get_transcript",
+        {"meeting_id": "meeting-1", "include_private_notes": True},
+    )
