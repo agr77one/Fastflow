@@ -293,6 +293,140 @@ main { padding: 18px 24px 24px; }
   margin: 0 0 12px;
 }
 
+/* ---- Config workspace ---------------------------------------------------- */
+.config-head {
+  display: grid;
+  grid-template-columns: minmax(210px, 0.42fr) minmax(0, 1.58fr);
+  align-items: end;
+  gap: 22px;
+  margin-bottom: 14px;
+}
+.config-head h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: clamp(22px, 3vw, 30px);
+  letter-spacing: -0.035em;
+}
+.config-head p:last-child { margin: 2px 0 0; }
+.config-sections {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  max-width: 100%;
+  padding: 4px;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: var(--surface-glass);
+  box-shadow: var(--shadow);
+  scrollbar-width: thin;
+}
+.config-section-tab {
+  flex: 0 0 auto;
+  padding: 7px 11px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.config-section-tab:hover {
+  background: var(--kbd-bg);
+  color: var(--text);
+}
+.config-section-tab.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 24%, transparent);
+}
+.config-grid {
+  align-items: start;
+  min-height: min(460px, 55vh);
+}
+.config-card {
+  animation: config-card-in 0.18s ease-out;
+}
+.config-card:hover { transform: none; }
+@keyframes config-card-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+.config-card > .config-card-heading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 12px;
+}
+.config-card-toggle {
+  display: grid;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  margin: -6px -7px -6px auto;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font: 700 20px/1 "Segoe UI Symbol", "Segoe UI", sans-serif;
+  cursor: pointer;
+}
+.config-card-toggle:hover,
+.config-card-toggle:focus-visible {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.config-card.is-collapsed {
+  padding-block: 14px;
+}
+.config-card.is-collapsed > :not(.config-card-heading) {
+  display: none !important;
+}
+.config-card.is-collapsed > .config-card-heading { margin-bottom: 0; }
+.config-save-bar {
+  position: sticky;
+  z-index: 8;
+  top: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 58px;
+  margin: 0 0 16px;
+  padding: 10px 12px 10px 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
+  background: var(--surface-glass);
+  box-shadow: var(--shadow-lift);
+  backdrop-filter: blur(14px) saturate(1.25);
+  -webkit-backdrop-filter: blur(14px) saturate(1.25);
+}
+.config-save-bar .card-actions {
+  flex: 0 0 auto;
+  margin-top: 0;
+}
+@media (max-width: 960px) {
+  .config-head { grid-template-columns: 1fr; gap: 10px; }
+  .config-sections { justify-content: flex-start; }
+}
+@media (max-width: 720px) {
+  .config-grid {
+    grid-template-columns: 1fr;
+    min-height: 380px;
+  }
+  .config-save-bar {
+    top: 104px;
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .config-save-bar .card-actions { justify-content: flex-end; }
+}
+
 dl {
   display: grid;
   grid-template-columns: 110px 1fr;

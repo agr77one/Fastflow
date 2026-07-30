@@ -164,7 +164,7 @@ T35|x|capture hotkey → Notes quick composer w/ staged selection or blank body|
 T36|x|2.5.0 docs/version/migration + full release gates|V18,V20,V47,V48,V49,V50,V51,V52,V53,V54,V55
 T37|x|repair Quill transcript schema/error handling + poison-cache retry + re-digest latest|V12,V14,V20,V23,V57
 T38|x|guarded local-model category creation + sorted category manager + note organize action|V3,V7,V20,V49,V58
-T39|.|compact Config section navigation + collapsible cards + sticky save|V5,V20,V55,V59
+T39|x|compact Config section navigation + collapsible cards + sticky save|V5,V20,V55,V59
 T40|.|Activity workspace: merge Telemetry+History, card/detail UI, explicit Save as note|V5,V6,V25,V26,V60
 ```
 

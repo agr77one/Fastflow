@@ -372,8 +372,47 @@
   </section>
 
   <section class="panel" id="tab-config">
-    <div class="grid">
-      <div class="card">
+    <div class="config-head">
+      <div>
+        <p class="eyebrow">Settings workspace</p>
+        <h2 id="config-section-title">Essentials</h2>
+        <p class="muted" id="config-section-description">Everyday shortcuts and preferences.</p>
+      </div>
+      <nav class="config-sections" id="config-sections" role="tablist"
+           aria-label="Configuration sections">
+        <button type="button" role="tab" class="config-section-tab active"
+                data-config-section="essentials" aria-controls="config-grid"
+                aria-selected="true">Essentials</button>
+        <button type="button" role="tab" class="config-section-tab"
+                data-config-section="models" aria-controls="config-grid"
+                aria-selected="false">Models &amp; AI</button>
+        <button type="button" role="tab" class="config-section-tab"
+                data-config-section="notes" aria-controls="config-grid"
+                aria-selected="false">Notes</button>
+        <button type="button" role="tab" class="config-section-tab"
+                data-config-section="prompts" aria-controls="config-grid"
+                aria-selected="false">Prompts</button>
+        <button type="button" role="tab" class="config-section-tab"
+                data-config-section="notifications" aria-controls="config-grid"
+                aria-selected="false">Notifications</button>
+        <button type="button" role="tab" class="config-section-tab"
+                data-config-section="meetings" aria-controls="config-grid"
+                aria-selected="false">Meetings</button>
+        <button type="button" role="tab" class="config-section-tab"
+                data-config-section="advanced" aria-controls="config-grid"
+                aria-selected="false">Advanced</button>
+      </nav>
+    </div>
+    <div class="config-save-bar">
+      <span class="muted" id="config-status" aria-live="polite"></span>
+      <div class="card-actions">
+        <button class="btn" id="config-revert">Revert</button>
+        <button class="btn btn-primary" id="config-save">Save all settings</button>
+      </div>
+    </div>
+    <div class="grid config-grid" id="config-grid" role="tabpanel"
+         aria-labelledby="config-section-title">
+      <div class="card" id="config-hotkeys" data-config-section="essentials">
         <h2>Hotkeys</h2>
         <p class="muted small">Modifiers then ONE key: <kbd>^</kbd> Ctrl <kbd>+</kbd> Shift <kbd>!</kbd> Alt <kbd>#</kbd> Win. Good: ^+g · ^!n · ^+1</p>
         <div class="form-row"><label for="hk-in-grammar">Grammar / Prompt</label><input type="text" id="hk-in-grammar" class="mono"></div>
@@ -382,7 +421,8 @@
         <div class="form-row"><label for="hk-in-ask">Ask in Chat</label><input type="text" id="hk-in-ask" class="mono"></div>
         <p class="muted small">Saving applies to the running app within a second (no restart).</p>
       </div>
-      <div class="card card-wide" id="config-notes">
+      <div class="card card-wide" id="config-notes"
+           data-config-section="notes" hidden>
         <h2>Notes &amp; capture</h2>
         <p class="muted small">Storage, organization, and optional local-model enrichment for the Notes workspace.</p>
         <h3 class="subhead">Storage</h3>
@@ -413,7 +453,7 @@
         <label class="check-row"><input type="checkbox" id="notes-gen-title"> Suggest titles with the local model</label>
         <label class="check-row"><input type="checkbox" id="notes-gen-summary"> Generate summaries with the local model</label>
       </div>
-      <div class="card">
+      <div class="card" id="config-provider" data-config-section="models" hidden>
         <h2>LLM provider &amp; server</h2>
         <div class="form-row">
           <label for="cfg-provider">Provider</label>
@@ -439,8 +479,8 @@
         </div>
         <p class="muted small" id="warm-model-note">FastFlowLM-only; warmups run in the background.</p>
       </div>
-      <div class="card">
-        <h2 id="models-title">Models</h2>
+      <div class="card" id="config-models" data-config-section="models" hidden>
+        <h2><span id="models-title">Models</span></h2>
         <p class="model-alert" id="model-alert" hidden></p>
 
         <h3 class="subhead">Installed</h3>
@@ -474,7 +514,7 @@
           </div>
         </div>
       </div>
-      <div class="card">
+      <div class="card" id="config-preferences" data-config-section="essentials">
         <h2>Performance &amp; history</h2>
         <div class="radio-row" id="perf-block">
           <label><input type="radio" name="perf" value="balanced"> 🟡 Balanced</label>
@@ -492,7 +532,8 @@
           <label><input type="radio" name="tone" value="friendly"> 🤝 Friendly</label>
         </div>
       </div>
-      <div class="card">
+      <div class="card" id="config-prompt-builder"
+           data-config-section="prompts" hidden>
         <h2>Prompt builder</h2>
         <p class="muted small">Controls the <code>prompt:</code> output shape without editing the locked built-in system prompt. Custom modes remain the fully custom escape hatch.</p>
         <div class="form-row">
@@ -549,7 +590,8 @@
         </div>
         <pre class="note-body" id="pb-preview" hidden></pre>
       </div>
-      <div class="card">
+      <div class="card" id="config-custom-modes"
+           data-config-section="prompts" hidden>
         <h2>Custom modes</h2>
         <p class="muted small">Your own <code>prefix:</code> commands for the grammar hotkey — the mode id is the prefix (e.g. id <code>translate</code> → select text, prefix with <code>translate:</code>). Built-in modes aren't editable here.</p>
         <div class="form-row"><label for="cm-select">Mode</label><select id="cm-select"></select></div>
@@ -562,14 +604,16 @@
           <span class="muted" id="cm-status"></span>
         </div>
       </div>
-      <div class="card">
+      <div class="card" id="config-routing"
+           data-config-section="advanced" hidden>
         <h2>Routing</h2>
         <label class="check-row"><input type="checkbox" id="cfg-routing"> Enable chunking for long inputs</label>
         <div class="form-row"><label for="cfg-long-thr">Long threshold</label><input type="number" id="cfg-long-thr" min="200" max="5000"></div>
         <div class="form-row"><label for="cfg-chunk-size">Chunk size</label><input type="number" id="cfg-chunk-size" min="200" max="4000"></div>
         <div class="form-row"><label for="cfg-min-chunk">Min chunk</label><input type="number" id="cfg-min-chunk" min="100" max="2000"></div>
       </div>
-      <div class="card card-wide">
+      <div class="card card-wide" id="config-notifications"
+           data-config-section="notifications" hidden>
         <h2>Notifications</h2>
         <p class="muted small">Choose which desktop toasts appear, mute duplicates, and set quiet hours. Errors &amp; warnings always come through while Do&nbsp;Not&nbsp;Disturb or quiet hours are on. Every notification — shown or muted — is recorded in the Telemetry tab's feed.</p>
         <label class="check-row"><input type="checkbox" id="ntf-enabled"> Show desktop notifications <span class="muted small">— master switch; off mutes everything</span></label>
@@ -592,7 +636,8 @@
         <label class="check-row"><input type="checkbox" id="ntf-cat-lifecycle"> App lifecycle <span class="muted small">— app ready, config reloaded</span></label>
         <label class="check-row"><input type="checkbox" id="ntf-cat-errors"> Errors &amp; warnings <span class="muted small">— always shown when DND / quiet hours are on</span></label>
       </div>
-      <div class="card card-wide">
+      <div class="card card-wide" id="config-meetings"
+           data-config-section="meetings" hidden>
         <h2>Meetings &amp; after-hours processing <span class="muted small" id="mtg-cfg-status"></span></h2>
         <p class="muted small">Connect the local <strong>Quill</strong> note app over MCP to search meetings and ask about them. During the idle window below, Flowkey pre-computes each meeting's summary + action items on the local model so daytime reads are instant (a full transcript costs ~15&nbsp;s of prefill — paid once, after hours).</p>
         <label class="check-row"><input type="checkbox" id="mtg-enabled"> Enable Quill integration</label>
@@ -620,11 +665,6 @@
           <button class="btn" id="mtg-run-now">Run batch now</button>
           <span class="muted small" id="mtg-run-status"></span>
         </div>
-      </div>
-      <div class="card-actions card-wide">
-        <button class="btn btn-primary" id="config-save">Save all settings</button>
-        <button class="btn" id="config-revert">Revert</button>
-        <span class="muted" id="config-status"></span>
       </div>
     </div>
   </section>

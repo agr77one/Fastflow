@@ -1447,6 +1447,132 @@ function notesConfigPatch() {
 
 // ---- Config ----------------------------------------------------------------
 
+const CONFIG_SECTION_KEY = "flowkey.config.section.v1";
+const CONFIG_COLLAPSED_KEY = "flowkey.config.collapsed.v1";
+const CONFIG_SECTION_META = {
+  essentials: ["Essentials", "Everyday shortcuts, performance, privacy, and tone."],
+  models: ["Models & AI", "Choose the local provider, runtime, and active model."],
+  notes: ["Notes", "Control the vault, categories, capture, and local enrichment."],
+  prompts: ["Prompts", "Shape prompt output and create your own prefix modes."],
+  notifications: ["Notifications", "Decide which local desktop signals deserve attention."],
+  meetings: ["Meetings", "Connect Quill and schedule after-hours digest processing."],
+  advanced: ["Advanced", "Tune long-input routing and lower-level behavior."],
+};
+
+let activeConfigSection = "essentials";
+let collapsedConfigCards = new Set();
+
+function readConfigWorkspaceState() {
+  try {
+    const savedSection = localStorage.getItem(CONFIG_SECTION_KEY);
+    if (CONFIG_SECTION_META[savedSection]) activeConfigSection = savedSection;
+    const savedCollapsed = JSON.parse(
+      localStorage.getItem(CONFIG_COLLAPSED_KEY) || "[]",
+    );
+    if (Array.isArray(savedCollapsed)) {
+      collapsedConfigCards = new Set(savedCollapsed.map(String));
+    }
+  } catch {
+    activeConfigSection = "essentials";
+    collapsedConfigCards = new Set();
+  }
+}
+
+function saveCollapsedConfigCards() {
+  try {
+    localStorage.setItem(
+      CONFIG_COLLAPSED_KEY,
+      JSON.stringify([...collapsedConfigCards]),
+    );
+  } catch {
+    /* local-only view preference; safe to forget when storage is unavailable */
+  }
+}
+
+function setConfigCardCollapsed(card, collapsed) {
+  card.classList.toggle("is-collapsed", collapsed);
+  const button = card.querySelector(":scope > h2 .config-card-toggle");
+  if (!button) return;
+  const title = button.dataset.title || "settings";
+  button.textContent = collapsed ? "›" : "▾";
+  button.setAttribute("aria-expanded", String(!collapsed));
+  button.setAttribute(
+    "aria-label",
+    `${collapsed ? "Expand" : "Collapse"} ${title}`,
+  );
+}
+
+function initializeConfigCards() {
+  for (const card of document.querySelectorAll("#config-grid > .card")) {
+    card.classList.add("config-card");
+    const heading = card.querySelector(":scope > h2");
+    if (!heading || heading.querySelector(".config-card-toggle")) continue;
+    heading.classList.add("config-card-heading");
+    const title = heading.textContent.trim() || "settings";
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "config-card-toggle";
+    toggle.dataset.title = title;
+    toggle.addEventListener("click", () => {
+      const collapsed = !card.classList.contains("is-collapsed");
+      if (collapsed) collapsedConfigCards.add(card.id);
+      else collapsedConfigCards.delete(card.id);
+      setConfigCardCollapsed(card, collapsed);
+      saveCollapsedConfigCards();
+    });
+    heading.append(toggle);
+    setConfigCardCollapsed(card, collapsedConfigCards.has(card.id));
+  }
+}
+
+function setConfigSection(section, focus = false) {
+  const selected = CONFIG_SECTION_META[section] ? section : "essentials";
+  activeConfigSection = selected;
+  const tabs = [...document.querySelectorAll("#config-sections [role='tab']")];
+  for (const tab of tabs) {
+    const active = tab.dataset.configSection === selected;
+    tab.classList.toggle("active", active);
+    tab.setAttribute("aria-selected", String(active));
+    tab.tabIndex = active ? 0 : -1;
+    if (active && focus) tab.focus();
+  }
+  for (const card of document.querySelectorAll("#config-grid > [data-config-section]")) {
+    card.hidden = card.dataset.configSection !== selected;
+  }
+  const [title, description] = CONFIG_SECTION_META[selected];
+  $("config-section-title").textContent = title;
+  $("config-section-description").textContent = description;
+  try {
+    localStorage.setItem(CONFIG_SECTION_KEY, selected);
+  } catch {
+    /* local-only view preference */
+  }
+}
+
+function initializeConfigWorkspace() {
+  readConfigWorkspaceState();
+  initializeConfigCards();
+  setConfigSection(activeConfigSection);
+  $("config-sections").addEventListener("click", (event) => {
+    const tab = event.target.closest("[data-config-section]");
+    if (tab) setConfigSection(tab.dataset.configSection);
+  });
+  $("config-sections").addEventListener("keydown", (event) => {
+    const tabs = [...document.querySelectorAll("#config-sections [role='tab']")];
+    const current = tabs.indexOf(event.target.closest("[role='tab']"));
+    if (current < 0) return;
+    let next = current;
+    if (event.key === "ArrowRight") next = (current + 1) % tabs.length;
+    else if (event.key === "ArrowLeft") {
+      next = (current - 1 + tabs.length) % tabs.length;
+    } else if (event.key === "Home") next = 0;
+    else if (event.key === "End") next = tabs.length - 1;
+    else return;
+    event.preventDefault();
+    setConfigSection(tabs[next].dataset.configSection, true);
+  });
+}
+
 function populatePromptBuilder(pb) {
   const cfg = { ...PROMPT_BUILDER_DEFAULTS, ...(pb || {}) };
   $("pb-version").value = cfg.prompt_version;
@@ -2755,6 +2881,7 @@ function tabFromHash() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  initializeConfigWorkspace();
   attachHelpMarker("history-store-help", HISTORY_STORE_HELP_TEXT);
   $("tabs").addEventListener("click", (e) => {
     const btn = e.target.closest(".tab");
