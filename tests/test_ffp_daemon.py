@@ -624,6 +624,7 @@ def test_post_config_snapshot_returns_flat_dashboard_fields(daemon_server):
     }
     notes = payload["result"]["notes"]
     assert isinstance(notes.get("categories"), list)
+    assert notes["categories"] == sorted(notes["categories"], key=str.casefold)
     assert notes["allow_new_categories"] is True
     assert payload["result"]["server"]["warm_on_start"] is True
     assert payload["result"]["server"]["keep_warm_minutes"] == 15
