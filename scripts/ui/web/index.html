@@ -291,6 +291,7 @@
           <p class="notes-ai-summary" id="ne-summary" hidden></p>
           <div class="notes-editor-actions">
             <button class="btn btn-primary" id="ne-save" type="button">Save note</button>
+            <button class="btn" id="ne-organize" type="button">Organize with local model</button>
             <button class="btn" id="ne-archive" type="button">Archive</button>
             <button class="btn" id="ne-restore" type="button" hidden>Restore</button>
             <button class="btn btn-danger" id="ne-trash" type="button">Move to Trash</button>
@@ -390,8 +391,14 @@
           <input type="text" id="notes-vault">
         </div>
         <h3 class="subhead">Organization</h3>
-        <label for="notes-categories">Categories <span class="muted small">(one per line)</span></label>
-        <textarea id="notes-categories" rows="6" spellcheck="false"></textarea>
+        <div id="notes-categories" class="config-category-list"
+             role="list" aria-label="Note categories"></div>
+        <div class="config-category-add">
+          <input type="text" id="notes-category-new"
+                 placeholder="Add category, e.g. learning/python">
+          <button class="btn" id="notes-category-add" type="button">Add</button>
+        </div>
+        <p class="muted small">Categories are kept sorted. Use one folder or a parent/child pair.</p>
         <h3 class="subhead">Link extraction &amp; enrichment</h3>
         <div class="form-row">
           <label for="notes-fetch-timeout">Fetch timeout (s)</label>
@@ -402,6 +409,7 @@
           <input type="number" id="notes-max-chars" min="100" max="100000">
         </div>
         <label class="check-row"><input type="checkbox" id="notes-low-conf"> Keep low-confidence categorizations in Inbox</label>
+        <label class="check-row"><input type="checkbox" id="notes-allow-new"> Allow the local model to create a new category when confidence is high</label>
         <label class="check-row"><input type="checkbox" id="notes-gen-title"> Suggest titles with the local model</label>
         <label class="check-row"><input type="checkbox" id="notes-gen-summary"> Generate summaries with the local model</label>
       </div>

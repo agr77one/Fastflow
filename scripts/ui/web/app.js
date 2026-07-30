@@ -1051,6 +1051,7 @@ function setEditorReadOnly(trashed) {
     $(id).disabled = trashed;
   }
   $("ne-save").hidden = trashed;
+  $("ne-organize").disabled = trashed || !notesState.current?.note_id;
   $("ne-archive").hidden = trashed || notesState.current?.status === "archived";
   $("ne-trash").hidden = trashed;
   $("ne-restore").hidden = !trashed;
@@ -1199,6 +1200,44 @@ async function saveNoteEditor() {
   }
 }
 
+async function organizeCurrentNote() {
+  if (!notesState.current?.note_id) {
+    setEditorStatus("Save the note before organizing it.", false);
+    return;
+  }
+  const button = $("ne-organize");
+  button.disabled = true;
+  setEditorStatus("Organizing with the local model…");
+  try {
+    const organized = await action("note_organize", {
+      note_id: notesState.current.note_id,
+      revision: notesState.current.revision,
+    });
+    if (!organized.ok) {
+      if (organized.conflict && organized.note) {
+        notesState.current = organized.note;
+        fillNoteEditor(organized.note);
+      }
+      setEditorStatus(organized.error || "Organize failed.", false);
+      return;
+    }
+    notesState.current = organized;
+    await loadNotes(false);
+    fillNoteEditor(organized);
+    const suggestion = organized.suggested_category;
+    const detail = organized.category === "inbox"
+      && suggestion && suggestion !== "inbox"
+      ? ` Kept in Inbox; suggested ${suggestion}.`
+      : ` Filed in ${organized.category}.`;
+    setEditorStatus(`Organized.${detail}`);
+  } catch (error) {
+    setEditorStatus(`Organize failed: ${error.message}`, false);
+  } finally {
+    button.disabled = !notesState.current?.note_id
+      || notesState.current?.status === "trashed";
+  }
+}
+
 async function archiveCurrentNote() {
   if (!notesState.current?.note_id) return;
   try {
@@ -1320,25 +1359,87 @@ async function loadNotes(takeStaged = true) {
 function populateNotesConfig(notes) {
   const cfg = notes || {};
   $("notes-vault").value = cfg.vault_dir || "";
-  $("notes-categories").value = (cfg.categories || []).join("\n");
+  notesCategories = [...new Set((cfg.categories || [])
+    .map(normalizeConfigCategory)
+    .filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b));
+  renderNotesCategoryManager();
   $("notes-fetch-timeout").value = cfg.fetch_timeout_seconds ?? 8;
   $("notes-max-chars").value = cfg.max_extracted_chars ?? 2000;
   $("notes-low-conf").checked = cfg.low_confidence_to_inbox !== false;
+  $("notes-allow-new").checked = cfg.allow_new_categories !== false;
   $("notes-gen-title").checked = cfg.generate_title !== false;
   $("notes-gen-summary").checked = cfg.generate_summary !== false;
 }
 
+function normalizeConfigCategory(value) {
+  const parts = String(value || "")
+    .trim()
+    .replace(/\\/g, "/")
+    .replace(/^\/+|\/+$/g, "")
+    .split("/");
+  if (parts.length < 1 || parts.length > 2) return "";
+  const normalized = parts.map((part) => part
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 32)
+    .replace(/-+$/g, ""));
+  if (normalized.some((part) => !part)) return "";
+  const category = normalized.join("/");
+  return category === "inbox" || category.length > 65 ? "" : category;
+}
+
+function renderNotesCategoryManager() {
+  const list = $("notes-categories");
+  list.replaceChildren();
+  for (const category of notesCategories) {
+    const row = document.createElement("div");
+    row.className = "config-category";
+    row.setAttribute("role", "listitem");
+    const label = document.createElement("span");
+    label.textContent = category;
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "config-category-remove";
+    remove.textContent = "×";
+    remove.setAttribute("aria-label", `Remove ${category}`);
+    remove.addEventListener("click", () => {
+      notesCategories = notesCategories.filter((item) => item !== category);
+      renderNotesCategoryManager();
+    });
+    row.append(label, remove);
+    list.append(row);
+  }
+}
+
+function addNotesCategory() {
+  const input = $("notes-category-new");
+  const category = normalizeConfigCategory(input.value);
+  if (!category) {
+    setStatus(
+      "config-status",
+      "⚠ Use one safe folder or parent/child pair, such as research or work/technical.",
+      false,
+    );
+    return;
+  }
+  if (!notesCategories.includes(category)) notesCategories.push(category);
+  notesCategories.sort((a, b) => a.localeCompare(b));
+  input.value = "";
+  renderNotesCategoryManager();
+  setStatus("config-status", "");
+}
+
 function notesConfigPatch() {
-  const categories = $("notes-categories").value
-    .split("\n")
-    .map((line) => line.trim().replace(/^\/+|\/+$/g, ""))
-    .filter(Boolean);
   return {
     vault_dir: $("notes-vault").value.trim(),
-    categories,
+    categories: [...notesCategories],
     fetch_timeout_seconds: Number($("notes-fetch-timeout").value) || 8,
     max_extracted_chars: Number($("notes-max-chars").value) || 2000,
     low_confidence_to_inbox: $("notes-low-conf").checked,
+    allow_new_categories: $("notes-allow-new").checked,
     generate_title: $("notes-gen-title").checked,
     generate_summary: $("notes-gen-summary").checked,
   };
@@ -2691,6 +2792,7 @@ document.addEventListener("DOMContentLoaded", () => {
   $("notes-empty-new").addEventListener("click", () => openNewNote());
   $("ne-close").addEventListener("click", closeNoteEditor);
   $("ne-save").addEventListener("click", saveNoteEditor);
+  $("ne-organize").addEventListener("click", organizeCurrentNote);
   $("ne-archive").addEventListener("click", archiveCurrentNote);
   $("ne-trash").addEventListener("click", trashCurrentNote);
   $("ne-restore").addEventListener("click", restoreCurrentNote);
@@ -2728,6 +2830,13 @@ document.addEventListener("DOMContentLoaded", () => {
   $("mtg-week-gen").addEventListener("click", generateWeekSummary);
   $("config-save").addEventListener("click", saveConfig);
   $("config-revert").addEventListener("click", loadConfig);
+  $("notes-category-add").addEventListener("click", addNotesCategory);
+  $("notes-category-new").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      addNotesCategory();
+    }
+  });
   $("cm-select").addEventListener("change", fillCustomModeForm);
   $("cm-save").addEventListener("click", saveCustomMode);
   $("cm-delete").addEventListener("click", deleteCustomMode);

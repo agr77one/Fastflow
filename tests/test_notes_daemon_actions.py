@@ -91,3 +91,31 @@ def test_notes_board_daemon_round_trip(vault):
 
     assert saved["ok"] is True
     assert saved["board"]["placements"][0]["note_id"] == note["note_id"]
+
+
+def test_note_organize_refiles_without_rewriting_authored_text(vault, monkeypatch):
+    created = ffp_daemon._act_note_create({
+        "title": "My exact title",
+        "body": "My exact body.\nSecond line.",
+        "category": "ideas",
+    })
+    monkeypatch.setattr(notes, "_llm_categorize", lambda **kwargs: {
+        "category": "research",
+        "suggested_category": "research",
+        "confidence": "high",
+        "created_category": False,
+        "title": "Model title must not be used",
+        "summary": "Model summary must not be used",
+    })
+
+    organized = ffp_daemon._act_note_organize({
+        "note_id": created["note_id"],
+        "revision": created["revision"],
+    })
+
+    assert organized["category"] == "research"
+    assert organized["suggested_category"] == "research"
+    assert organized["confidence"] == "high"
+    assert organized["title"] == "My exact title"
+    assert organized["body"] == "My exact body.\nSecond line.\n"
+    assert organized["revision"] == created["revision"] + 1

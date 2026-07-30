@@ -98,6 +98,7 @@
     "fetch_timeout_seconds": 8,
     "max_extracted_chars": 2000,
     "low_confidence_to_inbox": true,
+    "allow_new_categories": true,
     "generate_title": true,
     "generate_summary": true
   },

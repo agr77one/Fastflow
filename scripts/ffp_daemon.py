@@ -702,6 +702,19 @@ def _act_note_update(args: dict) -> dict:
     )
 
 
+def _act_note_organize(args: dict) -> dict:
+    import notes
+    raw_revision = args.get("revision")
+    try:
+        revision = int(raw_revision) if raw_revision is not None else None
+    except (TypeError, ValueError):
+        raise ValueError("revision must be an integer") from None
+    return notes.organize_note(
+        str(args.get("note_id") or ""),
+        revision,
+    )
+
+
 def _act_note_archive(args: dict) -> dict:
     import notes
     raw_revision = args.get("revision")
@@ -1019,6 +1032,7 @@ ACTIONS: dict[str, Callable[[dict], Any]] = {
     "note_get": _act_note_get,
     "note_create": _act_note_create,
     "note_update": _act_note_update,
+    "note_organize": _act_note_organize,
     "note_archive": _act_note_archive,
     "note_trash": _act_note_trash,
     "note_restore": _act_note_restore,
@@ -1070,7 +1084,7 @@ _WRITE_ACTIONS = {
     "pull_model", "remove_model", "apply_config_patch", "update_apply",
     "set_autostart", "bench_start", "pull_start",
     "chat_send", "chat_thread_delete", "chat_stage_selection", "chat_take_staged",
-    "note_create", "note_update", "note_archive", "note_trash", "note_restore",
+    "note_create", "note_update", "note_organize", "note_archive", "note_trash", "note_restore",
     "note_move", "note_delete", "notes_board_save",
     "note_stage_capture", "note_take_staged",
     "notify_gate",  # writes the notifications log + updates dedupe state

@@ -10,6 +10,7 @@ NOTE_SETTING_IDS = {
     "notes-fetch-timeout",
     "notes-max-chars",
     "notes-low-conf",
+    "notes-allow-new",
     "notes-gen-title",
     "notes-gen-summary",
 }
@@ -34,3 +35,15 @@ def test_notes_settings_use_config_single_save_flow():
     assert "notes: notesPatch" in app
     assert "function saveNotes()" not in app
     assert '"notes-save"' not in app
+
+
+def test_category_manager_is_compact_sorted_and_model_creation_is_opt_in():
+    html = (WEB / "index.html").read_text(encoding="utf-8")
+    app = (WEB / "app.js").read_text(encoding="utf-8")
+
+    assert 'id="notes-category-new"' in html
+    assert 'id="notes-category-add"' in html
+    assert '<textarea id="notes-categories"' not in html
+    assert "function renderNotesCategoryManager()" in app
+    assert "notesCategories.sort((a, b) => a.localeCompare(b))" in app
+    assert 'allow_new_categories: $("notes-allow-new").checked' in app

@@ -43,6 +43,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
 
+import ffp_config
 import grammar_fix
 
 log = logging.getLogger("ffp.notes")
@@ -111,10 +112,66 @@ def _categories() -> list[str]:
         if not cat or cat == INBOX:
             continue
         try:
-            out.append(_safe_category(str(cat)))
+            clean = _safe_category(str(cat))
         except ValueError:
             continue
-    return out or list(DEFAULT_CATEGORIES)
+        if clean not in out:
+            out.append(clean)
+    return sorted(out or list(DEFAULT_CATEGORIES), key=str.casefold)
+
+
+def _allow_new_categories() -> bool:
+    return bool(_notes_cfg().get("allow_new_categories", True))
+
+
+_CATEGORY_SEGMENT_RE = re.compile(r"[^a-z0-9]+")
+
+
+def _normalize_model_category(category: str) -> str:
+    """Return a safe one/two-level slug for a model-proposed category."""
+    raw = str(category or "").strip().replace("\\", "/").strip("/")
+    parts = [part.strip() for part in raw.split("/")]
+    if not parts or len(parts) > 2 or any(not part for part in parts):
+        return ""
+    normalized: list[str] = []
+    for part in parts:
+        segment = _CATEGORY_SEGMENT_RE.sub("-", part.lower()).strip("-")
+        segment = segment[:32].rstrip("-")
+        if not segment:
+            return ""
+        normalized.append(segment)
+    candidate = "/".join(normalized)
+    if candidate == INBOX or len(candidate) > 65:
+        return ""
+    try:
+        return _safe_category(candidate)
+    except ValueError:
+        return ""
+
+
+def _register_model_category(category: str) -> bool:
+    """Atomically add a guarded model-created category to user config."""
+    clean = _normalize_model_category(category)
+    if not clean:
+        return False
+
+    def add_category(cfg: dict) -> None:
+        notes_cfg = cfg.setdefault("notes", {})
+        existing: list[str] = []
+        for item in notes_cfg.get("categories") or DEFAULT_CATEGORIES:
+            try:
+                safe = _safe_category(str(item))
+            except ValueError:
+                continue
+            if safe != INBOX and safe not in existing:
+                existing.append(safe)
+        if clean not in existing:
+            existing.append(clean)
+        notes_cfg["categories"] = sorted(existing, key=str.casefold)
+
+    updated = ffp_config.update_config(grammar_fix.CONFIG_PATH, add_category)
+    grammar_fix.refresh_runtime_config()
+    return clean in ((updated.get("notes") or {}).get("categories") or [])
 
 
 def _fetch_timeout() -> int:
@@ -305,23 +362,33 @@ def _slug_tokens_from_url(url: str) -> list[str]:
 
 def _build_categorize_prompt(text: str, source_app: str, url: str,
                              slug_tokens: list[str], fetched_title: str,
-                             fetched_body: str, categories: list[str]) -> str:
+                             fetched_body: str, categories: list[str],
+                             allow_new: bool = False) -> str:
     cats_block = "\n".join(f"  - {c}" for c in categories) + f"\n  - {INBOX}"
     parts = [
         "You categorize a captured note.",
-        "Pick EXACTLY ONE folder from the list below.",
+        "Prefer EXACTLY ONE existing folder from the list below.",
         f"If you are unsure, choose '{INBOX}'.",
         "",
         "Available folders:",
         cats_block,
         "",
         "Output ONLY a JSON object matching this schema, no commentary, no Markdown fences:",
-        '{"category":"<folder>","confidence":"high|medium|low",'
+        '{"category":"<folder>","is_new":false,'
+        '"confidence":"high|medium|low",'
         '"title":"<short Sentence-case title, <=60 chars>",'
         '"summary":"<1-2 paragraph summary, third person>"}',
         "",
         f"Source app: {source_app or 'unknown'}",
     ]
+    if allow_new:
+        parts[2:2] = [
+            "If no existing folder fits, you MAY propose one new lowercase slug "
+            "with at most two levels (example: learning/python) and set is_new=true.",
+            "Only propose a new folder when confidence is high; otherwise use inbox.",
+        ]
+    else:
+        parts.insert(2, "Do not invent folders; is_new must be false.")
     if url:
         parts.append(f"URL: {url}")
     if slug_tokens:
@@ -339,10 +406,12 @@ def _llm_categorize(text: str, source_app: str, url: str,
     """Returns {category, confidence, title, summary}. Falls back gracefully on
     LLM failure or invalid JSON."""
     cats = _categories()
+    allow_new = _allow_new_categories()
     slug_tokens = _slug_tokens_from_url(url) if url else []
     user_content = _build_categorize_prompt(
         text=text, source_app=source_app, url=url, slug_tokens=slug_tokens,
         fetched_title=fetched_title, fetched_body=fetched_body, categories=cats,
+        allow_new=allow_new,
     )
     system_prompt = (
         "You are a strict categorizer. Output only valid JSON matching the schema. "
@@ -356,6 +425,8 @@ def _llm_categorize(text: str, source_app: str, url: str,
     except Exception as e:
         log.warning("categorize LLM call failed: %s", e)
         return {"category": INBOX, "confidence": "low",
+                "suggested_category": INBOX, "is_new": False,
+                "created_category": False,
                 "title": _fallback_title(text, fetched_title),
                 "summary": "(LLM unavailable; left in inbox)"}
 
@@ -363,22 +434,48 @@ def _llm_categorize(text: str, source_app: str, url: str,
     if not parsed:
         log.warning("categorize returned unparseable JSON; raw=%r", raw[:200])
         return {"category": INBOX, "confidence": "low",
+                "suggested_category": INBOX, "is_new": False,
+                "created_category": False,
                 "title": _fallback_title(text, fetched_title),
                 "summary": "(could not parse categorization output)"}
 
-    # Validate category against the allowed list.
-    chosen = str(parsed.get("category") or "").strip()
-    if chosen not in cats and chosen != INBOX:
-        log.info("LLM picked unknown category %r; falling back to inbox", chosen)
-        chosen = INBOX
     confidence = str(parsed.get("confidence") or "low").strip().lower()
     if confidence not in {"high", "medium", "low"}:
         confidence = "low"
+    raw_category = str(parsed.get("category") or "").strip().replace("\\", "/")
+    requested_new = parsed.get("is_new") is True
+    created_category = False
+    suggested = raw_category if raw_category in cats or raw_category == INBOX else (
+        _normalize_model_category(raw_category)
+    )
+    if raw_category in cats or raw_category == INBOX:
+        chosen = raw_category
+    elif (
+        requested_new
+        and allow_new
+        and confidence == "high"
+        and suggested
+        and _register_model_category(suggested)
+    ):
+        chosen = suggested
+        created_category = True
+    else:
+        log.info(
+            "LLM category %r not accepted (new=%s allow=%s confidence=%s)",
+            raw_category,
+            requested_new,
+            allow_new,
+            confidence,
+        )
+        chosen = INBOX
     if confidence == "low" and _low_conf_to_inbox():
         chosen = INBOX
 
     return {
         "category": chosen,
+        "suggested_category": suggested or INBOX,
+        "is_new": requested_new,
+        "created_category": created_category,
         "confidence": confidence,
         "title": _clean_title(parsed.get("title"), text, fetched_title),
         "summary": str(parsed.get("summary") or "").strip(),
@@ -667,6 +764,8 @@ def _note_record(path: Path, metadata: dict, body: str, include_body: bool = Fal
         "due": str(metadata.get("due") or ""),
         "source": str(metadata.get("source") or ""),
         "summary": str(metadata.get("summary") or ""),
+        "suggested_category": str(metadata.get("suggested_category") or ""),
+        "confidence": str(metadata.get("confidence") or ""),
         "created": str(metadata.get("created") or ""),
         "updated": str(metadata.get("updated") or ""),
         "excerpt": excerpt,
@@ -1063,6 +1162,72 @@ def update_note(note_id: str, revision: int | None, patch: dict) -> dict:
         return _note_record(destination, merged, new_body, include_body=True)
 
 
+def organize_note(note_id: str, revision: int | None = None) -> dict:
+    """Use the local model to re-file a note without rewriting authored text."""
+    initial = get_note(note_id)
+    if not initial.get("ok"):
+        return initial
+    if initial.get("status") == "trashed":
+        return {"ok": False, "error": "trashed notes cannot be organized"}
+    categorized = _llm_categorize(
+        text="\n\n".join(filter(None, [
+            str(initial.get("title") or ""),
+            str(initial.get("body") or ""),
+        ])),
+        source_app="dashboard",
+        url=str(initial.get("source") or ""),
+        fetched_title="",
+        fetched_body="",
+    )
+
+    with _NOTES_LOCK:
+        source_path = _find_note_path(note_id, include_trash=True)
+        if source_path is None:
+            return {"ok": False, "error": "note not found"}
+        metadata, body, text = _ensure_note_schema(source_path)
+        if metadata.get("status") == "trashed":
+            return {"ok": False, "error": "trashed notes cannot be organized"}
+        current_revision = int(metadata.get("revision") or 1)
+        if revision is not None and int(revision) != current_revision:
+            return {
+                "ok": False,
+                "error": "note changed while the local model was organizing it",
+                "conflict": True,
+                "note": _note_record(
+                    source_path,
+                    metadata,
+                    body,
+                    include_body=True,
+                ),
+            }
+
+        category = _safe_category(str(categorized.get("category") or INBOX))
+        updates = {
+            "category": category,
+            "suggested_category": str(
+                categorized.get("suggested_category") or category
+            ),
+            "confidence": str(categorized.get("confidence") or "low"),
+            "category_created": bool(categorized.get("created_category")),
+            "updated": _now_iso(),
+            "revision": current_revision + 1,
+        }
+        destination = _vault_subpath(category, source_path.name)
+        if destination.exists() and destination.resolve() != source_path.resolve():
+            destination = _vault_subpath(
+                category,
+                f"{source_path.stem}-{uuid.uuid4().hex[:6]}{source_path.suffix}",
+            )
+        rewritten = _merge_frontmatter(text, updates, body=body)
+        _atomic_write_text(destination, rewritten)
+        if destination.resolve() != source_path.resolve() and source_path.exists():
+            source_path.unlink()
+        merged = dict(metadata)
+        merged.update(updates)
+        _invalidate_index()
+        return _note_record(destination, merged, body, include_body=True)
+
+
 def archive_note(note_id: str, revision: int | None = None) -> dict:
     return update_note(note_id, revision, {"status": "archived"})
 
@@ -1422,7 +1587,11 @@ def _categorize_in_background(stub_path: Path, note_id: str, text: str,
             current_revision = int(metadata.get("revision") or 1)
             updates: dict[str, Any] = {
                 "confidence": categorized["confidence"],
-                "suggested_category": categorized["category"],
+                "suggested_category": categorized.get(
+                    "suggested_category",
+                    categorized["category"],
+                ),
+                "category_created": bool(categorized.get("created_category")),
                 "summary": categorized["summary"] if _wants_summary() else "",
                 "fetch_status": (
                     "error" if fetched and fetched.get("error")

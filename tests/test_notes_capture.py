@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import json
 import re
 
+import ffp_config
 import notes
 import pytest
 
@@ -23,6 +25,17 @@ def test_safe_category_accepts_and_normalizes(raw, expected):
     assert notes._safe_category(raw) == expected
 
 
+@pytest.mark.parametrize(("raw", "expected"), [
+    ("Learning / Python", "learning/python"),
+    ("Project Ideas", "project-ideas"),
+    ("one/two/three", ""),
+    ("../escape", ""),
+    ("inbox", ""),
+])
+def test_model_category_normalization_is_safe_and_bounded(raw, expected):
+    assert notes._normalize_model_category(raw) == expected
+
+
 # ---------- _parse_categorize_json (robust LLM-output parsing) ---------------
 
 def test_parse_categorize_json_plain_object():
@@ -42,6 +55,103 @@ def test_parse_categorize_json_recovers_embedded_object():
 @pytest.mark.parametrize("raw", ["", "not json at all", "[1, 2, 3]", "null"])
 def test_parse_categorize_json_returns_none_on_garbage(raw):
     assert notes._parse_categorize_json(raw) is None
+
+
+def _categorize_result(monkeypatch, payload, *, allow_new=True):
+    registered = []
+    monkeypatch.setattr(notes, "_notes_cfg", lambda: {
+        "categories": ["ideas", "research"],
+        "allow_new_categories": allow_new,
+        "low_confidence_to_inbox": True,
+    })
+    monkeypatch.setattr(
+        notes,
+        "_register_model_category",
+        lambda category: registered.append(category) or True,
+    )
+    monkeypatch.setattr(
+        notes.grammar_fix,
+        "_call_flm_api",
+        lambda *args, **kwargs: (json.dumps(payload), "local-model"),
+    )
+    return notes._llm_categorize("some note", "", "", "", ""), registered
+
+
+def test_known_category_is_selected_without_creating_one(monkeypatch):
+    result, registered = _categorize_result(monkeypatch, {
+        "category": "research",
+        "is_new": False,
+        "confidence": "high",
+        "title": "Research note",
+        "summary": "Summary",
+    })
+
+    assert result["category"] == "research"
+    assert result["created_category"] is False
+    assert registered == []
+
+
+def test_high_confidence_explicit_new_category_is_registered(monkeypatch):
+    result, registered = _categorize_result(monkeypatch, {
+        "category": "Learning / Python",
+        "is_new": True,
+        "confidence": "high",
+        "title": "Python note",
+        "summary": "Summary",
+    })
+
+    assert result["category"] == "learning/python"
+    assert result["suggested_category"] == "learning/python"
+    assert result["created_category"] is True
+    assert registered == ["learning/python"]
+
+
+@pytest.mark.parametrize(("allow_new", "is_new", "confidence"), [
+    (False, True, "high"),
+    (True, False, "high"),
+    (True, True, "medium"),
+    (True, True, "low"),
+])
+def test_unapproved_new_category_stays_in_inbox(
+    monkeypatch,
+    allow_new,
+    is_new,
+    confidence,
+):
+    result, registered = _categorize_result(
+        monkeypatch,
+        {
+            "category": "Learning / Python",
+            "is_new": is_new,
+            "confidence": confidence,
+            "title": "Python note",
+            "summary": "Summary",
+        },
+        allow_new=allow_new,
+    )
+
+    assert result["category"] == "inbox"
+    assert result["suggested_category"] == "learning/python"
+    assert result["created_category"] is False
+    assert registered == []
+
+
+def test_register_model_category_atomically_dedupes_and_sorts(tmp_path, monkeypatch):
+    config_path = tmp_path / "config.json"
+    ffp_config.save_config(config_path, {
+        "notes": {"categories": ["research", "Ideas", "research"]},
+    })
+    monkeypatch.setattr(notes.grammar_fix, "CONFIG_PATH", config_path)
+    monkeypatch.setattr(notes.grammar_fix, "refresh_runtime_config", lambda: None)
+
+    assert notes._register_model_category("learning/python") is True
+
+    saved = json.loads(config_path.read_text(encoding="utf-8"))
+    assert saved["notes"]["categories"] == [
+        "Ideas",
+        "learning/python",
+        "research",
+    ]
 
 
 # ---------- HTML extraction (stdlib parser path) -----------------------------
