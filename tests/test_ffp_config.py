@@ -280,6 +280,40 @@ def test_default_config_has_prompt_builder_defaults():
     assert ffp_config.DEFAULT_CONFIG["prompt_builder"] == ffp_prompt_builder.DEFAULT_PROMPT_BUILDER_CONFIG
     assert ffp_config.DEFAULT_CONFIG["server"]["warm_on_start"] is True
     assert ffp_config.DEFAULT_CONFIG["server"]["keep_warm_minutes"] == 15
+    assert ffp_config.DEFAULT_CONFIG["notes"]["allow_new_categories"] is True
+
+
+def test_filter_config_patch_accepts_guarded_note_category_setting():
+    filtered = ffp_config.filter_config_patch({
+        "notes": {
+            "categories": ["research", "work/technical"],
+            "allow_new_categories": False,
+            "unknown": "drop me",
+        },
+    })
+
+    assert filtered == {
+        "notes": {
+            "categories": ["research", "work/technical"],
+            "allow_new_categories": False,
+        },
+    }
+
+
+def test_update_config_load_mutate_write_is_atomic(tmp_path):
+    path = tmp_path / "config.json"
+    ffp_config.save_config(path, {"notes": {"categories": ["research"]}})
+
+    updated = ffp_config.update_config(
+        path,
+        lambda cfg: cfg["notes"]["categories"].append("ideas"),
+    )
+
+    assert updated["notes"]["categories"] == ["research", "ideas"]
+    assert ffp_config.load_config(path)["notes"]["categories"] == [
+        "research",
+        "ideas",
+    ]
 
 
 def test_filter_config_patch_clamps_keep_warm_settings():

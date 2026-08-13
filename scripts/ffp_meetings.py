@@ -140,6 +140,23 @@ def should_run_batch(meetings_cfg: dict, now_dt, idle_seconds: float | None) -> 
 
 # ---------- digest store --------------------------------------------------------------
 
+def _digest_is_poisoned(rec: dict) -> bool:
+    """Recognize legacy digests generated from Quill validation-error text."""
+    digest = str(rec.get("digest_md") or "").strip().lower()
+    try:
+        context_chars = int(rec.get("context_chars") or 0)
+    except (TypeError, ValueError):
+        context_chars = 0
+    validation_marker = (
+        "validation_error" in digest
+        or "invalid meeting_id input parameter" in digest
+        or ("meeting_id" in digest and "invalid input parameter" in digest)
+    )
+    return digest.startswith("error:") or bool(
+        validation_marker and (not context_chars or context_chars <= 512)
+    )
+
+
 def load_digests() -> list[dict]:
     import json
     if not DIGESTS_PATH.exists():
@@ -157,6 +174,9 @@ def load_digests() -> list[dict]:
                     continue
                 mid = row.get("meeting_id")
                 if not mid:
+                    continue
+                if _digest_is_poisoned(row):
+                    log.warning("ignoring poisoned meeting digest for %s", mid)
                     continue
                 prev = latest.get(mid)
                 if prev is None or str(row.get("processed_at") or "") >= str(prev.get("processed_at") or ""):

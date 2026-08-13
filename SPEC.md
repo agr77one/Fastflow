@@ -17,7 +17,7 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - LLM: FastFlowLM NPU @ `:52625` | Ollama @ `:11434`, OpenAI-compat `POST /v1/chat/completions`
 - dashboard: daemon-served `scripts/ui/web/{index.html,app.js,styles.css}`, CSP `default-src 'self'`
 - paths: `scripts/paths.py` → USER_ROOT/{config,data,logs}; `_version.py` = version src of truth
-- version: `2.3.0` (prompt-v2 speed+quality release); `2.2.0` released (`v2.2.0` on `25b8794`); repo `agr77one/Fastflow`
+- version: `2.5.0` = living Notes workspace + vision board; repo `agr77one/Fastflow`
 - run tree = `flowkey-pub2` (worktree, branch `live`=origin/main). old `FastFlowPrompt_Local_Setup`=1.5.0 stale.
 
 ## §I interfaces
@@ -26,6 +26,15 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - api: `POST /action/<name>` ! header `X-FFP-API: 1` → 200 `{ok,result,error,elapsed_ms}`
 - api: `GET /` → dashboard; `GET /healthz` → `{ok,version,api,actions}`
 - action: `config_snapshot` → full cfg; `apply_config_patch {patch}` → merge (whitelist `filter_config_patch`)
+- action: `notes_query {query?,kind?,status?,category?,tag?,sort?,limit?,offset?}` → `{results,count,facets}`
+- action: `note_create {title?,body?,kind?,category?,tags?,color?,due?,source?}` → note
+- action: `note_update {note_id,revision,patch}` → note | conflict
+- action: `note_organize {note_id,revision?}` → note; local LLM may update category/suggested metadata only
+- action: `note_trash {note_id}` / `note_restore {note_id}` → note; `note_delete {note_id,permanent:true}` → deleted
+- action: `notes_board_get` → `{board,placements}`; `notes_board_save {revision,board}` → board | conflict
+- action: `note_stage_capture {text?,source_app?}` / `note_take_staged` → quick-capture payload
+- data: note Markdown frontmatter schema v2 → stable `note_id`, `kind`, `status`, `tags`, `color`, `pinned`, `due`, `created`, `updated`, `revision`
+- data: `<vault>/.flowkey/board.json` → board sections + placements keyed by `note_id`
 - action: `recent_history {limit?}` → newest history rows; `input_text`/`output_text` iff stored @ write-time
 - action: `prompt_builder_preview {settings?,sample?}` → deterministic local preview (`⊥` LLM call)
 - config: `prompt_builder.prompt_version` ∈ {`v1`,`v2`}; default `v2`; v1 = instant rollback
@@ -43,12 +52,12 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - action: `meeting_actions_list {range:week|month}` → `{range,items:[{id,text,owner,status,...}],counts}`
 - action: `meeting_action_set_status {id,status:pending|accepted|rejected}` → `{ok}`
 - action: `meeting_week_summary {week_offset}` → `{ok,week_label,meeting_count,summary}`
-- mcp: Quill @ `http://127.0.0.1:19532/mcp` — Streamable-HTTP, SSE `data:`, `Mcp-Session-Id` header; init→notifications/initialized→tools/call
+- mcp: Quill @ `http://127.0.0.1:19532/mcp` — Streamable-HTTP, SSE `data:`, `Mcp-Session-Id` header; init→notifications/initialized→tools/call; `get_transcript {meeting_id,include_private_notes:true}`; tool `isError` → typed failure
 - cmd: `flm serve <model> --pmode turbo --host 127.0.0.1 --port 52625`
 - data: `data/{meeting_digests,meeting_action_status,meeting_skips,notifications,chat_threads}.jsonl`
 - autostart: HKCU Run `FastFlowPrompt` → bundled `AutoHotkey64.exe` + `grammarFix.ahk`; `FlowkeyGitSync` → `sync.ps1`
 - sched: Windows task `FlowkeyGitSync` daily 12:00 → `sync.ps1` (ff-only pull, guarded)
-- ACTIONS count = 75
+- ACTIONS count = 86
 
 ## §V invariants
 
@@ -98,6 +107,22 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - V45: surfaced v2 text → article agreement + fixed typo map normalized (∵ render copies user wording verbatim); ⊥ meaning change
 - V46: A/B rubric = 8 items; R8 = ⊥ section restates `<task>` (coverage-of-task ≥ 0.8), boilerplate-excluded set-wise on constraints; R8 false ⇒ disqualifying ∀ other scores; gate pass ≥ 7/8 ∧ R8 ∧ ⊥ invented
 - V40: model picker + installed list = app-styled elements (⊥ native `<datalist>`/`<select size>`, ∵ browser chrome ignores page CSS); theme-aware + keyboard-navigable (↑↓/Enter/Esc)
+- V47: Notes tab = notes + organization only; note config controls ∈ Config tab
+- V48: ∀ note API/UI identity = stable `note_id`; file move/rename ⊥ identity change
+- V49: AI enrichment ? fill blank/generated metadata; user-authored body/title ⊥ overwrite
+- V50: default remove → Trash, recoverable; permanent delete ! explicit Trash action + confirm
+- V51: v1 Markdown → schema v2 migration preserves body + unknown frontmatter + source path; migration backup ∃ before rewrite
+- V52: board placement references `note_id`; remove placement ⊥ delete/mutate note
+- V53: capture hotkey w/ selection → staged prefill; ⊥ selection → blank composer; stale clipboard ⊥ silent capture
+- V54: note writes + board writes atomic; stale `revision` → conflict, ⊥ overwrite
+- V55: note card/editor controls keyboard reachable; desktop split workspace + ≤720px stacked layout
+- V56: note `due` date-only value renders same calendar day ∀ timezone; ⊥ UTC date shift
+- V57: Quill transcript call matches discovered schema (`meeting_id` + `include_private_notes`); MCP JSON-RPC/tool `isError` ∨ validation payload → typed failure, ⊥ LLM input/cache; poisoned legacy digest → ⊥ idempotency hit, eligible reprocess
+- V58: model-created note category accepted ⟺ config opt-in ∧ `is_new` ∧ high confidence ∧ safe normalized ≤2-segment slug; accepted category atomically deduped+sorted into cfg; otherwise Inbox + suggestion; V49 holds
+- V59: Config → keyboard-accessible section nav + collapsible groups + one selected section visible + sticky Save/Revert; view state local-only persisted; ≤720px responsive
+- V60: future Activity workspace may join Telemetry+History + explicit `Save as note`; Notes remains authored knowledge; V6,V25,V26 hold
+- V61: note schema-migration write ∈ `_NOTES_LOCK` (double-checked, serialized vs concurrent note writes); migration-write failure → index/lookup fall back to unmigrated read, ⊥ silently drop note
+- V62: `ffp_quill` public read fns (`get_minutes`,`get_transcript`,`search_meetings`,`list_recent_meetings`) catch `QuillToolError` → soft-degrade (empty text/list); V57's typed-failure raise stays internal to `call_tool`, ⊥ leaks past the public API
 
 ## §T tasks
 
@@ -133,6 +158,16 @@ T27|x|streaming Chat tab (SSE): `ffp_chat.stream_send` + daemon `_STREAM_ACTIONS
 T30|x|clarify shape for underspecified requests + typo/article normalization + R8 echo gate + reported input in fixed set (2.4.3)|V44,V45,V46
 T29|x|bench memory guard + keep-warm/bench mutual exclusion + provider-error surfacing (2.4.2)|V41,V42,V43
 T28|x|model picker 2.4.1: footprint/MoE sizing + never-hide + active-model health + merged single Models card + app-styled combobox|V38,V39,V40
+T31|x|Notes schema v2 repository: stable ids, zero-loss migration, CRUD, Trash, indexed query, atomic board store|V7,V48,V49,V50,V51,V52,V54
+T32|x|daemon Notes v2 actions + backward-compatible read/move/delete + staged capture|V1,V2,V3,V7,V48,V50,V53,V54
+T33|x|move vault/categories/extraction/LLM Notes settings → Config single-save; Notes tab config-free|V3,V47
+T34|x|Notes-only card workspace: composer, editor, smart views, filters, tags, archive/Trash, vision board drag/order|V5,V47,V48,V50,V52,V54,V55,V56
+T35|x|capture hotkey → Notes quick composer w/ staged selection or blank body|V53
+T36|x|2.5.0 docs/version/migration + full release gates|V18,V20,V47,V48,V49,V50,V51,V52,V53,V54,V55
+T37|x|repair Quill transcript schema/error handling + poison-cache retry + re-digest latest|V12,V14,V20,V23,V57
+T38|x|guarded local-model category creation + sorted category manager + note organize action|V3,V7,V20,V49,V58
+T39|x|compact Config section navigation + collapsible cards + sticky save|V5,V20,V55,V59
+T40|.|Activity workspace: merge Telemetry+History, card/detail UI, explicit Save as note|V5,V6,V25,V26,V60
 ```
 
 ## §B bugs
@@ -179,4 +214,10 @@ B35|2026-07-27|`flm bench qwen3.6-moe:35b-a3b` died 4s in w/ driver `0xc01e0200`
 B36|2026-07-27|keep-warm thread ⊥ aware of benchmarks: warms/reloads active model on 15min tick during a 10-20min bench ∴ NPU+mem contention mid-run|V42; `ffp_benchmark.is_running()` gate in `_warm_model_once`
 B37|2026-07-27|FLM returns HTTP **200** + `{"error":"Failed to load <model> model!"}`; `_call_openai_compatible`/`ffp_chat` read only `choices` ∴ real cause discarded → "Local LLM returned no usable text"|V43; surface the error body
 B34|2026-07-27|self-caught: `_active_model_health` tested membership vs `_provider_list("all")`; ollama "all" = installed+suggested (`ffp_provider_runtime:80`) ∴ never-pulled model → false `installed=True` (⊥ warn)|V39; trust `details` (unfiltered, authoritative) else re-list w/ `installed` filter
+B41|2026-07-29|Notes due `2026-08-04` parsed as UTC midnight → EDT displayed Aug 3|V56; parse date-only @ local noon
+B42|2026-07-29|Quill `get_transcript` sent `id`; live schema requires `meeting_id`+`include_private_notes`; `call_tool` ignored `isError` ∴ 133-char validation error fed to LLM + cached as digest|V57
+B43|2026-07-29|`fresh_modules` teardown popped `notes` after test collection; later daemon-action tests patched a stale module while action-local `import notes` resolved a new module ∴ tests touched the real vault + became order-dependent|rebind `sys.modules["notes"]` to the isolated test module; V20 full-suite gate
+B44|2026-08-13|pre-release review: V57's `call_tool` raise (the B42 fix) went ⊥ caught by `get_minutes`/`get_transcript`/`search_meetings`/`list_recent_meetings`; `run_batch`'s pagination loop, `meeting_overview`, and `process_meeting`'s `NoContentError` skip-path all broke on any Quill tool error: scheduled batch could silently no-op (status never updated), Overview widget 500'd instead of `reachable=False`, dead meetings retried forever instead of perma-skip|V62; catch `QuillToolError` in the 4 public read fns, restore module's documented fail-soft contract
+B45|2026-08-13|pre-release review: `_ensure_note_schema`'s migration write ran outside `_NOTES_LOCK` ∴ could race a locked `note_update`/`note_organize` on the same file (dueling `uuid4()` note_id, last-writer-wins corruption); `_load_note_index`/`_find_note_path` silently dropped a note from every listing/lookup on migration-write failure (e.g. read-only file)|V61; lock + double-check inside `_ensure_note_schema`; index/lookup fall back to unmigrated read on failure instead of dropping the note
+B46|2026-08-13|pre-release review: `trash_note` was the only note-mutating fn ⊥ taking a `revision` param ∴ "Move to Trash" could silently act on a note that changed since the editor loaded it, unlike update/organize/archive; also `_act_note_archive`/`_act_notes_board_save` used a bare `int()` revision parse (raw 500 on bad input) unlike `_act_note_update`/`_act_note_organize`'s guarded parse|V54; add revision param + conflict check to `trash_note` + daemon action + app.js call site; guard the two bare `int()` parses to match the others
 ```

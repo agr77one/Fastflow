@@ -4,7 +4,15 @@ Flowkey is a Windows desktop assistant that adds local-LLM hotkeys for grammar f
 
 Everything runs locally through [FastFlowLM](https://fastflowlm.com) (AMD Ryzen AI NPU) or, on machines without the NPU, through [Ollama](https://ollama.com) (CPU/GPU) as a secondary provider. No cloud service, analytics, or telemetry is used by the app.
 
-Current version: `2.4.3`
+Current version: `2.5.0`
+
+## What's new in 2.5
+
+- **Notes is now a real thinking workspace.** Capture plain notes, tasks, ideas, links, and read-later items as readable sticky cards. Search them, filter by type, category, or tag, and organize them with colors, pins, due dates, status, Archive, and a recoverable Trash.
+- **The Vision Board keeps important notes alive.** Create and rename board sections, drag cards into the order you want, and keep unplaced notes nearby. Board placement never changes or deletes the underlying note.
+- **`Ctrl+Alt+N` opens a quick composer.** Selected text is staged as an editable draft; with no selection, Flowkey opens a blank note. Nothing is saved until you choose to save it, and old clipboard text is never captured by accident.
+- **Notes settings moved to Config.** The Notes tab is only for writing and organizing. Vault location, categories, extraction limits, and local-model enrichment now live together under Config → Notes & capture.
+- **Existing Markdown notes migrate safely.** Notes receive stable IDs and richer metadata when first read. Flowkey preserves the body and unknown frontmatter, writes a v1 backup under the vault's `.flowkey/backups/v1/` directory before rewriting, and uses atomic saves with edit-conflict detection.
 
 ## What's new in 2.4
 
@@ -120,7 +128,7 @@ Launch the app with AutoHotkey v2:
 | `<custom>:` + `Ctrl+Shift+G` | Any mode you define in Dashboard → Config → Custom modes (e.g. `translate:`) |
 | `Ctrl+Alt+C` | Open chat (the Chat tab has a "My notes" toggle that grounds replies in your notes vault) |
 | `Ctrl+Shift+A` | Ask in chat with selected text |
-| `Ctrl+Alt+N` | Capture a note |
+| `Ctrl+Alt+N` | Open Notes quick capture (selected text prefills the composer; no selection opens it blank) |
 
 Prefix tip: put the keyword on the first line of your selection — `prompt: rough idea here` (or `prompt` on its own line, then the text). Without a prefix, `Ctrl+Shift+G` always runs a grammar fix.
 
@@ -135,7 +143,8 @@ The dashboard is a web page served by the local daemon — open it from the tray
 - **Models:** pull models with live progress — pick a suggestion or type any name (on Ollama, anything from the [library](https://ollama.com/library) works); set active, remove. Suggestions are hardware-aware: detected RAM/VRAM caps the model size (e.g. 32 GB RAM → ~4B on the NPU; 8 GB VRAM → ~9B on the GPU), oversized models are hidden, and free-typing one asks before pulling.
 - **Benchmark:** works on both providers — `flm bench` on FastFlowLM (~10–20 min, NPU), timed generations with native metrics on Ollama (~1–3 min, server keeps running).
 - **History:** Telemetry view shows what ran and how fast; Exposed view shows stored request/result text only for rows captured while history storage was visible. The History tab includes the same redacted/visible storage toggle as Config.
-- **Notes:** browse or search your vault.
+- **Notes:** write and organize notes, tasks, ideas, links, and read-later items; use smart views, categories, tags, pins, Archive/Trash, or arrange cards on the Vision Board.
+- **Notes settings:** Config → Notes & capture controls the vault, categories, link extraction, and optional local-model enrichment. The Notes tab itself contains no settings.
 - **Meetings:** connect the local [Quill](https://quillapp.com) app to search meetings, read AI digests (pre-computed after-hours), review action items (accept / reject), and generate a weekly review. Off by default — enable in Config → Meetings.
 - **Notifications:** per-event toggles, dedupe window, Do-Not-Disturb, and quiet hours; every toast (shown or muted) is logged to the Telemetry feed.
 

@@ -57,8 +57,7 @@ def test_shipped_seed_keys_do_not_silently_drift_from_schema():
         f"seed vs schema drift changed (missing from seed): {sorted(missing_from_seed)}"
     )
     # In seed, not top-level in schema: runtime/user-managed optional blocks
-    # (chat threads config, per-hotkey overrides, notes vault config) the app
-    # reads directly; DEFAULT_CONFIG doesn't declare them.
-    assert extra_in_seed == {"chat", "hotkeys", "notes"}, (
+    # (chat threads config and per-hotkey overrides) the app reads directly.
+    assert extra_in_seed == {"chat", "hotkeys"}, (
         f"seed vs schema drift changed (extra in seed): {sorted(extra_in_seed)}"
     )

@@ -555,164 +555,1026 @@ async function loadHistory() {
 
 // ---- Notes -----------------------------------------------------------------
 
-// Browse the vault: empty query lists the newest notes (notes_list); a query
-// runs the ranked search (note_search) and shows snippets instead of dates.
-let notesCategories = [];     // buckets from config, for the reader's Move dropdown
-let currentNoteRelpath = "";  // note open in the reader pane
+const NOTE_VIEW_META = {
+  board: ["Vision board", "Arrange what matters"],
+  all: ["All notes", "Everything you have captured"],
+  task: ["Tasks", "Things ready for action"],
+  idea: ["Ideas", "Possibilities worth growing"],
+  link: ["Links", "Useful places and references"],
+  read_later: ["Read later", "A quiet queue for focused reading"],
+  pinned: ["Pinned", "Keep the important things visible"],
+  archived: ["Archive", "Notes kept out of the daily flow"],
+  trashed: ["Trash", "Recover or permanently remove notes"],
+};
 
-// Render the notes table with clickable rows that open the reader. `col3` maps
-// a result row to its third-column text (snippet for search, modified for list).
-function renderNotesTable(results, col3) {
-  const body = $("notes-body");
-  body.replaceChildren();
-  for (const r of results) {
-    const tr = document.createElement("tr");
-    for (const cell of [r.title, r.category, col3(r)]) {
-      const td = document.createElement("td");
-      td.textContent = cell || "";
-      tr.append(td);
+const NOTE_KIND_META = {
+  note: ["✦", "Note"],
+  task: ["✓", "Task"],
+  idea: ["◇", "Idea"],
+  link: ["↗", "Link"],
+  read_later: ["◷", "Read later"],
+};
+
+let notesCategories = [];
+let notesSearchTimer = null;
+let draggedNoteId = "";
+let notesState = {
+  view: "board",
+  query: "",
+  category: "",
+  tag: "",
+  results: [],
+  facets: { counts: {}, categories: [], tags: [] },
+  board: null,
+  current: null,
+};
+
+function notesQueryArgs() {
+  const kind = ["task", "idea", "link", "read_later"].includes(notesState.view)
+    ? notesState.view
+    : "";
+  let status = "";
+  if (notesState.view === "board") status = "active";
+  if (notesState.view === "archived") status = "archived";
+  if (notesState.view === "trashed") status = "trashed";
+  return {
+    query: notesState.query,
+    kind,
+    status,
+    category: notesState.category,
+    tag: notesState.tag,
+    sort: notesState.view === "task" ? "due" : "updated",
+    limit: 200,
+  };
+}
+
+function visibleNotes() {
+  let notes = [...notesState.results];
+  if (!["archived", "trashed", "board"].includes(notesState.view)) {
+    notes = notes.filter((note) => note.status !== "archived");
+  }
+  if (notesState.view === "pinned") {
+    notes = notes.filter((note) => note.pinned);
+  }
+  return notes;
+}
+
+function setNotesStatus(message, good = true) {
+  setStatus("notes-status", message || "", good);
+}
+
+function setEditorStatus(message, good = true) {
+  setStatus("ne-status", message || "", good);
+}
+
+function renderNotesViewButtons() {
+  document.querySelectorAll("[data-notes-view]").forEach((button) => {
+    const active = button.dataset.notesView === notesState.view;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-current", active ? "page" : "false");
+  });
+}
+
+function makeFacetButton(label, active, onClick) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = `notes-facet-btn${active ? " active" : ""}`;
+  button.textContent = label;
+  button.addEventListener("click", onClick);
+  return button;
+}
+
+function renderNotesFacets() {
+  const categoryList = $("notes-category-list");
+  categoryList.replaceChildren();
+  categoryList.append(makeFacetButton(
+    "All categories",
+    !notesState.category,
+    () => {
+      notesState.category = "";
+      loadNotes(false);
+    },
+  ));
+  for (const category of notesState.facets.categories || []) {
+    categoryList.append(makeFacetButton(
+      category,
+      notesState.category === category,
+      () => {
+        notesState.category = notesState.category === category ? "" : category;
+        loadNotes(false);
+      },
+    ));
+  }
+
+  const tagList = $("notes-tag-list");
+  tagList.replaceChildren();
+  for (const tag of (notesState.facets.tags || []).slice(0, 18)) {
+    tagList.append(makeFacetButton(
+      `#${tag}`,
+      notesState.tag === tag,
+      () => {
+        notesState.tag = notesState.tag === tag ? "" : tag;
+        loadNotes(false);
+      },
+    ));
+  }
+  if (!(notesState.facets.tags || []).length) {
+    const empty = document.createElement("span");
+    empty.className = "muted small";
+    empty.textContent = "Tags appear as you add them.";
+    tagList.append(empty);
+  }
+}
+
+function formatNoteDate(value) {
+  if (!value) return "";
+  const raw = String(value);
+  const date = new Date(/^\d{4}-\d{2}-\d{2}$/.test(raw) ? `${raw}T12:00:00` : raw);
+  if (Number.isNaN(date.getTime())) return String(value).replace("T", " ").slice(0, 16);
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function noteKindMeta(kind) {
+  return NOTE_KIND_META[kind] || NOTE_KIND_META.note;
+}
+
+function createNoteCard(note, options = {}) {
+  const card = document.createElement("article");
+  const color = ["yellow", "peach", "pink", "violet", "blue", "mint", "slate"].includes(note.color)
+    ? note.color
+    : "yellow";
+  card.className = `note-card note-color-${color}`;
+  card.dataset.noteId = note.note_id;
+  card.tabIndex = 0;
+  card.setAttribute("aria-label", `${noteKindMeta(note.kind)[1]}: ${note.title || "Untitled note"}`);
+
+  const top = document.createElement("div");
+  top.className = "note-card-top";
+  const kind = document.createElement("span");
+  kind.className = "note-kind";
+  kind.textContent = `${noteKindMeta(note.kind)[0]} ${noteKindMeta(note.kind)[1]}`;
+  top.append(kind);
+  if (note.pinned) {
+    const pin = document.createElement("span");
+    pin.className = "note-pin";
+    pin.title = "Pinned";
+    pin.textContent = "⌖";
+    top.append(pin);
+  }
+  card.append(top);
+
+  const heading = document.createElement("h3");
+  heading.textContent = note.title || "Untitled note";
+  card.append(heading);
+  if (note.excerpt) {
+    const excerpt = document.createElement("p");
+    excerpt.className = "note-card-excerpt";
+    excerpt.textContent = note.excerpt;
+    card.append(excerpt);
+  }
+
+  const chips = document.createElement("div");
+  chips.className = "note-card-chips";
+  if (note.kind === "task" && note.status === "done") {
+    const done = document.createElement("span");
+    done.className = "note-chip done";
+    done.textContent = "Completed";
+    chips.append(done);
+  }
+  if (note.due) {
+    const due = document.createElement("span");
+    due.className = "note-chip";
+    due.textContent = `Due ${formatNoteDate(note.due)}`;
+    chips.append(due);
+  }
+  if (note.category) {
+    const category = document.createElement("span");
+    category.className = "note-chip";
+    category.textContent = note.category;
+    chips.append(category);
+  }
+  for (const tag of (note.tags || []).slice(0, 2)) {
+    const chip = document.createElement("span");
+    chip.className = "note-chip";
+    chip.textContent = `#${tag}`;
+    chips.append(chip);
+  }
+  if (chips.childElementCount) card.append(chips);
+
+  const footer = document.createElement("footer");
+  const updated = document.createElement("span");
+  updated.textContent = formatNoteDate(note.updated || note.created);
+  footer.append(updated);
+  if (/^https?:\/\//i.test(note.source || "")) {
+    const source = document.createElement("a");
+    source.href = note.source;
+    source.target = "_blank";
+    source.rel = "noopener";
+    source.textContent = "Open source ↗";
+    source.addEventListener("click", (event) => event.stopPropagation());
+    footer.append(source);
+  }
+  if (options.unplaced) {
+    const add = document.createElement("button");
+    add.type = "button";
+    add.className = "note-card-action";
+    add.textContent = "Add to board";
+    add.addEventListener("click", (event) => {
+      event.stopPropagation();
+      moveNoteOnBoard(note.note_id, firstBoardSectionId());
+    });
+    footer.append(add);
+  }
+  card.append(footer);
+
+  const open = () => openNoteEditor(note.note_id);
+  card.addEventListener("click", open);
+  card.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      open();
     }
-    if (r.relpath) {
-      tr.classList.add("note-row");
-      tr.tabIndex = 0;
-      const open = () => openNoteReader(r.relpath);
-      tr.addEventListener("click", open);
-      tr.addEventListener("keydown", (e) => { if (e.key === "Enter") open(); });
+  });
+  if (options.draggable) {
+    card.draggable = true;
+    card.addEventListener("dragstart", (event) => {
+      draggedNoteId = note.note_id;
+      card.classList.add("dragging");
+      if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", note.note_id);
+      }
+    });
+    card.addEventListener("dragend", () => {
+      draggedNoteId = "";
+      card.classList.remove("dragging");
+    });
+  }
+  return card;
+}
+
+function renderNoteGrid(notes) {
+  const grid = $("notes-card-grid");
+  grid.replaceChildren();
+  for (const note of notes) grid.append(createNoteCard(note));
+}
+
+function firstBoardSectionId() {
+  return notesState.board?.sections?.[0]?.id || "now";
+}
+
+function populateBoardSectionSelect(selected = "") {
+  const select = $("ne-board-section");
+  select.replaceChildren();
+  for (const section of notesState.board?.sections || []) {
+    const option = document.createElement("option");
+    option.value = section.id;
+    option.textContent = section.title;
+    option.selected = section.id === selected;
+    select.append(option);
+  }
+  if (!select.value && select.options.length) select.value = select.options[0].value;
+}
+
+function placementFor(noteId) {
+  return (notesState.board?.placements || []).find((item) => item.note_id === noteId) || null;
+}
+
+function normalizeBoardOrders() {
+  const bySection = new Map();
+  for (const placement of notesState.board?.placements || []) {
+    if (!bySection.has(placement.section_id)) bySection.set(placement.section_id, []);
+    bySection.get(placement.section_id).push(placement);
+  }
+  for (const placements of bySection.values()) {
+    placements.sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
+    placements.forEach((placement, index) => { placement.order = index; });
+  }
+}
+
+async function saveNotesBoard() {
+  if (!notesState.board) return false;
+  normalizeBoardOrders();
+  try {
+    const result = await action("notes_board_save", {
+      revision: notesState.board.revision,
+      board: notesState.board,
+    });
+    if (!result.ok) {
+      if (result.board) notesState.board = result.board;
+      setNotesStatus(result.error || "Board could not be saved.", false);
+      return false;
     }
-    body.append(tr);
-  }
-  return results.length;
-}
-
-async function browseNotes() {
-  const query = $("note-query").value.trim();
-  try {
-    if (query) {
-      const res = await action("note_search", { query, limit: 20 });
-      $("notes-col3").textContent = "Snippet";
-      const n = renderNotesTable(res.results || [], (r) => r.snippet || "");
-      $("notes-count").textContent = `(${res.count} match${res.count === 1 ? "" : "es"})`;
-      $("notes-empty").hidden = n > 0;
-    } else {
-      const res = await action("notes_list", { limit: 20 });
-      $("notes-col3").textContent = "Modified";
-      const n = renderNotesTable(res.results || [], (r) => r.modified);
-      $("notes-count").textContent = `(${res.count} total — newest 20)`;
-      $("notes-empty").hidden = n > 0;
-    }
-  } catch (e) {
-    fillTable("notes-body", [[`Notes unavailable: ${e.message}`, "", ""]]);
-    $("notes-empty").hidden = true;
+    notesState.board = result.board;
+    return true;
+  } catch (error) {
+    setNotesStatus(`Board save failed: ${error.message}`, false);
+    return false;
   }
 }
 
-async function openNoteReader(relpath) {
-  try {
-    const n = await action("note_get", { relpath });
-    if (!n.ok) { setStatus("nr-status", n.error || "note not found", false); return; }
-    currentNoteRelpath = n.relpath || relpath;
-    $("nr-title").textContent = n.title || "(untitled)";
-    $("nr-body").textContent = n.body || "";
-    const src = $("nr-source");
-    if (n.source) { src.textContent = n.source; src.href = n.source; src.hidden = false; }
-    else { src.hidden = true; src.removeAttribute("href"); }
-    // Bucket dropdown: configured categories + inbox, plus the note's current
-    // category if it isn't in the list.
-    const cats = [...notesCategories];
-    if (!cats.includes("inbox")) cats.push("inbox");
-    if (n.category && !cats.includes(n.category)) cats.unshift(n.category);
-    const sel = $("nr-bucket");
-    sel.replaceChildren();
-    for (const c of cats) {
-      const o = document.createElement("option");
-      o.value = c; o.textContent = c;
-      if (c === n.category) o.selected = true;
-      sel.append(o);
-    }
-    setStatus("nr-status", "");
-    $("note-reader").hidden = false;
-    $("note-reader").scrollIntoView({ behavior: "smooth", block: "nearest" });
-  } catch (e) {
-    setStatus("nr-status", `Open failed: ${e.message}`, false);
-  }
+async function moveNoteOnBoard(noteId, sectionId) {
+  if (!notesState.board) return;
+  const placements = notesState.board.placements || [];
+  notesState.board.placements = placements.filter((item) => item.note_id !== noteId);
+  const order = notesState.board.placements.filter((item) => item.section_id === sectionId).length;
+  notesState.board.placements.push({
+    note_id: noteId,
+    section_id: sectionId || firstBoardSectionId(),
+    order,
+    size: "medium",
+  });
+  if (await saveNotesBoard()) renderNotesWorkspace();
 }
 
-async function moveNoteToBucket() {
-  if (!currentNoteRelpath) return;
-  const category = $("nr-bucket").value;
-  try {
-    const res = await action("note_move", { relpath: currentNoteRelpath, category });
-    if (!res.ok) { setStatus("nr-status", res.error || "move failed", false); return; }
-    currentNoteRelpath = res.relpath || currentNoteRelpath;
-    setStatus("nr-status", `Moved to ${res.category}.`);
-    browseNotes();
-  } catch (e) {
-    setStatus("nr-status", `Move failed: ${e.message}`, false);
-  }
+async function removeNoteFromBoard(noteId) {
+  if (!notesState.board) return;
+  const before = notesState.board.placements || [];
+  notesState.board.placements = before.filter((item) => item.note_id !== noteId);
+  if (before.length !== notesState.board.placements.length) await saveNotesBoard();
 }
 
-async function deleteCurrentNote() {
-  if (!currentNoteRelpath) return;
-  if (!(await confirmDialog("Delete this note from the vault?", "Delete"))) return;
-  try {
-    const res = await action("note_delete", { relpath: currentNoteRelpath });
-    if (!res.ok) { setStatus("nr-status", res.error || "delete failed", false); return; }
-    $("note-reader").hidden = true;
-    currentNoteRelpath = "";
-    browseNotes();
-  } catch (e) {
-    setStatus("nr-status", `Delete failed: ${e.message}`, false);
-  }
+async function renameBoardSection(sectionId, title) {
+  const section = (notesState.board?.sections || []).find((item) => item.id === sectionId);
+  if (!section) return;
+  section.title = String(title || "Section").trim().slice(0, 60) || "Section";
+  await saveNotesBoard();
 }
 
-async function loadNotes() {
-  browseNotes();
-  try {
-    const cfg = await action("config_snapshot");
-    const notes = cfg.notes || {};
-    notesCategories = notes.categories || [];
-    $("notes-vault").value = notes.vault_dir || "";
-    $("notes-categories").value = (notes.categories || []).join("\n");
-    $("notes-fetch-timeout").value = notes.fetch_timeout_seconds ?? 8;
-    $("notes-max-chars").value = notes.max_extracted_chars ?? 2000;
-    $("notes-low-conf").checked = notes.low_confidence_to_inbox !== false;
-    $("notes-gen-title").checked = notes.generate_title !== false;
-    $("notes-gen-summary").checked = notes.generate_summary !== false;
-    setStatus("notes-status", "");
-  } catch (e) {
-    setStatus("notes-status", `Load failed: ${e.message}`, false);
-  }
-}
-
-async function saveNotes() {
-  const categories = $("notes-categories").value
-    .split("\n")
-    .map((line) => line.trim().replace(/^\/+|\/+$/g, ""))
-    .filter(Boolean);
-  if (categories.length === 0) {
-    setStatus("notes-status", "⚠ Category list cannot be empty.", false);
+async function removeBoardSection(sectionId) {
+  const sections = notesState.board?.sections || [];
+  if (sections.length <= 1) {
+    setNotesStatus("The board needs at least one section.", false);
     return;
   }
-  const patch = {
-    notes: {
-      vault_dir: $("notes-vault").value.trim(),
-      categories,
-      fetch_timeout_seconds: Number($("notes-fetch-timeout").value) || 8,
-      max_extracted_chars: Number($("notes-max-chars").value) || 2000,
-      low_confidence_to_inbox: $("notes-low-conf").checked,
-      generate_title: $("notes-gen-title").checked,
-      generate_summary: $("notes-gen-summary").checked,
-    },
-  };
-  try {
-    const out = await action("apply_config_patch", { patch });
-    setStatus("notes-status", `✅ Saved (${out}).`);
-  } catch (e) {
-    setStatus("notes-status", `⚠ Save failed: ${e.message}`, false);
+  const section = sections.find((item) => item.id === sectionId);
+  if (!(await confirmDialog(`Remove the '${section?.title || "section"}' section? Its notes will move to the first section.`, "Remove section"))) {
+    return;
   }
+  notesState.board.sections = sections.filter((item) => item.id !== sectionId);
+  const fallback = firstBoardSectionId();
+  for (const placement of notesState.board.placements || []) {
+    if (placement.section_id === sectionId) placement.section_id = fallback;
+  }
+  if (await saveNotesBoard()) renderNotesWorkspace();
+}
+
+function renderNotesBoard(notes) {
+  const board = $("notes-board");
+  board.replaceChildren();
+  const noteMap = new Map(notes.map((note) => [note.note_id, note]));
+  const placedIds = new Set();
+  for (const section of notesState.board?.sections || []) {
+    const column = document.createElement("section");
+    column.className = "notes-board-column";
+    column.dataset.sectionId = section.id;
+
+    const header = document.createElement("div");
+    header.className = "notes-board-column-head";
+    const name = document.createElement("input");
+    name.type = "text";
+    name.value = section.title;
+    name.maxLength = 60;
+    name.setAttribute("aria-label", "Board section name");
+    name.addEventListener("change", () => renameBoardSection(section.id, name.value));
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "btn btn-icon";
+    remove.title = "Remove section";
+    remove.setAttribute("aria-label", `Remove ${section.title} section`);
+    remove.textContent = "×";
+    remove.addEventListener("click", () => removeBoardSection(section.id));
+    header.append(name, remove);
+    column.append(header);
+
+    const dropzone = document.createElement("div");
+    dropzone.className = "notes-board-dropzone";
+    dropzone.dataset.sectionId = section.id;
+    dropzone.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      dropzone.classList.add("drag-over");
+      if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+    });
+    dropzone.addEventListener("dragleave", () => dropzone.classList.remove("drag-over"));
+    dropzone.addEventListener("drop", (event) => {
+      event.preventDefault();
+      dropzone.classList.remove("drag-over");
+      const noteId = event.dataTransfer?.getData("text/plain") || draggedNoteId;
+      if (noteId) moveNoteOnBoard(noteId, section.id);
+    });
+
+    const placements = (notesState.board?.placements || [])
+      .filter((item) => item.section_id === section.id)
+      .sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
+    for (const placement of placements) {
+      const note = noteMap.get(placement.note_id);
+      if (!note) continue;
+      placedIds.add(note.note_id);
+      dropzone.append(createNoteCard(note, { draggable: true }));
+    }
+    if (!dropzone.childElementCount) {
+      const hint = document.createElement("p");
+      hint.className = "notes-drop-hint";
+      hint.textContent = "Drag a note here";
+      dropzone.append(hint);
+    }
+    column.append(dropzone);
+    board.append(column);
+  }
+
+  const unplaced = notes.filter((note) => !placedIds.has(note.note_id));
+  const unplacedGrid = $("notes-unplaced-grid");
+  unplacedGrid.replaceChildren();
+  for (const note of unplaced) unplacedGrid.append(createNoteCard(note, { unplaced: true }));
+  $("notes-unplaced").hidden = unplaced.length === 0;
+}
+
+function renderNotesWorkspace() {
+  const meta = NOTE_VIEW_META[notesState.view] || NOTE_VIEW_META.all;
+  $("notes-view-title").textContent = meta[0];
+  $("notes-view-kicker").textContent = meta[1];
+  const notes = visibleNotes();
+  $("notes-count").textContent = `(${notes.length})`;
+  renderNotesViewButtons();
+  renderNotesFacets();
+  const boardMode = notesState.view === "board";
+  $("notes-board-view").hidden = !boardMode;
+  $("notes-card-grid").hidden = boardMode;
+  $("board-add-section").hidden = !boardMode;
+  if (boardMode) renderNotesBoard(notes);
+  else renderNoteGrid(notes);
+  const isEmpty = notes.length === 0;
+  $("notes-empty").hidden = !isEmpty;
+  if (isEmpty) {
+    $("notes-board-view").hidden = true;
+    $("notes-card-grid").hidden = true;
+  }
+  populateBoardSectionSelect(placementFor(notesState.current?.note_id)?.section_id || "");
+}
+
+function setNotesView(view) {
+  if (!NOTE_VIEW_META[view]) return;
+  notesState.view = view;
+  loadNotes(false);
+}
+
+function setEditorOpen(open) {
+  $("note-editor").hidden = !open;
+  $("notes-layout").classList.toggle("editor-open", open);
+}
+
+function populateEditorCategories(selected = INBOX_PLACEHOLDER) {
+  const categories = [
+    "inbox",
+    ...notesCategories,
+    ...(notesState.facets.categories || []),
+  ].filter((value, index, all) => value && all.indexOf(value) === index);
+  const select = $("ne-category");
+  select.replaceChildren();
+  for (const category of categories) {
+    const option = document.createElement("option");
+    option.value = category;
+    option.textContent = category;
+    option.selected = category === selected;
+    select.append(option);
+  }
+}
+
+const INBOX_PLACEHOLDER = "inbox";
+
+function setEditorReadOnly(trashed) {
+  for (const id of [
+    "ne-title", "ne-kind", "ne-status-select", "ne-body", "ne-category",
+    "ne-color", "ne-tags", "ne-due", "ne-source", "ne-pinned",
+    "ne-on-board", "ne-board-section",
+  ]) {
+    $(id).disabled = trashed;
+  }
+  $("ne-save").hidden = trashed;
+  $("ne-organize").disabled = trashed || !notesState.current?.note_id;
+  $("ne-archive").hidden = trashed || notesState.current?.status === "archived";
+  $("ne-trash").hidden = trashed;
+  $("ne-restore").hidden = !trashed;
+  $("ne-delete").hidden = !trashed;
+}
+
+function fillNoteEditor(note) {
+  const isNew = !note;
+  const current = note || {
+    title: "",
+    body: "",
+    kind: "note",
+    status: "active",
+    category: "inbox",
+    tags: [],
+    color: "yellow",
+    due: "",
+    source: "",
+    pinned: false,
+    summary: "",
+  };
+  $("ne-kicker").textContent = isNew ? "Quick capture" : noteKindMeta(current.kind)[1];
+  $("ne-heading").textContent = isNew ? "New note" : "Edit note";
+  $("ne-title").value = current.title || "";
+  $("ne-body").value = current.body || "";
+  $("ne-kind").value = current.kind || "note";
+  $("ne-status-select").value = current.status === "trashed" ? "active" : (current.status || "active");
+  populateEditorCategories(current.category || "inbox");
+  $("ne-color").value = current.color || "yellow";
+  $("ne-tags").value = (current.tags || []).join(", ");
+  $("ne-due").value = (current.due || "").slice(0, 10);
+  $("ne-source").value = current.source || "";
+  $("ne-pinned").checked = !!current.pinned;
+  const placement = current.note_id ? placementFor(current.note_id) : null;
+  $("ne-on-board").checked = !!placement || (isNew && notesState.view === "board");
+  populateBoardSectionSelect(placement?.section_id || firstBoardSectionId());
+  $("ne-board-row").hidden = !$("ne-on-board").checked;
+  $("ne-summary").hidden = !current.summary;
+  $("ne-summary").textContent = current.summary ? `Local AI summary · ${current.summary}` : "";
+  $("ne-save").textContent = isNew ? "Create note" : "Save note";
+  setEditorReadOnly(current.status === "trashed");
+  setEditorStatus("");
+}
+
+function openNewNote(prefill = "") {
+  notesState.current = null;
+  fillNoteEditor(null);
+  const captured = String(prefill || "");
+  $("ne-body").value = captured;
+  if (/^https?:\/\/\S+$/i.test(captured.trim())) {
+    $("ne-kind").value = "read_later";
+    $("ne-source").value = captured.trim();
+  }
+  setEditorOpen(true);
+  $("ne-body").focus();
+}
+
+async function openNoteEditor(noteId) {
+  try {
+    const note = await action("note_get", { note_id: noteId });
+    if (!note.ok) {
+      setNotesStatus(note.error || "Note not found.", false);
+      return;
+    }
+    notesState.current = note;
+    fillNoteEditor(note);
+    setEditorOpen(true);
+  } catch (error) {
+    setNotesStatus(`Open failed: ${error.message}`, false);
+  }
+}
+
+function closeNoteEditor() {
+  notesState.current = null;
+  setEditorOpen(false);
+}
+
+function editorNoteFields() {
+  return {
+    title: $("ne-title").value.trim(),
+    body: $("ne-body").value,
+    kind: $("ne-kind").value,
+    status: $("ne-status-select").value,
+    category: $("ne-category").value || "inbox",
+    tags: $("ne-tags").value,
+    color: $("ne-color").value,
+    due: $("ne-due").value,
+    source: $("ne-source").value.trim(),
+    pinned: $("ne-pinned").checked,
+  };
+}
+
+async function syncEditorBoardPlacement(noteId) {
+  if (!notesState.board) return;
+  if ($("ne-on-board").checked) {
+    const sectionId = $("ne-board-section").value || firstBoardSectionId();
+    const existing = placementFor(noteId);
+    if (existing) existing.section_id = sectionId;
+    else {
+      notesState.board.placements.push({
+        note_id: noteId,
+        section_id: sectionId,
+        order: notesState.board.placements.filter((item) => item.section_id === sectionId).length,
+        size: "medium",
+      });
+    }
+    await saveNotesBoard();
+  } else {
+    await removeNoteFromBoard(noteId);
+  }
+}
+
+async function saveNoteEditor() {
+  const fields = editorNoteFields();
+  if (!fields.title && !fields.body.trim() && !fields.source) {
+    setEditorStatus("Write something before saving.", false);
+    return;
+  }
+  setEditorStatus("Saving…");
+  try {
+    let saved;
+    if (notesState.current?.note_id) {
+      saved = await action("note_update", {
+        note_id: notesState.current.note_id,
+        revision: notesState.current.revision,
+        patch: fields,
+      });
+    } else {
+      saved = await action("note_create", { ...fields, captured_via: "dashboard" });
+    }
+    if (!saved.ok) {
+      if (saved.conflict && saved.note) {
+        notesState.current = saved.note;
+        fillNoteEditor(saved.note);
+      }
+      setEditorStatus(saved.error || "Save failed.", false);
+      return;
+    }
+    await syncEditorBoardPlacement(saved.note_id);
+    notesState.current = saved;
+    await loadNotes(false);
+    fillNoteEditor(saved);
+    setEditorStatus("Saved.");
+  } catch (error) {
+    setEditorStatus(`Save failed: ${error.message}`, false);
+  }
+}
+
+async function organizeCurrentNote() {
+  if (!notesState.current?.note_id) {
+    setEditorStatus("Save the note before organizing it.", false);
+    return;
+  }
+  const button = $("ne-organize");
+  button.disabled = true;
+  setEditorStatus("Organizing with the local model…");
+  try {
+    const organized = await action("note_organize", {
+      note_id: notesState.current.note_id,
+      revision: notesState.current.revision,
+    });
+    if (!organized.ok) {
+      if (organized.conflict && organized.note) {
+        notesState.current = organized.note;
+        fillNoteEditor(organized.note);
+      }
+      setEditorStatus(organized.error || "Organize failed.", false);
+      return;
+    }
+    notesState.current = organized;
+    await loadNotes(false);
+    fillNoteEditor(organized);
+    const suggestion = organized.suggested_category;
+    const detail = organized.category === "inbox"
+      && suggestion && suggestion !== "inbox"
+      ? ` Kept in Inbox; suggested ${suggestion}.`
+      : ` Filed in ${organized.category}.`;
+    setEditorStatus(`Organized.${detail}`);
+  } catch (error) {
+    setEditorStatus(`Organize failed: ${error.message}`, false);
+  } finally {
+    button.disabled = !notesState.current?.note_id
+      || notesState.current?.status === "trashed";
+  }
+}
+
+async function archiveCurrentNote() {
+  if (!notesState.current?.note_id) return;
+  try {
+    const result = await action("note_archive", {
+      note_id: notesState.current.note_id,
+      revision: notesState.current.revision,
+    });
+    if (!result.ok) {
+      setEditorStatus(result.error || "Archive failed.", false);
+      return;
+    }
+    await removeNoteFromBoard(result.note_id);
+    closeNoteEditor();
+    await loadNotes(false);
+  } catch (error) {
+    setEditorStatus(`Archive failed: ${error.message}`, false);
+  }
+}
+
+async function trashCurrentNote() {
+  if (!notesState.current?.note_id) {
+    closeNoteEditor();
+    return;
+  }
+  if (!(await confirmDialog("Move this note to Trash? You can restore it later.", "Move to Trash"))) return;
+  try {
+    const noteId = notesState.current.note_id;
+    const result = await action("note_trash", {
+      note_id: noteId,
+      revision: notesState.current.revision,
+    });
+    if (!result.ok) {
+      setEditorStatus(result.error || "Move to Trash failed.", false);
+      return;
+    }
+    await removeNoteFromBoard(noteId);
+    closeNoteEditor();
+    await loadNotes(false);
+  } catch (error) {
+    setEditorStatus(`Move to Trash failed: ${error.message}`, false);
+  }
+}
+
+async function restoreCurrentNote() {
+  if (!notesState.current?.note_id) return;
+  try {
+    const result = await action("note_restore", { note_id: notesState.current.note_id });
+    if (!result.ok) {
+      setEditorStatus(result.error || "Restore failed.", false);
+      return;
+    }
+    notesState.current = result;
+    await loadNotes(false);
+    fillNoteEditor(result);
+    setEditorStatus("Restored.");
+  } catch (error) {
+    setEditorStatus(`Restore failed: ${error.message}`, false);
+  }
+}
+
+async function permanentlyDeleteCurrentNote() {
+  if (!notesState.current?.note_id) return;
+  if (!(await confirmDialog("Permanently delete this note? This cannot be undone.", "Delete forever"))) return;
+  try {
+    const result = await action("note_delete", {
+      note_id: notesState.current.note_id,
+      permanent: true,
+    });
+    if (!result.ok) {
+      setEditorStatus(result.error || "Delete failed.", false);
+      return;
+    }
+    closeNoteEditor();
+    await loadNotes(false);
+  } catch (error) {
+    setEditorStatus(`Delete failed: ${error.message}`, false);
+  }
+}
+
+async function addBoardSection() {
+  const input = $("board-section-title");
+  const title = input.value.trim();
+  if (!title || !notesState.board) return;
+  const base = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "section";
+  const existing = new Set(notesState.board.sections.map((section) => section.id));
+  let sectionId = base;
+  let suffix = 2;
+  while (existing.has(sectionId)) {
+    sectionId = `${base}-${suffix}`;
+    suffix += 1;
+  }
+  notesState.board.sections.push({ id: sectionId, title: title.slice(0, 60) });
+  input.value = "";
+  if (await saveNotesBoard()) renderNotesWorkspace();
+}
+
+async function loadNotes(takeStaged = true) {
+  setNotesStatus("Loading…");
+  try {
+    const [feed, boardResult, cfg] = await Promise.all([
+      action("notes_query", notesQueryArgs()),
+      action("notes_board_get"),
+      action("config_snapshot"),
+    ]);
+    notesState.results = feed.results || [];
+    notesState.facets = feed.facets || { counts: {}, categories: [], tags: [] };
+    notesState.board = boardResult.board;
+    notesCategories = (cfg.notes || {}).categories || [];
+    renderNotesWorkspace();
+    setNotesStatus("");
+    if (takeStaged) {
+      const staged = await action("note_take_staged");
+      if (staged.staged) openNewNote(staged.text || "");
+    }
+  } catch (error) {
+    setNotesStatus(`Notes unavailable: ${error.message}`, false);
+    notesState.results = [];
+    renderNotesWorkspace();
+  }
+}
+
+function populateNotesConfig(notes) {
+  const cfg = notes || {};
+  $("notes-vault").value = cfg.vault_dir || "";
+  notesCategories = [...new Set((cfg.categories || [])
+    .map(normalizeConfigCategory)
+    .filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b));
+  renderNotesCategoryManager();
+  $("notes-fetch-timeout").value = cfg.fetch_timeout_seconds ?? 8;
+  $("notes-max-chars").value = cfg.max_extracted_chars ?? 2000;
+  $("notes-low-conf").checked = cfg.low_confidence_to_inbox !== false;
+  $("notes-allow-new").checked = cfg.allow_new_categories !== false;
+  $("notes-gen-title").checked = cfg.generate_title !== false;
+  $("notes-gen-summary").checked = cfg.generate_summary !== false;
+}
+
+function normalizeConfigCategory(value) {
+  const parts = String(value || "")
+    .trim()
+    .replace(/\\/g, "/")
+    .replace(/^\/+|\/+$/g, "")
+    .split("/");
+  if (parts.length < 1 || parts.length > 2) return "";
+  const normalized = parts.map((part) => part
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 32)
+    .replace(/-+$/g, ""));
+  if (normalized.some((part) => !part)) return "";
+  const category = normalized.join("/");
+  return category === "inbox" || category.length > 65 ? "" : category;
+}
+
+function renderNotesCategoryManager() {
+  const list = $("notes-categories");
+  list.replaceChildren();
+  for (const category of notesCategories) {
+    const row = document.createElement("div");
+    row.className = "config-category";
+    row.setAttribute("role", "listitem");
+    const label = document.createElement("span");
+    label.textContent = category;
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "config-category-remove";
+    remove.textContent = "×";
+    remove.setAttribute("aria-label", `Remove ${category}`);
+    remove.addEventListener("click", () => {
+      notesCategories = notesCategories.filter((item) => item !== category);
+      renderNotesCategoryManager();
+    });
+    row.append(label, remove);
+    list.append(row);
+  }
+}
+
+function addNotesCategory() {
+  const input = $("notes-category-new");
+  const category = normalizeConfigCategory(input.value);
+  if (!category) {
+    setStatus(
+      "config-status",
+      "⚠ Use one safe folder or parent/child pair, such as research or work/technical.",
+      false,
+    );
+    return;
+  }
+  if (!notesCategories.includes(category)) notesCategories.push(category);
+  notesCategories.sort((a, b) => a.localeCompare(b));
+  input.value = "";
+  renderNotesCategoryManager();
+  setStatus("config-status", "");
+}
+
+function notesConfigPatch() {
+  return {
+    vault_dir: $("notes-vault").value.trim(),
+    categories: [...notesCategories],
+    fetch_timeout_seconds: Number($("notes-fetch-timeout").value) || 8,
+    max_extracted_chars: Number($("notes-max-chars").value) || 2000,
+    low_confidence_to_inbox: $("notes-low-conf").checked,
+    allow_new_categories: $("notes-allow-new").checked,
+    generate_title: $("notes-gen-title").checked,
+    generate_summary: $("notes-gen-summary").checked,
+  };
 }
 
 // ---- Config ----------------------------------------------------------------
+
+const CONFIG_SECTION_KEY = "flowkey.config.section.v1";
+const CONFIG_COLLAPSED_KEY = "flowkey.config.collapsed.v1";
+const CONFIG_SECTION_META = {
+  essentials: ["Essentials", "Everyday shortcuts, performance, privacy, and tone."],
+  models: ["Models & AI", "Choose the local provider, runtime, and active model."],
+  notes: ["Notes", "Control the vault, categories, capture, and local enrichment."],
+  prompts: ["Prompts", "Shape prompt output and create your own prefix modes."],
+  notifications: ["Notifications", "Decide which local desktop signals deserve attention."],
+  meetings: ["Meetings", "Connect Quill and schedule after-hours digest processing."],
+  advanced: ["Advanced", "Tune long-input routing and lower-level behavior."],
+};
+
+let activeConfigSection = "essentials";
+let collapsedConfigCards = new Set();
+
+function readConfigWorkspaceState() {
+  try {
+    const savedSection = localStorage.getItem(CONFIG_SECTION_KEY);
+    if (CONFIG_SECTION_META[savedSection]) activeConfigSection = savedSection;
+    const savedCollapsed = JSON.parse(
+      localStorage.getItem(CONFIG_COLLAPSED_KEY) || "[]",
+    );
+    if (Array.isArray(savedCollapsed)) {
+      collapsedConfigCards = new Set(savedCollapsed.map(String));
+    }
+  } catch {
+    activeConfigSection = "essentials";
+    collapsedConfigCards = new Set();
+  }
+}
+
+function saveCollapsedConfigCards() {
+  try {
+    localStorage.setItem(
+      CONFIG_COLLAPSED_KEY,
+      JSON.stringify([...collapsedConfigCards]),
+    );
+  } catch {
+    /* local-only view preference; safe to forget when storage is unavailable */
+  }
+}
+
+function setConfigCardCollapsed(card, collapsed) {
+  card.classList.toggle("is-collapsed", collapsed);
+  const button = card.querySelector(":scope > h2 .config-card-toggle");
+  if (!button) return;
+  const title = button.dataset.title || "settings";
+  button.textContent = collapsed ? "›" : "▾";
+  button.setAttribute("aria-expanded", String(!collapsed));
+  button.setAttribute(
+    "aria-label",
+    `${collapsed ? "Expand" : "Collapse"} ${title}`,
+  );
+}
+
+function initializeConfigCards() {
+  for (const card of document.querySelectorAll("#config-grid > .card")) {
+    card.classList.add("config-card");
+    const heading = card.querySelector(":scope > h2");
+    if (!heading || heading.querySelector(".config-card-toggle")) continue;
+    heading.classList.add("config-card-heading");
+    const title = heading.textContent.trim() || "settings";
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "config-card-toggle";
+    toggle.dataset.title = title;
+    toggle.addEventListener("click", () => {
+      const collapsed = !card.classList.contains("is-collapsed");
+      if (collapsed) collapsedConfigCards.add(card.id);
+      else collapsedConfigCards.delete(card.id);
+      setConfigCardCollapsed(card, collapsed);
+      saveCollapsedConfigCards();
+    });
+    heading.append(toggle);
+    setConfigCardCollapsed(card, collapsedConfigCards.has(card.id));
+  }
+}
+
+function setConfigSection(section, focus = false) {
+  const selected = CONFIG_SECTION_META[section] ? section : "essentials";
+  activeConfigSection = selected;
+  const tabs = [...document.querySelectorAll("#config-sections [role='tab']")];
+  for (const tab of tabs) {
+    const active = tab.dataset.configSection === selected;
+    tab.classList.toggle("active", active);
+    tab.setAttribute("aria-selected", String(active));
+    tab.tabIndex = active ? 0 : -1;
+    if (active && focus) tab.focus();
+  }
+  for (const card of document.querySelectorAll("#config-grid > [data-config-section]")) {
+    card.hidden = card.dataset.configSection !== selected;
+  }
+  const [title, description] = CONFIG_SECTION_META[selected];
+  $("config-section-title").textContent = title;
+  $("config-section-description").textContent = description;
+  try {
+    localStorage.setItem(CONFIG_SECTION_KEY, selected);
+  } catch {
+    /* local-only view preference */
+  }
+}
+
+function initializeConfigWorkspace() {
+  readConfigWorkspaceState();
+  initializeConfigCards();
+  setConfigSection(activeConfigSection);
+  $("config-sections").addEventListener("click", (event) => {
+    const tab = event.target.closest("[data-config-section]");
+    if (tab) setConfigSection(tab.dataset.configSection);
+  });
+  $("config-sections").addEventListener("keydown", (event) => {
+    const tabs = [...document.querySelectorAll("#config-sections [role='tab']")];
+    const current = tabs.indexOf(event.target.closest("[role='tab']"));
+    if (current < 0) return;
+    let next = current;
+    if (event.key === "ArrowRight") next = (current + 1) % tabs.length;
+    else if (event.key === "ArrowLeft") {
+      next = (current - 1 + tabs.length) % tabs.length;
+    } else if (event.key === "Home") next = 0;
+    else if (event.key === "End") next = tabs.length - 1;
+    else return;
+    event.preventDefault();
+    setConfigSection(tabs[next].dataset.configSection, true);
+  });
+}
 
 function populatePromptBuilder(pb) {
   const cfg = { ...PROMPT_BUILDER_DEFAULTS, ...(pb || {}) };
@@ -884,6 +1746,7 @@ async function loadConfig() {
     populatePromptBuilder(cfg.prompt_builder || {});
     const tone = (cfg.tone || {}).preset || "formal";
     document.querySelectorAll('input[name="tone"]').forEach((r) => (r.checked = r.value === tone));
+    populateNotesConfig(cfg.notes || {});
     populateNotifications(cfg.notifications || {});
     populateMeetings(cfg.meetings || {});
     setStatus("config-status", "");
@@ -1195,6 +2058,11 @@ async function loadFlmVersion(force) {
 }
 
 async function saveConfig() {
+  const notesPatch = notesConfigPatch();
+  if (notesPatch.categories.length === 0) {
+    setStatus("config-status", "⚠ Notes categories cannot be empty.", false);
+    return;
+  }
   const hotkeys = {
     grammar_fix: $("hk-in-grammar").value.trim(),
     open_chat: $("hk-in-chat").value.trim(),
@@ -1240,6 +2108,7 @@ async function saveConfig() {
     prompt_builder: promptBuilderPatch(),
     modes: { tone: { preset: tone ? tone.value : "formal" } },
     hotkeys,
+    notes: notesPatch,
     notifications: notificationsPatch(),
     meetings: meetingsPatch(),
   };
@@ -2015,6 +2884,7 @@ function tabFromHash() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  initializeConfigWorkspace();
   attachHelpMarker("history-store-help", HISTORY_STORE_HELP_TEXT);
   $("tabs").addEventListener("click", (e) => {
     const btn = e.target.closest(".tab");
@@ -2032,15 +2902,44 @@ document.addEventListener("DOMContentLoaded", () => {
   $("refresh-btn").addEventListener("click", refreshAll);
   $("theme-btn").addEventListener("click", cycleTheme);
   applyTheme(localStorage.getItem(THEME_KEY) || "auto");
-  $("note-search-btn").addEventListener("click", browseNotes);
-  $("note-query").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") browseNotes();
+  $("note-query").addEventListener("input", (event) => {
+    notesState.query = event.target.value.trim();
+    clearTimeout(notesSearchTimer);
+    notesSearchTimer = setTimeout(() => loadNotes(false), 180);
   });
-  $("notes-save").addEventListener("click", saveNotes);
-  $("notes-revert").addEventListener("click", loadNotes);
-  $("nr-move").addEventListener("click", moveNoteToBucket);
-  $("nr-delete").addEventListener("click", deleteCurrentNote);
-  $("nr-close").addEventListener("click", () => { $("note-reader").hidden = true; });
+  $("note-query").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      clearTimeout(notesSearchTimer);
+      notesState.query = event.target.value.trim();
+      loadNotes(false);
+    }
+  });
+  $("notes-view-list").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-notes-view]");
+    if (button) setNotesView(button.dataset.notesView);
+  });
+  $("note-new").addEventListener("click", () => openNewNote());
+  $("notes-empty-new").addEventListener("click", () => openNewNote());
+  $("ne-close").addEventListener("click", closeNoteEditor);
+  $("ne-save").addEventListener("click", saveNoteEditor);
+  $("ne-organize").addEventListener("click", organizeCurrentNote);
+  $("ne-archive").addEventListener("click", archiveCurrentNote);
+  $("ne-trash").addEventListener("click", trashCurrentNote);
+  $("ne-restore").addEventListener("click", restoreCurrentNote);
+  $("ne-delete").addEventListener("click", permanentlyDeleteCurrentNote);
+  $("ne-on-board").addEventListener("change", () => {
+    $("ne-board-row").hidden = !$("ne-on-board").checked;
+  });
+  $("ne-body").addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault();
+      saveNoteEditor();
+    }
+  });
+  $("board-section-add").addEventListener("click", addBoardSection);
+  $("board-section-title").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") addBoardSection();
+  });
   $("history-view-telemetry").addEventListener("click", () => setHistoryView("telemetry"));
   $("history-view-exposed").addEventListener("click", () => setHistoryView("exposed"));
   $("history-storage-action").addEventListener("click", setHistoryStorageFromBanner);
@@ -2061,6 +2960,13 @@ document.addEventListener("DOMContentLoaded", () => {
   $("mtg-week-gen").addEventListener("click", generateWeekSummary);
   $("config-save").addEventListener("click", saveConfig);
   $("config-revert").addEventListener("click", loadConfig);
+  $("notes-category-add").addEventListener("click", addNotesCategory);
+  $("notes-category-new").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      addNotesCategory();
+    }
+  });
   $("cm-select").addEventListener("change", fillCustomModeForm);
   $("cm-save").addEventListener("click", saveCustomMode);
   $("cm-delete").addEventListener("click", deleteCustomMode);

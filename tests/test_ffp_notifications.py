@@ -48,9 +48,8 @@ CLASSIFY_CASES = [
     ("Flowkey", "Grammar engine not found (ffp-grammar-fix.exe / pyw.exe + grammar_fix.py).", "errors"),
     ("Flowkey", "No text returned.", "errors"),
     ("Flowkey", "Clipboard write failed.", "errors"),
-    ("Flowkey", "📝 Note capture: clipboard busy — try again in a moment.", "errors"),
-    ("Flowkey", "📝 Note capture: nothing to save (no selection, clipboard empty).", "errors"),
     ("Flowkey", "📝 Note capture: daemon unavailable.", "errors"),
+    ("Flowkey", "📝 Clipboard busy — opened a blank note.", "errors"),
     ("Flowkey", "💬 Ask: clipboard busy — try again in a moment.", "errors"),
     ("Flowkey", "💬 Ask: nothing to send (no selection, clipboard empty).", "errors"),
     ("Flowkey", "Ask: daemon unavailable.", "errors"),
@@ -83,7 +82,8 @@ CLASSIFY_CASES = [
     ("Flowkey", "Prompt refined.", "action_result"),
     ("Flowkey", "Grammar fixed.", "action_result"),
     ("Flowkey", "✅ summarize done. · 1.2s · 45 tok/s", "action_result"),
-    ("Flowkey", "📝 Note saved from chrome.exe (412 chars) — categorizing…", "action_result"),
+    ("Flowkey", "📝 Selection ready in Notes (412 chars).", "action_result"),
+    ("Flowkey", "📝 Blank note ready.", "action_result"),
     ("Flowkey", "💬 Sent to chat (412 chars).", "action_result"),
 ]
 

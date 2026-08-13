@@ -925,10 +925,18 @@ def build_config_snapshot() -> dict:
         ).to_dict(),
         "notes": {
             "vault_dir": str(notes_cfg.get("vault_dir") or r"%USERPROFILE%\Documents\FastFlowPrompt Notes"),
-            "categories": list(notes_cfg.get("categories") or []),
+            "categories": sorted(
+                {
+                    str(category).strip().replace("\\", "/").strip("/")
+                    for category in (notes_cfg.get("categories") or [])
+                    if str(category).strip()
+                },
+                key=str.casefold,
+            ),
             "fetch_timeout_seconds": int(notes_cfg.get("fetch_timeout_seconds") or 8),
             "max_extracted_chars": int(notes_cfg.get("max_extracted_chars") or 2000),
             "low_confidence_to_inbox": bool(notes_cfg.get("low_confidence_to_inbox", True)),
+            "allow_new_categories": bool(notes_cfg.get("allow_new_categories", True)),
             "generate_title": bool(notes_cfg.get("generate_title", True)),
             "generate_summary": bool(notes_cfg.get("generate_summary", True)),
         },

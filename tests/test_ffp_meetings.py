@@ -120,6 +120,56 @@ def test_digests_list():
     assert "digest_md" not in out["digests"][0]  # list is summary-only
 
 
+def test_poisoned_validation_digest_is_not_a_cache_hit():
+    M.save_digest({
+        "meeting_id": "poisoned",
+        "title": "Real meeting",
+        "processed_at": "2026-07-29T22:17:55",
+        "source": "transcript",
+        "context_chars": 133,
+        "digest_md": (
+            "## Summary\n- (not discussed)\n"
+            "## Goals\n- (not discussed)\n"
+            "## Action items\n"
+            "- [unassigned] Review invalid meeting_id input parameters"
+        ),
+    })
+
+    assert M.digest_exists("poisoned") is False
+    assert M.get_digest("poisoned") == {
+        "found": False,
+        "meeting_id": "poisoned",
+    }
+    assert M.list_digests() == {"digests": [], "count": 0}
+
+
+def test_batch_reprocesses_poisoned_validation_digest():
+    meeting = {
+        "id": "poisoned",
+        "title": "Real meeting",
+        "date": "2026-07-29T13:59:24Z",
+    }
+    M.save_digest({
+        "meeting_id": meeting["id"],
+        "title": meeting["title"],
+        "processed_at": "2026-07-29T22:17:55",
+        "source": "transcript",
+        "context_chars": 133,
+        "digest_md": "- [unassigned] Review invalid meeting_id input parameters",
+    })
+
+    result = M.run_batch(
+        _cfg(),
+        client=FakeQuill([meeting], minutes="## Notes\n- fixed parcel routing"),
+        llm_call=lambda messages: "## Summary\n- Fixed parcel routing",
+    )
+
+    assert result["processed"] == 1
+    assert M.get_digest("poisoned")["digest_md"] == (
+        "## Summary\n- Fixed parcel routing"
+    )
+
+
 # ---------- process / batch -----------------------------------------------------------
 
 def test_process_meeting_uses_minutes_when_available():

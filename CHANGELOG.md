@@ -2,6 +2,33 @@
 
 ## Unreleased
 
+## 2.5.0
+
+**Notes now works like a notepad, sticky-note wall, and vision board instead of a file browser.** Capture first, shape the note in an editor, and organize it without leaving the Notes tab.
+
+### Added
+
+- **Living Notes workspace.** Notes render as responsive sticky cards with dedicated types for notes, tasks, ideas, links, and read-later items. The composer/editor supports title, body, category, tags, color, status, due date, source link, pinning, Archive, and Trash.
+- **Smart organization.** Search, type views, Pinned/Archive/Trash views, category facets, and tag facets work over an indexed vault feed.
+- **Vision Board.** Editable sections and drag-and-drop card ordering are persisted separately in `.flowkey/board.json`, keyed by stable note IDs. Removing a board placement never mutates or deletes the note.
+- **Recoverable removal.** The default delete action moves a note to Trash. Restore is immediate; permanent deletion is available only inside Trash and requires explicit confirmation.
+- **Safe schema-v2 migration.** Existing Markdown notes gain a stable `note_id` and richer metadata without losing their body, source path, or unknown frontmatter. A backup is written to `.flowkey/backups/v1/` before the first rewrite.
+- **Conflict-aware, atomic writes.** Notes and board state use atomic replacement and revisions, so a stale editor reports a conflict instead of overwriting newer work.
+
+### Changed
+
+- **The Notes tab contains notes only.** Vault, category, extraction, and local-model controls moved to Config → Notes & capture and save with the rest of Config.
+- **`Ctrl+Alt+N` opens the Notes composer.** A fresh selection prefills the draft; no selection opens a blank composer. Prior clipboard contents are never used as an implicit fallback, and capture no longer saves before review.
+- **Local-model enrichment cannot rewrite authored content.** It may fill only blank or generated metadata, preserving user-written titles and bodies.
+- **Legacy note actions remain compatible.** Existing callers can continue reading or moving by relative path while the new workspace uses stable IDs.
+
+### Fixed
+
+- **Date-only due dates keep their calendar day.** A value such as `2026-08-04` displays as August 4 in every timezone instead of shifting to the prior day west of UTC.
+- **Note migration no longer races concurrent edits or vanishes notes.** Upgrading a pre-2.5 note to the new schema is now serialized against other note writes, and a note whose file can't be rewritten (e.g. a read-only location) still appears in search and listings instead of silently disappearing.
+- **"Move to Trash" respects the same conflict check as every other note action.** If a note changed since you opened it, trashing it now reports the conflict instead of acting on stale data.
+- **A Quill hiccup no longer breaks Meetings.** A transient error from Quill during a scheduled digest run, the Overview widget, or a meeting Q&A now degrades gracefully instead of surfacing as an error or silently skipping a whole batch.
+
 ## 2.4.3
 
 **`prompt:` handles vague requests properly.** A request too thin to break into requirements now produces a prompt that names what is missing, instead of handing the request back reworded.

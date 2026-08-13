@@ -151,64 +151,154 @@
   </section>
 
   <section class="panel" id="tab-notes">
-    <div class="grid">
-      <div class="card card-wide">
-        <h2>Your notes <span class="muted small" id="notes-count"></span></h2>
-        <div class="form-row">
-          <input type="text" id="note-query" placeholder="Search notes… (leave empty to show newest)">
-          <button class="btn" id="note-search-btn">Search</button>
+    <div class="notes-shell">
+      <header class="card notes-toolbar">
+        <div>
+          <p class="eyebrow">Your thinking space</p>
+          <h2>Notes <span class="muted small" id="notes-count"></span></h2>
         </div>
-        <table class="data-table">
-          <thead><tr><th>Title</th><th>Category</th><th id="notes-col3">Modified</th></tr></thead>
-          <tbody id="notes-body"></tbody>
-        </table>
-        <p class="muted small" id="notes-empty" hidden>No notes found.</p>
-        <p class="muted small">Click a note to read it, move it to another bucket, or delete it.</p>
-      </div>
-      <div class="card card-wide note-reader" id="note-reader" hidden>
-        <div class="card-actions reader-head">
-          <h2 id="nr-title" class="nr-title">Note</h2>
-          <button class="btn" id="nr-close" title="Close">✕</button>
+        <div class="notes-toolbar-actions">
+          <input type="search" id="note-query" aria-label="Search notes" placeholder="Search notes, tags, links…">
+          <button class="btn btn-primary" id="note-new" type="button">＋ New note</button>
         </div>
-        <p class="muted small"><a id="nr-source" href="#" target="_blank" rel="noopener" hidden></a></p>
-        <div class="form-row">
-          <label for="nr-bucket">Bucket</label>
-          <select id="nr-bucket"></select>
-          <button class="btn" id="nr-move">Move</button>
-          <button class="btn" id="nr-delete">Delete…</button>
-          <span class="muted small" id="nr-status"></span>
-        </div>
-        <pre class="note-body" id="nr-body"></pre>
-      </div>
-      <div class="card card-wide">
-        <h2>Vault</h2>
-        <div class="form-row">
-          <label for="notes-vault">Vault directory</label>
-          <input type="text" id="notes-vault">
-        </div>
-      </div>
-      <div class="card card-wide">
-        <h2>Categories <span class="muted small">(one per line — the LLM picks from this list)</span></h2>
-        <textarea id="notes-categories" rows="7" spellcheck="false"></textarea>
-      </div>
-      <div class="card card-wide">
-        <h2>LLM behavior</h2>
-        <div class="form-row">
-          <label for="notes-fetch-timeout">Fetch timeout (s)</label>
-          <input type="number" id="notes-fetch-timeout" min="1" max="120">
-        </div>
-        <div class="form-row">
-          <label for="notes-max-chars">Max extracted chars</label>
-          <input type="number" id="notes-max-chars" min="100" max="100000">
-        </div>
-        <label class="check-row"><input type="checkbox" id="notes-low-conf"> Low-confidence categorizations stay in inbox/ instead of being auto-filed</label>
-        <label class="check-row"><input type="checkbox" id="notes-gen-title"> Generate title via LLM</label>
-        <label class="check-row"><input type="checkbox" id="notes-gen-summary"> Generate summary via LLM</label>
-      </div>
-      <div class="card-actions card-wide">
-        <button class="btn btn-primary" id="notes-save">Save notes settings</button>
-        <button class="btn" id="notes-revert">Revert</button>
-        <span class="muted" id="notes-status"></span>
+      </header>
+
+      <div class="notes-layout" id="notes-layout">
+        <aside class="card notes-sidebar" aria-label="Notes views">
+          <nav class="notes-view-list" id="notes-view-list">
+            <button class="notes-view-btn active" type="button" data-notes-view="board"><span>◫</span> Vision board</button>
+            <button class="notes-view-btn" type="button" data-notes-view="all"><span>✦</span> All notes</button>
+            <button class="notes-view-btn" type="button" data-notes-view="task"><span>✓</span> Tasks</button>
+            <button class="notes-view-btn" type="button" data-notes-view="idea"><span>◇</span> Ideas</button>
+            <button class="notes-view-btn" type="button" data-notes-view="link"><span>↗</span> Links</button>
+            <button class="notes-view-btn" type="button" data-notes-view="read_later"><span>◷</span> Read later</button>
+            <button class="notes-view-btn" type="button" data-notes-view="pinned"><span>⌖</span> Pinned</button>
+            <button class="notes-view-btn" type="button" data-notes-view="archived"><span>□</span> Archive</button>
+            <button class="notes-view-btn" type="button" data-notes-view="trashed"><span>♲</span> Trash</button>
+          </nav>
+          <div class="notes-facet-block">
+            <h3>Categories</h3>
+            <div id="notes-category-list" class="notes-facet-list"></div>
+          </div>
+          <div class="notes-facet-block">
+            <h3>Tags</h3>
+            <div id="notes-tag-list" class="notes-tag-list"></div>
+          </div>
+        </aside>
+
+        <section class="notes-content" aria-live="polite">
+          <div class="notes-view-head">
+            <div>
+              <p class="eyebrow" id="notes-view-kicker">Arrange what matters</p>
+              <h2 id="notes-view-title">Vision board</h2>
+            </div>
+            <div class="board-add-section" id="board-add-section">
+              <input type="text" id="board-section-title" maxlength="60" aria-label="New board section" placeholder="New section">
+              <button class="btn" id="board-section-add" type="button">Add section</button>
+            </div>
+          </div>
+
+          <div id="notes-board-view">
+            <div class="notes-board" id="notes-board"></div>
+            <div class="notes-unplaced" id="notes-unplaced">
+              <div class="notes-view-head compact">
+                <div>
+                  <p class="eyebrow">Ready when you are</p>
+                  <h3>Unplaced notes</h3>
+                </div>
+              </div>
+              <div class="notes-card-grid" id="notes-unplaced-grid"></div>
+            </div>
+          </div>
+          <div class="notes-card-grid" id="notes-card-grid" hidden></div>
+          <div class="notes-empty card" id="notes-empty" hidden>
+            <span class="notes-empty-icon">✦</span>
+            <h3>Nothing here yet</h3>
+            <p class="muted">Capture a thought, task, idea, or link and it will appear here.</p>
+            <button class="btn btn-primary" id="notes-empty-new" type="button">Create a note</button>
+          </div>
+          <p class="muted small" id="notes-status"></p>
+        </section>
+
+        <aside class="card notes-editor" id="note-editor" hidden aria-label="Note editor">
+          <div class="notes-editor-head">
+            <div>
+              <p class="eyebrow" id="ne-kicker">Quick capture</p>
+              <h2 id="ne-heading">New note</h2>
+            </div>
+            <button class="btn btn-icon" id="ne-close" type="button" aria-label="Close editor">✕</button>
+          </div>
+          <label for="ne-title">Title</label>
+          <input type="text" id="ne-title" maxlength="120" placeholder="What is this about?">
+          <div class="notes-editor-pair">
+            <div>
+              <label for="ne-kind">Type</label>
+              <select id="ne-kind">
+                <option value="note">Note</option>
+                <option value="task">Task</option>
+                <option value="idea">Idea</option>
+                <option value="link">Link</option>
+                <option value="read_later">Read later</option>
+              </select>
+            </div>
+            <div>
+              <label for="ne-status-select">Status</label>
+              <select id="ne-status-select">
+                <option value="active">Active</option>
+                <option value="done">Done</option>
+                <option value="archived">Archived</option>
+              </select>
+            </div>
+          </div>
+          <label for="ne-body">Note</label>
+          <textarea id="ne-body" rows="12" placeholder="Write anything…"></textarea>
+          <div class="notes-editor-pair">
+            <div>
+              <label for="ne-category">Category</label>
+              <select id="ne-category"></select>
+            </div>
+            <div>
+              <label for="ne-color">Color</label>
+              <select id="ne-color">
+                <option value="yellow">Sunlight</option>
+                <option value="peach">Peach</option>
+                <option value="pink">Rose</option>
+                <option value="violet">Violet</option>
+                <option value="blue">Sky</option>
+                <option value="mint">Mint</option>
+                <option value="slate">Slate</option>
+              </select>
+            </div>
+          </div>
+          <label for="ne-tags">Tags</label>
+          <input type="text" id="ne-tags" placeholder="release, research, personal">
+          <div class="notes-editor-pair">
+            <div>
+              <label for="ne-due">Due</label>
+              <input type="date" id="ne-due">
+            </div>
+            <div>
+              <label for="ne-source">Source link</label>
+              <input type="url" id="ne-source" placeholder="https://…">
+            </div>
+          </div>
+          <label class="check-row"><input type="checkbox" id="ne-pinned"> Pin this note</label>
+          <label class="check-row"><input type="checkbox" id="ne-on-board"> Show on Vision Board</label>
+          <div class="form-row" id="ne-board-row">
+            <label for="ne-board-section">Section</label>
+            <select id="ne-board-section"></select>
+          </div>
+          <p class="notes-ai-summary" id="ne-summary" hidden></p>
+          <div class="notes-editor-actions">
+            <button class="btn btn-primary" id="ne-save" type="button">Save note</button>
+            <button class="btn" id="ne-organize" type="button">Organize with local model</button>
+            <button class="btn" id="ne-archive" type="button">Archive</button>
+            <button class="btn" id="ne-restore" type="button" hidden>Restore</button>
+            <button class="btn btn-danger" id="ne-trash" type="button">Move to Trash</button>
+            <button class="btn btn-danger" id="ne-delete" type="button" hidden>Delete forever…</button>
+          </div>
+          <p class="muted small" id="ne-status"></p>
+        </aside>
       </div>
     </div>
   </section>
@@ -282,8 +372,47 @@
   </section>
 
   <section class="panel" id="tab-config">
-    <div class="grid">
-      <div class="card">
+    <div class="config-head">
+      <div>
+        <p class="eyebrow">Settings workspace</p>
+        <h2 id="config-section-title">Essentials</h2>
+        <p class="muted" id="config-section-description">Everyday shortcuts and preferences.</p>
+      </div>
+      <nav class="config-sections" id="config-sections" role="tablist"
+           aria-label="Configuration sections">
+        <button type="button" role="tab" class="config-section-tab active"
+                data-config-section="essentials" aria-controls="config-grid"
+                aria-selected="true">Essentials</button>
+        <button type="button" role="tab" class="config-section-tab"
+                data-config-section="models" aria-controls="config-grid"
+                aria-selected="false">Models &amp; AI</button>
+        <button type="button" role="tab" class="config-section-tab"
+                data-config-section="notes" aria-controls="config-grid"
+                aria-selected="false">Notes</button>
+        <button type="button" role="tab" class="config-section-tab"
+                data-config-section="prompts" aria-controls="config-grid"
+                aria-selected="false">Prompts</button>
+        <button type="button" role="tab" class="config-section-tab"
+                data-config-section="notifications" aria-controls="config-grid"
+                aria-selected="false">Notifications</button>
+        <button type="button" role="tab" class="config-section-tab"
+                data-config-section="meetings" aria-controls="config-grid"
+                aria-selected="false">Meetings</button>
+        <button type="button" role="tab" class="config-section-tab"
+                data-config-section="advanced" aria-controls="config-grid"
+                aria-selected="false">Advanced</button>
+      </nav>
+    </div>
+    <div class="config-save-bar">
+      <span class="muted" id="config-status" aria-live="polite"></span>
+      <div class="card-actions">
+        <button class="btn" id="config-revert">Revert</button>
+        <button class="btn btn-primary" id="config-save">Save all settings</button>
+      </div>
+    </div>
+    <div class="grid config-grid" id="config-grid" role="tabpanel"
+         aria-labelledby="config-section-title">
+      <div class="card" id="config-hotkeys" data-config-section="essentials">
         <h2>Hotkeys</h2>
         <p class="muted small">Modifiers then ONE key: <kbd>^</kbd> Ctrl <kbd>+</kbd> Shift <kbd>!</kbd> Alt <kbd>#</kbd> Win. Good: ^+g · ^!n · ^+1</p>
         <div class="form-row"><label for="hk-in-grammar">Grammar / Prompt</label><input type="text" id="hk-in-grammar" class="mono"></div>
@@ -292,7 +421,39 @@
         <div class="form-row"><label for="hk-in-ask">Ask in Chat</label><input type="text" id="hk-in-ask" class="mono"></div>
         <p class="muted small">Saving applies to the running app within a second (no restart).</p>
       </div>
-      <div class="card">
+      <div class="card card-wide" id="config-notes"
+           data-config-section="notes" hidden>
+        <h2>Notes &amp; capture</h2>
+        <p class="muted small">Storage, organization, and optional local-model enrichment for the Notes workspace.</p>
+        <h3 class="subhead">Storage</h3>
+        <div class="form-row">
+          <label for="notes-vault">Vault directory</label>
+          <input type="text" id="notes-vault">
+        </div>
+        <h3 class="subhead">Organization</h3>
+        <div id="notes-categories" class="config-category-list"
+             role="list" aria-label="Note categories"></div>
+        <div class="config-category-add">
+          <input type="text" id="notes-category-new"
+                 placeholder="Add category, e.g. learning/python">
+          <button class="btn" id="notes-category-add" type="button">Add</button>
+        </div>
+        <p class="muted small">Categories are kept sorted. Use one folder or a parent/child pair.</p>
+        <h3 class="subhead">Link extraction &amp; enrichment</h3>
+        <div class="form-row">
+          <label for="notes-fetch-timeout">Fetch timeout (s)</label>
+          <input type="number" id="notes-fetch-timeout" min="1" max="120">
+        </div>
+        <div class="form-row">
+          <label for="notes-max-chars">Max extracted chars</label>
+          <input type="number" id="notes-max-chars" min="100" max="100000">
+        </div>
+        <label class="check-row"><input type="checkbox" id="notes-low-conf"> Keep low-confidence categorizations in Inbox</label>
+        <label class="check-row"><input type="checkbox" id="notes-allow-new"> Allow the local model to create a new category when confidence is high</label>
+        <label class="check-row"><input type="checkbox" id="notes-gen-title"> Suggest titles with the local model</label>
+        <label class="check-row"><input type="checkbox" id="notes-gen-summary"> Generate summaries with the local model</label>
+      </div>
+      <div class="card" id="config-provider" data-config-section="models" hidden>
         <h2>LLM provider &amp; server</h2>
         <div class="form-row">
           <label for="cfg-provider">Provider</label>
@@ -318,8 +479,8 @@
         </div>
         <p class="muted small" id="warm-model-note">FastFlowLM-only; warmups run in the background.</p>
       </div>
-      <div class="card">
-        <h2 id="models-title">Models</h2>
+      <div class="card" id="config-models" data-config-section="models" hidden>
+        <h2><span id="models-title">Models</span></h2>
         <p class="model-alert" id="model-alert" hidden></p>
 
         <h3 class="subhead">Installed</h3>
@@ -353,7 +514,7 @@
           </div>
         </div>
       </div>
-      <div class="card">
+      <div class="card" id="config-preferences" data-config-section="essentials">
         <h2>Performance &amp; history</h2>
         <div class="radio-row" id="perf-block">
           <label><input type="radio" name="perf" value="balanced"> 🟡 Balanced</label>
@@ -371,7 +532,8 @@
           <label><input type="radio" name="tone" value="friendly"> 🤝 Friendly</label>
         </div>
       </div>
-      <div class="card">
+      <div class="card" id="config-prompt-builder"
+           data-config-section="prompts" hidden>
         <h2>Prompt builder</h2>
         <p class="muted small">Controls the <code>prompt:</code> output shape without editing the locked built-in system prompt. Custom modes remain the fully custom escape hatch.</p>
         <div class="form-row">
@@ -428,7 +590,8 @@
         </div>
         <pre class="note-body" id="pb-preview" hidden></pre>
       </div>
-      <div class="card">
+      <div class="card" id="config-custom-modes"
+           data-config-section="prompts" hidden>
         <h2>Custom modes</h2>
         <p class="muted small">Your own <code>prefix:</code> commands for the grammar hotkey — the mode id is the prefix (e.g. id <code>translate</code> → select text, prefix with <code>translate:</code>). Built-in modes aren't editable here.</p>
         <div class="form-row"><label for="cm-select">Mode</label><select id="cm-select"></select></div>
@@ -441,14 +604,16 @@
           <span class="muted" id="cm-status"></span>
         </div>
       </div>
-      <div class="card">
+      <div class="card" id="config-routing"
+           data-config-section="advanced" hidden>
         <h2>Routing</h2>
         <label class="check-row"><input type="checkbox" id="cfg-routing"> Enable chunking for long inputs</label>
         <div class="form-row"><label for="cfg-long-thr">Long threshold</label><input type="number" id="cfg-long-thr" min="200" max="5000"></div>
         <div class="form-row"><label for="cfg-chunk-size">Chunk size</label><input type="number" id="cfg-chunk-size" min="200" max="4000"></div>
         <div class="form-row"><label for="cfg-min-chunk">Min chunk</label><input type="number" id="cfg-min-chunk" min="100" max="2000"></div>
       </div>
-      <div class="card card-wide">
+      <div class="card card-wide" id="config-notifications"
+           data-config-section="notifications" hidden>
         <h2>Notifications</h2>
         <p class="muted small">Choose which desktop toasts appear, mute duplicates, and set quiet hours. Errors &amp; warnings always come through while Do&nbsp;Not&nbsp;Disturb or quiet hours are on. Every notification — shown or muted — is recorded in the Telemetry tab's feed.</p>
         <label class="check-row"><input type="checkbox" id="ntf-enabled"> Show desktop notifications <span class="muted small">— master switch; off mutes everything</span></label>
@@ -471,7 +636,8 @@
         <label class="check-row"><input type="checkbox" id="ntf-cat-lifecycle"> App lifecycle <span class="muted small">— app ready, config reloaded</span></label>
         <label class="check-row"><input type="checkbox" id="ntf-cat-errors"> Errors &amp; warnings <span class="muted small">— always shown when DND / quiet hours are on</span></label>
       </div>
-      <div class="card card-wide">
+      <div class="card card-wide" id="config-meetings"
+           data-config-section="meetings" hidden>
         <h2>Meetings &amp; after-hours processing <span class="muted small" id="mtg-cfg-status"></span></h2>
         <p class="muted small">Connect the local <strong>Quill</strong> note app over MCP to search meetings and ask about them. During the idle window below, Flowkey pre-computes each meeting's summary + action items on the local model so daytime reads are instant (a full transcript costs ~15&nbsp;s of prefill — paid once, after hours).</p>
         <label class="check-row"><input type="checkbox" id="mtg-enabled"> Enable Quill integration</label>
@@ -499,11 +665,6 @@
           <button class="btn" id="mtg-run-now">Run batch now</button>
           <span class="muted small" id="mtg-run-status"></span>
         </div>
-      </div>
-      <div class="card-actions card-wide">
-        <button class="btn btn-primary" id="config-save">Save all settings</button>
-        <button class="btn" id="config-revert">Revert</button>
-        <span class="muted" id="config-status"></span>
       </div>
     </div>
   </section>

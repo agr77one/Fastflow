@@ -17,7 +17,7 @@ import paths as _paths
 
 log = logging.getLogger("ffp.config")
 
-_config_lock = threading.Lock()
+_config_lock = threading.RLock()
 
 CLAUDE_PROMPT_SYSTEM_PROMPT_V1 = (
     "Rewrite the user text as a Claude-ready prompt. "
@@ -92,6 +92,23 @@ DEFAULT_CONFIG = {
         "min_chunk_chars": 700,
     },
     "prompt_builder": copy.deepcopy(ffp_prompt_builder.DEFAULT_PROMPT_BUILDER_CONFIG),
+    "notes": {
+        "vault_dir": r"%USERPROFILE%\Documents\FastFlowPrompt Notes",
+        "categories": [
+            "work/technical",
+            "work/managerial",
+            "work/career",
+            "research",
+            "personal",
+            "ideas",
+        ],
+        "fetch_timeout_seconds": 8,
+        "max_extracted_chars": 2000,
+        "low_confidence_to_inbox": True,
+        "allow_new_categories": True,
+        "generate_title": True,
+        "generate_summary": True,
+    },
     "dictionary": {
         "protected_words": [],
     },
@@ -232,18 +249,35 @@ def _enforce_builtin_mode_prompts(cfg: dict) -> None:
             user_mode["system_prompt"] = default_mode["system_prompt"]
 
 
+def _save_config_unlocked(config_path: Path, cfg: dict) -> None:
+    payload = json.dumps(cfg, ensure_ascii=False, indent=2) + "\n"
+    try:
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = config_path.with_suffix(config_path.suffix + ".tmp")
+        tmp.write_text(payload, encoding="utf-8")
+        os.replace(tmp, config_path)
+    except OSError as exc:
+        log.warning("failed to save config %s: %s", config_path, exc)
+        raise
+
+
 def save_config(config_path: Path, cfg: dict) -> None:
     """Atomic write with a module lock to avoid torn JSON under concurrency."""
-    payload = json.dumps(cfg, ensure_ascii=False, indent=2) + "\n"
     with _config_lock:
-        try:
-            config_path.parent.mkdir(parents=True, exist_ok=True)
-            tmp = config_path.with_suffix(config_path.suffix + ".tmp")
-            tmp.write_text(payload, encoding="utf-8")
-            os.replace(tmp, config_path)
-        except OSError as exc:
-            log.warning("failed to save config %s: %s", config_path, exc)
-            raise
+        _save_config_unlocked(config_path, cfg)
+
+
+def update_config(config_path: Path, mutator) -> dict:
+    """Atomically load, mutate, and replace config without a stale overwrite."""
+    with _config_lock:
+        cfg = load_config(config_path)
+        replacement = mutator(cfg)
+        if replacement is not None:
+            if not isinstance(replacement, dict):
+                raise TypeError("config mutator must return a dict or None")
+            cfg = replacement
+        _save_config_unlocked(config_path, cfg)
+        return cfg
 
 
 def deep_merge(dst: dict, src: dict) -> None:
@@ -378,6 +412,7 @@ _PATCH_ROUTING_KEYS = frozenset({
     "min_chunk_chars",
 })
 _PATCH_NOTES_KEYS = frozenset({
+    "allow_new_categories",
     "categories",
     "fetch_timeout_seconds",
     "generate_summary",

@@ -117,6 +117,7 @@ _WEB_ROUTES = {
 
 _paths.ensure_dirs()
 LOG_DIR = _paths.LOGS_DIR  # centralized via paths.py
+_NOTE_STAGED_PATH = _paths.DATA_DIR / ".note_staged.json"
 
 log = logging.getLogger("ffp.daemon")
 
@@ -603,6 +604,26 @@ def _act_notes_list(args: dict) -> dict:
     return notes.list_recent_notes(limit)
 
 
+def _act_notes_query(args: dict) -> dict:
+    """Filterable schema-v2 Notes workspace feed."""
+    import notes
+    try:
+        limit = int(args.get("limit") or 50)
+        offset = int(args.get("offset") or 0)
+    except (TypeError, ValueError):
+        limit, offset = 50, 0
+    return notes.query_notes(
+        str(args.get("query") or ""),
+        kind=str(args.get("kind") or ""),
+        status=str(args.get("status") or ""),
+        category=str(args.get("category") or ""),
+        tag=str(args.get("tag") or ""),
+        sort=str(args.get("sort") or "updated"),
+        limit=limit,
+        offset=offset,
+    )
+
+
 def _act_note_search(args: dict) -> dict:
     """Search the notes vault. args.query (str), args.limit (int, default 5)."""
     import notes
@@ -646,19 +667,153 @@ def _act_save_note(args: dict) -> dict:
 def _act_note_get(args: dict) -> dict:
     """Read one note's full content for the dashboard reader."""
     import notes
-    return notes.get_note(str(args.get("relpath") or args.get("path") or ""))
+    return notes.get_note(str(
+        args.get("note_id") or args.get("relpath") or args.get("path") or ""
+    ))
+
+
+def _act_note_create(args: dict) -> dict:
+    import notes
+    return notes.create_note(
+        title=str(args.get("title") or ""),
+        body=str(args.get("body") or ""),
+        kind=str(args.get("kind") or "note"),
+        category=str(args.get("category") or "inbox"),
+        tags=args.get("tags"),
+        color=str(args.get("color") or notes.DEFAULT_COLOR),
+        due=str(args.get("due") or ""),
+        source=str(args.get("source") or ""),
+        pinned=bool(args.get("pinned")),
+        captured_via=str(args.get("captured_via") or "dashboard"),
+    )
+
+
+def _act_note_update(args: dict) -> dict:
+    import notes
+    raw_revision = args.get("revision")
+    try:
+        revision = int(raw_revision) if raw_revision is not None else None
+    except (TypeError, ValueError):
+        raise ValueError("revision must be an integer") from None
+    return notes.update_note(
+        str(args.get("note_id") or ""),
+        revision,
+        args.get("patch") if isinstance(args.get("patch"), dict) else {},
+    )
+
+
+def _act_note_organize(args: dict) -> dict:
+    import notes
+    raw_revision = args.get("revision")
+    try:
+        revision = int(raw_revision) if raw_revision is not None else None
+    except (TypeError, ValueError):
+        raise ValueError("revision must be an integer") from None
+    return notes.organize_note(
+        str(args.get("note_id") or ""),
+        revision,
+    )
+
+
+def _act_note_archive(args: dict) -> dict:
+    import notes
+    raw_revision = args.get("revision")
+    try:
+        revision = int(raw_revision) if raw_revision is not None else None
+    except (TypeError, ValueError):
+        raise ValueError("revision must be an integer") from None
+    return notes.archive_note(str(args.get("note_id") or ""), revision)
+
+
+def _act_note_trash(args: dict) -> dict:
+    import notes
+    raw_revision = args.get("revision")
+    try:
+        revision = int(raw_revision) if raw_revision is not None else None
+    except (TypeError, ValueError):
+        raise ValueError("revision must be an integer") from None
+    return notes.trash_note(str(args.get("note_id") or ""), revision)
+
+
+def _act_note_restore(args: dict) -> dict:
+    import notes
+    return notes.restore_note(str(args.get("note_id") or ""))
 
 
 def _act_note_move(args: dict) -> dict:
     """Re-file a note into a different bucket (updates frontmatter category)."""
     import notes
-    return notes.move_note(str(args.get("relpath") or ""), str(args.get("category") or ""))
+    return notes.move_note(
+        str(args.get("note_id") or args.get("relpath") or ""),
+        str(args.get("category") or ""),
+    )
 
 
 def _act_note_delete(args: dict) -> dict:
-    """Delete a note from the vault."""
+    """Legacy relpath delete, or explicit permanent deletion from v2 Trash."""
     import notes
+    note_id = str(args.get("note_id") or "")
+    if note_id:
+        if bool(args.get("permanent")):
+            return notes.permanently_delete_note(note_id, permanent=True)
+        return notes.trash_note(note_id)
     return notes.delete_note(str(args.get("relpath") or ""))
+
+
+def _act_notes_board_get(_args: dict) -> dict:
+    import notes
+    return notes.get_board()
+
+
+def _act_notes_board_save(args: dict) -> dict:
+    import notes
+    raw_revision = args.get("revision")
+    try:
+        revision = int(raw_revision) if raw_revision is not None else None
+    except (TypeError, ValueError):
+        raise ValueError("revision must be an integer") from None
+    return notes.save_board(
+        args.get("board") if isinstance(args.get("board"), dict) else {},
+        revision,
+    )
+
+
+def _act_note_stage_capture(args: dict) -> dict:
+    """Atomically stage selected or blank text for the Notes composer."""
+    payload = {
+        "text": str(args.get("text") or ""),
+        "source_app": str(args.get("source_app") or ""),
+        "staged_at": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime()),
+    }
+    _NOTE_STAGED_PATH.parent.mkdir(parents=True, exist_ok=True)
+    temp = _NOTE_STAGED_PATH.with_name(
+        f".{_NOTE_STAGED_PATH.name}.{threading.get_ident()}.tmp"
+    )
+    try:
+        temp.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+        temp.replace(_NOTE_STAGED_PATH)
+    finally:
+        if temp.exists():
+            with contextlib.suppress(OSError):
+                temp.unlink()
+    return {"ok": True, "chars": len(payload["text"]), "staged": True}
+
+
+def _act_note_take_staged(_args: dict) -> dict:
+    if not _NOTE_STAGED_PATH.exists():
+        return {"text": "", "source_app": "", "staged": False}
+    try:
+        payload = json.loads(_NOTE_STAGED_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError, json.JSONDecodeError):
+        payload = {}
+    with contextlib.suppress(OSError):
+        _NOTE_STAGED_PATH.unlink()
+    return {
+        "text": str(payload.get("text") or ""),
+        "source_app": str(payload.get("source_app") or ""),
+        "staged_at": str(payload.get("staged_at") or ""),
+        "staged": True,
+    }
 
 
 def _act_notify(args: dict) -> str:
@@ -884,9 +1039,20 @@ ACTIONS: dict[str, Callable[[dict], Any]] = {
     "bench_history": _act_bench_history,
     "note_search": _act_note_search,
     "notes_list": _act_notes_list,
+    "notes_query": _act_notes_query,
     "note_get": _act_note_get,
+    "note_create": _act_note_create,
+    "note_update": _act_note_update,
+    "note_organize": _act_note_organize,
+    "note_archive": _act_note_archive,
+    "note_trash": _act_note_trash,
+    "note_restore": _act_note_restore,
     "note_move": _act_note_move,
     "note_delete": _act_note_delete,
+    "notes_board_get": _act_notes_board_get,
+    "notes_board_save": _act_notes_board_save,
+    "note_stage_capture": _act_note_stage_capture,
+    "note_take_staged": _act_note_take_staged,
     "mode_ids": _act_mode_ids,
     "pull_start": _act_pull_start,
     "pull_status": _act_pull_status,
@@ -929,7 +1095,9 @@ _WRITE_ACTIONS = {
     "pull_model", "remove_model", "apply_config_patch", "update_apply",
     "set_autostart", "bench_start", "pull_start",
     "chat_send", "chat_thread_delete", "chat_stage_selection", "chat_take_staged",
-    "note_move", "note_delete",
+    "note_create", "note_update", "note_organize", "note_archive", "note_trash", "note_restore",
+    "note_move", "note_delete", "notes_board_save",
+    "note_stage_capture", "note_take_staged",
     "notify_gate",  # writes the notifications log + updates dedupe state
 }
 
