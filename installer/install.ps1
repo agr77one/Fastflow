@@ -13,7 +13,7 @@
       3. AutoHotkey v2   stage ahk\AutoHotkey64.exe (copy bundled vendor copy,
                          else download ahk-v2.zip). Same path _autostart_command_line()
                          resolves, so the dashboard toggle and this agree.
-      4. FastFlowLM      detect 'flm', else run flm-setup.exe silently (one UAC)
+      4. FastFlowLM      detect 'flm', else run flm-setup.msi silently (one UAC)
       5. autostart       write HKCU Run value Flowkey (logon launch)
       6. launch          start grammarFix.ahk via AutoHotkey64.exe
 
@@ -214,17 +214,21 @@ if ($SkipFlm) {
 } elseif (Test-Command "flm") {
     Ok "flm already on PATH."
 } else {
-    $flmSetup = Join-Path $releaseRoot "vendor\flm\flm-setup.exe"
+    # FastFlowLM moved from FastFlowLM/FastFlowLM to ROCm/FastFlowLM and, as of
+    # v1.0.1, switched its Windows asset from an Inno-Setup .exe to an .msi
+    # (release title: "Windows Installer Switch"). GitHub redirects the old
+    # org's "latest" URL to the new one, so the URL below still works.
+    $flmSetup = Join-Path $releaseRoot "vendor\flm\flm-setup.msi"
     if (-not (Test-Path $flmSetup)) {
         Info "Downloading FastFlowLM installer (large -- hundreds of MB)..."
-        $flmSetup = Join-Path $env:TEMP "ffp-flm-setup.exe"
-        Invoke-WebRequest -Uri "https://github.com/FastFlowLM/FastFlowLM/releases/latest/download/flm-setup.exe" `
+        $flmSetup = Join-Path $env:TEMP "ffp-flm-setup.msi"
+        Invoke-WebRequest -Uri "https://github.com/FastFlowLM/FastFlowLM/releases/latest/download/flm-setup.msi" `
             -OutFile $flmSetup -UseBasicParsing
     }
     Info "Installing FastFlowLM (a UAC prompt is expected; install is silent after you accept)..."
-    $flmArgs = "/VERYSILENT /SUPPRESSMSGBOXES /NOCANCEL /NORESTART /SP- /NOICONS " +
-               "/CLOSEAPPLICATIONS /FORCECLOSEAPPLICATIONS /LANG=english"
-    $proc = Start-Process -FilePath $flmSetup -ArgumentList $flmArgs -Verb RunAs -Wait -PassThru
+    $flmLog = Join-Path $env:TEMP "ffp-flm-install.log"
+    $flmArgs = "/i `"$flmSetup`" /quiet /norestart /l*v `"$flmLog`""
+    $proc = Start-Process -FilePath "msiexec.exe" -ArgumentList $flmArgs -Verb RunAs -Wait -PassThru
     Update-SessionPath
     if (Test-Command "flm") {
         Ok "FastFlowLM installed."

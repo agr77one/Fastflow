@@ -7,7 +7,7 @@
       1. Read version from scripts/_version.py
       2. Generate file_version_info.txt for the VERSIONINFO resource
       3a. (optional) Download AHK v2 portable into vendor/ahk/
-      3b. (optional) Download flm-setup.exe into vendor/flm/
+      3b. (optional) Download flm-setup.msi into vendor/flm/
       4. Run PyInstaller against installer/fastflowprompt.spec
       5. Run Inno Setup compiler on installer/installer.iss
       6. (optional) Sign the resulting installer with sign.ps1
@@ -18,7 +18,7 @@
     Download AutoHotkey v2 portable into vendor/ahk/ (skipped if present).
 
 .PARAMETER BundleFlm
-    Download flm-setup.exe into vendor/flm/ (skipped if present).
+    Download flm-setup.msi into vendor/flm/ (skipped if present).
 
 .PARAMETER SkipPyInstaller
     Skip the PyInstaller step (debugging).
@@ -142,11 +142,15 @@ if ($BundleAhk) {
 if ($BundleFlm) {
     $vendorDir = Join-Path $releaseRoot "vendor\flm"
     if (-not (Test-Path $vendorDir)) { New-Item -ItemType Directory -Path $vendorDir -Force | Out-Null }
-    $flmDst = Join-Path $vendorDir "flm-setup.exe"
+    # FastFlowLM moved from FastFlowLM/FastFlowLM to ROCm/FastFlowLM and, as of
+    # v1.0.1, switched its Windows asset from an Inno-Setup .exe to an .msi
+    # (release title: "Windows Installer Switch"). GitHub redirects the old
+    # org's "latest" URL to the new one, so the URL below still works.
+    $flmDst = Join-Path $vendorDir "flm-setup.msi"
     if (Test-Path $flmDst) {
         "FLM installer already present: $flmDst"
     } else {
-        $flmUrl = "https://github.com/FastFlowLM/FastFlowLM/releases/latest/download/flm-setup.exe"
+        $flmUrl = "https://github.com/FastFlowLM/FastFlowLM/releases/latest/download/flm-setup.msi"
         "Downloading FLM installer from $flmUrl ..."
         Invoke-WebRequest -Uri $flmUrl -OutFile $flmDst -UseBasicParsing
         "Got: $flmDst ($([math]::Round((Get-Item $flmDst).Length/1MB,1)) MB)"

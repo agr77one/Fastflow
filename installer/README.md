@@ -21,7 +21,7 @@ Sibling folders consumed by these scripts:
 ├── scripts/               ← Python + AHK source
 ├── setup/defaults/        ← seed config shipped read-only
 ├── vendor/ahk/            ← AutoHotkey v2 portable (downloaded)
-├── vendor/flm/            ← flm-setup.exe (downloaded)
+├── vendor/flm/            ← flm-setup.msi (downloaded)
 ├── dist/FastFlowPrompt/   ← PyInstaller output (build artifact)
 └── out/                   ← signed installer .exe (build artifact)
 ```
@@ -69,7 +69,7 @@ Steps the script runs:
 1. Read `scripts\_version.py` → derive version (e.g. `2.1.0`)
 2. Generate `file_version_info.txt` for the Win32 VERSIONINFO resource
 3. Download `vendor\ahk\AutoHotkey64.exe` if missing (`-BundleAhk`)
-4. Download `vendor\flm\flm-setup.exe` if missing (`-BundleFlm`)
+4. Download `vendor\flm\flm-setup.msi` if missing (`-BundleFlm`)
 5. Run `pyinstaller --clean --noconfirm fastflowprompt.spec` → `dist\FastFlowPrompt\`
 6. Run `iscc installer.iss` → `out\Flowkey-Setup-<version>.exe`
 7. Run `sign.ps1` against the output (`-Sign`)
@@ -83,7 +83,7 @@ Debug flags:
 
 1. Installs the PyInstaller bundle, AHK runtime, and AHK source scripts to
    `C:\Program Files\FastFlowPrompt\` (read-only).
-2. Chain-installs FastFlowLM by running the vendored `flm-setup.exe` silently —
+2. Chain-installs FastFlowLM by running the vendored `flm-setup.msi` silently —
    only if FLM isn't already on the machine. Drops a marker so the uninstaller
    knows whether to chain-remove FLM later.
 3. (Optional task) Creates a per-machine HKLM `Run` entry so AHK starts on

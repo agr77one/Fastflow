@@ -131,13 +131,16 @@ Source: "setup\defaults\*"; DestDir: "{app}\setup\defaults"; \
   Flags: ignoreversion recursesubdirs skipifsourcedoesntexist
 
 ; --- FLM chained installer (extracted to tmp, run during install, then deleted)
-Source: "vendor\flm\flm-setup.exe"; DestDir: "{tmp}"; \
+; FastFlowLM switched its Windows asset from an Inno-Setup .exe to an .msi as
+; of v1.0.1 ("Windows Installer Switch") — chained via msiexec below instead
+; of running it directly.
+Source: "vendor\flm\flm-setup.msi"; DestDir: "{tmp}"; \
   Flags: deleteafterinstall ignoreversion skipifsourcedoesntexist; Check: NeedsFLM
 
 [Run]
 ; --- 1. Chain FLM install (skipped if FLM already on this machine) ------------
-Filename: "{tmp}\flm-setup.exe"; \
-  Parameters: "/VERYSILENT /SUPPRESSMSGBOXES /NOCANCEL /NORESTART /SP- /NOICONS /CLOSEAPPLICATIONS /FORCECLOSEAPPLICATIONS /LANG=english /LOG=""{tmp}\flm-install.log"""; \
+Filename: "msiexec.exe"; \
+  Parameters: "/i ""{tmp}\flm-setup.msi"" /quiet /norestart /l*v ""{tmp}\flm-install.log"""; \
   StatusMsg: "Installing FastFlowLM runtime (~170 MB)..."; \
   Check: NeedsFLM; \
   Flags: waituntilterminated
@@ -211,7 +214,15 @@ Type: dirifempty;     Name: "{app}"
 const
   FLM_REG_PREFIX = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\flm version ';
 
-{ True if no FLM uninstall key is found AND no flm.exe exists in PF\FastFlowLM. }
+{ True if no FLM uninstall key is found AND no flm.exe exists in PF\FastFlowLM.
+
+  CAUTION (unverified as of the v1.0.1 exe->msi switch): this scans for an
+  uninstall SUBKEY NAME starting with 'flm version ' — how FastFlowLM's old
+  Inno-Setup .exe installer named its own entry. An MSI-based install
+  typically registers its uninstall key under a product-code GUID instead,
+  which this prefix match would never find, falling through to the
+  {commonpf}\FastFlowLM\flm.exe path check below. Needs validation on a real
+  machine with the new .msi installer (see SPEC.md B47 / T8 clean-VM test). }
 function NeedsFLM(): Boolean;
 var
   Names: TArrayOfString;
@@ -242,7 +253,10 @@ begin
 end;
 
 { Locate the FLM QuietUninstallString from the 32-bit Uninstall hive.
-  Returns a cmd-runnable string, or '' if FLM isn't registered. }
+  Returns a cmd-runnable string, or '' if FLM isn't registered.
+
+  Same 'flm version ' subkey-name assumption as NeedsFLM above, and the same
+  post-v1.0.1-msi caveat: unverified whether it still finds the entry. }
 function FlmUninstallCmd(Param: String): String;
 var
   Names: TArrayOfString;
