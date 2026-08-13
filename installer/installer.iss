@@ -216,13 +216,13 @@ const
 
 { True if no FLM uninstall key is found AND no flm.exe exists in PF\FastFlowLM.
 
-  CAUTION (unverified as of the v1.0.1 exe->msi switch): this scans for an
-  uninstall SUBKEY NAME starting with 'flm version ' — how FastFlowLM's old
+  CAUTION (unverified as of the v1.0.1 exe-to-msi switch): this scans for an
+  uninstall SUBKEY NAME starting with 'flm version ' -- how FastFlowLM's old
   Inno-Setup .exe installer named its own entry. An MSI-based install
   typically registers its uninstall key under a product-code GUID instead,
-  which this prefix match would never find, falling through to the
-  {commonpf}\FastFlowLM\flm.exe path check below. Needs validation on a real
-  machine with the new .msi installer (see SPEC.md B47 / T8 clean-VM test). }
+  which this prefix match would never find, falling through to the common
+  Program-Files path check below. Needs validation on a real machine with
+  the new .msi installer (see SPEC.md B47 / T8 clean-VM test). }
 function NeedsFLM(): Boolean;
 var
   Names: TArrayOfString;
