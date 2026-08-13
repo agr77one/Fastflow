@@ -718,13 +718,21 @@ def _act_note_organize(args: dict) -> dict:
 def _act_note_archive(args: dict) -> dict:
     import notes
     raw_revision = args.get("revision")
-    revision = int(raw_revision) if raw_revision is not None else None
+    try:
+        revision = int(raw_revision) if raw_revision is not None else None
+    except (TypeError, ValueError):
+        raise ValueError("revision must be an integer") from None
     return notes.archive_note(str(args.get("note_id") or ""), revision)
 
 
 def _act_note_trash(args: dict) -> dict:
     import notes
-    return notes.trash_note(str(args.get("note_id") or ""))
+    raw_revision = args.get("revision")
+    try:
+        revision = int(raw_revision) if raw_revision is not None else None
+    except (TypeError, ValueError):
+        raise ValueError("revision must be an integer") from None
+    return notes.trash_note(str(args.get("note_id") or ""), revision)
 
 
 def _act_note_restore(args: dict) -> dict:
@@ -760,7 +768,10 @@ def _act_notes_board_get(_args: dict) -> dict:
 def _act_notes_board_save(args: dict) -> dict:
     import notes
     raw_revision = args.get("revision")
-    revision = int(raw_revision) if raw_revision is not None else None
+    try:
+        revision = int(raw_revision) if raw_revision is not None else None
+    except (TypeError, ValueError):
+        raise ValueError("revision must be an integer") from None
     return notes.save_board(
         args.get("board") if isinstance(args.get("board"), dict) else {},
         revision,

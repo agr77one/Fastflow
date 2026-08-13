@@ -43,6 +43,22 @@ def test_v51_migration_preserves_body_unknown_metadata_and_backup(vault):
     assert "schema_version" not in backup.read_text(encoding="utf-8")
 
 
+def test_v61_migration_write_failure_keeps_note_visible(vault, monkeypatch):
+    _legacy_note(vault)
+
+    def _boom(path, text):
+        raise OSError("read-only mount")
+
+    monkeypatch.setattr(notes, "_atomic_write_text", _boom)
+
+    listed = notes.query_notes()
+    found = notes.get_note("inbox/legacy.md")
+
+    assert any(r["relpath"] == "inbox/legacy.md" for r in listed["results"])
+    assert found["ok"] is True
+    assert found["body"] == "Original body\n"
+
+
 def test_v48_stable_note_id_survives_category_move(vault):
     _legacy_note(vault)
     before = notes.get_note("inbox/legacy.md")
@@ -74,6 +90,17 @@ def test_v54_create_update_and_stale_revision_conflict(vault):
     assert conflict["conflict"] is True
     assert notes.get_note(created["note_id"])["body"] == "Ship it"
     assert not list(vault.rglob("*.tmp"))
+
+
+def test_v54_trash_rejects_stale_revision(vault):
+    created = notes.create_note(title="Recover me", body="x", category="ideas")
+    notes.update_note(created["note_id"], created["revision"], {"pinned": True})
+
+    conflict = notes.trash_note(created["note_id"], created["revision"])
+    trashed = notes.trash_note(created["note_id"], conflict["note"]["revision"])
+
+    assert conflict["conflict"] is True
+    assert trashed["status"] == "trashed"
 
 
 def test_v50_trash_restore_and_explicit_permanent_delete(vault):

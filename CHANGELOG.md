@@ -25,6 +25,9 @@
 ### Fixed
 
 - **Date-only due dates keep their calendar day.** A value such as `2026-08-04` displays as August 4 in every timezone instead of shifting to the prior day west of UTC.
+- **Note migration no longer races concurrent edits or vanishes notes.** Upgrading a pre-2.5 note to the new schema is now serialized against other note writes, and a note whose file can't be rewritten (e.g. a read-only location) still appears in search and listings instead of silently disappearing.
+- **"Move to Trash" respects the same conflict check as every other note action.** If a note changed since you opened it, trashing it now reports the conflict instead of acting on stale data.
+- **A Quill hiccup no longer breaks Meetings.** A transient error from Quill during a scheduled digest run, the Overview widget, or a meeting Q&A now degrades gracefully instead of surfacing as an error or silently skipping a whole batch.
 
 ## 2.4.3
 

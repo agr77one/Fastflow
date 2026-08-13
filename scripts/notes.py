@@ -668,48 +668,63 @@ def _ensure_note_schema(path: Path) -> tuple[dict, str, str]:
     if schema >= SCHEMA_VERSION and note_id:
         return metadata, body, text
 
-    stat = path.stat()
-    created = str(metadata.get("created") or time.strftime(
-        "%Y-%m-%dT%H:%M:%S", time.localtime(stat.st_mtime)
-    ))
-    source = str(metadata.get("source") or "")
-    kind = str(metadata.get("kind") or ("link" if source else "note"))
-    if kind not in NOTE_KINDS:
-        kind = "note"
-    status = str(metadata.get("status") or (
-        "trashed" if TRASH_DIR in path.parts else "active"
-    ))
-    if status not in NOTE_STATUSES:
-        status = "active"
-    try:
-        revision = max(1, int(metadata.get("revision") or 1))
-    except (TypeError, ValueError):
-        revision = 1
-    updates = {
-        "schema_version": SCHEMA_VERSION,
-        "note_id": note_id or uuid.uuid4().hex,
-        "kind": kind,
-        "status": status,
-        "tags": metadata.get("tags") if isinstance(metadata.get("tags"), list) else [],
-        "color": (
-            metadata.get("color")
-            if metadata.get("color") in NOTE_COLORS
-            else DEFAULT_COLOR
-        ),
-        "pinned": bool(metadata.get("pinned", False)),
-        "due": str(metadata.get("due") or ""),
-        "created": created,
-        "updated": str(metadata.get("updated") or created),
-        "revision": revision,
-        "category": _note_category(path, metadata),
-    }
-    _backup_before_migration(path)
-    migrated = _merge_frontmatter(text, updates)
-    _atomic_write_text(path, migrated)
-    merged = dict(metadata)
-    merged.update(updates)
-    _invalidate_index()
-    return merged, body, migrated
+    with _NOTES_LOCK:
+        # Re-read under the lock: this is a write (migration), so it must be
+        # serialized against every other note write, not just other readers.
+        # Re-check the "already migrated" condition too, in case another
+        # thread migrated this exact file while we were waiting for the lock.
+        text = path.read_text(encoding="utf-8", errors="replace")
+        metadata, body, _lines = _note_parts(text)
+        try:
+            schema = int(metadata.get("schema_version") or 0)
+        except (TypeError, ValueError):
+            schema = 0
+        note_id = str(metadata.get("note_id") or "").strip()
+        if schema >= SCHEMA_VERSION and note_id:
+            return metadata, body, text
+
+        stat = path.stat()
+        created = str(metadata.get("created") or time.strftime(
+            "%Y-%m-%dT%H:%M:%S", time.localtime(stat.st_mtime)
+        ))
+        source = str(metadata.get("source") or "")
+        kind = str(metadata.get("kind") or ("link" if source else "note"))
+        if kind not in NOTE_KINDS:
+            kind = "note"
+        status = str(metadata.get("status") or (
+            "trashed" if TRASH_DIR in path.parts else "active"
+        ))
+        if status not in NOTE_STATUSES:
+            status = "active"
+        try:
+            revision = max(1, int(metadata.get("revision") or 1))
+        except (TypeError, ValueError):
+            revision = 1
+        updates = {
+            "schema_version": SCHEMA_VERSION,
+            "note_id": note_id or uuid.uuid4().hex,
+            "kind": kind,
+            "status": status,
+            "tags": metadata.get("tags") if isinstance(metadata.get("tags"), list) else [],
+            "color": (
+                metadata.get("color")
+                if metadata.get("color") in NOTE_COLORS
+                else DEFAULT_COLOR
+            ),
+            "pinned": bool(metadata.get("pinned", False)),
+            "due": str(metadata.get("due") or ""),
+            "created": created,
+            "updated": str(metadata.get("updated") or created),
+            "revision": revision,
+            "category": _note_category(path, metadata),
+        }
+        _backup_before_migration(path)
+        migrated = _merge_frontmatter(text, updates)
+        _atomic_write_text(path, migrated)
+        merged = dict(metadata)
+        merged.update(updates)
+        _invalidate_index()
+        return merged, body, migrated
 
 
 def _iter_note_paths(include_trash: bool = False) -> list[Path]:
@@ -801,9 +816,15 @@ def _load_note_index(include_trash: bool = False) -> list[dict]:
     for path in paths:
         try:
             metadata, body, _text = _ensure_note_schema(path)
-            records.append(_note_record(path, metadata, body))
         except (OSError, ValueError):
-            log.exception("could not index note %s", path)
+            log.exception("could not migrate note %s; indexing it unmigrated", path)
+            try:
+                text = path.read_text(encoding="utf-8", errors="replace")
+                metadata, body, _lines = _note_parts(text)
+            except OSError:
+                log.exception("could not read note %s", path)
+                continue
+        records.append(_note_record(path, metadata, body))
     final_signature = _index_signature(paths)
     _INDEX_CACHE[cache_key] = (final_signature, [dict(item) for item in records])
     return records
@@ -823,7 +844,12 @@ def _find_note_path(identifier: str, include_trash: bool = True) -> Path | None:
             try:
                 metadata, _body, _text = _ensure_note_schema(path)
             except OSError:
-                continue
+                log.exception("could not migrate note %s; matching it unmigrated", path)
+                try:
+                    text = path.read_text(encoding="utf-8", errors="replace")
+                    metadata, _body, _lines = _note_parts(text)
+                except OSError:
+                    continue
             if str(metadata.get("note_id") or "") == raw:
                 return path
     return None
@@ -1023,7 +1049,12 @@ def get_note(relpath: str) -> dict:
     target = _find_note_path(relpath, include_trash=True)
     if target is None:
         return {"ok": False, "error": "note not found"}
-    metadata, body, _text = _ensure_note_schema(target)
+    try:
+        metadata, body, _text = _ensure_note_schema(target)
+    except (OSError, ValueError):
+        log.exception("could not migrate note %s; reading it unmigrated", target)
+        text = target.read_text(encoding="utf-8", errors="replace")
+        metadata, body, _lines = _note_parts(text)
     return _note_record(target, metadata, body, include_body=True)
 
 
@@ -1232,14 +1263,22 @@ def archive_note(note_id: str, revision: int | None = None) -> dict:
     return update_note(note_id, revision, {"status": "archived"})
 
 
-def trash_note(note_id: str) -> dict:
+def trash_note(note_id: str, revision: int | None = None) -> dict:
     """Move a note into the recoverable vault-local Trash."""
     with _NOTES_LOCK:
         source = _find_note_path(note_id, include_trash=False)
         if source is None:
             return {"ok": False, "error": "note not found"}
         metadata, body, text = _ensure_note_schema(source)
-        revision = int(metadata.get("revision") or 1)
+        current_revision = int(metadata.get("revision") or 1)
+        if revision is not None and int(revision) != current_revision:
+            return {
+                "ok": False,
+                "error": "note changed since it was opened",
+                "conflict": True,
+                "note": _note_record(source, metadata, body, include_body=True),
+            }
+        revision = current_revision
         relpath = str(source.relative_to(_vault_dir())).replace("\\", "/")
         updates = {
             "status": "trashed",

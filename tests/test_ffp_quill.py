@@ -112,3 +112,29 @@ def test_get_transcript_uses_current_quill_schema():
         "get_transcript",
         {"meeting_id": "meeting-1", "include_private_notes": True},
     )
+
+
+class _RaisingClient:
+    """call_tool always raises, like a real Quill tool-level error (V57)."""
+
+    session_id = "test"
+
+    def call_tool(self, name, arguments):
+        raise ffp_quill.QuillToolError(name, "boom")
+
+
+def test_get_minutes_degrades_on_quill_tool_error():
+    assert ffp_quill.get_minutes("meeting-1", client=_RaisingClient()) == ""
+
+
+def test_get_transcript_degrades_on_quill_tool_error():
+    assert ffp_quill.get_transcript("meeting-1", client=_RaisingClient()) == ""
+
+
+def test_search_meetings_degrades_on_quill_tool_error():
+    result = ffp_quill.search_meetings("q", client=_RaisingClient())
+    assert result == {"meetings": [], "reachable": True}
+
+
+def test_list_recent_meetings_degrades_on_quill_tool_error():
+    assert ffp_quill.list_recent_meetings(client=_RaisingClient()) == []

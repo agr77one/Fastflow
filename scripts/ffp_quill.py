@@ -203,7 +203,11 @@ def search_meetings(query: str, limit: int = 10, offset: int = 0, *, url: str = 
         args["query"] = str(query)
     if offset:
         args["offset"] = int(offset)
-    text = c.call_tool("search_meetings", args)
+    try:
+        text = c.call_tool("search_meetings", args)
+    except QuillToolError as exc:
+        log.warning("Quill search_meetings failed: %s", exc)
+        text = ""
     return {"meetings": _parse_meetings(text), "reachable": bool(c.session_id)}
 
 
@@ -212,12 +216,21 @@ def list_recent_meetings(limit: int = 30, offset: int = 0, *, url: str = DEFAULT
     args: dict = {"limit": max(1, min(int(limit or 30), 30))}
     if offset:
         args["offset"] = int(offset)
-    return _parse_meetings(c.call_tool("search_meetings", args))
+    try:
+        text = c.call_tool("search_meetings", args)
+    except QuillToolError as exc:
+        log.warning("Quill search_meetings failed: %s", exc)
+        text = ""
+    return _parse_meetings(text)
 
 
 def get_minutes(meeting_id: str, *, url: str = DEFAULT_MCP_URL, client: QuillClient | None = None) -> str:
     c = client or QuillClient(url)
-    text = c.call_tool("get_minutes", {"meeting_id": meeting_id})
+    try:
+        text = c.call_tool("get_minutes", {"meeting_id": meeting_id})
+    except QuillToolError as exc:
+        log.warning("Quill get_minutes failed: %s", exc)
+        return ""
     if not text or "No minutes found" in text:
         return ""
     return clean_text(text)
@@ -225,7 +238,12 @@ def get_minutes(meeting_id: str, *, url: str = DEFAULT_MCP_URL, client: QuillCli
 
 def get_transcript(meeting_id: str, *, url: str = DEFAULT_MCP_URL, client: QuillClient | None = None) -> str:
     c = client or QuillClient(url)
-    return clean_text(c.call_tool(
-        "get_transcript",
-        {"meeting_id": meeting_id, "include_private_notes": True},
-    ))
+    try:
+        text = c.call_tool(
+            "get_transcript",
+            {"meeting_id": meeting_id, "include_private_notes": True},
+        )
+    except QuillToolError as exc:
+        log.warning("Quill get_transcript failed: %s", exc)
+        return ""
+    return clean_text(text)

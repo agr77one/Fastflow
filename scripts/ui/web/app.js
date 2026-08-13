@@ -1265,7 +1265,10 @@ async function trashCurrentNote() {
   if (!(await confirmDialog("Move this note to Trash? You can restore it later.", "Move to Trash"))) return;
   try {
     const noteId = notesState.current.note_id;
-    const result = await action("note_trash", { note_id: noteId });
+    const result = await action("note_trash", {
+      note_id: noteId,
+      revision: notesState.current.revision,
+    });
     if (!result.ok) {
       setEditorStatus(result.error || "Move to Trash failed.", false);
       return;
