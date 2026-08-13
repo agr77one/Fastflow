@@ -18,7 +18,7 @@ in source control — `installer/build.ps1` downloads them on demand.
 ```
 
 The build script is idempotent — it skips a download if the file is already
-present. Delete `vendor/ahk/AutoHotkey64.exe` or `vendor/flm/flm-setup.exe`
+present. Delete `vendor/ahk/AutoHotkey64.exe` or `vendor/flm/flm-setup.msi`
 to force a fresh pull (e.g. when picking up a new upstream version).
 
 ## Pinning
