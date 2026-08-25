@@ -212,70 +212,118 @@ Type: dirifempty;     Name: "{app}"
 [Code]
 
 const
-  FLM_REG_PREFIX = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\flm version ';
+  FLM_UNINST_PATH = 'Software\Microsoft\Windows\CurrentVersion\Uninstall';
 
-{ True if no FLM uninstall key is found AND no flm.exe exists in PF\FastFlowLM.
+{ True if this uninstall entry's DisplayName looks like FastFlowLM.
 
-  CAUTION (unverified as of the v1.0.1 exe-to-msi switch): this scans for an
-  uninstall SUBKEY NAME starting with 'flm version ' -- how FastFlowLM's old
-  Inno-Setup .exe installer named its own entry. An MSI-based install
-  typically registers its uninstall key under a product-code GUID instead,
-  which this prefix match would never find, falling through to the common
-  Program-Files path check below. Needs validation on a real machine with
-  the new .msi installer (see SPEC.md B47 / T8 clean-VM test). }
-function NeedsFLM(): Boolean;
+  FLM has shipped two installer formats with different registry shapes: the
+  old Inno build registered SUBKEY 'flm_is1' with DisplayName
+  'flm version 0.9.45'; the v1.0.1+ MSI registers under a product-code GUID
+  with DisplayName 'flm'. The previous code matched the SUBKEY NAME against
+  'flm version ' and so found NEITHER -- verified on a real machine carrying
+  both entries (SPEC.md B50). Match DisplayName instead. }
+function IsFlmDisplayName(Value: String): Boolean;
+var
+  Lowered: String;
+begin
+  Lowered := Lowercase(Trim(Value));
+  Result := (Lowered = 'flm')
+         or (Pos('flm version', Lowered) = 1)
+         or (Pos('fastflowlm', Lowered) = 1);
+end;
+
+{ Search one registry view for FLM's uninstall entry. Sets FoundKey to the
+  full subkey path on success. }
+function FindFlmUninstallKey(RootKey: Integer; var FoundKey: String): Boolean;
 var
   Names: TArrayOfString;
   i: Integer;
-  Dummy: String;
+  KeyPath, Disp: String;
 begin
-  Result := True;
-
-  { Scan 32-bit uninstall hive for any 'flm version *' subkey. }
-  if RegGetSubkeyNames(HKLM, 'Software\Microsoft\Windows\CurrentVersion\Uninstall', Names) then
+  Result := False;
+  FoundKey := '';
+  if not RegGetSubkeyNames(RootKey, FLM_UNINST_PATH, Names) then
+    Exit;
+  for i := 0 to GetArrayLength(Names) - 1 do
   begin
-    for i := 0 to GetArrayLength(Names) - 1 do
+    KeyPath := FLM_UNINST_PATH + '\' + Names[i];
+    if RegQueryStringValue(RootKey, KeyPath, 'DisplayName', Disp) then
     begin
-      if Pos('flm version ', Names[i]) = 1 then
+      if IsFlmDisplayName(Disp) then
       begin
-        Result := False;
+        FoundKey := KeyPath;
+        Result := True;
         Exit;
       end;
     end;
   end;
-
-  { Fallback: probe the default install path. }
-  if FileExists(ExpandConstant('{commonpf}\FastFlowLM\flm.exe')) then
-    Result := False;
-
-  { Avoid 'Dummy unused' warning. }
-  Dummy := '';
 end;
 
-{ Locate the FLM QuietUninstallString from the 32-bit Uninstall hive.
-  Returns a cmd-runnable string, or '' if FLM isn't registered.
+{ True if FLM appears absent. Checks BOTH registry views: the MSI product
+  lands in the 64-bit view while the legacy Inno entry sits in the 32-bit
+  one, and this installer runs 64-bit (ArchitecturesInstallIn64BitMode), so
+  a plain HKLM would miss the legacy entry entirely. }
+function NeedsFLM(): Boolean;
+var
+  FoundKey: String;
+begin
+  Result := True;
 
-  Same 'flm version ' subkey-name assumption as NeedsFLM above, and the same
-  post-v1.0.1-msi caveat: unverified whether it still finds the entry. }
+  if FindFlmUninstallKey(HKLM64, FoundKey) then
+  begin
+    Result := False;
+    Exit;
+  end;
+  if FindFlmUninstallKey(HKLM32, FoundKey) then
+  begin
+    Result := False;
+    Exit;
+  end;
+
+  { Fallback: probe the install path. FLM installs into an flm-named folder
+    under Program Files; the old code probed a FastFlowLM-named one that
+    never exists. Keep both, preferring the real one. }
+  if FileExists(ExpandConstant('{commonpf}\flm\flm.exe')) then
+    Result := False
+  else if FileExists(ExpandConstant('{commonpf}\FastFlowLM\flm.exe')) then
+    Result := False;
+end;
+
+{ Return a cmd-runnable silent uninstall command for FLM, or a harmless echo
+  if it isn't registered. The MSI product publishes an UninstallString but an
+  EMPTY QuietUninstallString, so derive the quiet form when needed. }
 function FlmUninstallCmd(Param: String): String;
 var
-  Names: TArrayOfString;
-  i: Integer;
-  KeyPath, Quiet: String;
+  FoundKey, Quiet, Raw: String;
+  RootKey: Integer;
 begin
   Result := 'echo FLM not registered';
-  if not RegGetSubkeyNames(HKLM, 'Software\Microsoft\Windows\CurrentVersion\Uninstall', Names) then
-    Exit;
-  for i := 0 to GetArrayLength(Names) - 1 do
+
+  RootKey := HKLM64;
+  if not FindFlmUninstallKey(RootKey, FoundKey) then
   begin
-    if Pos('flm version ', Names[i]) = 1 then
+    RootKey := HKLM32;
+    if not FindFlmUninstallKey(RootKey, FoundKey) then
+      Exit;
+  end;
+
+  if RegQueryStringValue(RootKey, FoundKey, 'QuietUninstallString', Quiet) then
+  begin
+    if Trim(Quiet) <> '' then
     begin
-      KeyPath := 'Software\Microsoft\Windows\CurrentVersion\Uninstall\' + Names[i];
-      if RegQueryStringValue(HKLM, KeyPath, 'QuietUninstallString', Quiet) then
-      begin
-        Result := Quiet;
-        Exit;
-      end;
+      Result := Quiet;
+      Exit;
+    end;
+  end;
+
+  if RegQueryStringValue(RootKey, FoundKey, 'UninstallString', Raw) then
+  begin
+    if Trim(Raw) <> '' then
+    begin
+      if Pos('msiexec', Lowercase(Raw)) > 0 then
+        Result := Raw + ' /quiet /norestart'
+      else
+        Result := Raw + ' /SILENT';
     end;
   end;
 end;

@@ -21,8 +21,11 @@ PERF_TO_PMODE = {"balanced": "turbo", "max": "turbo"}
 
 # FastFlowLM upstream release feed. The HTML page is what we open in the
 # browser for a manual download; the API gives us the latest tag + asset URL.
-FLM_RELEASES_API = "https://api.github.com/repos/FastFlowLM/FastFlowLM/releases/latest"
-FLM_RELEASES_PAGE = "https://github.com/FastFlowLM/FastFlowLM/releases/"
+# Repo moved FastFlowLM/FastFlowLM -> ROCm/FastFlowLM (SPEC.md B47); GitHub's
+# API 301-redirects the old path so this kept working either way, but point
+# at the canonical location rather than depend on that redirect indefinitely.
+FLM_RELEASES_API = "https://api.github.com/repos/ROCm/FastFlowLM/releases/latest"
+FLM_RELEASES_PAGE = "https://github.com/ROCm/FastFlowLM/releases/"
 
 
 @dataclass(frozen=True)
@@ -420,13 +423,21 @@ def check_flm_update(
     tag = str(payload.get("tag_name") or "").strip()
     latest = tag.lstrip("vV")
     release_url = str(payload.get("html_url") or FLM_RELEASES_PAGE)
+    # FLM switched its Windows installer asset from .exe to .msi in v1.0.1
+    # (SPEC.md B47/B49). Prefer .msi, but still accept .exe so a check against
+    # an older/rolled-back release resolves an asset instead of silently "".
     asset_url = ""
+    fallback_url = ""
     for asset in payload.get("assets") or []:
         if not isinstance(asset, dict):
             continue
-        if str(asset.get("name") or "").lower().endswith(".exe"):
+        name = str(asset.get("name") or "").lower()
+        if name.endswith(".msi"):
             asset_url = str(asset.get("browser_download_url") or "")
             break
+        if name.endswith(".exe") and not fallback_url:
+            fallback_url = str(asset.get("browser_download_url") or "")
+    asset_url = asset_url or fallback_url
 
     out["latest"] = latest
     out["release_url"] = release_url
