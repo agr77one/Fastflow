@@ -149,3 +149,68 @@ def test_v34_force_restart_waits_for_old_port_before_spawning(monkeypatch, tmp_p
     assert result == "started"
     assert stopped == [True]
     assert len(spawned) == 1
+
+
+def _fake_release(assets: list[str], tag: str = "v1.0.2"):
+    """Stand in for the GitHub releases API payload with the given asset names."""
+    payload = {
+        "tag_name": tag,
+        "html_url": f"https://github.com/ROCm/FastFlowLM/releases/tag/{tag}",
+        "assets": [
+            {
+                "name": name,
+                "browser_download_url": (
+                    f"https://github.com/ROCm/FastFlowLM/releases/download/{tag}/{name}"
+                ),
+            }
+            for name in assets
+        ],
+    }
+
+    class _Resp:
+        def read(self):
+            return json.dumps(payload).encode("utf-8")
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_exc):
+            return False
+
+    return lambda *_a, **_k: _Resp()
+
+
+def test_b49_update_check_resolves_msi_asset(monkeypatch, tmp_path):
+    """FLM ships flm-setup.msi as of v1.0.1; the .exe-only matcher returned ''."""
+    monkeypatch.setattr(ffp_flm_server, "flm_version", lambda _nw: "0.9.45")
+    monkeypatch.setattr(
+        ffp_flm_server.urllib.request,
+        "urlopen",
+        _fake_release(["fastflowlm_1.0.2_linux.tar.gz", "flm-setup.msi"]),
+    )
+
+    out = ffp_flm_server.check_flm_update(0, cache_path=tmp_path / "c.json", force=True)
+
+    assert out["latest"] == "1.0.2"
+    assert out["has_update"] is True
+    assert out["asset_url"].endswith("/flm-setup.msi")
+
+
+def test_b49_update_check_still_accepts_exe_asset(monkeypatch, tmp_path):
+    """Older/rolled-back releases only ship .exe — must still resolve, not ''."""
+    monkeypatch.setattr(ffp_flm_server, "flm_version", lambda _nw: "0.9.45")
+    monkeypatch.setattr(
+        ffp_flm_server.urllib.request,
+        "urlopen",
+        _fake_release(["flm-setup.exe"], tag="v1.0.0"),
+    )
+
+    out = ffp_flm_server.check_flm_update(0, cache_path=tmp_path / "c.json", force=True)
+
+    assert out["asset_url"].endswith("/flm-setup.exe")
+
+
+def test_b49_release_feed_points_at_rocm_org():
+    """Repo moved orgs; don't rely on GitHub's 301 redirect indefinitely (B47)."""
+    assert "ROCm/FastFlowLM" in ffp_flm_server.FLM_RELEASES_API
+    assert "ROCm/FastFlowLM" in ffp_flm_server.FLM_RELEASES_PAGE

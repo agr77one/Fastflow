@@ -216,13 +216,13 @@ if ($SkipFlm) {
 } else {
     # FastFlowLM moved from FastFlowLM/FastFlowLM to ROCm/FastFlowLM and, as of
     # v1.0.1, switched its Windows asset from an Inno-Setup .exe to an .msi
-    # (release title: "Windows Installer Switch"). GitHub redirects the old
-    # org's "latest" URL to the new one, so the URL below still works.
+    # (release title: "Windows Installer Switch"). Point at the canonical
+    # ROCm/FastFlowLM org directly rather than the old org's redirect.
     $flmSetup = Join-Path $releaseRoot "vendor\flm\flm-setup.msi"
     if (-not (Test-Path $flmSetup)) {
         Info "Downloading FastFlowLM installer (large -- hundreds of MB)..."
         $flmSetup = Join-Path $env:TEMP "ffp-flm-setup.msi"
-        Invoke-WebRequest -Uri "https://github.com/FastFlowLM/FastFlowLM/releases/latest/download/flm-setup.msi" `
+        Invoke-WebRequest -Uri "https://github.com/ROCm/FastFlowLM/releases/latest/download/flm-setup.msi" `
             -OutFile $flmSetup -UseBasicParsing
     }
     Info "Installing FastFlowLM (a UAC prompt is expected; install is silent after you accept)..."

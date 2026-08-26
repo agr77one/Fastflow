@@ -8,7 +8,7 @@ in source control — `installer/build.ps1` downloads them on demand.
 | dir        | what                                  | source                                                                  | license      |
 |------------|---------------------------------------|-------------------------------------------------------------------------|--------------|
 | `ahk/`     | AutoHotkey v2 64-bit interpreter      | <https://www.autohotkey.com/download/ahk-v2.zip>                        | GPLv2        |
-| `flm/`     | FastFlowLM official setup wrapper     | <https://github.com/FastFlowLM/FastFlowLM/releases/latest>              | see FLM site |
+| `flm/`     | FastFlowLM official setup wrapper     | <https://github.com/ROCm/FastFlowLM/releases/latest>                    | see FLM site |
 
 ## Refresh
 

@@ -144,13 +144,13 @@ if ($BundleFlm) {
     if (-not (Test-Path $vendorDir)) { New-Item -ItemType Directory -Path $vendorDir -Force | Out-Null }
     # FastFlowLM moved from FastFlowLM/FastFlowLM to ROCm/FastFlowLM and, as of
     # v1.0.1, switched its Windows asset from an Inno-Setup .exe to an .msi
-    # (release title: "Windows Installer Switch"). GitHub redirects the old
-    # org's "latest" URL to the new one, so the URL below still works.
+    # (release title: "Windows Installer Switch"). Point at the canonical
+    # ROCm/FastFlowLM org directly rather than the old org's redirect.
     $flmDst = Join-Path $vendorDir "flm-setup.msi"
     if (Test-Path $flmDst) {
         "FLM installer already present: $flmDst"
     } else {
-        $flmUrl = "https://github.com/FastFlowLM/FastFlowLM/releases/latest/download/flm-setup.msi"
+        $flmUrl = "https://github.com/ROCm/FastFlowLM/releases/latest/download/flm-setup.msi"
         "Downloading FLM installer from $flmUrl ..."
         Invoke-WebRequest -Uri $flmUrl -OutFile $flmDst -UseBasicParsing
         "Got: $flmDst ($([math]::Round((Get-Item $flmDst).Length/1MB,1)) MB)"

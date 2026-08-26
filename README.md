@@ -73,7 +73,7 @@ Install these first on a new machine:
 4. Install FastFlowLM from [fastflowlm.com](https://fastflowlm.com/) or directly with PowerShell:
 
 ```powershell
-Invoke-WebRequest https://github.com/FastFlowLM/FastFlowLM/releases/latest/download/flm-setup.msi -OutFile flm-setup.msi
+Invoke-WebRequest https://github.com/ROCm/FastFlowLM/releases/latest/download/flm-setup.msi -OutFile flm-setup.msi
 Start-Process msiexec.exe -ArgumentList '/i', 'flm-setup.msi', '/quiet', '/norestart' -Wait
 ```
 
