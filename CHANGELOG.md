@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+## 2.5.1
+
+**Provider failures are diagnosable, and an installed model can be re-downloaded.** All three items came out of a real debugging session on a live machine.
+
+### Added
+
+- **Re-download… button** in Config → Models. Re-fetches a model that is already installed — needed after a FastFlowLM upgrade invalidates local weights, where the model still lists as installed but the runtime rejects it. For FastFlowLM this is remove-then-pull, because `flm pull` only downloads a model that is *missing*, so a plain re-pull is a silent no-op. The UI confirms first, and a failed forced pull states plainly that the old copy is gone and the pull must be retried. Ollama is left to its own `pull`, which already re-fetches when the remote digest changes.
+
+### Fixed
+
+- **Provider startup errors are no longer discarded.** `server.log_to_file` defaults to false, and on that path the local server's stdout/stderr went nowhere — so a refused start surfaced only as `FastFlowLM server exited early (exit 1)` with nothing to act on. Provider output is now always captured (to a scratch file that is deleted if the server comes up, or to the persistent log when logging is enabled), and the last lines are appended to the error. `log_to_file` now controls only whether the log persists, never whether a failure can be diagnosed.
+- **A stale version check is no longer presented as current.** The non-blocking FastFlowLM update read could serve a cache days past its TTL and render it as fact; the network-failure fallback also served cached values while reporting itself as uncached. Stale readings are now flagged, labelled in the UI, and refreshed once in the background.
+
 ## 2.5.0
 
 **Notes now works like a notepad, sticky-note wall, and vision board instead of a file browser.** Capture first, shape the note in an editor, and organize it without leaving the Notes tab.

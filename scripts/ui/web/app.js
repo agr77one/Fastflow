@@ -1892,7 +1892,8 @@ function renderModelAlert(health) {
   el.textContent =
     `⚠ Active model "${health.model}" is not installed for the current ` +
     `${health.provider} version. Hotkeys and chat will fail until you ` +
-    `re-download it below (or pick another installed model).`;
+    `re-download it — select it below and use "Re-download…" — or pick ` +
+    `another installed model.`;
 }
 
 async function loadModels() {
@@ -2171,6 +2172,35 @@ async function removeModel() {
 }
 
 let pullTimer = null;
+
+// Re-download an already-installed model. Needed after a provider upgrade
+// invalidates local weights (FLM stamps them per version — see the model
+// alert above): the model still lists as installed, so a normal Download is a
+// no-op. For FastFlowLM this is remove-then-pull server-side, so it is
+// destructive if the download then fails — hence the explicit warning.
+async function repullModel() {
+  const name = selectedModel;
+  if (!name) {
+    setStatus("config-status", "Pick an installed model first.", false);
+    return;
+  }
+  const msg =
+    `Re-download '${name}'? The existing copy is deleted first, so if the ` +
+    `download fails the model will not be installed until you retry.`;
+  if (!(await confirmDialog(msg, "Re-download"))) return;
+  try {
+    const state = await action("pull_start", { model: name, force: true });
+    if (state.state === "running") {
+      setText("pull-status", `Re-downloading ${name}… 0%`);
+      clearInterval(pullTimer);
+      pullTimer = setInterval(pollPull, 1000);
+    } else {
+      setText("pull-status", `⚠ Re-download not started: ${state.error || "unknown"}`);
+    }
+  } catch (e) {
+    setText("pull-status", `⚠ Re-download not started: ${e.message}`);
+  }
+}
 
 async function pullModel() {
   const name = $("pull-name").value.trim();
@@ -2990,6 +3020,7 @@ document.addEventListener("DOMContentLoaded", () => {
   $("pb-allow-suffix").addEventListener("change", updatePromptBuilderHint);
   $("pb-suffix").addEventListener("input", updatePromptBuilderHint);
   $("model-set-active").addEventListener("click", setActiveModel);
+  $("model-repull").addEventListener("click", repullModel);
   $("model-remove").addEventListener("click", removeModel);
   $("pull-btn").addEventListener("click", pullModel);
   // Pull combobox: typing filters, ▾ toggles, arrows/Enter/Escape navigate.

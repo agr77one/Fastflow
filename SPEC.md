@@ -17,7 +17,7 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - LLM: FastFlowLM NPU @ `:52625` | Ollama @ `:11434`, OpenAI-compat `POST /v1/chat/completions`
 - dashboard: daemon-served `scripts/ui/web/{index.html,app.js,styles.css}`, CSP `default-src 'self'`
 - paths: `scripts/paths.py` → USER_ROOT/{config,data,logs}; `_version.py` = version src of truth
-- version: `2.5.0` = living Notes workspace + vision board; repo `agr77one/Fastflow`
+- version: `2.5.1` = provider-failure visibility + model re-download; repo `agr77one/Fastflow`
 - run tree = `flowkey-pub2` (worktree, branch `live`=origin/main). old `FastFlowPrompt_Local_Setup`=1.5.0 stale.
 
 ## §I interfaces
@@ -125,6 +125,7 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - V62: `ffp_quill` public read fns (`get_minutes`,`get_transcript`,`search_meetings`,`list_recent_meetings`) catch `QuillToolError` → soft-degrade (empty text/list); V57's typed-failure raise stays internal to `call_tool`, ⊥ leaks past the public API
 - V63: provider start failure → error carries the provider's own last output verbatim (ANSI-stripped, tail-bounded), ∀ `server.log_to_file`; capture ⊥ optional ∵ discarded stderr = undiagnosable failure. `log_to_file` governs PERSISTENCE only: false → scratch capture, deleted iff start succeeded
 - V64: cached update-check result past TTL ⊥ presented as current fact — flagged `stale` (incl. network-failure fallback to disk) ∧ UI labels it ∧ triggers one background forced refresh; ⊥ blocking the tab
+- V65: force re-pull of an installed model = provider-correct: FLM `pull` only fetches when ABSENT ∴ force ⇒ remove-then-pull (DESTRUCTIVE on download failure → error says the model is now uninstalled + retry); ollama `pull` already re-fetches on digest change ∴ ⊥ remove. UI confirms before sending force
 
 ## §T tasks
 
@@ -170,6 +171,7 @@ T37|x|repair Quill transcript schema/error handling + poison-cache retry + re-di
 T38|x|guarded local-model category creation + sorted category manager + note organize action|V3,V7,V20,V49,V58
 T39|x|compact Config section navigation + collapsible cards + sticky save|V5,V20,V55,V59
 T40|.|Activity workspace: merge Telemetry+History, card/detail UI, explicit Save as note|V5,V6,V25,V26,V60
+T41|x|2.5.1: always capture provider output on start failure; flag+refresh stale update cache; Re-download… button for installed models|V63,V64,V65
 ```
 
 ## §B bugs
