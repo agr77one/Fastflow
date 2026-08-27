@@ -2033,24 +2033,39 @@ async function loadAutostart() {
   }
 }
 
+function renderFlmVersion(info) {
+  const cur = info.current ? `v${info.current}` : "not detected";
+  // A cache past its TTL is a guess, not a fact — say so rather than printing
+  // a stale "vX available" as current (B52).
+  const aged = info.stale ? " (cached — rechecking…)" : "";
+  if (!info.current) {
+    setText("flm-version", "FastFlowLM: not detected (is flm on PATH?)");
+    $("flm-download").hidden = true;
+  } else if (info.has_update) {
+    setText("flm-version", `FastFlowLM ${cur} → v${info.latest} available.${aged}`);
+    if (info.release_url) $("flm-download").href = info.release_url;
+    $("flm-download").hidden = false;
+  } else if (info.latest) {
+    setText("flm-version", `FastFlowLM ${cur} — up to date ✓${aged}`);
+    $("flm-download").hidden = true;
+  } else {
+    setText("flm-version", `FastFlowLM ${cur} — click 'Check for updates' to compare.`);
+    $("flm-download").hidden = true;
+  }
+}
+
 async function loadFlmVersion(force) {
   setText("flm-version", "FastFlowLM: checking…");
   try {
     const info = await action("flm_update_check", force ? { force: true } : { cache_only: true });
-    const cur = info.current ? `v${info.current}` : "not detected";
-    if (!info.current) {
-      setText("flm-version", "FastFlowLM: not detected (is flm on PATH?)");
-      $("flm-download").hidden = true;
-    } else if (info.has_update) {
-      setText("flm-version", `FastFlowLM ${cur} → v${info.latest} available.`);
-      if (info.release_url) $("flm-download").href = info.release_url;
-      $("flm-download").hidden = false;
-    } else if (info.latest) {
-      setText("flm-version", `FastFlowLM ${cur} — up to date ✓`);
-      $("flm-download").hidden = true;
-    } else {
-      setText("flm-version", `FastFlowLM ${cur} — click 'Check for updates' to compare.`);
-      $("flm-download").hidden = true;
+    renderFlmVersion(info);
+    // The non-blocking read can hand back a cache that expired long ago (a
+    // 14-day-old entry was being shown as the current latest). Refresh once in
+    // the background so the label self-corrects without stalling the tab.
+    if (!force && info.stale && info.current) {
+      action("flm_update_check", { force: true })
+        .then(renderFlmVersion)
+        .catch(() => { /* offline: the cached label already says it's cached */ });
     }
   } catch (e) {
     setText("flm-version", `FastFlowLM: check failed (${e.message})`);

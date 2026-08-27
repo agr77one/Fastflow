@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 import socket
 import subprocess
@@ -128,6 +129,28 @@ def find_pids_on_port(port: int, no_window: int) -> list[int]:
     return sorted(pids)
 
 
+_ANSI_RE = re.compile("\x1b\\[[0-9;]*m")
+
+
+def _capture_tail(path: Path, start: int, max_lines: int = 4, limit: int = 400) -> str:
+    """Return the last few meaningful lines a provider wrote after `start` bytes.
+
+    Read binary and decode leniently: FLM emits ANSI colour codes and can emit
+    non-UTF-8 bytes, and a diagnostic must never itself raise.
+    """
+    try:
+        with path.open("rb") as handle:
+            handle.seek(start)
+            raw = handle.read()
+    except OSError:
+        return ""
+    text = _ANSI_RE.sub("", raw.decode("utf-8", errors="replace"))
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    if not lines:
+        return ""
+    return " | ".join(lines[-max_lines:])[:limit]
+
+
 def warmup_request(
     model: str,
     timeout_seconds: int,
@@ -181,36 +204,59 @@ def start_flm_server(
     if perf_mode == "max":
         creationflags |= getattr(subprocess, "HIGH_PRIORITY_CLASS", 0)
 
-    stdout_target = None
-    stderr_target = None
-    log_handle = None
-    if settings.log_to_file:
-        log_path = settings.logs_dir / settings.log_file
-        log_path.parent.mkdir(parents=True, exist_ok=True)
-        log_handle = log_path.open("a", encoding="utf-8")
-        log_handle.write(f"\n[{time.strftime('%Y-%m-%d %H:%M:%S')}] starting: {' '.join(args)}\n")
-        log_handle.flush()
-        stdout_target = log_handle
-        stderr_target = log_handle
+    # ALWAYS capture the provider's output. With log_to_file off we still need
+    # it to explain a startup failure: discarding it turned a real, specific
+    # error (FLM resolving its model dir to the SYSTEM profile and failing with
+    # "Access is denied") into a bare "exited early (exit 1)" carrying no
+    # diagnosable signal at all -- five failures produced zero usable evidence
+    # (B51). The scratch file is removed unless the server actually failed.
+    temp_capture = not settings.log_to_file
+    if temp_capture:
+        capture_path = settings.logs_dir / f".flm_start_{os.getpid()}.log"
+    else:
+        capture_path = settings.logs_dir / settings.log_file
+    capture_path.parent.mkdir(parents=True, exist_ok=True)
+    log_handle = capture_path.open("a", encoding="utf-8")
+    log_handle.write(f"\n[{time.strftime('%Y-%m-%d %H:%M:%S')}] starting: {' '.join(args)}\n")
+    log_handle.flush()
+    try:
+        capture_start = capture_path.stat().st_size
+    except OSError:
+        capture_start = 0
 
     try:
-        proc = popen_hidden(args, creationflags=creationflags, stdout=stdout_target, stderr=stderr_target)
+        proc = popen_hidden(args, creationflags=creationflags, stdout=log_handle, stderr=log_handle)
     finally:
-        if log_handle is not None:
-            log_handle.close()
+        log_handle.close()
     write_pid(settings.pid_path, proc.pid)
+
+    def discard_capture() -> None:
+        if not temp_capture:
+            return
+        try:
+            capture_path.unlink(missing_ok=True)
+        except OSError as exc:
+            log.debug("could not remove FLM capture %s: %s", capture_path, exc)
+
+    def failure(message: str) -> RuntimeError:
+        detail = _capture_tail(capture_path, capture_start)
+        discard_capture()
+        if detail:
+            return RuntimeError(f"{message} Server said: {detail}")
+        return RuntimeError(message)
 
     deadline = time.time() + max(5, settings.startup_timeout_seconds)
     while time.time() < deadline:
         if is_flm_server_reachable(settings.base_url):
+            discard_capture()
             return "started"
         if proc.poll() is not None:
             remove_pid(settings.pid_path)
-            raise RuntimeError(f"FastFlowLM server exited early (exit {proc.returncode}).")
+            raise failure(f"FastFlowLM server exited early (exit {proc.returncode}).")
         time.sleep(0.25)
     kill_pid(proc.pid, settings.no_window)
     remove_pid(settings.pid_path)
-    raise RuntimeError("FastFlowLM server did not start in time.")
+    raise failure("FastFlowLM server did not start in time.")
 
 
 def stop_flm_server(settings: FlmServerSettings, *, force: bool = False) -> bool:
@@ -413,11 +459,15 @@ def check_flm_update(
         log.debug("FLM update check failed, serving local/cache: %s", exc)
         out["error"] = str(exc)
         out["has_update"] = False
-        out["cached"] = False
+        out["cached"] = bool(cached)
         if cached:
             out["latest"] = str(cached.get("latest") or "")
             out["asset_url"] = str(cached.get("asset_url") or "")
             out["release_url"] = str(cached.get("release_url") or FLM_RELEASES_PAGE)
+            out["checked_at"] = float(cached.get("checked_at") or 0)
+            # We fell back to whatever was on disk — mark it, so callers never
+            # present cached values as a fresh answer (B52).
+            out["stale"] = True
         return out
 
     tag = str(payload.get("tag_name") or "").strip()

@@ -4,6 +4,7 @@ import json
 import types
 
 import ffp_flm_server
+import pytest
 
 
 def _fake_run(stdout="", returncode=0, stderr="", capture=None):
@@ -214,3 +215,132 @@ def test_b49_release_feed_points_at_rocm_org():
     """Repo moved orgs; don't rely on GitHub's 301 redirect indefinitely (B47)."""
     assert "ROCm/FastFlowLM" in ffp_flm_server.FLM_RELEASES_API
     assert "ROCm/FastFlowLM" in ffp_flm_server.FLM_RELEASES_PAGE
+
+
+def _settings(tmp_path, *, log_to_file: bool):
+    return ffp_flm_server.FlmServerSettings(
+        base_url="http://127.0.0.1:52625",
+        model="qwen3.5:9b",
+        timeout_seconds=60,
+        performance_mode="balanced",
+        startup_timeout_seconds=5,
+        extra_args=[],
+        log_to_file=log_to_file,
+        log_file="flm_server.log",
+        pid_path=tmp_path / "flm.pid",
+        logs_dir=tmp_path,
+        no_window=0,
+    )
+
+
+class _DeadProc:
+    """A child that writes to its handle then exits non-zero, like FLM does."""
+
+    pid = 4321
+
+    def __init__(self, handle, text):
+        handle.write(text)
+        handle.flush()
+        self.returncode = 1
+
+    def poll(self):
+        return self.returncode
+
+
+def _spawn_dead(text):
+    def _popen(argv, **kwargs):
+        return _DeadProc(kwargs["stdout"], text)
+    return _popen
+
+
+def test_b51_startup_failure_reports_provider_output_even_with_logging_off(monkeypatch, tmp_path):
+    """log_to_file=False must not swallow WHY the provider died."""
+    settings = _settings(tmp_path, log_to_file=False)
+    monkeypatch.setattr(ffp_flm_server, "is_flm_server_reachable", lambda _u: False)
+    monkeypatch.setattr(ffp_flm_server, "write_pid", lambda *_a: None)
+    monkeypatch.setattr(ffp_flm_server, "remove_pid", lambda *_a: None)
+    monkeypatch.setattr(ffp_flm_server.time, "sleep", lambda _s: None)
+    monkeypatch.setattr(
+        ffp_flm_server,
+        "popen_hidden",
+        _spawn_dead('Error: create_directories: Access is denied.: "C:\\systemprofile\\.flm"\n'),
+    )
+
+    with pytest.raises(RuntimeError) as excinfo:
+        ffp_flm_server.start_flm_server(settings, lambda *_a: ("", settings.model))
+
+    message = str(excinfo.value)
+    assert "exited early (exit 1)" in message
+    assert "Access is denied" in message          # the actual cause reaches the caller
+    assert not list(tmp_path.glob(".flm_start_*.log"))   # scratch capture cleaned up
+
+
+def test_b51_scratch_capture_removed_on_success(monkeypatch, tmp_path):
+    settings = _settings(tmp_path, log_to_file=False)
+    # Not reachable pre-spawn (else it short-circuits to already_running),
+    # reachable once the startup loop polls.
+    reachability = iter([False, True])
+    monkeypatch.setattr(
+        ffp_flm_server, "is_flm_server_reachable", lambda _u: next(reachability)
+    )
+    monkeypatch.setattr(ffp_flm_server, "write_pid", lambda *_a: None)
+    monkeypatch.setattr(ffp_flm_server, "popen_hidden", _spawn_dead("[FLM] starting\n"))
+
+    assert ffp_flm_server.start_flm_server(settings, lambda *_a: ("", settings.model)) == "started"
+    assert not list(tmp_path.glob(".flm_start_*.log"))
+    assert not (tmp_path / "flm_server.log").exists()   # honoured log_to_file=False
+
+
+def test_b51_persistent_log_is_kept_and_still_reports_cause(monkeypatch, tmp_path):
+    settings = _settings(tmp_path, log_to_file=True)
+    monkeypatch.setattr(ffp_flm_server, "is_flm_server_reachable", lambda _u: False)
+    monkeypatch.setattr(ffp_flm_server, "write_pid", lambda *_a: None)
+    monkeypatch.setattr(ffp_flm_server, "remove_pid", lambda *_a: None)
+    monkeypatch.setattr(ffp_flm_server.time, "sleep", lambda _s: None)
+    monkeypatch.setattr(ffp_flm_server, "popen_hidden", _spawn_dead("Error: boom\n"))
+
+    with pytest.raises(RuntimeError, match="boom"):
+        ffp_flm_server.start_flm_server(settings, lambda *_a: ("", settings.model))
+    assert (tmp_path / "flm_server.log").exists()       # persistent log NOT deleted
+
+
+def test_b51_capture_tail_strips_ansi_and_survives_bad_bytes(tmp_path):
+    p = tmp_path / "c.log"
+    p.write_bytes(b"header\n\x1b[31mError: red text\x1b[0m\n\xff\xfe bad bytes\n")
+    tail = ffp_flm_server._capture_tail(p, 0)
+    assert "Error: red text" in tail
+    assert "\x1b" not in tail and "[31m" not in tail
+
+
+def test_b52_network_failure_marks_cached_fallback_stale(monkeypatch, tmp_path):
+    """Falling back to disk must never look like a fresh answer."""
+    cache = tmp_path / "c.json"
+    cache.write_text(json.dumps({
+        "checked_at": 1.0, "latest": "0.9.46",
+        "release_url": "https://example/tag/v0.9.46", "asset_url": "",
+    }), encoding="utf-8")
+    monkeypatch.setattr(ffp_flm_server, "flm_version", lambda _nw: "0.9.45")
+
+    def _boom(*_a, **_k):
+        raise OSError("no network")
+    monkeypatch.setattr(ffp_flm_server.urllib.request, "urlopen", _boom)
+
+    out = ffp_flm_server.check_flm_update(0, cache_path=cache, force=True)
+
+    assert out["stale"] is True
+    assert out["cached"] is True
+    assert out["error"]
+
+
+def test_b52_expired_cache_served_cache_only_is_flagged_stale(monkeypatch, tmp_path):
+    cache = tmp_path / "c.json"
+    cache.write_text(json.dumps({
+        "checked_at": 1.0, "latest": "0.9.46", "release_url": "", "asset_url": "",
+    }), encoding="utf-8")
+    monkeypatch.setattr(ffp_flm_server, "flm_version", lambda _nw: "0.9.45")
+
+    out = ffp_flm_server.check_flm_update(0, cache_path=cache, cache_only=True)
+
+    assert out["cached"] is True
+    assert out["stale"] is True          # 1970 timestamp is far past any TTL
+    assert out["has_update"] is True     # still reported, but flagged as stale
