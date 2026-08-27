@@ -440,6 +440,7 @@ def _act_pull_model(args: dict) -> str:
             name,
             _NO_WINDOW,
             timeout=ffp_actions.PULL_MODEL_TIMEOUT_SECONDS,
+            force=bool(args.get("force")),
         )
     except FileNotFoundError:
         raise RuntimeError(f"{grammar_fix.LLM_PROVIDER} CLI not found in PATH")
@@ -581,12 +582,22 @@ def _act_bench_start(args: dict) -> dict:
 
 def _act_pull_start(args: dict) -> dict:
     """Start an async `flm pull <model>` on a background thread (non-blocking).
-    Poll `pull_status` for progress. args.model (str)."""
+    Poll `pull_status` for progress. args.model (str), args.force (bool).
+
+    args.force re-downloads an already-installed model. For FastFlowLM that is
+    remove-then-pull (its `pull` is a no-op when present), so it is destructive
+    if the download fails — the UI confirms before sending it.
+    """
     import ffp_pull
     model = str(args.get("model") or args.get("value") or "").strip()
     if not model:
         return {"ok": False, "error": "pull_start requires args.model"}
-    return ffp_pull.start_pull(model, _NO_WINDOW, provider=grammar_fix.LLM_PROVIDER)
+    return ffp_pull.start_pull(
+        model,
+        _NO_WINDOW,
+        provider=grammar_fix.LLM_PROVIDER,
+        force=bool(args.get("force")),
+    )
 
 
 def _act_pull_status(_args: dict) -> dict:

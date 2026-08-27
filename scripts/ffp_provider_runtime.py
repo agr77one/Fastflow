@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 import json
+import logging
+import subprocess
 import urllib.error
 import urllib.request
 
 import ffp_flm_server
 import ffp_provider_status
 from subprocess_util import run_hidden
+
+log = logging.getLogger("ffp.provider")
 
 OLLAMA_SUGGESTED_MODELS = ["llama3.2:3b", "qwen2.5:3b", "gemma3:4b"]
 
@@ -84,12 +88,21 @@ def list_models(provider: str, filter_kind: str, model: str, no_window: int, bas
     return out
 
 
-def pull_model(provider: str, model: str, no_window: int, *, timeout: int = 900) -> str:
+def pull_model(provider: str, model: str, no_window: int, *, timeout: int = 900,
+               force: bool = False) -> str:
     provider = normalize_provider(provider)
     name = str(model or "").strip()
     if not name:
         raise ValueError("model name is empty")
     cli = "ollama" if provider == "ollama" else "flm"
+    if force and provider != "ollama":
+        # `flm pull` only downloads "if not present", so forcing fresh weights
+        # means removing first (B53). Ignore a remove failure — the model may
+        # simply not be installed, which the pull below handles.
+        try:
+            remove_model(provider, name, no_window, timeout=60)
+        except (RuntimeError, FileNotFoundError, subprocess.TimeoutExpired) as exc:
+            log.info("force pull: remove of %s did not succeed (%s)", name, exc)
     result = run_hidden([cli, "pull", name], timeout=timeout, creationflags=no_window)
     output = (result.stdout or "") + (result.stderr or "")
     if result.returncode != 0:

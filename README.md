@@ -4,7 +4,13 @@ Flowkey is a Windows desktop assistant that adds local-LLM hotkeys for grammar f
 
 Everything runs locally through [FastFlowLM](https://fastflowlm.com) (AMD Ryzen AI NPU) or, on machines without the NPU, through [Ollama](https://ollama.com) (CPU/GPU) as a secondary provider. No cloud service, analytics, or telemetry is used by the app.
 
-Current version: `2.5.0`
+Current version: `2.5.1`
+
+## What's new in 2.5.1
+
+- **Re-download a model you already have.** Config → **Models** has a new **Re-download…** button. A FastFlowLM upgrade can invalidate weights you already pulled — the model still lists as installed, but the runtime rejects it, and the ordinary Download button does nothing because `flm pull` only fetches models that are *missing*. Re-download deletes the local copy first and pulls fresh. It warns you before starting, since a failed download leaves the model uninstalled until you retry.
+- **Failures tell you what actually went wrong.** When the local server refused to start, Flowkey reported only `exited early (exit 1)` — the provider's own error was being discarded because the server log is off by default. The provider's output is now always captured, and its last lines are included in the error. (A real case this would have solved immediately: FastFlowLM 0.9.x looking for models in the wrong Windows profile and failing with "Access is denied" — fixed upstream in 1.0.x.)
+- **The update line no longer shows a stale answer.** The FastFlowLM version check could display a cached result days old as if it were current. A cached reading is now labelled as such and refreshed in the background.
 
 ## What's new in 2.5
 
