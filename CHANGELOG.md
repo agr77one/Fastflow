@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+## 2.5.2
+
+**The local server starts after a reboot, and start-with-Windows works again.** Both were silent failures with no error anywhere; both were found on a live machine.
+
+### Fixed
+
+- **FastFlowLM could not start when launched by Flowkey.** FastFlowLM's installer stores its model directory as a **machine-scope** `REG_EXPAND_SZ` containing `%USERPROFILE%\.flm`. Machine-scope variables are expanded in the SYSTEM context when a login session's environment block is built, so every process inheriting it saw `C:\Windows\system32\config\systemprofile\.flm` — a directory it may not create — and `flm` exited immediately with `create_directories: Access is denied`. This is why the failure appeared only for the app (explorer → AutoHotkey → daemon → flm all inherit that block), never from an interactive shell, survived a reboot, and was *not* fixed by upgrading FastFlowLM to 1.0.3. Flowkey now repairs the value for every `flm` child it spawns rather than trusting the machine environment. Upstream bug; Flowkey is now immune to it.
+- **Logon autostart silently launched nothing.** The autostart command fell back to the bare string `AutoHotkey64.exe` whenever the installed layout was absent — which is every source tree, where AutoHotkey lives under `vendor\ahk`. AutoHotkey is bundled rather than on `PATH`, so Windows resolved nothing at logon while the Run entry still read as enabled. The command is now always a resolved absolute path, `get_autostart_state` reports a `valid` flag, and the daemon repairs an enabled-but-unlaunchable entry at startup (repair only — it never creates one the user did not enable).
+
+### Changed
+
+- **Re-download uses FastFlowLM's own `--force` instead of remove-then-pull.** 2.5.1 deleted the model first because `flm pull` alone skips models that are already present; `flm pull --force` re-downloads without deleting, so the existing copy now survives a failed re-download and the destructive warning is gone.
+
 ## 2.5.1
 
 **Provider failures are diagnosable, and an installed model can be re-downloaded.** All three items came out of a real debugging session on a live machine.

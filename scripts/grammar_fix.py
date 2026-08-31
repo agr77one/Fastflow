@@ -681,6 +681,13 @@ def run_doctor() -> str:
         checks.append((f"{key}_reachable", str(bool(status.get("reachable"))).lower()))
     checks.append(("flm_base_url", FLM_BASE_URL))
     checks.append(("flm_reachable", str(is_flm_server_reachable()).lower()))
+    # Profile/env context the provider child will inherit. FLM resolves its
+    # model directory from this, and a wrong value fails as an opaque
+    # "Access is denied" on a systemprofile path (B51/B54). Reporting it here
+    # is what finally made that diagnosable, so keep it in doctor.
+    checks.append(("env_USERPROFILE", os.environ.get("USERPROFILE") or "(unset)"))
+    checks.append(("env_FLM_MODEL_PATH", os.environ.get("FLM_MODEL_PATH") or "(unset)"))
+    checks.append(("expanduser_~", os.path.expanduser("~")))
     models_info = list_flm_models()
     if "error" in models_info:
         checks.append(("model_installed", f"unknown ({models_info['error']})"))

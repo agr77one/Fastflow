@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import logging
-import subprocess
 import urllib.error
 import urllib.request
 
@@ -95,15 +94,14 @@ def pull_model(provider: str, model: str, no_window: int, *, timeout: int = 900,
     if not name:
         raise ValueError("model name is empty")
     cli = "ollama" if provider == "ollama" else "flm"
+    argv = [cli, "pull", name]
     if force and provider != "ollama":
-        # `flm pull` only downloads "if not present", so forcing fresh weights
-        # means removing first (B53). Ignore a remove failure — the model may
-        # simply not be installed, which the pull below handles.
-        try:
-            remove_model(provider, name, no_window, timeout=60)
-        except (RuntimeError, FileNotFoundError, subprocess.TimeoutExpired) as exc:
-            log.info("force pull: remove of %s did not succeed (%s)", name, exc)
-    result = run_hidden([cli, "pull", name], timeout=timeout, creationflags=no_window)
+        # `flm pull` alone only downloads "if not present"; FLM's own
+        # `--force` re-downloads without deleting first (B55). `ollama pull`
+        # already re-fetches on digest change.
+        argv.append("--force")
+    result = run_hidden(argv, timeout=timeout, creationflags=no_window,
+                        env=ffp_flm_server.flm_env())
     output = (result.stdout or "") + (result.stderr or "")
     if result.returncode != 0:
         raise RuntimeError(f"{cli} pull failed (exit {result.returncode}):\n{output.strip()}")
@@ -117,7 +115,8 @@ def remove_model(provider: str, model: str, no_window: int, *, timeout: int = 60
         raise ValueError("model name is empty")
     cli = "ollama" if provider == "ollama" else "flm"
     command = "rm" if provider == "ollama" else "remove"
-    result = run_hidden([cli, command, name], timeout=timeout, creationflags=no_window)
+    result = run_hidden([cli, command, name], timeout=timeout, creationflags=no_window,
+                        env=ffp_flm_server.flm_env())
     output = (result.stdout or "") + (result.stderr or "")
     if result.returncode != 0:
         raise RuntimeError(f"{cli} {command} failed (exit {result.returncode}):\n{output.strip()}")

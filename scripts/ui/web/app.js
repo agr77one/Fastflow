@@ -2176,8 +2176,8 @@ let pullTimer = null;
 // Re-download an already-installed model. Needed after a provider upgrade
 // invalidates local weights (FLM stamps them per version — see the model
 // alert above): the model still lists as installed, so a normal Download is a
-// no-op. For FastFlowLM this is remove-then-pull server-side, so it is
-// destructive if the download then fails — hence the explicit warning.
+// no-op. Server-side this uses the provider's own force flag, which does not
+// delete the existing copy first.
 async function repullModel() {
   const name = selectedModel;
   if (!name) {
@@ -2185,8 +2185,8 @@ async function repullModel() {
     return;
   }
   const msg =
-    `Re-download '${name}'? The existing copy is deleted first, so if the ` +
-    `download fails the model will not be installed until you retry.`;
+    `Re-download '${name}'? This re-fetches the full model, which can take ` +
+    `a while. Your existing copy stays in place until the new one arrives.`;
   if (!(await confirmDialog(msg, "Re-download"))) return;
   try {
     const state = await action("pull_start", { model: name, force: true });

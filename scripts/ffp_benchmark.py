@@ -23,6 +23,7 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 
+import ffp_flm_server
 from subprocess_util import run_hidden
 
 log = logging.getLogger("ffp.benchmark")
@@ -119,6 +120,7 @@ def _default_runner(model: str, work: Path, no_window: int) -> str:
     """Run the real `flm bench <model>` in `work` so the CSV lands there."""
     result = run_hidden(
         ["flm", "bench", model],
+        env=ffp_flm_server.flm_env(),
         cwd=str(work),
         timeout=5400,  # 90 min hard cap; large-context sweeps can be slow
         creationflags=no_window,

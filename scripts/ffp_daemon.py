@@ -160,36 +160,96 @@ def _autostart_command_line() -> str:
     Resolves to:
         "<APP_DIR>\\ahk\\AutoHotkey64.exe" "<APP_DIR>\\scripts\\grammarFix.ahk"
 
-    Falls back to a best-effort path if the production layout isn't present
-    (e.g. dev mode). Returns an empty string if we can't find an AHK exe.
+    In a dev/source tree the bundled interpreter lives under vendor\\ahk
+    instead, so that location is probed too. Returns an empty string if no AHK
+    exe can be resolved.
+
+    The command MUST name a real, resolvable exe. This previously fell back to
+    the bare string "AutoHotkey64.exe" whenever the installed layout was
+    absent — which is the dev-tree case — and AutoHotkey is not on PATH, so
+    Windows silently failed to launch anything at logon and autostart just
+    never happened (B56). Never emit a bare name we haven't resolved.
     """
+    import shutil
+
     from paths import APP_DIR
-    ahk = APP_DIR / "ahk" / "AutoHotkey64.exe"
-    if not ahk.exists():
-        # Dev mode: assume AHK is on PATH and just run the .ahk script.
-        ahk_fallback = "AutoHotkey64.exe"
-        script = APP_DIR / "scripts" / "grammarFix.ahk"
-        if not script.exists():
-            return ""
-        return f'"{ahk_fallback}" "{script}"'
     script = APP_DIR / "scripts" / "grammarFix.ahk"
-    return f'"{ahk}" "{script}"'
+    if not script.exists():
+        return ""
+    for candidate in (
+        APP_DIR / "ahk" / "AutoHotkey64.exe",            # installed layout
+        APP_DIR / "vendor" / "ahk" / "AutoHotkey64.exe",  # dev/source tree
+    ):
+        if candidate.exists():
+            return f'"{candidate}" "{script}"'
+    on_path = shutil.which("AutoHotkey64.exe") or shutil.which("AutoHotkey.exe")
+    if on_path:
+        return f'"{on_path}" "{script}"'
+    return ""
+
+
+def _autostart_value_is_launchable(value: str) -> bool:
+    """True if a Run value's exe actually resolves. A value whose exe cannot be
+    found launches nothing at logon, while still reading as 'enabled'."""
+    import shutil
+    text = str(value or "").strip()
+    if not text:
+        return False
+    exe = text[1:text.index('"', 1)] if text.startswith('"') and '"' in text[1:] else text.split(" ", 1)[0]
+    exe = exe.strip()
+    if not exe:
+        return False
+    if Path(exe).is_absolute():
+        return Path(exe).exists()
+    return shutil.which(exe) is not None
 
 
 def _act_get_autostart_state(_args: dict) -> dict:
-    """Report whether HKCU autostart is registered for this user."""
+    """Report whether HKCU autostart is registered for this user.
+
+    `valid` distinguishes "registered and will actually launch" from
+    "registered but points at an exe that cannot be found" (B56).
+    """
     try:
         import winreg
     except ImportError:
-        return {"enabled": False, "supported": False, "value": ""}
+        return {"enabled": False, "supported": False, "value": "", "valid": False}
     try:
         with winreg.OpenKey(winreg.HKEY_CURRENT_USER, _AUTOSTART_REG_PATH) as k:
             value, _kind = winreg.QueryValueEx(k, _AUTOSTART_VALUE_NAME)
-            return {"enabled": True, "supported": True, "value": str(value)}
+            return {
+                "enabled": True, "supported": True, "value": str(value),
+                "valid": _autostart_value_is_launchable(str(value)),
+            }
     except FileNotFoundError:
-        return {"enabled": False, "supported": True, "value": ""}
+        return {"enabled": False, "supported": True, "value": "", "valid": False}
     except OSError as exc:
-        return {"enabled": False, "supported": True, "value": "", "error": str(exc)}
+        return {"enabled": False, "supported": True, "value": "", "valid": False,
+                "error": str(exc)}
+
+
+def _repair_autostart_if_broken() -> None:
+    """Rewrite an existing-but-unlaunchable autostart entry.
+
+    Repair only: if the user never enabled autostart there is nothing to fix
+    and we must not create it. An entry that names an exe Windows cannot
+    resolve is silently dead at logon, which is exactly how autostart stopped
+    working without any error anywhere (B56).
+    """
+    state = _act_get_autostart_state({})
+    if not state.get("enabled") or state.get("valid"):
+        return
+    fixed = _autostart_command_line()
+    if not fixed or fixed == state.get("value"):
+        log.warning("autostart entry %r is not launchable and could not be repaired",
+                    state.get("value"))
+        return
+    result = _act_set_autostart({"enabled": True})
+    if result.get("ok"):
+        log.info("repaired unlaunchable autostart entry: %r -> %r",
+                 state.get("value"), result.get("value"))
+    else:
+        log.warning("could not repair autostart entry: %s", result.get("error"))
 
 
 def _act_set_autostart(args: dict) -> dict:
@@ -1554,6 +1614,12 @@ def main() -> int:
     threading.Thread(target=_meeting_scheduler, daemon=True).start()
     # FastFlowLM warmup is isolated from startup: model load/network errors only log.
     threading.Thread(target=_model_warm_scheduler, name="ffp-model-warm", daemon=True).start()
+
+    # Self-heal an autostart entry that reads as enabled but cannot launch.
+    try:
+        _repair_autostart_if_broken()
+    except Exception:
+        log.exception("autostart repair check failed")
 
     server = ThreadingHTTPServer((HOST, args.port), Handler)
     server.timeout = 1.0

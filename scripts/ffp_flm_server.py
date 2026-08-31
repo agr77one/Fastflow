@@ -129,6 +129,40 @@ def find_pids_on_port(port: int, no_window: int) -> list[int]:
     return sorted(pids)
 
 
+_SYSTEM_PROFILE_MARKER = "config\\systemprofile"
+
+
+def flm_env() -> dict:
+    """Environment for `flm` children, with a poisoned FLM_MODEL_PATH repaired.
+
+    FastFlowLM's installer stores FLM_MODEL_PATH as a MACHINE-scope
+    REG_EXPAND_SZ containing `%USERPROFILE%\\.flm`. Machine-scope variables are
+    expanded in the SYSTEM context when a session's environment block is built,
+    so that per-user path becomes
+    `C:\\Windows\\system32\\config\\systemprofile\\.flm` for every process that
+    inherits it — and `flm` then dies with
+    `create_directories: Access is denied.` on a directory it may not create.
+
+    Processes launched from a freshly-read environment can see the correct
+    value, which is why this reproduces only for the app (explorer -> AHK ->
+    daemon -> flm) and never from an interactive shell. Repair it here rather
+    than depending on the machine's environment being sane (B54).
+    """
+    env = dict(os.environ)
+    configured = (env.get("FLM_MODEL_PATH") or "").strip()
+    if not configured:
+        return env
+    normalized = configured.replace("/", "\\").lower()
+    if _SYSTEM_PROFILE_MARKER in normalized:
+        home_models = str(Path.home() / ".flm")
+        log.warning(
+            "FLM_MODEL_PATH points into the SYSTEM profile (%s); using %s instead",
+            configured, home_models,
+        )
+        env["FLM_MODEL_PATH"] = home_models
+    return env
+
+
 _ANSI_RE = re.compile("\x1b\\[[0-9;]*m")
 
 
@@ -225,7 +259,8 @@ def start_flm_server(
         capture_start = 0
 
     try:
-        proc = popen_hidden(args, creationflags=creationflags, stdout=log_handle, stderr=log_handle)
+        proc = popen_hidden(args, creationflags=creationflags, stdout=log_handle,
+                            stderr=log_handle, env=flm_env())
     finally:
         log_handle.close()
     write_pid(settings.pid_path, proc.pid)
@@ -315,6 +350,7 @@ def flm_list(filter_kind: str, model: str, no_window: int) -> dict:
     try:
         result = run_hidden(
             ["flm", "list", "--json"],
+            env=flm_env(),
             timeout=15,
             creationflags=no_window,
             encoding="utf-8",
@@ -374,6 +410,7 @@ def flm_version(no_window: int) -> str:
     try:
         result = run_hidden(
             ["flm", "version", "--json"],
+            env=flm_env(),
             timeout=10,
             creationflags=no_window,
             encoding="utf-8",

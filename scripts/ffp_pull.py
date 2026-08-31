@@ -16,6 +16,7 @@ import threading
 import time
 from collections.abc import Callable
 
+import ffp_flm_server
 from subprocess_util import NO_WINDOW
 
 log = logging.getLogger("ffp.pull")
@@ -53,31 +54,23 @@ def _default_runner(
 ) -> int:
     is_ollama = str(provider).strip().lower() == "ollama"
     cli = "ollama" if is_ollama else "flm"
+    argv = [cli, "pull", model]
     if force and not is_ollama:
-        # `flm pull` downloads only "if not present" (its own help text), so
-        # re-pulling an installed model is a silent no-op. Removing first is the
-        # only way to get fresh weights — which is exactly what's needed after
-        # an FLM upgrade invalidates a locally-pulled model (B30/B53).
-        # `ollama pull` already re-fetches when the remote digest changes, so
-        # it is left alone.
-        on_line(f"removing {model} to force a fresh download…\n")
-        removed = subprocess.run(
-            [cli, "remove", model],
-            capture_output=True, text=True, encoding="utf-8", errors="replace",
-            creationflags=no_window, check=False,
-        )
-        # A "not installed" failure here is fine — the pull below covers it.
-        detail = ((removed.stdout or "") + (removed.stderr or "")).strip()
-        if detail:
-            on_line(detail.splitlines()[-1] + "\n")
+        # `flm pull` alone downloads only "if not present", so re-pulling an
+        # installed model is a silent no-op. FLM exposes `--force` for exactly
+        # this ("Force re-download even if model exists"), which is
+        # non-destructive — it does NOT delete first. `ollama pull` already
+        # re-fetches when the remote digest changes, so it needs nothing (B55).
+        argv.append("--force")
     proc = subprocess.Popen(
-        [cli, "pull", model],
+        argv,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
         encoding="utf-8",
         errors="replace",
         creationflags=no_window,
+        env=ffp_flm_server.flm_env(),
     )
     assert proc.stdout is not None
     for line in proc.stdout:  # text mode → \r and \r\n both split, so progress updates arrive
@@ -92,10 +85,9 @@ def start_pull(model: str, no_window: int = NO_WINDOW, *, provider: str = "fastf
     """Launch `flm pull <model>` on a background thread. Returns immediately;
     poll status(). Refuses a second concurrent pull.
 
-    `force=True` re-downloads a model that is already installed. For
-    FastFlowLM that means remove-then-pull, because `flm pull` is a no-op when
-    the model is present — so a forced pull is DESTRUCTIVE if the download then
-    fails, and the error says so.
+    `force=True` re-downloads a model that is already installed, via FLM's own
+    `pull --force`. It is NOT destructive: nothing is deleted up front, so a
+    failed forced pull leaves the existing copy in place.
     """
     global _thread
     model = str(model or "").strip()
@@ -105,7 +97,7 @@ def start_pull(model: str, no_window: int = NO_WINDOW, *, provider: str = "fastf
         if _job["state"] == "running":
             return {"ok": False, "error": "a pull is already running", "model": _job["model"]}
         _job.update({"state": "running", "model": model, "percent": 0.0,
-                     "message": "removing old copy…" if force else "starting…",
+                     "message": "re-downloading…" if force else "starting…",
                      "error": "", "forced": bool(force),
                      "started_at": time.time(), "finished_at": 0.0})
     run = runner or _default_runner
@@ -133,12 +125,6 @@ def start_pull(model: str, no_window: int = NO_WINDOW, *, provider: str = "fastf
                 is_ollama = str(provider).strip().lower() == "ollama"
                 cli = "ollama" if is_ollama else "flm"
                 error = f"{cli} pull exited with code {rc}"
-                if force and not is_ollama:
-                    # Be explicit: the old copy is already gone at this point.
-                    error += (
-                        f" — {model} was removed first to force a fresh download, "
-                        "so it is no longer installed. Run the pull again to restore it."
-                    )
                 _update(state="error", error=error, finished_at=time.time())
         except FileNotFoundError:
             cli = "ollama" if str(provider).strip().lower() == "ollama" else "flm"

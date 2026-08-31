@@ -4,11 +4,17 @@ Flowkey is a Windows desktop assistant that adds local-LLM hotkeys for grammar f
 
 Everything runs locally through [FastFlowLM](https://fastflowlm.com) (AMD Ryzen AI NPU) or, on machines without the NPU, through [Ollama](https://ollama.com) (CPU/GPU) as a secondary provider. No cloud service, analytics, or telemetry is used by the app.
 
-Current version: `2.5.1`
+Current version: `2.5.2`
+
+## What's new in 2.5.2
+
+- **The local server starts again after a reboot.** FastFlowLM's installer records its model folder in a *machine-wide* setting written as `%USERPROFILE%\.flm`. Windows expands that placeholder as the **SYSTEM** account when it builds a login session, so every program launched from your desktop inherited `C:\Windows\system32\config\systemprofile\.flm` — a folder it isn't allowed to create. FastFlowLM then died instantly with "Access is denied", which is why the server would not start after boot even though running `flm` yourself worked fine. Flowkey now corrects that setting for the FastFlowLM processes it launches, so it no longer depends on the machine's environment being right.
+- **Start-with-Windows works again.** The autostart entry could be written as a bare `AutoHotkey64.exe` with no path. AutoHotkey is bundled with Flowkey rather than installed system-wide, so Windows could not find it and silently launched nothing at login — while the setting still showed as enabled. Flowkey now always records the full path, reports whether an entry can actually launch, and repairs a broken one on startup.
+- **Re-download no longer deletes first.** The **Re-download…** button now uses FastFlowLM's own force flag, so your existing copy stays in place until the new one finishes.
 
 ## What's new in 2.5.1
 
-- **Re-download a model you already have.** Config → **Models** has a new **Re-download…** button. A FastFlowLM upgrade can invalidate weights you already pulled — the model still lists as installed, but the runtime rejects it, and the ordinary Download button does nothing because `flm pull` only fetches models that are *missing*. Re-download deletes the local copy first and pulls fresh. It warns you before starting, since a failed download leaves the model uninstalled until you retry.
+- **Re-download a model you already have.** Config → **Models** has a new **Re-download…** button. A FastFlowLM upgrade can invalidate weights you already pulled — the model still lists as installed, but the runtime rejects it, and the ordinary Download button does nothing because `flm pull` only fetches models that are *missing*.
 - **Failures tell you what actually went wrong.** When the local server refused to start, Flowkey reported only `exited early (exit 1)` — the provider's own error was being discarded because the server log is off by default. The provider's output is now always captured, and its last lines are included in the error. (A real case this would have solved immediately: FastFlowLM 0.9.x looking for models in the wrong Windows profile and failing with "Access is denied" — fixed upstream in 1.0.x.)
 - **The update line no longer shows a stale answer.** The FastFlowLM version check could display a cached result days old as if it were current. A cached reading is now labelled as such and refreshed in the background.
 
