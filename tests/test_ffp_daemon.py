@@ -841,3 +841,81 @@ def test_open_dashboard_writes_marker(daemon_server, tmp_path, monkeypatch):
     assert payload["ok"] is True
     assert payload["result"] == "queued"
     assert (tmp_path / ".open_dashboard").read_text(encoding="utf-8") == "1\n"
+
+
+# ---- B56: autostart entries must name a resolvable exe ----------------------
+
+def test_b56_bare_exe_name_not_on_path_is_not_launchable(daemon_module, monkeypatch):
+    """The old dev-mode fallback wrote a bare name that Windows cannot resolve,
+    so autostart silently launched nothing while still reading as enabled."""
+    import shutil
+    monkeypatch.setattr(shutil, "which", lambda _n: None)
+    value = r'"AutoHotkey64.exe" "C:\tree\scripts\grammarFix.ahk"'
+    assert daemon_module._autostart_value_is_launchable(value) is False
+
+
+def test_b56_absolute_existing_exe_is_launchable(daemon_module, tmp_path):
+    exe = tmp_path / "AutoHotkey64.exe"
+    exe.write_bytes(b"stub")
+    assert daemon_module._autostart_value_is_launchable(f'"{exe}" "x.ahk"') is True
+
+
+def test_b56_absolute_missing_exe_is_not_launchable(daemon_module, tmp_path):
+    missing = tmp_path / "gone" / "AutoHotkey64.exe"
+    assert daemon_module._autostart_value_is_launchable(f'"{missing}" "x.ahk"') is False
+
+
+def test_b56_empty_value_is_not_launchable(daemon_module):
+    assert daemon_module._autostart_value_is_launchable("") is False
+
+
+def test_b56_command_line_prefers_dev_tree_vendor_ahk(daemon_module, tmp_path, monkeypatch):
+    """A source tree keeps AHK under vendor\ahk; that must be used verbatim
+    rather than degrading to an unresolvable bare name."""
+    (tmp_path / "scripts").mkdir()
+    (tmp_path / "scripts" / "grammarFix.ahk").write_text("; stub", encoding="utf-8")
+    vendor = tmp_path / "vendor" / "ahk"
+    vendor.mkdir(parents=True)
+    (vendor / "AutoHotkey64.exe").write_bytes(b"stub")
+
+    import paths
+    monkeypatch.setattr(paths, "APP_DIR", tmp_path)
+
+    cmd = daemon_module._autostart_command_line()
+    assert str(vendor / "AutoHotkey64.exe") in cmd
+    assert daemon_module._autostart_value_is_launchable(cmd) is True
+
+
+def test_b56_repair_rewrites_an_unlaunchable_entry(daemon_module, monkeypatch):
+    calls = []
+    monkeypatch.setattr(daemon_module, "_act_get_autostart_state",
+                        lambda _a: {"enabled": True, "valid": False, "value": '"AutoHotkey64.exe" "x.ahk"'})
+    monkeypatch.setattr(daemon_module, "_autostart_command_line", lambda: '"C:\real\\AutoHotkey64.exe" "x.ahk"')
+    monkeypatch.setattr(daemon_module, "_act_set_autostart",
+                        lambda a: calls.append(a) or {"ok": True, "value": "fixed"})
+
+    daemon_module._repair_autostart_if_broken()
+
+    assert calls == [{"enabled": True}]
+
+
+def test_b56_repair_never_creates_an_entry_the_user_did_not_enable(daemon_module, monkeypatch):
+    calls = []
+    monkeypatch.setattr(daemon_module, "_act_get_autostart_state",
+                        lambda _a: {"enabled": False, "valid": False, "value": ""})
+    monkeypatch.setattr(daemon_module, "_act_set_autostart", lambda a: calls.append(a))
+
+    daemon_module._repair_autostart_if_broken()
+
+    assert calls == []
+
+
+def test_b56_repair_leaves_a_valid_entry_alone(daemon_module, monkeypatch):
+    calls = []
+    monkeypatch.setattr(daemon_module, "_act_get_autostart_state",
+                        lambda _a: {"enabled": True, "valid": True, "value": r'"C:\ok\AutoHotkey64.exe" "x.ahk"'})
+    monkeypatch.setattr(daemon_module, "_act_set_autostart", lambda a: calls.append(a))
+
+    daemon_module._repair_autostart_if_broken()
+
+    assert calls == []

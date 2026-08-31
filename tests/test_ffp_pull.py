@@ -37,8 +37,8 @@ def test_b53_force_is_passed_through_to_the_runner():
     assert status["forced"] is True
 
 
-def test_b53_forced_pull_failure_says_the_model_was_removed():
-    """A forced FLM pull deletes first, so a failure must not look harmless."""
+def test_b55_forced_pull_failure_does_not_claim_removal():
+    """`flm pull --force` never deletes first, so a failure must NOT say it did."""
     def runner(provider, model, no_window, on_line, force=False):
         return 1
 
@@ -46,8 +46,8 @@ def test_b53_forced_pull_failure_says_the_model_was_removed():
     ffp_pull._thread.join(timeout=2)
 
     error = ffp_pull.status()["error"]
-    assert "no longer installed" in error
-    assert "Run the pull again" in error
+    assert "exited with code 1" in error
+    assert "no longer installed" not in error
 
 
 def test_b53_non_forced_failure_does_not_claim_removal():
@@ -90,14 +90,9 @@ def test_b53_ollama_force_does_not_remove_first(monkeypatch):
     assert popened == [["ollama", "pull", "llama3.2:3b"]]
 
 
-def test_b53_flm_force_removes_before_pulling(monkeypatch):
-    """`flm pull` is a no-op when present, so force must remove first."""
+def test_b55_flm_force_uses_the_force_flag_and_never_removes(monkeypatch):
+    """`flm pull --force` re-downloads in place; nothing may be deleted first."""
     calls = []
-
-    class _Removed:
-        stdout = "removed"
-        stderr = ""
-        returncode = 0
 
     class _Proc:
         stdout = iter(["100%\n"])
@@ -108,7 +103,7 @@ def test_b53_flm_force_removes_before_pulling(monkeypatch):
 
     monkeypatch.setattr(
         ffp_pull.subprocess, "run",
-        lambda argv, **kw: calls.append(("run", argv)) or _Removed(),
+        lambda argv, **kw: calls.append(("run", argv)) or _Proc(),
     )
     monkeypatch.setattr(
         ffp_pull.subprocess, "Popen",
@@ -118,7 +113,31 @@ def test_b53_flm_force_removes_before_pulling(monkeypatch):
     rc = ffp_pull._default_runner("fastflowlm", "qwen3.5:9b", 0, lambda _l: None, force=True)
 
     assert rc == 0
-    assert calls == [
-        ("run", ["flm", "remove", "qwen3.5:9b"]),
-        ("popen", ["flm", "pull", "qwen3.5:9b"]),
-    ]
+    assert calls == [("popen", ["flm", "pull", "qwen3.5:9b", "--force"])]
+
+
+def test_b54_flm_env_repairs_a_systemprofile_model_path(monkeypatch):
+    """A machine-scope %USERPROFILE% expands to the SYSTEM profile — repair it."""
+    import ffp_flm_server
+    bad = "C:\\Windows\\system32\\config\\systemprofile\\.flm"
+    monkeypatch.setenv("FLM_MODEL_PATH", bad)
+
+    env = ffp_flm_server.flm_env()
+
+    assert env["FLM_MODEL_PATH"] != bad
+    assert "systemprofile" not in env["FLM_MODEL_PATH"].lower()
+    assert env["FLM_MODEL_PATH"].endswith(".flm")
+
+
+def test_b54_flm_env_leaves_a_sane_model_path_alone(monkeypatch):
+    import ffp_flm_server
+    good = "D:\\models\\.flm"
+    monkeypatch.setenv("FLM_MODEL_PATH", good)
+    assert ffp_flm_server.flm_env()["FLM_MODEL_PATH"] == good
+
+
+def test_b54_flm_env_does_not_invent_a_model_path(monkeypatch):
+    """Unset means 'let FLM decide' — don't start forcing a value."""
+    import ffp_flm_server
+    monkeypatch.delenv("FLM_MODEL_PATH", raising=False)
+    assert "FLM_MODEL_PATH" not in ffp_flm_server.flm_env()
