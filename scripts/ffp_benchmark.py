@@ -24,7 +24,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 import ffp_flm_server
-from subprocess_util import run_hidden
+from subprocess_util import resolve_cli, run_hidden
 
 log = logging.getLogger("ffp.benchmark")
 
@@ -119,7 +119,7 @@ def parse_bench_csv(path: Path) -> list[dict]:
 def _default_runner(model: str, work: Path, no_window: int) -> str:
     """Run the real `flm bench <model>` in `work` so the CSV lands there."""
     result = run_hidden(
-        ["flm", "bench", model],
+        [resolve_cli("flm"), "bench", model],
         env=ffp_flm_server.flm_env(),
         cwd=str(work),
         timeout=5400,  # 90 min hard cap; large-context sweeps can be slow

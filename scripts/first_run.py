@@ -35,6 +35,7 @@ import ffp_config
 import ffp_provider_status
 import paths as _paths
 from loopback_http import daemon_headers, json_get, json_post
+from subprocess_util import resolve_cli
 
 log = logging.getLogger("ffp.first_run")
 
@@ -546,7 +547,7 @@ class WizardApp:
         def worker() -> None:
             try:
                 proc = subprocess.Popen(
-                    [cli, "pull", model],
+                    [resolve_cli(cli), "pull", model],
                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
                     creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
                 )

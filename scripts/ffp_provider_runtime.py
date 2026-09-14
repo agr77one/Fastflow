@@ -9,7 +9,7 @@ import urllib.request
 
 import ffp_flm_server
 import ffp_provider_status
-from subprocess_util import run_hidden
+from subprocess_util import resolve_cli, run_hidden
 
 log = logging.getLogger("ffp.provider")
 
@@ -94,7 +94,7 @@ def pull_model(provider: str, model: str, no_window: int, *, timeout: int = 900,
     if not name:
         raise ValueError("model name is empty")
     cli = "ollama" if provider == "ollama" else "flm"
-    argv = [cli, "pull", name]
+    argv = [resolve_cli(cli), "pull", name]
     if force and provider != "ollama":
         # `flm pull` alone only downloads "if not present"; FLM's own
         # `--force` re-downloads without deleting first (B55). `ollama pull`
@@ -115,7 +115,7 @@ def remove_model(provider: str, model: str, no_window: int, *, timeout: int = 60
         raise ValueError("model name is empty")
     cli = "ollama" if provider == "ollama" else "flm"
     command = "rm" if provider == "ollama" else "remove"
-    result = run_hidden([cli, command, name], timeout=timeout, creationflags=no_window,
+    result = run_hidden([resolve_cli(cli), command, name], timeout=timeout, creationflags=no_window,
                         env=ffp_flm_server.flm_env())
     output = (result.stdout or "") + (result.stderr or "")
     if result.returncode != 0:

@@ -14,7 +14,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from subprocess_util import popen_hidden, run_hidden
+from subprocess_util import popen_hidden, resolve_cli, run_hidden, search_path
 
 log = logging.getLogger("ffp.flmserver")
 
@@ -149,6 +149,13 @@ def flm_env() -> dict:
     than depending on the machine's environment being sane (B54).
     """
     env = dict(os.environ)
+    # PATH repair, always -- FLM's installer appends its install directory to
+    # the MACHINE PATH, but a process only ever sees the environment block
+    # built when its session started. Flowkey normally launches at logon, so an
+    # FLM installed or repaired afterwards stays invisible until the user signs
+    # out: `flm` reads as "not installed" on a machine where it is installed
+    # and on the machine PATH (B58).
+    env["PATH"] = search_path()
     configured = (env.get("FLM_MODEL_PATH") or "").strip()
     if not configured:
         return env
@@ -222,7 +229,7 @@ def start_flm_server(
     perf_mode = settings.performance_mode if settings.performance_mode in {"balanced", "max"} else "balanced"
     pmode = PERF_TO_PMODE.get(perf_mode, "turbo")
     args = [
-        "flm",
+        resolve_cli("flm"),
         "serve",
         settings.model,
         "--pmode",
@@ -349,7 +356,7 @@ def flm_list(filter_kind: str, model: str, no_window: int) -> dict:
         return {"error": f"bad filter: {filter_kind}", "models": [], "active": model}
     try:
         result = run_hidden(
-            ["flm", "list", "--json"],
+            [resolve_cli("flm"), "list", "--json"],
             env=flm_env(),
             timeout=15,
             creationflags=no_window,
@@ -409,7 +416,7 @@ def flm_version(no_window: int) -> str:
     """
     try:
         result = run_hidden(
-            ["flm", "version", "--json"],
+            [resolve_cli("flm"), "version", "--json"],
             env=flm_env(),
             timeout=10,
             creationflags=no_window,
