@@ -17,7 +17,7 @@ import time
 from collections.abc import Callable
 
 import ffp_flm_server
-from subprocess_util import NO_WINDOW
+from subprocess_util import NO_WINDOW, resolve_cli
 
 log = logging.getLogger("ffp.pull")
 
@@ -54,7 +54,7 @@ def _default_runner(
 ) -> int:
     is_ollama = str(provider).strip().lower() == "ollama"
     cli = "ollama" if is_ollama else "flm"
-    argv = [cli, "pull", model]
+    argv = [resolve_cli(cli), "pull", model]
     if force and not is_ollama:
         # `flm pull` alone downloads only "if not present", so re-pulling an
         # installed model is a silent no-op. FLM exposes `--force` for exactly

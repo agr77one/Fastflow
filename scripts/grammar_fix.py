@@ -30,7 +30,7 @@ import ffp_provider_status
 import ffp_telemetry
 import ffp_updater
 import paths as _paths
-from subprocess_util import NO_WINDOW
+from subprocess_util import NO_WINDOW, resolve_cli
 
 try:
     from _version import __version__ as APP_VERSION
@@ -711,7 +711,10 @@ def run_doctor() -> str:
             ahk_path = ""
     checks.append(("autohotkey", ahk_path or "not found in PATH"))
     try:
-        val = subprocess.run(["flm", "validate", "--json"], capture_output=True, text=True, timeout=15, check=False, creationflags=_NO_WINDOW)
+        # env=flm_env(): this was the only `flm` call site running on the raw
+        # inherited environment, so it alone missed both the PATH repair (B58)
+        # and the FLM_MODEL_PATH repair (B54).
+        val = subprocess.run([resolve_cli("flm"), "validate", "--json"], capture_output=True, text=True, timeout=15, check=False, creationflags=_NO_WINDOW, env=ffp_flm_server.flm_env())
         if val.returncode == 0 and val.stdout.strip():
             try:
                 vdata = json.loads(val.stdout)

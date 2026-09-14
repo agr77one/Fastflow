@@ -230,16 +230,169 @@ IsDaemonHealthy_Impl() {
     }
 }
 
+; --- pythonw discovery ------------------------------------------------------
+; Dev/source runs launch the Python entrypoints with pythonw, so finding one
+; has to work on ANY machine. Nothing below hardcodes an install path:
+;   1. GRAMMARFIX_PYTHONW    explicit override (escape hatch)
+;   2. scripts\.venv         ONLY while its base interpreter still exists
+;   3. PEP 514 registry      how every conformant Windows Python advertises
+;                            itself (python.org, PSF Python Manager, Anaconda)
+;   4. pyw.exe / pythonw.exe on PATH, skipping Microsoft Store alias stubs
+;
+; B57: a venv's Scripts\pythonw.exe is only a ~250 KB stub that re-execs the
+; interpreter named in pyvenv.cfg. Uninstalling that interpreter (a 3.13 -> 3.14
+; upgrade does exactly that) leaves the stub on disk, so the old FileExist()
+; check still passed and every hotkey popped a modal "Python venv launcher is
+; sorry to say ... did not find executable" dialog. Existence != usable. The
+; venv rung now validates pyvenv.cfg's base statically -- no spawn, so a dead
+; venv can never raise that dialog merely to be detected -- and the old sole
+; fallback ("pyw.exe") is no longer assumed: PSF Python Manager ships
+; pythonw.exe with no py/pyw launcher at all.
+global _pythonwPathCache := ""
+
 ResolvePythonwPath_Impl() {
-    pythonwPath := EnvGet("GRAMMARFIX_PYTHONW")
-    if (pythonwPath = "") {
-        venvPythonw := A_ScriptDir "\\.venv\\Scripts\\pythonw.exe"
-        if FileExist(venvPythonw)
-            pythonwPath := venvPythonw
+    global _pythonwPathCache
+    ; Revalidate rather than blindly reuse. Flowkey runs for a whole login
+    ; session, so the interpreter can be upgraded or uninstalled underneath a
+    ; cached path -- B57 is that exact scenario -- and a cache that never
+    ; rechecks would pin the dead path until AHK itself is restarted, which is
+    ; the failure this release exists to remove. Validation is file stats only,
+    ; never a spawn, so the cache still saves the registry sweep on the hot path
+    ; while healing itself the moment the interpreter moves.
+    if (_pythonwPathCache != "" && CachedPythonwUsable_Impl(_pythonwPathCache))
+        return _pythonwPathCache
+    return _pythonwPathCache := DiscoverPythonwPath_Impl()
+}
+
+CachedPythonwUsable_Impl(path) {
+    ; The bare-name last resort can't be stat-checked, and re-discovering is how
+    ; a Python installed after we gave up gets picked up at all.
+    if (path = "" || path = "pyw.exe")
+        return false
+    if !UsablePythonwExe_Impl(path)
+        return false
+    ; Any venv stub is only good while its base interpreter survives -- whether
+    ; we chose it or GRAMMARFIX_PYTHONW pointed at it. Walk up from
+    ; <venv>\Scripts\pythonw.exe and re-check the cfg if this is one.
+    SplitPath(path, , &scriptsDir)
+    SplitPath(scriptsDir, , &maybeVenvDir)
+    if (maybeVenvDir != "" && FileExist(maybeVenvDir "\pyvenv.cfg"))
+        return VenvBaseInterpreterExists_Impl(maybeVenvDir)
+    return true
+}
+
+DiscoverPythonwPath_Impl() {
+    override := EnvGet("GRAMMARFIX_PYTHONW")
+    if (override != "" && UsablePythonwExe_Impl(override))
+        return override
+
+    venvDir     := A_ScriptDir "\.venv"
+    venvPythonw := venvDir "\Scripts\pythonw.exe"
+    if (UsablePythonwExe_Impl(venvPythonw) && VenvBaseInterpreterExists_Impl(venvDir))
+        return venvPythonw
+
+    fromRegistry := PythonwFromRegistry_Impl()
+    if (fromRegistry != "")
+        return fromRegistry
+
+    for exeName in ["pyw.exe", "pythonw.exe"] {
+        fromPath := ExeOnPath_Impl(exeName)
+        if (fromPath != "")
+            return fromPath
     }
-    if (pythonwPath = "")
-        pythonwPath := "pyw.exe"
-    return pythonwPath
+    ; Nothing found. Return the launcher name so the failure surfaces as a
+    ; normal "can't start" rather than a silent no-op.
+    return "pyw.exe"
+}
+
+; Exists AND has content. Windows "App Execution Alias" entries under
+; WindowsApps are 0-byte reparse stubs that open the Microsoft Store instead of
+; running Python, and they sit on PATH ahead of real installs.
+UsablePythonwExe_Impl(path) {
+    if (path = "" || !FileExist(path))
+        return false
+    try return FileGetSize(path) > 0
+    catch
+        return false
+}
+
+; Static health check for a venv: pyvenv.cfg names the base interpreter that
+; the Scripts\ stubs re-exec. If that file is gone, the venv is dead weight.
+VenvBaseInterpreterExists_Impl(venvDir) {
+    cfgPath := venvDir "\pyvenv.cfg"
+    if !FileExist(cfgPath)
+        return false
+    try cfg := FileRead(cfgPath)
+    catch
+        return false
+    home := "", executable := ""
+    Loop Parse cfg, "`n", "`r" {
+        if RegExMatch(A_LoopField, "i)^\s*executable\s*=\s*(.+?)\s*$", &m)
+            executable := m[1]
+        else if RegExMatch(A_LoopField, "i)^\s*home\s*=\s*(.+?)\s*$", &m)
+            home := m[1]
+    }
+    if (executable != "")
+        return FileExist(executable) != ""
+    if (home != "")
+        return FileExist(RTrim(home, "\") "\python.exe") != ""
+    return false
+}
+
+; PEP 514: conformant installs register
+;   <root>\SOFTWARE\Python\<Company>\<Tag>\InstallPath
+; with (default) = install dir and, where supported, WindowedExecutablePath.
+; Highest 3.11+ minor wins; HKCU (per-user) is searched before HKLM so a user
+; install shadows a machine one, matching what `python` on PATH would pick.
+PythonwFromRegistry_Impl() {
+    best := "", bestVer := -1
+    for root in ["HKCU\SOFTWARE\Python", "HKLM\SOFTWARE\Python", "HKLM\SOFTWARE\WOW6432Node\Python"] {
+        try {
+            Loop Reg root, "KR" {
+                if (A_LoopRegName != "InstallPath")
+                    continue
+                ; v2 has no A_LoopRegSubKey: A_LoopRegKey is the FULL path of
+                ; the key being enumerated, so the version tag is its last
+                ; segment and InstallPath hangs directly off it.
+                tag := A_LoopRegKey
+                if (sep := InStr(tag, "\", , -1))
+                    tag := SubStr(tag, sep + 1)
+                if !RegExMatch(tag, "(\d+)\.(\d+)", &v)
+                    continue
+                ver := v[1] * 100 + v[2]
+                if (ver < 311 || ver <= bestVer)
+                    continue
+                keyPath := A_LoopRegKey "\" A_LoopRegName
+                exe := ""
+                try exe := RegRead(keyPath, "WindowedExecutablePath")
+                if (exe = "") {
+                    dir := ""
+                    try dir := RegRead(keyPath)      ; (default) = install dir
+                    if (dir != "")
+                        exe := RTrim(dir, "\") "\pythonw.exe"
+                }
+                if UsablePythonwExe_Impl(exe) {
+                    best := exe
+                    bestVer := ver
+                }
+            }
+        }
+    }
+    return best
+}
+
+; Resolve a bare exe name against PATH ourselves: FileExist() doesn't search
+; PATH, and this lets UsablePythonwExe_Impl() veto the Store alias stubs.
+ExeOnPath_Impl(exeName) {
+    Loop Parse EnvGet("PATH"), ";" {
+        dir := Trim(A_LoopField, " `t`"")
+        if (dir = "")
+            continue
+        candidate := RTrim(dir, "\") "\" exeName
+        if UsablePythonwExe_Impl(candidate)
+            return candidate
+    }
+    return ""
 }
 
 ; --- Entrypoint launching (frozen exe vs dev .py) ---------------------------

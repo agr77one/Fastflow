@@ -98,10 +98,14 @@ jobs:
           $failed = $false
           foreach ($f in $files) {
             $script = Get-Content -Raw $f.FullName
-            $noComments = ($script -split "`n" | ForEach-Object { $_ -replace ';.*$','' }) -join "`n"
-            $noStrings = $noComments -replace '"[^"\n]*"','' -replace "'[^'\n]*'", ''
-            $opens = ($noStrings.ToCharArray() | Where-Object { $_ -eq '{' }).Count
-            $closes = ($noStrings.ToCharArray() | Where-Object { $_ -eq '}' }).Count
+            # Strings FIRST, then comments. A ';' inside a string literal is not
+            # a comment -- `Loop Parse EnvGet("PATH"), ";" {` is valid AHK -- and
+            # stripping comments first truncates that line at the semicolon,
+            # taking the brace with it and failing correct code (SPEC.md B59).
+            $noStrings = $script -replace '"[^"\n]*"','' -replace "'[^'\n]*'", ''
+            $noComments = ($noStrings -split "`n" | ForEach-Object { $_ -replace ';.*$','' }) -join "`n"
+            $opens = ($noComments.ToCharArray() | Where-Object { $_ -eq '{' }).Count
+            $closes = ($noComments.ToCharArray() | Where-Object { $_ -eq '}' }).Count
             if ($opens -ne $closes) { Write-Host "FAIL $($f.Name): braces $opens / $closes"; $failed = $true }
             else { Write-Host "OK   $($f.Name): braces $opens / $closes" }
           }
@@ -125,7 +129,7 @@ jobs:
         run: |
           $ahk = Get-ChildItem -Path "C:\Program Files\AutoHotkey" -Recurse -Filter AutoHotkey64.exe -File -ErrorAction SilentlyContinue | Select-Object -First 1
           if (-not $ahk) { Write-Host "AutoHotkey64.exe not found; skipping AHK unit tests"; exit 0 }
-          foreach ($test in @("tests/test_classify_clipboard.ahk", "tests/test_parse_mode.ahk")) {
+          foreach ($test in @("tests/test_classify_clipboard.ahk", "tests/test_parse_mode.ahk", "tests/test_pythonw_discovery.ahk")) {
             $errFile = Join-Path $env:RUNNER_TEMP "_ahk_test.err"
             $p = Start-Process -FilePath $ahk.FullName -ArgumentList @('/ErrorStdOut', $test) -RedirectStandardError $errFile -PassThru -Wait
             $e = Get-Content -Raw -LiteralPath $errFile -ErrorAction SilentlyContinue

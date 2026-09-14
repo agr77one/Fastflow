@@ -96,6 +96,9 @@ def test_pull_and_remove_pick_ollama_commands(monkeypatch):
         return SimpleNamespace(returncode=0, stdout="", stderr="")
 
     monkeypatch.setattr(ffp_provider_runtime, "run_hidden", fake_run)
+    # argv[0] is now resolved to an absolute path (B58); pin it to the bare
+    # name so this test asserts the CLI contract, not what is installed here.
+    monkeypatch.setattr(ffp_provider_runtime, "resolve_cli", lambda name: name)
 
     assert ffp_provider_runtime.pull_model("ollama", "llama3.2:3b", 0) == "pulled llama3.2:3b"
     assert ffp_provider_runtime.remove_model("ollama", "llama3.2:3b", 0) == "removed llama3.2:3b"

@@ -82,6 +82,9 @@ def test_b53_ollama_force_does_not_remove_first(monkeypatch):
         ffp_pull.subprocess, "Popen",
         lambda argv, **kw: popened.append(argv) or _Proc(),
     )
+    # argv[0] is now resolved to an absolute path (B58); pin it to the bare
+    # name so this test asserts the CLI contract, not what is installed here.
+    monkeypatch.setattr(ffp_pull, "resolve_cli", lambda name: name)
 
     rc = ffp_pull._default_runner("ollama", "llama3.2:3b", 0, lambda _l: None, force=True)
 
@@ -109,6 +112,9 @@ def test_b55_flm_force_uses_the_force_flag_and_never_removes(monkeypatch):
         ffp_pull.subprocess, "Popen",
         lambda argv, **kw: calls.append(("popen", argv)) or _Proc(),
     )
+    # argv[0] is now resolved to an absolute path (B58); pin it to the bare
+    # name so this test asserts the CLI contract, not what is installed here.
+    monkeypatch.setattr(ffp_pull, "resolve_cli", lambda name: name)
 
     rc = ffp_pull._default_runner("fastflowlm", "qwen3.5:9b", 0, lambda _l: None, force=True)
 

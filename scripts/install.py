@@ -30,6 +30,7 @@ from pathlib import Path
 
 import ffp_config
 import paths as _paths
+from subprocess_util import resolve_cli, resolve_exe
 
 HERE = Path(__file__).resolve().parent
 
@@ -57,7 +58,13 @@ def _step(msg: str) -> None:
 # ---------- Prereq detection -------------------------------------------------
 
 def _has_cmd(name: str) -> bool:
-    return shutil.which(name) is not None
+    # resolve_exe, not shutil.which: `which` only sees the PATH this process
+    # inherited, so an FLM installed after the shell started reads as missing
+    # and postreboot() opens its download page for software already present.
+    # Detection has to agree with the resolver the call sites launch through,
+    # or the guard rejects the command before resolve_cli is ever reached
+    # (V69 / B58).
+    return bool(resolve_exe(name))
 
 
 def _has_autohotkey() -> bool:
@@ -128,7 +135,7 @@ def _model_installed(name: str) -> bool:
         return False
     try:
         result = subprocess.run(
-            ["flm", "list", "--quiet", "--filter", "installed"],
+            [resolve_cli("flm"), "list", "--quiet", "--filter", "installed"],
             capture_output=True, text=True, timeout=15, check=False,
         )
     except Exception:
@@ -142,7 +149,7 @@ def _pull_model(name: str) -> bool:
         return False
     _step(f"Pulling model {name} (first run may take several minutes)...")
     try:
-        result = subprocess.run(["flm", "pull", name], check=False)
+        result = subprocess.run([resolve_cli("flm"), "pull", name], check=False)
     except Exception as e:
         _step(f"flm pull failed: {e}")
         return False

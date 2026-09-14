@@ -4,7 +4,14 @@ Flowkey is a Windows desktop assistant that adds local-LLM hotkeys for grammar f
 
 Everything runs locally through [FastFlowLM](https://fastflowlm.com) (AMD Ryzen AI NPU) or, on machines without the NPU, through [Ollama](https://ollama.com) (CPU/GPU) as a secondary provider. No cloud service, analytics, or telemetry is used by the app.
 
-Current version: `2.5.2`
+Current version: `2.5.3`
+
+## What's new in 2.5.3
+
+- **Upgrading Python no longer breaks every hotkey.** Flowkey runs its Python helpers from a small virtual environment. When the Python that environment was built against is removed — exactly what a 3.13 to 3.14 upgrade does — the environment keeps a launcher stub that no longer works, and every hotkey stopped with a modal "Python venv launcher is sorry to say..." dialog that had to be dismissed by hand. Flowkey now notices the environment is dead and falls back to a working Python on the machine.
+- **Flowkey finds Python however it was installed.** Its only fallback was one specific launcher that the newer Python installer does not ship at all, so a machine with a perfectly good Python could still fail. Flowkey now looks Python up the way Windows itself records it, and ignores the Microsoft Store placeholder that stands in for Python on `PATH` without being it.
+- **Flowkey finds FastFlowLM even when Windows hasn't caught up.** If you install FastFlowLM while Flowkey is already running — or Flowkey starts at sign-in before Windows has published the change — FastFlowLM was invisible to Flowkey until you signed out and back in, showing as "not installed" on a machine where it plainly was. Flowkey now looks it up properly instead of trusting what it inherited at startup.
+- **Re-running the source installer repairs a broken setup.** It previously reported "venv already present" and changed nothing, because it checked only whether the file was there — not whether it worked.
 
 ## What's new in 2.5.2
 
@@ -191,4 +198,5 @@ AutoHotkey tests are run by CI on Windows. Locally, run them with AutoHotkey v2:
 ```powershell
 & "C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe" /ErrorStdOut tests\test_parse_mode.ahk
 & "C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe" /ErrorStdOut tests\test_classify_clipboard.ahk
+& "C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe" /ErrorStdOut tests\test_pythonw_discovery.ahk
 ```

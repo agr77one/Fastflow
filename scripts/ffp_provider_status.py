@@ -8,9 +8,10 @@ controls on Ollama-only machines.
 
 from __future__ import annotations
 
-import shutil
 import socket
 from dataclasses import dataclass
+
+from subprocess_util import resolve_exe
 
 
 @dataclass(frozen=True)
@@ -81,7 +82,11 @@ def provider_status(provider: str, *, base_url: str = "") -> dict:
     key = str(provider or "").strip().lower()
     spec = PROVIDERS.get(key) or PROVIDERS["fastflowlm"]
     effective_url = str(base_url or spec.base_url).strip().rstrip("/")
-    cli_path = shutil.which(spec.cli) or ""
+    # resolve_exe, not shutil.which: `which` only sees the PATH this process
+    # inherited at session start, which is how an installed FLM reports as
+    # missing (B58). Detection has to agree with what flm_env() will actually
+    # run, or doctor and the wizard contradict the app.
+    cli_path = resolve_exe(spec.cli)
     installed = bool(cli_path)
     reachable = is_reachable(effective_url)
     return {
