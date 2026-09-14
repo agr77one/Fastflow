@@ -98,10 +98,14 @@ jobs:
           $failed = $false
           foreach ($f in $files) {
             $script = Get-Content -Raw $f.FullName
-            $noComments = ($script -split "`n" | ForEach-Object { $_ -replace ';.*$','' }) -join "`n"
-            $noStrings = $noComments -replace '"[^"\n]*"','' -replace "'[^'\n]*'", ''
-            $opens = ($noStrings.ToCharArray() | Where-Object { $_ -eq '{' }).Count
-            $closes = ($noStrings.ToCharArray() | Where-Object { $_ -eq '}' }).Count
+            # Strings FIRST, then comments. A ';' inside a string literal is not
+            # a comment -- `Loop Parse EnvGet("PATH"), ";" {` is valid AHK -- and
+            # stripping comments first truncates that line at the semicolon,
+            # taking the brace with it and failing correct code (SPEC.md B59).
+            $noStrings = $script -replace '"[^"\n]*"','' -replace "'[^'\n]*'", ''
+            $noComments = ($noStrings -split "`n" | ForEach-Object { $_ -replace ';.*$','' }) -join "`n"
+            $opens = ($noComments.ToCharArray() | Where-Object { $_ -eq '{' }).Count
+            $closes = ($noComments.ToCharArray() | Where-Object { $_ -eq '}' }).Count
             if ($opens -ne $closes) { Write-Host "FAIL $($f.Name): braces $opens / $closes"; $failed = $true }
             else { Write-Host "OK   $($f.Name): braces $opens / $closes" }
           }
