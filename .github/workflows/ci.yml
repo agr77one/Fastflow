@@ -125,7 +125,7 @@ jobs:
         run: |
           $ahk = Get-ChildItem -Path "C:\Program Files\AutoHotkey" -Recurse -Filter AutoHotkey64.exe -File -ErrorAction SilentlyContinue | Select-Object -First 1
           if (-not $ahk) { Write-Host "AutoHotkey64.exe not found; skipping AHK unit tests"; exit 0 }
-          foreach ($test in @("tests/test_classify_clipboard.ahk", "tests/test_parse_mode.ahk")) {
+          foreach ($test in @("tests/test_classify_clipboard.ahk", "tests/test_parse_mode.ahk", "tests/test_pythonw_discovery.ahk")) {
             $errFile = Join-Path $env:RUNNER_TEMP "_ahk_test.err"
             $p = Start-Process -FilePath $ahk.FullName -ArgumentList @('/ErrorStdOut', $test) -RedirectStandardError $errFile -PassThru -Wait
             $e = Get-Content -Raw -LiteralPath $errFile -ErrorAction SilentlyContinue

@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 2.5.3
+
+**Flowkey survives a Python upgrade.** Removing the interpreter Flowkey's virtual environment was built against broke every hotkey with a modal Windows dialog, and re-running the source installer repaired nothing. Found on a live machine.
+
+### Fixed
+
+- **"Python venv launcher is sorry to say ... did not find executable" on every hotkey.** A virtual environment's `Scripts\pythonw.exe` is not an interpreter — it is a ~250 KB stub that re-execs the interpreter recorded in `pyvenv.cfg`. Upgrading Python 3.13 to 3.14 uninstalls that interpreter but leaves the stub on disk, so the resolver's existence check still passed and every action spawned a dead launcher that hung on a modal dialog. The virtual environment is now accepted only while its base interpreter still exists, verified by reading `pyvenv.cfg` rather than by running the stub — running it to find out is precisely what raised the dialog.
+- **Locating Python no longer assumes an install layout.** The rung below the virtual environment was the bare name `pyw.exe`, which the PSF Python Manager installer does not ship at all (it installs `pythonw.exe` under `%LOCALAPPDATA%\Python\bin`), so deleting the stale environment would only have moved the failure. Discovery now walks the PEP 514 registry entries every conformant Windows Python writes, newest 3.11+ first, and resolves `PATH` by hand so the zero-byte Microsoft Store alias stubs that shadow real installs are rejected rather than launched.
+- **`install.ps1` repairs an unhealthy virtual environment instead of reporting success.** It carried the same existence-is-health assumption, so re-running the installer on an affected machine printed "venv already present" and fixed nothing. It now checks that the environment's base interpreter exists, rebuilds it when it does not, and finds the interpreter to rebuild with using the same rung order as the app.
+
 ## 2.5.2
 
 **The local server starts after a reboot, and start-with-Windows works again.** Both were silent failures with no error anywhere; both were found on a live machine.

@@ -86,14 +86,87 @@ function Test-Command([string]$Name) {
     return [bool](Get-Command $Name -ErrorAction SilentlyContinue)
 }
 
-function Test-PythonOk {
-    if (-not (Test-Command "python")) { return $false }
+# A path is a real program only if it exists AND has content. Windows "App
+# Execution Alias" stubs under WindowsApps are 0-byte reparse points that open
+# the Microsoft Store instead of running Python, and they sit on PATH ahead of
+# real installs -- so `python` resolving is not proof that Python is installed.
+function Test-RealExe([string]$Path) {
+    if (-not $Path) { return $false }
+    $item = Get-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue
+    return ($item -and -not $item.PSIsContainer -and $item.Length -gt 0)
+}
+
+function Test-PythonVersionOk([string]$Exe) {
+    if (-not (Test-RealExe $Exe)) { return $false }
     try {
-        $v = & python --version 2>&1
+        $v = & $Exe --version 2>&1
         if ($v -match "Python (\d+)\.(\d+)") {
             return ([int]$matches[1] -eq 3 -and [int]$matches[2] -ge 11)
         }
     } catch { }
+    return $false
+}
+
+# PEP 514: every conformant Windows Python registers
+#   <root>\SOFTWARE\Python\<Company>\<Tag>\InstallPath
+# with (default) = install dir and, where supported, ExecutablePath. This is the
+# only install-layout-independent way to find an interpreter -- python.org drops
+# py.exe in C:\Windows, PSF Python Manager ships no py/pyw launcher at all, and
+# the Store build hides behind alias stubs. Newest version first.
+function Get-RegistryPythonExes {
+    $found = foreach ($root in 'HKCU:\SOFTWARE\Python', 'HKLM:\SOFTWARE\Python', 'HKLM:\SOFTWARE\WOW6432Node\Python') {
+        if (-not (Test-Path $root)) { continue }
+        foreach ($key in (Get-ChildItem -Path $root -Recurse -ErrorAction SilentlyContinue)) {
+            if ($key.PSChildName -ne 'InstallPath') { continue }
+            $tag = Split-Path -Leaf (Split-Path -Parent $key.Name)
+            if ($tag -notmatch '(\d+)\.(\d+)') { continue }
+            $ver = [int]$matches[1] * 100 + [int]$matches[2]
+            $exe = $key.GetValue('ExecutablePath')
+            if (-not $exe) {
+                $dir = $key.GetValue('')
+                if ($dir) { $exe = Join-Path $dir 'python.exe' }
+            }
+            if ($exe) { [pscustomobject]@{ Version = $ver; Exe = $exe } }
+        }
+    }
+    $found | Sort-Object Version -Descending | Select-Object -ExpandProperty Exe
+}
+
+# Mirrors grammarFix.ahk's DiscoverPythonwPath_Impl() rung order so the
+# installer and the running app never disagree about which Python is in play.
+function Resolve-PythonExe {
+    $candidates = @()
+    $onPath = Get-Command python -ErrorAction SilentlyContinue
+    if ($onPath) { $candidates += $onPath.Source }
+    $pyLauncher = Get-Command py -ErrorAction SilentlyContinue
+    if ($pyLauncher) {
+        $viaPy = & $pyLauncher.Source -3 -c "import sys; print(sys.executable)" 2>$null
+        if ($viaPy) { $candidates += "$viaPy".Trim() }
+    }
+    $candidates += Get-RegistryPythonExes
+    foreach ($candidate in $candidates) {
+        if (Test-PythonVersionOk $candidate) { return $candidate }
+    }
+    return $null
+}
+
+# A venv's Scripts\*.exe are ~250 KB stubs that re-exec the interpreter named in
+# pyvenv.cfg. Uninstalling that interpreter (a 3.13 -> 3.14 upgrade does exactly
+# that) leaves the stubs on disk, so a Test-Path check reports a dead venv as
+# healthy -- and the app then pops a modal "Python venv launcher is sorry to
+# say ... did not find executable" dialog on every hotkey. See SPEC.md B57.
+function Test-VenvHealthy([string]$VenvDir) {
+    $cfg = Join-Path $VenvDir "pyvenv.cfg"
+    if (-not (Test-Path (Join-Path $VenvDir "Scripts\pythonw.exe"))) { return $false }
+    if (-not (Test-Path $cfg)) { return $false }
+    $baseHome = $null
+    $baseExe  = $null
+    foreach ($line in (Get-Content -LiteralPath $cfg -ErrorAction SilentlyContinue)) {
+        if     ($line -match '^\s*executable\s*=\s*(.+?)\s*$') { $baseExe  = $matches[1] }
+        elseif ($line -match '^\s*home\s*=\s*(.+?)\s*$')       { $baseHome = $matches[1] }
+    }
+    if ($baseExe)  { return (Test-Path -LiteralPath $baseExe) }
+    if ($baseHome) { return (Test-Path -LiteralPath (Join-Path $baseHome 'python.exe')) }
     return $false
 }
 
@@ -148,9 +221,8 @@ if ($releaseRoot -like "$env:ProgramFiles*" -or $releaseRoot -like "${env:Progra
 
 # ---- 1. Python ---------------------------------------------------------------
 Info "Step 1/6: Python 3.11+"
-if (Test-PythonOk) {
-    Ok "$(& python --version 2>&1)"
-} else {
+$pythonExe = Resolve-PythonExe
+if (-not $pythonExe) {
     if (-not (Test-Command "winget")) {
         throw "Python 3.11+ not found and winget is unavailable. Install Python from " +
               "https://www.python.org/downloads/windows/ (tick 'Add to PATH'), then re-run."
@@ -159,24 +231,32 @@ if (Test-PythonOk) {
     winget install --id Python.Python.3.13 --silent --scope user `
         --accept-package-agreements --accept-source-agreements
     Update-SessionPath
-    if (-not (Test-PythonOk)) {
-        throw "Python installed but 'python' isn't on PATH yet. Close this window, open a " +
-              "new one, and re-run install.ps1."
+    $pythonExe = Resolve-PythonExe
+    if (-not $pythonExe) {
+        throw "Python installed but no 3.11+ interpreter could be found on PATH, via the " +
+              "py launcher, or in the registry. Close this window, open a new one, and " +
+              "re-run install.ps1."
     }
-    Ok "$(& python --version 2>&1)"
 }
+Ok "$(& $pythonExe --version 2>&1) [$pythonExe]"
 
 # ---- 2. venv -----------------------------------------------------------------
-# scripts\.venv is what grammarFix.ahk's ResolvePythonwPath_Impl() probes for.
+# scripts\.venv is what grammarFix.ahk's DiscoverPythonwPath_Impl() probes for.
 # No pip install: deps are stdlib-only and the daemon/wizard/chat all launch by
 # file path (pythonw <script.py>), so a bare venv interpreter is sufficient.
+# Health, not mere presence: a venv whose base interpreter was uninstalled is
+# worse than no venv at all, so rebuild it instead of reporting success.
 Info "Step 2/6: virtualenv at scripts\.venv"
-if (Test-Path $venvPythonw) {
+if (Test-VenvHealthy $venvDir) {
     Ok "venv already present."
 } else {
-    & python -m venv "$venvDir"
-    if ($LASTEXITCODE -ne 0 -or -not (Test-Path $venvPythonw)) {
-        throw "venv creation failed (expected $venvPythonw)."
+    if (Test-Path $venvDir) {
+        Info "Existing venv points at an interpreter that is gone -- rebuilding."
+        Remove-Item $venvDir -Recurse -Force
+    }
+    & $pythonExe -m venv "$venvDir"
+    if ($LASTEXITCODE -ne 0 -or -not (Test-VenvHealthy $venvDir)) {
+        throw "venv creation failed (expected a working $venvPythonw)."
     }
     Ok "Created venv -> AHK will auto-detect $venvPythonw"
 }
