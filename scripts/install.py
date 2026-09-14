@@ -30,7 +30,7 @@ from pathlib import Path
 
 import ffp_config
 import paths as _paths
-from subprocess_util import resolve_cli
+from subprocess_util import resolve_cli, resolve_exe
 
 HERE = Path(__file__).resolve().parent
 
@@ -58,7 +58,13 @@ def _step(msg: str) -> None:
 # ---------- Prereq detection -------------------------------------------------
 
 def _has_cmd(name: str) -> bool:
-    return shutil.which(name) is not None
+    # resolve_exe, not shutil.which: `which` only sees the PATH this process
+    # inherited, so an FLM installed after the shell started reads as missing
+    # and postreboot() opens its download page for software already present.
+    # Detection has to agree with the resolver the call sites launch through,
+    # or the guard rejects the command before resolve_cli is ever reached
+    # (V69 / B58).
+    return bool(resolve_exe(name))
 
 
 def _has_autohotkey() -> bool:

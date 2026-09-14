@@ -128,3 +128,20 @@ def test_provider_status_uses_resolve_exe(provider, monkeypatch):
     assert seen == [ffp_provider_status.PROVIDERS[provider].cli]
     assert status["installed"] is True
     assert status["cli_path"].endswith(".exe")
+
+
+def test_install_guards_use_the_shared_resolver(monkeypatch):
+    """install.py's _has_cmd gated every FLM path before resolve_cli could run.
+
+    With shutil.which behind the guard, `ffp-install` on a stale PATH reported
+    FLM missing and postreboot() opened its download page for software that was
+    already installed — detection disagreeing with execution, which is exactly
+    what V69 forbids.
+    """
+    import install
+
+    monkeypatch.setattr(install, "resolve_exe", lambda name: rf"C:ound\{name}.exe")
+    assert install._has_cmd("flm") is True
+
+    monkeypatch.setattr(install, "resolve_exe", lambda _name: "")
+    assert install._has_cmd("flm") is False

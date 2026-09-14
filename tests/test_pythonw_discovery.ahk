@@ -56,7 +56,10 @@ MakeVenv(name, cfgText) {
     global sandbox
     dir := sandbox "\" name
     DirCreate(dir "\Scripts")
-    FileAppend("", dir "\Scripts\pythonw.exe")
+    ; Non-empty on purpose: a 0-byte stub is rejected as an alias stub before
+    ; the pyvenv.cfg check runs, which would let the dead-venv cases below pass
+    ; for entirely the wrong reason.
+    FileAppend("venv launcher stub", dir "\Scripts\pythonw.exe")
     if (cfgText != "")
         FileAppend(cfgText, dir "\pyvenv.cfg")
     return dir
@@ -85,6 +88,20 @@ Check("venv with dead home= only", VenvBaseInterpreterExists_Impl(deadHome), fal
 
 Check("venv with no pyvenv.cfg", VenvBaseInterpreterExists_Impl(MakeVenv("no_cfg", "")), false)
 Check("venv dir absent", VenvBaseInterpreterExists_Impl(sandbox "\not_a_venv"), false)
+
+; --- Cached path revalidation -----------------------------------------------
+; Flowkey runs for a whole login session, so a cached interpreter can be
+; upgraded or uninstalled underneath it. A cache that never rechecks pins the
+; dead path until AHK restarts -- reintroducing the very failure B57 is about.
+Check("cached empty", CachedPythonwUsable_Impl(""), false)
+; The bare-name last resort must always re-discover: a Python installed after
+; we gave up is only picked up if we look again.
+Check("cached bare pyw.exe", CachedPythonwUsable_Impl("pyw.exe"), false)
+Check("cached path now missing", CachedPythonwUsable_Impl(sandbox "\gone\pythonw.exe"), false)
+Check("cached plain interpreter", CachedPythonwUsable_Impl(realFile), true)
+Check("cached live venv stub", CachedPythonwUsable_Impl(aliveExec "\Scripts\pythonw.exe"), true)
+; The regression: the venv was fine when we cached it, then its base went away.
+Check("cached venv whose base vanished", CachedPythonwUsable_Impl(deadExec "\Scripts\pythonw.exe"), false)
 
 ; --- Discovery on THIS machine ----------------------------------------------
 ; The portability contract: wherever a conformant Python 3.11+ is installed,

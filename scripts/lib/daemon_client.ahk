@@ -252,9 +252,33 @@ global _pythonwPathCache := ""
 
 ResolvePythonwPath_Impl() {
     global _pythonwPathCache
-    if (_pythonwPathCache != "")
+    ; Revalidate rather than blindly reuse. Flowkey runs for a whole login
+    ; session, so the interpreter can be upgraded or uninstalled underneath a
+    ; cached path -- B57 is that exact scenario -- and a cache that never
+    ; rechecks would pin the dead path until AHK itself is restarted, which is
+    ; the failure this release exists to remove. Validation is file stats only,
+    ; never a spawn, so the cache still saves the registry sweep on the hot path
+    ; while healing itself the moment the interpreter moves.
+    if (_pythonwPathCache != "" && CachedPythonwUsable_Impl(_pythonwPathCache))
         return _pythonwPathCache
     return _pythonwPathCache := DiscoverPythonwPath_Impl()
+}
+
+CachedPythonwUsable_Impl(path) {
+    ; The bare-name last resort can't be stat-checked, and re-discovering is how
+    ; a Python installed after we gave up gets picked up at all.
+    if (path = "" || path = "pyw.exe")
+        return false
+    if !UsablePythonwExe_Impl(path)
+        return false
+    ; Any venv stub is only good while its base interpreter survives -- whether
+    ; we chose it or GRAMMARFIX_PYTHONW pointed at it. Walk up from
+    ; <venv>\Scripts\pythonw.exe and re-check the cfg if this is one.
+    SplitPath(path, , &scriptsDir)
+    SplitPath(scriptsDir, , &maybeVenvDir)
+    if (maybeVenvDir != "" && FileExist(maybeVenvDir "\pyvenv.cfg"))
+        return VenvBaseInterpreterExists_Impl(maybeVenvDir)
+    return true
 }
 
 DiscoverPythonwPath_Impl() {
