@@ -15,6 +15,7 @@ import subprocess
 import sys
 import threading
 import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -562,8 +563,13 @@ def _call_openai_compatible(
         headers={"Content-Type": "application/json", "Authorization": f"Bearer {bearer}"},
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=max(2, timeout_seconds)) as resp:
-        payload = json.loads(resp.read().decode("utf-8"))
+    try:
+        with urllib.request.urlopen(req, timeout=max(2, timeout_seconds)) as resp:
+            payload = json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        # A non-2xx answer used to escape as a bare "HTTP Error 400: Bad Request" with the
+        # body (the real cause, e.g. a prompt outgrowing the model's window) discarded.
+        raise RuntimeError(ffp_llm_client.describe_http_error(e, base_url, model)) from e
     # FastFlowLM reports load failures as HTTP 200 with an {"error": ...} body
     # (e.g. "Failed to load <model> model!" when the weights don't fit in
     # memory). Surfacing it beats the generic "returned no usable text" that

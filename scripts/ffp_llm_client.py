@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 import time
+import urllib.error
 from collections.abc import Callable
 from dataclasses import dataclass
 
@@ -12,6 +14,37 @@ import ffp_config
 import ffp_prompt_builder
 
 log = logging.getLogger("ffp.llm")
+
+
+def describe_http_error(e: urllib.error.HTTPError, base_url: str, model: str = "") -> str:
+    """Words for a non-2xx answer from the provider.
+
+    The response body carries the real cause -- FastFlowLM answers
+    ``{"error": {"message": "Max length reached!"}}`` when a prompt outgrows the
+    model's context window -- while ``HTTPError`` itself only says "Bad Request"
+    (and, being a ``URLError``, is easily mistaken for "server unreachable"). A prompt
+    that outgrew the window is the common case, so it gets plain words and the
+    remedy; the provider's own text stays in brackets for diagnosis. Shared by every
+    provider call (hotkeys, chat, meetings) so they all fail the same readable way.
+    """
+    detail = ""
+    try:
+        raw = e.read().decode("utf-8", errors="replace").strip()
+    except Exception:
+        raw = ""
+    if raw:
+        try:
+            err = json.loads(raw).get("error")
+            detail = str(err.get("message") if isinstance(err, dict) else err or "").strip()
+        except (ValueError, AttributeError):
+            detail = raw[:300]
+    if "max length" in detail.lower():
+        subject = f"{model}'s" if model else "the active model's"
+        return (
+            f"The input is too long for {subject} context window - shorten it or switch to a "
+            f"larger-context model (Config > Models). [HTTP {e.code}: {detail}]"
+        )
+    return f"LLM rejected the request (HTTP {e.code}) at {base_url}: {detail or e.reason}"
 
 
 @dataclass(frozen=True)

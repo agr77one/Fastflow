@@ -334,6 +334,7 @@
           <span class="muted small" id="mtg-process-status"></span>
         </div>
         <div id="mtg-quality" class="muted small" hidden></div>
+        <div id="mtg-coverage" class="warn-note small" hidden></div>
         <pre class="note-body" id="mtg-digest"></pre>
         <h2>Ask about this meeting</h2>
         <div class="form-row">
@@ -625,7 +626,7 @@
         <div class="form-row">
           <label for="ntf-qh-start">From</label>
           <input type="time" id="ntf-qh-start">
-          <label for="ntf-qh-end" style="min-width:auto">to</label>
+          <label for="ntf-qh-end" class="label-inline">to</label>
           <input type="time" id="ntf-qh-end">
         </div>
         <h2>Per-event</h2>
@@ -650,13 +651,15 @@
             <option value="transcript">Transcript</option>
           </select>
         </div>
-        <div class="form-row"><label for="mtg-maxctx">Max context tokens</label><input type="number" id="mtg-maxctx" min="500" max="32000"><span class="muted small">caps what's fed to the model (bigger = slower prefill)</span></div>
+        <div class="form-row"><label for="mtg-maxctx">Max context tokens</label><input type="number" id="mtg-maxctx" min="500" max="32000"><span class="muted small">how much of each meeting is fed to the model — longer meetings are cut here (default 16000 covers most; bigger = slower prefill)</span></div>
+        <div class="form-row"><label for="mtg-model">Meeting model</label><select id="mtg-model"></select><span class="muted small" id="mtg-model-hint"></span></div>
+        <div class="form-row"><label for="mtg-temp">Temperature</label><input type="number" id="mtg-temp" min="0" max="1" step="0.05"><span class="muted small">lower = more literal digests (default 0.2)</span></div>
         <h2>After-hours batch</h2>
         <label class="check-row"><input type="checkbox" id="mtg-batch-enabled"> Auto-process during the window below</label>
         <div class="form-row">
           <label for="mtg-start">From</label>
           <input type="time" id="mtg-start">
-          <label for="mtg-end" style="min-width:auto">to</label>
+          <label for="mtg-end" class="label-inline">to</label>
           <input type="time" id="mtg-end">
         </div>
         <label class="check-row"><input type="checkbox" id="mtg-idle"> Only when the machine is idle</label>
@@ -664,6 +667,7 @@
         <div class="form-row"><label for="mtg-maxrun">Max meetings per run</label><input type="number" id="mtg-maxrun" min="1" max="50"></div>
         <div class="card-actions">
           <button class="btn" id="mtg-run-now">Run batch now</button>
+          <button class="btn" id="mtg-redo-cut" hidden title="Process again the digests that only covered part of their meeting, using the Max context tokens above. Replaces the cached digests.">Re-digest cut-off digests</button>
           <span class="muted small" id="mtg-run-status"></span>
         </div>
       </div>

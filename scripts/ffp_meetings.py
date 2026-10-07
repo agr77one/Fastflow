@@ -16,19 +16,26 @@ Layout:
 - ``ask``: on-demand Q&A about one meeting (used by the dashboard).
 
 The LLM call is injectable for tests; it defaults to the same provider-resolved
-endpoint chat/grammar use (via ffp_chat._default_llm_call).
+endpoint chat/grammar use (via ffp_chat._default_llm_call) but on its own model:
+``resolve_model`` picks an installed model with enough context window + parameters
+for a transcript, independent of the (often tiny) model chosen for hotkeys.
 """
 
 from __future__ import annotations
 
+import copy
+import dataclasses
 import datetime
 import hashlib
 import json
 import logging
+import math
 import re
 import threading
 import time
+from collections.abc import Callable
 
+import ffp_config
 import ffp_quill
 import paths as _paths
 
@@ -39,24 +46,44 @@ ACTION_STATUS_PATH = _paths.MEETING_ACTION_STATUS_FILE
 SKIPS_PATH = _paths.MEETING_SKIPS_FILE
 VALID_ACTION_STATUSES = ("pending", "accepted", "rejected")
 
-DEFAULTS = {
-    "enabled": False,
-    "mcp_url": ffp_quill.DEFAULT_MCP_URL,
-    "source": "auto",            # auto | minutes | transcript
-    "max_context_tokens": 6000,
-    "batch": {
-        "enabled": True,
-        "start": "17:00",
-        "end": "21:00",
-        "only_when_idle": True,
-        "idle_minutes": 10,
-        "max_per_run": 10,
-    },
-}
+# ffp_config.DEFAULT_CONFIG["meetings"] is the one source of truth; this copy is
+# what the module falls back to (snapshot, sampling) so the two can never drift.
+DEFAULTS = copy.deepcopy(ffp_config.DEFAULT_CONFIG["meetings"])
+DEFAULT_MODEL = ffp_config.DEFAULT_MEETING_MODEL
 
-_DIGEST_MAX_TOKENS = 600
+# What a model must offer to digest a transcript: it is a floor, not a preference.
+# Below it the digest is either rejected outright (context window) or too weak to
+# trust (a 1B translation model "summarising" a meeting).
+MIN_MODEL_PARAMS_B = 4.0
+MIN_MODEL_CONTEXT = 8192
+
+# Reply budgets. Real digests run ~260 tokens (largest of 256 cached: ~490), so
+# 800 leaves headroom for a long action-item list without letting a rambling model
+# decode for minutes (~9 tok/s on the NPU). A cut-off reply is logged by ffp_chat.
+_DIGEST_MAX_TOKENS = 800
 _ASK_MAX_TOKENS = 700
-_TEMPERATURE = 0.2
+_WEEK_MAX_TOKENS = 1024
+
+# Input budget = context window - reply - this fixed prompt scaffolding, at a
+# deliberately pessimistic chars/token: Cyrillic/CJK transcripts tokenize ~2x denser
+# than English, and a too-long prompt is a hard provider error, not a soft truncation.
+_PROMPT_OVERHEAD_TOKENS = 500
+_FIT_CHARS_PER_TOKEN = 2.5
+
+# Meeting calls are batch work on a bigger model: a full-transcript digest (~76 s
+# worst case seen) plus FastFlowLM's ~12 s load when the model differs from the one
+# resident for hotkeys outruns the 100 s the hotkey path is tuned for.
+_MIN_TIMEOUT_SECONDS = 240
+
+# Marker appended where a transcript is cut to fit. A digest built from a cut transcript
+# misses the end of the meeting, so we record that and let the dashboard say so.
+_TRUNCATION_MARKER = "\n…[truncated]"
+# Digests written before coverage was recorded carry a fingerprint instead of a flag:
+# the old default cap (6000 tokens = 24,000 chars) plus the marker _clamp appends.
+_LEGACY_CAPPED_CHARS = 24000 + len(_TRUNCATION_MARKER)
+# Redoing a cut-off digest must be worth a minute of NPU time: the new limit has to
+# reach at least this much further (~250 tokens) than the old one did.
+_MIN_REDO_GAIN_CHARS = 1000
 
 _batch_lock = threading.Lock()   # only one batch run at a time
 _io_lock = threading.Lock()      # serialize digest-file read-modify-write
@@ -211,16 +238,32 @@ def digest_exists(meeting_id: str) -> bool:
     return any(d.get("meeting_id") == meeting_id for d in load_digests())
 
 
+def digest_truncation(rec: dict) -> tuple[bool, float | None]:
+    """(was the source cut off?, share of it the digest saw -- None when unknown).
+
+    Rows written since coverage was recorded say so outright; older rows are recognised
+    by the old default cap's fingerprint, with the share unknown.
+    """
+    if "truncated" in rec:
+        coverage = rec.get("coverage")
+        return bool(rec["truncated"]), float(coverage) if isinstance(coverage, (int, float)) else None
+    return rec.get("context_chars") == _LEGACY_CAPPED_CHARS, None
+
+
 def get_digest(meeting_id: str) -> dict:
     for d in load_digests():
         if d.get("meeting_id") == str(meeting_id or ""):
-            return {"found": True, **d}
+            truncated, coverage = digest_truncation(d)
+            return {"found": True, **d, "truncated": truncated, "coverage": coverage}
     return {"found": False, "meeting_id": str(meeting_id or "")}
 
 
 def list_digests() -> dict:
     rows = [
-        {k: d.get(k) for k in ("meeting_id", "title", "date", "url", "processed_at", "source", "seconds")}
+        {
+            **{k: d.get(k) for k in ("meeting_id", "title", "date", "url", "processed_at", "source", "seconds")},
+            "truncated": digest_truncation(d)[0],
+        }
         for d in load_digests()
     ]
     return {"digests": rows, "count": len(rows)}
@@ -368,11 +411,127 @@ def _older_than_days(date_iso: object, days: int, *, now: datetime.datetime | No
 
 # ---------- LLM + content -------------------------------------------------------------
 
-def _resolve_llm_call(llm_call):
-    if llm_call is not None:
-        return llm_call
-    import ffp_chat
-    return ffp_chat._default_llm_call
+class MeetingModelError(RuntimeError):
+    """No installed model can digest meetings (none large enough, or none installed)."""
+
+
+@dataclasses.dataclass(frozen=True)
+class MeetingModel:
+    name: str
+    context_tokens: int | None = None   # None = unknown -> inputs are not clamped
+
+
+def _model_catalog() -> dict[str, dict] | None:
+    """FastFlowLM's catalog keyed by model name (``installed``, ``context_length``,
+    ``parameter_size``), or None when it can't be read (CLI missing / failing)."""
+    try:
+        import grammar_fix
+        listing = grammar_fix._provider_list("all")
+    except Exception as exc:
+        log.warning("meeting model check skipped, model catalog unavailable: %s", exc)
+        return None
+    details = listing.get("details") if isinstance(listing, dict) else None
+    if not details or listing.get("error"):
+        return None
+    return {str(d["name"]): d for d in details if isinstance(d, dict) and d.get("name")}
+
+
+def _model_problem(entry: dict | None) -> str:
+    """Why a catalog entry can't run meetings ("is not installed", ...), or '' when it
+    can. Phrased to follow the model name, so it reads in an error and a picker alike."""
+    if entry is None:
+        return "is not in the FastFlowLM catalog"
+    if not entry.get("installed"):
+        return "is not installed"
+    context = entry.get("context_length")
+    if isinstance(context, int) and context < MIN_MODEL_CONTEXT:
+        return f"has only a {context}-token context window"
+    import ffp_hardware
+    params = (ffp_hardware.parse_params_b(str(entry.get("name") or ""))
+              or ffp_hardware.parse_params_b(str(entry.get("parameter_size") or "")))
+    if params is not None and params < MIN_MODEL_PARAMS_B:
+        return f"is only {params:g}B parameters"
+    return ""
+
+
+def resolve_model(mcfg: dict) -> MeetingModel:
+    """Pick the model meetings run on.
+
+    FastFlowLM loads whichever model a request names, so meetings are decoupled from
+    the hotkey model. Preference: ``meetings.model``, then the built-in default, then
+    the active model -- the first that is installed with >= MIN_MODEL_CONTEXT of
+    context and >= MIN_MODEL_PARAMS_B of parameters. If none qualifies, raise
+    MeetingModelError naming why each was rejected, rather than let a transcript hit
+    a 1024-token model and come back as an opaque "Max length reached". Providers
+    without catalog metadata (Ollama) keep using the provider's own model.
+    """
+    import grammar_fix
+    active = str(getattr(grammar_fix, "FLM_MODEL", "") or "")
+    if str(getattr(grammar_fix, "LLM_PROVIDER", "")) != "fastflowlm":
+        return MeetingModel(active)
+    configured = str(mcfg.get("model") or "").strip() or DEFAULT_MODEL
+    catalog = _model_catalog()
+    if catalog is None:  # can't verify -> trust the configuration
+        return MeetingModel(configured)
+    problems: list[str] = []
+    for name in dict.fromkeys(n for n in (configured, DEFAULT_MODEL, active) if n):
+        problem = _model_problem(catalog.get(name))
+        if not problem:
+            if problems:
+                log.warning("meeting model fell back to %r: %s", name, "; ".join(problems))
+            context = catalog[name].get("context_length")
+            return MeetingModel(name, context if isinstance(context, int) else None)
+        problems.append(f"'{name}' {problem}")
+    raise MeetingModelError(
+        f"No usable model for meetings: {'; '.join(problems)}. Meetings need an installed model with "
+        f"at least {MIN_MODEL_CONTEXT} tokens of context and {MIN_MODEL_PARAMS_B:g}B parameters - "
+        f"run `flm pull {DEFAULT_MODEL}` or choose one in Config > Meetings."
+    )
+
+
+def list_models() -> dict:
+    """Installed models for the dashboard's meeting-model picker, each marked usable
+    or not (with the reason) by the same floor ``resolve_model`` enforces -- so the
+    picker never offers a model the daemon would quietly replace."""
+    import grammar_fix
+    provider = str(getattr(grammar_fix, "LLM_PROVIDER", ""))
+    out: dict = {"provider": provider, "applies": provider == "fastflowlm", "default": DEFAULT_MODEL, "models": []}
+    if not out["applies"]:
+        return out
+    catalog = _model_catalog()
+    if catalog is None:
+        out["error"] = "could not read the FastFlowLM model list"
+        return out
+    for name, entry in sorted(catalog.items()):
+        if not entry.get("installed"):
+            continue
+        problem = _model_problem(entry)
+        out["models"].append({
+            "name": name,
+            "context_length": entry.get("context_length"),
+            "usable": not problem,
+            "reason": problem,
+        })
+    return out
+
+
+def _temperature(mcfg: dict) -> float:
+    """Sampling temperature for meeting calls: the config value, clamped to 0..1."""
+    default = float(DEFAULTS["temperature"])
+    try:
+        value = float(mcfg.get("temperature", default))
+    except (TypeError, ValueError):
+        return default
+    return max(0.0, min(value, 1.0)) if math.isfinite(value) else default
+
+
+def _timeout_seconds() -> int:
+    try:
+        import grammar_fix
+        configured = int(getattr(grammar_fix, "FLM_TIMEOUT_SECONDS", 0) or 0)
+    except Exception:
+        configured = 0
+    return max(configured, _MIN_TIMEOUT_SECONDS)
 
 
 def _provider_model() -> tuple[str, str]:
@@ -383,10 +542,85 @@ def _provider_model() -> tuple[str, str]:
         return "", ""
 
 
-def _fetch_content(meeting_id: str, cfg_meetings: dict, client) -> tuple[str, str]:
-    """Return (content, source). Prefers minutes unless source='transcript'."""
+@dataclasses.dataclass(frozen=True)
+class _LLM:
+    """One resolved way to ask the model: the call, the model behind it, its window."""
+
+    call: Callable[[list[dict], int], str]
+    model: str = ""
+    context_tokens: int | None = None
+
+    def run(self, messages: list[dict], max_tokens: int) -> str:
+        """Run the call; name the model in a failure so a cause such as a too-small
+        context window is visible instead of a bare provider error."""
+        try:
+            return str(self.call(messages, max_tokens) or "").strip()
+        except RuntimeError as exc:
+            if self.model:
+                raise RuntimeError(f"[{self.model}] {exc}") from exc
+            raise
+
+    def input_chars(self, max_tokens: int) -> int | None:
+        """Characters of variable content that fit beside the prompt scaffolding and a
+        ``max_tokens`` reply, or None when the context window isn't known."""
+        if not self.context_tokens:
+            return None
+        room = self.context_tokens - max_tokens - _PROMPT_OVERHEAD_TOKENS
+        return max(1000, int(room * _FIT_CHARS_PER_TOKEN))
+
+
+def _resolve_llm(llm_call, mcfg: dict) -> _LLM:
+    """The caller meeting work runs through.
+
+    ``llm_call`` is a test seam taking just ``messages``. Production passes None and
+    gets the resolved meeting model at the configured temperature, the per-call reply
+    budget and the meeting timeout. An already-built ``_LLM`` passes through unchanged
+    (run_batch resolves once per batch, not once per meeting).
+    """
+    if isinstance(llm_call, _LLM):
+        return llm_call
+    if llm_call is not None:
+        return _LLM(lambda messages, _max_tokens: llm_call(messages), _provider_model()[1])
+    import ffp_chat
+    model = resolve_model(mcfg)
+    temperature = _temperature(mcfg)
+
+    def call(messages: list[dict], max_tokens: int) -> str:
+        return ffp_chat._default_llm_call(
+            messages, model=model.name, max_tokens=max_tokens,
+            temperature=temperature, timeout=_timeout_seconds(),
+        )
+
+    return _LLM(call, model.name, model.context_tokens)
+
+
+def _clamp(content: str, limit: int | None) -> str:
+    """Cut ``content`` to ``limit`` characters, marking the cut."""
+    if limit and len(content) > limit:
+        return content[:limit] + _TRUNCATION_MARKER
+    return content
+
+
+def _configured_chars(mcfg: dict) -> int:
+    """The user's ``max_context_tokens`` as a character budget (~4 chars/token)."""
+    try:
+        tokens = int(mcfg.get("max_context_tokens") or DEFAULTS["max_context_tokens"])
+    except (TypeError, ValueError):
+        tokens = int(DEFAULTS["max_context_tokens"])
+    return max(1000, tokens * 4)
+
+
+def _input_limit(mcfg: dict, llm: _LLM, max_tokens: int) -> int:
+    """Characters of transcript to send: the configured cap, or less when the model's
+    context window cannot hold that beside the prompt and a ``max_tokens`` reply."""
+    limit = _configured_chars(mcfg)
+    window = llm.input_chars(max_tokens)
+    return min(limit, window) if window else limit
+
+
+def _fetch_full(meeting_id: str, cfg_meetings: dict, client) -> tuple[str, str]:
+    """Return (content, source) uncut. Prefers minutes unless source='transcript'."""
     source_pref = str(cfg_meetings.get("source") or "auto")
-    max_chars = max(1000, int(cfg_meetings.get("max_context_tokens") or 6000) * 4)
     content, used = "", ""
     if source_pref != "transcript":
         content = ffp_quill.get_minutes(meeting_id, client=client)
@@ -395,9 +629,13 @@ def _fetch_content(meeting_id: str, cfg_meetings: dict, client) -> tuple[str, st
     if not content:
         content = ffp_quill.get_transcript(meeting_id, client=client)
         used = "transcript" if content else used
-    if len(content) > max_chars:
-        content = content[:max_chars] + "\n…[truncated]"
     return content, used
+
+
+def _fetch_content(meeting_id: str, cfg_meetings: dict, client) -> tuple[str, str]:
+    """Return (content, source), cut to the configured cap."""
+    content, used = _fetch_full(meeting_id, cfg_meetings, client)
+    return _clamp(content, _configured_chars(cfg_meetings)), used
 
 
 _DIGEST_SYSTEM = (
@@ -458,14 +696,20 @@ def process_meeting(meeting: dict, cfg: dict, *, client=None, llm_call=None, str
     if not mid:
         raise ValueError("meeting has no id")
     c = client or ffp_quill.QuillClient(str(mcfg.get("mcp_url") or ffp_quill.DEFAULT_MCP_URL))
-    content, source = _fetch_content(mid, mcfg, c)
-    if not content:
+    full, source = _fetch_full(mid, mcfg, c)
+    if not full:
         raise NoContentError("no minutes or transcript available for meeting")
-    call = _resolve_llm_call(llm_call)
+    llm = _resolve_llm(llm_call, mcfg)
+    limit = _input_limit(mcfg, llm, _DIGEST_MAX_TOKENS)
+    content = _clamp(full, limit)
+    kept = min(len(full), limit)      # characters of the source the digest actually saw
     t0 = time.time()
-    digest_md = str(call(_digest_prompt(meeting.get("title") or "", meeting.get("date") or "", content, strict=strict)) or "").strip()
+    digest_md = llm.run(
+        _digest_prompt(meeting.get("title") or "", meeting.get("date") or "", content, strict=strict),
+        _DIGEST_MAX_TOKENS,
+    )
     seconds = round(time.time() - t0, 2)
-    provider, model = _provider_model()
+    provider = _provider_model()[0]
     return {
         "meeting_id": mid,
         "title": meeting.get("title") or "",
@@ -473,9 +717,15 @@ def process_meeting(meeting: dict, cfg: dict, *, client=None, llm_call=None, str
         "url": meeting.get("url") or "",
         "processed_at": _now_iso(),
         "provider": provider,
-        "model": model,
+        "model": llm.model,
         "source": source,
         "context_chars": len(content),
+        # How much of the meeting this digest is about. A cut-off digest silently misses
+        # the end of the meeting -- where decisions and action items tend to be -- so the
+        # dashboard needs to be able to say so (see digest_truncation for older rows).
+        "transcript_chars": len(full),
+        "truncated": kept < len(full),
+        "coverage": round(kept / len(full), 2),
         "seconds": seconds,
         "digest_md": digest_md,
         "strict": strict,
@@ -483,8 +733,35 @@ def process_meeting(meeting: dict, cfg: dict, *, client=None, llm_call=None, str
     }
 
 
-def run_batch(cfg: dict, *, llm_call=None, client=None, max_per_run=None, reason: str = "manual") -> dict:
-    """Process up to N undigested recent meetings. Idempotent (skips cached)."""
+def _redo_queue(mcfg: dict, llm: _LLM, cap: int) -> tuple[list[dict], int]:
+    """Cached digests that were cut short and that today's limit would see more of.
+
+    Returns (up to ``cap`` meetings, newest first, how many more are waiting). Built from
+    the digest rows themselves -- they carry title/date/url -- so no Quill listing is
+    needed. A digest only qualifies if the limit now reaches meaningfully further than it
+    did: raising nothing means nothing to redo, and a redone digest that is *still* cut
+    (transcript longer than the new limit) does not qualify again.
+    """
+    new_limit = _input_limit(mcfg, llm, _DIGEST_MAX_TOKENS)
+    due = []
+    for d in load_digests():
+        if not digest_truncation(d)[0]:
+            continue
+        kept = max(0, int(d.get("context_chars") or 0) - len(_TRUNCATION_MARKER))
+        if new_limit - kept >= _MIN_REDO_GAIN_CHARS:
+            due.append({"id": d["meeting_id"], "title": d.get("title") or "",
+                        "date": d.get("date") or "", "url": d.get("url") or ""})
+    due.sort(key=lambda m: m["date"], reverse=True)
+    return due[:cap], max(0, len(due) - cap)
+
+
+def run_batch(cfg: dict, *, llm_call=None, client=None, max_per_run=None, reason: str = "manual",
+              redigest_truncated: bool = False) -> dict:
+    """Process up to N undigested recent meetings. Idempotent (skips cached).
+
+    ``redigest_truncated`` instead redoes digests that were cut short and that the
+    current limit would cover more of (a deliberate, user-initiated pass: it replaces
+    cached digests, so it never runs from the scheduler)."""
     mcfg = cfg.get("meetings") if isinstance(cfg.get("meetings"), dict) else {}
     if not mcfg.get("enabled"):
         return {"ok": False, "error": "Quill integration is disabled", "processed": 0}
@@ -504,7 +781,7 @@ def run_batch(cfg: dict, *, llm_call=None, client=None, max_per_run=None, reason
         seen: set[str] = set()
         skips = load_skips()
         offset = 0
-        while len(todo) < cap and offset <= 120:
+        while not redigest_truncated and len(todo) < cap and offset <= 120:
             page = ffp_quill.list_recent_meetings(limit=30, offset=offset, client=c)
             if not page:
                 break
@@ -518,13 +795,28 @@ def run_batch(cfg: dict, *, llm_call=None, client=None, max_per_run=None, reason
                             break
             offset += 30
 
+        llm = llm_call
+        if todo or redigest_truncated:
+            # Resolve the model once for the whole batch; if nothing can run meetings,
+            # every meeting would fail identically -- say so once, up front.
+            try:
+                llm = _resolve_llm(llm_call, mcfg)
+            except MeetingModelError as exc:
+                log.warning("meeting batch not started: %s", exc)
+                return {"ok": False, "error": str(exc), "processed": 0}
+        remaining = 0
+        if redigest_truncated:
+            todo, remaining = _redo_queue(mcfg, llm, cap)
+
         processed, skipped, errors = 0, 0, []
         for mt in todo:
             try:
-                save_digest(process_meeting(mt, cfg, client=c, llm_call=llm_call))
+                save_digest(process_meeting(mt, cfg, client=c, llm_call=llm))
                 processed += 1
             except NoContentError as exc:
-                if _older_than_days(mt.get("date"), _SKIP_MIN_AGE_DAYS):
+                # A redo must never skip-mark: the meeting already has a good (if partial)
+                # digest, and losing its transcript later is not "nothing to digest".
+                if not redigest_truncated and _older_than_days(mt.get("date"), _SKIP_MIN_AGE_DAYS):
                     save_skip(mt)
                     skipped += 1
                     log.info("meeting %s (%s) has no content in Quill; marked skipped — won't re-queue",
@@ -540,14 +832,22 @@ def run_batch(cfg: dict, *, llm_call=None, client=None, max_per_run=None, reason
             "last_run_at": _now_iso(), "last_processed": processed,
             "last_errors": len(errors), "last_skipped": skipped, "last_reason": reason,
         })
-        return {"ok": True, "processed": processed, "errors": errors, "queued": len(todo), "skipped": skipped}
+        return {"ok": True, "processed": processed, "errors": errors, "queued": len(todo),
+                "skipped": skipped, "remaining": remaining}
     finally:
         _status["running"] = False
         _batch_lock.release()
 
 
 def batch_status() -> dict:
-    return {**_status, "total_digests": len(load_digests()), "total_skips": list_skips()["count"]}
+    digests = load_digests()
+    return {
+        **_status,
+        "total_digests": len(digests),
+        "total_skips": list_skips()["count"],
+        # Cached digests that only cover part of their meeting (see digest_truncation).
+        "truncated_digests": sum(1 for d in digests if digest_truncation(d)[0]),
+    }
 
 
 # ---------- on-demand Q&A about one meeting -------------------------------------------
@@ -579,13 +879,14 @@ def ask(meeting_id: str, question: str, cfg: dict, *, client=None, llm_call=None
         content, source = _fetch_content(str(meeting_id), mcfg, c)
         if not content:
             return {"ok": False, "error": "no content available for this meeting"}
-    call = _resolve_llm_call(llm_call)
+    llm = _resolve_llm(llm_call, mcfg)
+    content = _clamp(content, llm.input_chars(_ASK_MAX_TOKENS))
     msgs = [
         {"role": "system", "content": _ASK_SYSTEM},
         {"role": "user", "content": f"MEETING: {title} ({date})\n\nCONTENT:\n{content}\n\nQUESTION: {question}"},
     ]
     t0 = time.time()
-    answer = str(call(msgs) or "").strip()
+    answer = llm.run(msgs, _ASK_MAX_TOKENS)
     return {"ok": True, "answer": answer, "source": source, "seconds": round(time.time() - t0, 2)}
 
 
@@ -799,7 +1100,9 @@ def week_summary(cfg: dict = None, *, week_offset: int = 0, now=None, llm_call=N
     blocks = []
     for d in sorted(week_digests, key=lambda x: str(x.get("date") or "")):
         blocks.append(f"### {d.get('title') or 'Meeting'} ({str(d.get('date') or '')[:10]})\n{d.get('digest_md') or ''}")
-    context = "\n\n".join(blocks)[:24000]
+    mcfg = cfg.get("meetings") if isinstance(cfg, dict) and isinstance(cfg.get("meetings"), dict) else {}
+    llm = _resolve_llm(llm_call, mcfg)
+    context = "\n\n".join(blocks)[: min(24000, llm.input_chars(_WEEK_MAX_TOKENS) or 24000)]
     user = (
         f"WEEK: {label}\nThis week's {len(week_digests)} meeting digest(s):\n\n{context}\n\n"
         "Write a concise weekly review using EXACTLY these sections:\n"
@@ -807,27 +1110,45 @@ def week_summary(cfg: dict = None, *, week_offset: int = 0, now=None, llm_call=N
         "## Themes\n- recurring topics across meetings\n"
         "## Open items\n- follow-ups still needing attention\n"
     )
-    call = _resolve_llm_call(llm_call)
-    summary = str(call([{"role": "system", "content": _WEEK_SYSTEM}, {"role": "user", "content": user}]) or "").strip()
+    summary = llm.run([{"role": "system", "content": _WEEK_SYSTEM}, {"role": "user", "content": user}], _WEEK_MAX_TOKENS)
     return {"ok": True, "week_label": label, "meeting_count": len(week_digests), "summary": summary}
 
 
 # ---------- dashboard snapshot --------------------------------------------------------
 
+def _int_or_default(value, default: int) -> int:
+    """``int(value)``, or ``default`` when it is unset or unparseable. Unlike
+    ``value or default`` this keeps a real 0 (``idle_minutes: 0`` means "don't wait for
+    the machine to be idle"; the scheduler honours it, so the dashboard must show it)."""
+    try:
+        return int(default if value is None else value)
+    except (TypeError, ValueError):
+        return default
+
+
 def config_snapshot(meetings_cfg) -> dict:
     cfg = meetings_cfg if isinstance(meetings_cfg, dict) else {}
     b = cfg.get("batch") if isinstance(cfg.get("batch"), dict) else {}
+    d, db = DEFAULTS, DEFAULTS["batch"]
     return {
-        "enabled": bool(cfg.get("enabled", False)),
-        "mcp_url": str(cfg.get("mcp_url") or ffp_quill.DEFAULT_MCP_URL),
-        "source": str(cfg.get("source") or "auto"),
-        "max_context_tokens": int(cfg.get("max_context_tokens") or 6000),
+        "enabled": bool(cfg.get("enabled", d["enabled"])),
+        "mcp_url": str(cfg.get("mcp_url") or d["mcp_url"]),
+        "source": str(cfg.get("source") or d["source"]),
+        "max_context_tokens": int(cfg.get("max_context_tokens") or d["max_context_tokens"]),
+        "model": str(cfg.get("model") or "").strip() or DEFAULT_MODEL,
+        "temperature": _temperature(cfg),
+        # What the dashboard's model picker offers: the same floor resolve_model enforces.
+        "model_requirements": {
+            "default": DEFAULT_MODEL,
+            "min_params_b": MIN_MODEL_PARAMS_B,
+            "min_context": MIN_MODEL_CONTEXT,
+        },
         "batch": {
-            "enabled": bool(b.get("enabled", True)),
-            "start": str(b.get("start") or "17:00"),
-            "end": str(b.get("end") or "21:00"),
-            "only_when_idle": bool(b.get("only_when_idle", True)),
-            "idle_minutes": int(b.get("idle_minutes") or 10),
-            "max_per_run": int(b.get("max_per_run") or 10),
+            "enabled": bool(b.get("enabled", db["enabled"])),
+            "start": str(b.get("start") or db["start"]),
+            "end": str(b.get("end") or db["end"]),
+            "only_when_idle": bool(b.get("only_when_idle", db["only_when_idle"])),
+            "idle_minutes": _int_or_default(b.get("idle_minutes"), db["idle_minutes"]),
+            "max_per_run": int(b.get("max_per_run") or db["max_per_run"]),
         },
     }

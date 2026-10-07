@@ -2,6 +2,35 @@
 
 ## Unreleased
 
+## 2.5.4
+
+**Meetings no longer break when the hotkey model is too small for a transcript.** Found on a live machine: with a 1024-token translation model (`hy-mt2-flash:1.8b`) chosen for hotkeys, every meeting digest failed with `LLM unreachable at http://127.0.0.1:52625: Bad Request` — the server was up, and the real error (`Max length reached!`) was thrown away.
+
+### Fixed
+
+- **Meetings run on their own model, not the hotkey model.** Digests, "ask about this meeting" and the weekly review used whatever model was active for hotkeys, so choosing a small model for fast grammar fixes silently broke them. They now use `meetings.model` (default `qwen3.5:4b`), which FastFlowLM loads on demand. The model must be installed with at least 4B parameters and 8192 tokens of context (checked against FastFlowLM's own catalog); otherwise the default, then the active model, is tried, and if none qualifies the error says which model failed which check and how to fix it (`flm pull qwen3.5:4b`). Existing installs pick up the default without editing config. Not applied to Ollama, which has no catalog metadata.
+- **A provider HTTP error was reported as "LLM unreachable", or as a bare `HTTP Error 400`.** `HTTPError` is a kind of `URLError`, so any 4xx/5xx from the provider was labelled "unreachable" (chat, the Ollama model list, Quill's handshake) or escaped as urllib's own `HTTP Error 400: Bad Request` (hotkeys), with the response body — the real cause — thrown away. A prompt that outgrew the model's window now reads `The input is too long for <model>'s context window - shorten it or switch to a larger-context model (Config > Models). [HTTP 400: Max length reached!]`; any other rejection reports `LLM rejected the request (HTTP n): <the provider's message>`; a genuine connection failure still says "unreachable". On hotkeys only `prompt:` mode is exposed: its v2 contract skips chunking, so a long selection on a small-window model fails, while grammar, summarize, explain and tone are chunked and don't.
+- **Transcripts are cut to what the model's window holds.** `max_context_tokens` (up to 32000) could exceed a model's window, which is a hard provider error rather than a soft truncation. The input is now clamped to the window minus the reply budget, at a deliberately pessimistic characters-per-token so non-English transcripts fit.
+- **The meeting reply budgets and temperature were never applied.** `_DIGEST_MAX_TOKENS`, `_ASK_MAX_TOKENS` and `_TEMPERATURE` were defined in the first meetings release but nothing passed them on, so every call ran with chat's 1024 tokens / 0.3. Digests now get 800 tokens (the largest of 256 real digests was ~490), questions 700, weekly reviews 1024, at the configured temperature. A reply cut off by its token limit is logged.
+- **Meeting calls get a longer timeout.** Loading the meeting model when another is resident costs ~12 s, on top of a digest that can take over a minute — more than the 100 s the hotkey path is tuned for. The floor is 240 s; a longer configured timeout still wins.
+
+- **Long meetings were only digested up to the cap, silently.** The default transcript budget (6000 tokens ≈ 24k characters) cut the end off any longer meeting — where decisions and action items tend to be — and nothing said so. On one install 131 of 256 cached digests (51%) were cut short; in a sample of 24 of them the digest had seen a median 64% of the transcript (worst case 37%), and every sampled transcript fit comfortably inside `qwen3.5:4b`'s window. Digests now record `transcript_chars`, `truncated` and `coverage`; the meeting list marks cut-off ones `✓ partial`; the reader says how much was covered. Digests from before this release are recognised by the old cap's fingerprint (their share is unknown).
+- **The `FLM_MODEL_PATH` repair message flooded the daemon log.** The poisoned value is inherited for the life of the process, so the repair runs on every `flm` call and logged every time — 172 of the 190 warning lines in a month of logs. It is logged once per distinct value now (the repair itself still applies every time). Quill's "handshake refused" warning is likewise logged once.
+- **A stored `idle_minutes: 0` was shown as 10.** `0` is valid ("don't wait for an idle machine") and the scheduler honoured it, but the dashboard displayed 10 and the next Save wrote that back.
+- **Two inline `style=` attributes were blocked by the dashboard's own CSP**, so the "to" between the two time fields kept the 140 px label width. They are classes now, and a test keeps inline styles out of the markup.
+- **A config backup was tracked in the repository.** `config/grammar_hotkey.config.json.bak-<timestamp>` copies are personal-config snapshots and are now ignored; the one committed in v1.5.0 is untracked (its contents were checked — nothing sensitive).
+
+### Changed
+
+- **The default transcript budget is 16000 tokens (was 6000)**, ≈ 64k characters, which covers a typical meeting in one pass. It is after-hours batch work, so the longer prefill costs nothing anyone waits for, and the window clamp above keeps it safe on smaller models. **Existing installs keep their saved value** (the dashboard writes it on every Save) — raise it in Config → Meetings, then use *Re-digest cut-off digests*.
+
+### Added
+
+- **Config → Meetings → Re-digest cut-off digests (N).** Redoes the digests that only covered part of their meeting, using the limit on screen (saved first). It is deliberate and never runs from the scheduler, because it replaces cached digests — the confirmation says that action items you already accepted or rejected may reappear as pending if the new digest words them differently. It only queues digests the new limit would reach meaningfully further into (so it does nothing if you haven't raised the limit, and a digest that is still cut isn't redone twice), runs up to *Max meetings per run* per click, and says how many are still waiting.
+- **The digest line shows which model wrote it** (`cached … · transcript · 41s · qwen3.5:4b`).
+- **Config → Meetings → Meeting model and Temperature.** The model picker lists installed models and shows the ones below the floor disabled, with the reason (e.g. "has only a 1024-token context window"). A saved choice that can't run is shown as "unavailable — qwen3.5:4b will be used". New `meeting_models` daemon action backs it, so the picker and the daemon share one rule set.
+- **Failures name the model** — `[qwen3.5:4b] …` — so a model problem is visible instead of a bare provider error.
+
 ## 2.5.3
 
 **Flowkey survives a Python upgrade.** Removing the interpreter Flowkey's virtual environment was built against broke every hotkey with a modal Windows dialog, and re-running the source installer repaired nothing. Found on a live machine.

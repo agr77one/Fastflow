@@ -130,6 +130,10 @@ def find_pids_on_port(port: int, no_window: int) -> list[int]:
 
 
 _SYSTEM_PROFILE_MARKER = "config\\systemprofile"
+# The poisoned value is inherited for the life of the process, so the repair below runs
+# on EVERY flm spawn (list, version, serve, pull, ...). Warn once per distinct value --
+# 172 of 190 warning lines in a month of daemon logs were this one message repeating.
+_warned_model_paths: set[str] = set()
 
 
 def flm_env() -> dict:
@@ -162,10 +166,13 @@ def flm_env() -> dict:
     normalized = configured.replace("/", "\\").lower()
     if _SYSTEM_PROFILE_MARKER in normalized:
         home_models = str(Path.home() / ".flm")
-        log.warning(
-            "FLM_MODEL_PATH points into the SYSTEM profile (%s); using %s instead",
-            configured, home_models,
-        )
+        if configured not in _warned_model_paths:
+            _warned_model_paths.add(configured)
+            log.warning(
+                "FLM_MODEL_PATH points into the SYSTEM profile (%s); using %s instead "
+                "(repaired for every flm call this session; logged once)",
+                configured, home_models,
+            )
         env["FLM_MODEL_PATH"] = home_models
     return env
 

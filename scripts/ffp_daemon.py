@@ -1001,6 +1001,12 @@ def _act_meeting_digests_list(_args: dict) -> dict:
     return ffp_meetings.list_digests()
 
 
+def _act_meeting_models(_args: dict) -> dict:
+    """Installed models for the Meetings model picker, each flagged usable/unusable."""
+    import ffp_meetings
+    return ffp_meetings.list_models()
+
+
 def _act_meeting_process(args: dict) -> dict:
     """Process one meeting now (used by the dashboard 'Process now' button)."""
     import ffp_meetings
@@ -1030,8 +1036,13 @@ def _act_meeting_redigest(args: dict) -> dict:
 def _act_meeting_batch_run(args: dict) -> dict:
     import ffp_meetings
     mpr = args.get("max_per_run")
+    # redigest_truncated replaces cached digests, so only an explicit dashboard request
+    # may set it -- the after-hours scheduler never does.
+    redo = bool(args.get("redigest_truncated"))
     return ffp_meetings.run_batch(grammar_fix.load_config(),
-                                  max_per_run=int(mpr) if mpr else None, reason="manual")
+                                  max_per_run=int(mpr) if mpr else None,
+                                  reason="manual_redo" if redo else "manual",
+                                  redigest_truncated=redo)
 
 
 def _act_meeting_batch_status(_args: dict) -> dict:
@@ -1142,6 +1153,7 @@ ACTIONS: dict[str, Callable[[dict], Any]] = {
     "meeting_overview": _act_meeting_overview,
     "meeting_digest_get": _act_meeting_digest_get,
     "meeting_digests_list": _act_meeting_digests_list,
+    "meeting_models": _act_meeting_models,
     "meeting_process": _act_meeting_process,
     "meeting_redigest": _act_meeting_redigest,
     "meeting_batch_run": _act_meeting_batch_run,

@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import json
 import logging
+import math
 import os
 import re
 import tempfile
@@ -43,6 +44,12 @@ _LEGACY_PROMPT_BUILDER_IDENTITY = {
     "detail_level": "balanced",
 }
 _LEGACY_PROMPT_BUILDER_IDENTITY.pop("prompt_version")
+
+# Model the meetings feature (digests, ask, weekly review) runs on. It is a floor
+# as well as a default: a transcript needs a real instruction-following model with
+# a large context window, which the model picked for hotkeys is often not (a 1024-
+# token translation model rejects a digest outright). See ffp_meetings.resolve_model.
+DEFAULT_MEETING_MODEL = "qwen3.5:4b"
 
 DEFAULT_CONFIG = {
     "enabled": True,
@@ -132,7 +139,12 @@ DEFAULT_CONFIG = {
         "enabled": False,
         "mcp_url": "http://127.0.0.1:19532/mcp",
         "source": "auto",
-        "max_context_tokens": 6000,
+        # Transcript budget per digest. 16000 tokens (~64k chars) covers a typical meeting in
+        # one pass; the old 6000 cut 51% of one install's digests short. After-hours batch
+        # work, so the longer prefill costs nothing the user waits for.
+        "max_context_tokens": 16000,
+        "model": DEFAULT_MEETING_MODEL,
+        "temperature": 0.2,
         "batch": {
             "enabled": True,
             "start": "17:00",
@@ -496,6 +508,9 @@ def _filter_server_patch(value: dict) -> dict:
 
 
 _PATCH_MEETINGS_SOURCES = frozenset({"auto", "minutes", "transcript"})
+# Provider model tags: "qwen3.5:4b", "gemma4-it:e4b", "qwen3.6-moe:35b-a3b", and the
+# "hf.co/org/repo:tag" shape. Never a path or a shell fragment.
+_MODEL_NAME_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:/+@-]{0,99}$")
 
 
 def _validate_mcp_url(url: str) -> str:
@@ -526,6 +541,19 @@ def _filter_meetings_patch(value: dict) -> dict:
             out["max_context_tokens"] = max(500, min(int(value["max_context_tokens"]), 32000))
         except (TypeError, ValueError):
             pass
+    if "model" in value:
+        model = str(value["model"] or "").strip()
+        if not model:
+            out["model"] = DEFAULT_MEETING_MODEL  # blank = back to the default
+        elif _MODEL_NAME_RE.match(model):
+            out["model"] = model
+    if "temperature" in value:
+        try:
+            temperature = float(value["temperature"])
+        except (TypeError, ValueError):
+            temperature = math.nan
+        if math.isfinite(temperature):
+            out["temperature"] = round(max(0.0, min(temperature, 1.0)), 2)
     batch = value.get("batch")
     if isinstance(batch, dict):
         fb: dict = {}

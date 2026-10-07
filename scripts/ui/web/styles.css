@@ -754,7 +754,13 @@ input[type="number"] { max-width: 120px; }
   margin: 8px 0;
 }
 .form-row label { min-width: 140px; font-weight: 600; }
+/* The "to" between two time fields. Was an inline style="" -- blocked by the dashboard's
+   CSP (default-src 'self'), so the label silently kept the 140px width. */
+.form-row label.label-inline { min-width: auto; }
 .form-row .btn { flex-shrink: 0; }
+
+/* A caveat about the content shown (e.g. a digest that only covers part of its meeting). */
+.warn-note { color: var(--warn); margin: 6px 0; }
 
 .check-row {
   display: block;
