@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Fixed
+
+- **A long selection no longer comes back shorter than it went in.** Grammar mode split a long selection into chunks but only processed the first three, and the hotkey replaces your selection with the output, so a 10,000-character selection became its first 3,600 characters and the rest was gone. Grammar now covers every chunk, and any chunk it can't reach (timeout, a failed call) is passed through unchanged rather than dropped.
+- **Grammar and tone fixes were cut off mid-text.** The reply budget was a fixed 160–220 tokens, but a rewrite is as long as its input: in one install's history a quarter of the 700–1200 character grammar fixes returned about 30% of their text. The budget now scales with the text (summarize and explain keep their short budget).
+- **Summarize, explain and tone say when they skipped text.** They condense at most 8 chunks (was 3, silently); beyond that the result ends with "(Note: only the first N of M characters of the selection were used.)".
+
 ## 2.5.4
 
 **Meetings no longer break when the hotkey model is too small for a transcript.** Found on a live machine: with a 1024-token translation model (`hy-mt2-flash:1.8b`) chosen for hotkeys, every meeting digest failed with `LLM unreachable at http://127.0.0.1:52625: Bad Request` — the server was up, and the real error (`Max length reached!`) was thrown away.

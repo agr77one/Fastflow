@@ -382,8 +382,8 @@ def test_split_chunks_merges_tiny_trailing_chunk(fresh_modules):
         ("prompt", "tiny", 240, "prompt_short"),
         ("prompt", "x" * 600, 320, "prompt_medium"),
         ("prompt", "x" * 1500, 420, "prompt_long"),
-        ("grammar", "x" * 800, 220, "grammar_medium"),
-        ("grammar", "x" * 1500, 180, "grammar_long"),
+        ("grammar", "x" * 800, 411, "grammar_medium"),   # budget scales with the text (V75)
+        ("grammar", "x" * 1500, 684, "grammar_long"),
     ],
 )
 def test_select_runtime_picks_expected_strategy_and_cap(
