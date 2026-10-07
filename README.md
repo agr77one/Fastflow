@@ -4,7 +4,14 @@ Flowkey is a Windows desktop assistant that adds local-LLM hotkeys for grammar f
 
 Everything runs locally through [FastFlowLM](https://fastflowlm.com) (AMD Ryzen AI NPU) or, on machines without the NPU, through [Ollama](https://ollama.com) (CPU/GPU) as a secondary provider. No cloud service, analytics, or telemetry is used by the app.
 
-Current version: `2.5.3`
+Current version: `2.5.4`
+
+## What's new in 2.5.4
+
+- **Meetings no longer break when your hotkey model is small.** Digests, questions and the weekly review now run on their own model (default `qwen3.5:4b`), chosen in Config → Meetings, so a fast grammar or translation model can't make them fail with "LLM unreachable".
+- **Long meetings are summarized to the end.** The transcript limit is now 16000 tokens (was 6000, which silently cut off about half of one install's digests). Cut-off digests are marked "✓ partial", and a new *Re-digest cut-off digests* button redoes them.
+- **Errors say what went wrong.** A prompt that is too long for the model now says so (for hotkeys, chat and meetings) instead of "unreachable" or a bare `HTTP Error 400`.
+- **Smaller fixes:** a quieter log, `idle_minutes: 0` is kept, and the dashboard's "to" label spacing is fixed.
 
 ## What's new in 2.5.3
 
@@ -164,7 +171,7 @@ The dashboard is a web page served by the local daemon — open it from the tray
 - **History:** Telemetry view shows what ran and how fast; Exposed view shows stored request/result text only for rows captured while history storage was visible. The History tab includes the same redacted/visible storage toggle as Config.
 - **Notes:** write and organize notes, tasks, ideas, links, and read-later items; use smart views, categories, tags, pins, Archive/Trash, or arrange cards on the Vision Board.
 - **Notes settings:** Config → Notes & capture controls the vault, categories, link extraction, and optional local-model enrichment. The Notes tab itself contains no settings.
-- **Meetings:** connect the local [Quill](https://quillapp.com) app to search meetings, read AI digests (pre-computed after-hours), review action items (accept / reject), and generate a weekly review. Off by default — enable in Config → Meetings.
+- **Meetings:** connect the local [Quill](https://quillapp.com) app to search meetings, read AI digests (pre-computed after-hours), review action items (accept / reject), and generate a weekly review. Off by default — enable in Config → Meetings. Digests, questions and reviews run on their own **meeting model** (default `qwen3.5:4b`; it must be installed with ≥ 4B parameters and ≥ 8K tokens of context), independent of the model you use for hotkeys — so a small grammar or translation model there never breaks meetings. Each meeting is digested up to **Max context tokens** (default 16000 ≈ 64k characters, enough for most meetings in one pass); a digest that only covers part of its meeting is marked **✓ partial** in the list and flagged in the reader, and *Re-digest cut-off digests* in Config → Meetings redoes them after you raise the limit.
 - **Notifications:** per-event toggles, dedupe window, Do-Not-Disturb, and quiet hours; every toast (shown or muted) is logged to the Telemetry feed.
 
 ## Supported surfaces

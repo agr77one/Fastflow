@@ -25,6 +25,9 @@ log = logging.getLogger("ffp.quill")
 DEFAULT_MCP_URL = "http://127.0.0.1:19532/mcp"
 PROTOCOL_VERSION = "2025-06-18"
 
+# connect() runs on many dashboard actions; a persistent refusal would otherwise warn on each.
+_warned_refusals: set[tuple[str, int]] = set()
+
 
 class QuillToolError(RuntimeError):
     """Quill accepted the MCP request but rejected the tool invocation."""
@@ -94,6 +97,14 @@ class QuillClient:
             self.server_info = ((init or {}).get("result") or {}).get("serverInfo") or {}
             self._post("notifications/initialized", None, notification=True)
             return True
+        except urllib.error.HTTPError as exc:
+            # Quill ANSWERED but refused the handshake (wrong path, incompatible version):
+            # not "unreachable", and worth a warning because nothing will work until fixed.
+            if (self.url, exc.code) not in _warned_refusals:
+                _warned_refusals.add((self.url, exc.code))
+                log.warning("Quill at %s refused the MCP handshake: HTTP %s %s (logged once)",
+                            self.url, exc.code, exc.reason)
+            return False
         except (urllib.error.URLError, TimeoutError, OSError) as exc:
             log.info("Quill not reachable at %s: %s", self.url, exc)
             return False

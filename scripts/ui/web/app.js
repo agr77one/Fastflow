@@ -2563,6 +2563,7 @@ async function sendChat() {
 // actions; the daemon talks MCP to the local Quill app. CSP-safe DOM only.
 let currentMeeting = null;
 let digestIds = new Set();
+let partialIds = new Set();   // cached digests that only cover part of their meeting
 let mtgOffset = 0;
 let renderedMeetingIds = new Set();
 const MTG_PAGE = 30;
@@ -2588,8 +2589,10 @@ async function loadMeetings() {
   try {
     const d = await action("meeting_digests_list");
     digestIds = new Set((d.digests || []).map((x) => x.meeting_id));
+    partialIds = new Set((d.digests || []).filter((x) => x.truncated).map((x) => x.meeting_id));
   } catch {
     digestIds = new Set();
+    partialIds = new Set();
   }
   searchMeetings();
   loadActionItems();
@@ -2625,7 +2628,8 @@ async function _fetchMeetingsPage() {
       tr.dataset.title = m.title || "";
       tr.dataset.date = m.date || "";
       tr.dataset.url = m.url || "";
-      const cells = [m.title || "(untitled)", (m.date || "").slice(0, 10), m.participants || "", digestIds.has(m.id) ? "✓" : "—"];
+      const digestCell = !digestIds.has(m.id) ? "—" : partialIds.has(m.id) ? "✓ partial" : "✓";
+      const cells = [m.title || "(untitled)", (m.date || "").slice(0, 10), m.participants || "", digestCell];
       for (const c of cells) {
         const td = document.createElement("td");
         td.textContent = c;
@@ -2679,18 +2683,40 @@ function _showQuality(quality) {
   el.hidden = false;
 }
 
+// A digest built from a cut transcript says nothing about the end of the meeting —
+// where decisions and action items tend to be — so say so, with how much it covered.
+function _showCoverage(d) {
+  const el = $("mtg-coverage");
+  if (!d || !d.truncated) { el.hidden = true; return; }
+  const saw = typeof d.coverage === "number"
+    ? `covers the first ${Math.round(d.coverage * 100)}% of the transcript`
+    : "was cut at the old 6,000-token limit";
+  el.textContent =
+    `⚠ This digest ${saw}, so the end of the meeting isn't summarized. ` +
+    `Raise “Max context tokens” in Config › Meetings, then press Process now.`;
+  el.hidden = false;
+}
+
+function _digestStatus(label, r) {
+  const model = r.model ? ` · ${r.model}` : "";
+  return `${label} · ${r.source} · ${r.seconds}s${model}`;
+}
+
 async function loadDigest() {
   const body = $("mtg-digest");
   body.textContent = "Loading…";
   $("mtg-process-status").textContent = "";
   $("mtg-quality").hidden = true;
+  $("mtg-coverage").hidden = true;
   try {
     const d = await action("meeting_digest_get", { meeting_id: currentMeeting.id });
     if (d.found) {
       body.textContent = d.digest_md || "(empty digest)";
       const strictLabel = d.strict ? " · strict" : "";
-      $("mtg-process-status").textContent = `cached ${(d.processed_at || "").replace("T", " ")} · ${d.source} · ${d.seconds}s${strictLabel}`;
+      $("mtg-process-status").textContent =
+        _digestStatus(`cached ${(d.processed_at || "").replace("T", " ")}`, d) + strictLabel;
       _showQuality(d.quality);
+      _showCoverage(d);
     } else {
       body.textContent = "Not processed yet. Click 'Process now' to generate a summary + action items on the local model, or wait for the after-hours batch.";
     }
@@ -2701,16 +2727,20 @@ async function loadDigest() {
 
 async function processMeetingNow() {
   if (!currentMeeting) return;
-  $("mtg-process-status").textContent = "Processing on the local model… (first token can take ~15s on a full transcript)";
+  $("mtg-process-status").textContent =
+    "Processing on the meeting model… (a long transcript takes about a minute; the first run also loads the model)";
   $("mtg-quality").hidden = true;
+  $("mtg-coverage").hidden = true;
   try {
     const r = await action("meeting_process", {
       meeting_id: currentMeeting.id, title: currentMeeting.title, date: currentMeeting.date, url: currentMeeting.url,
     });
     $("mtg-digest").textContent = r.digest_md || "(empty)";
-    $("mtg-process-status").textContent = `done · ${r.source} · ${r.seconds}s`;
+    $("mtg-process-status").textContent = _digestStatus("done", r);
     _showQuality(r.quality);
+    _showCoverage(r);
     digestIds.add(currentMeeting.id);
+    if (r.truncated) partialIds.add(currentMeeting.id); else partialIds.delete(currentMeeting.id);
   } catch (e) {
     $("mtg-process-status").textContent = `⚠ ${e.message}`;
   }
@@ -2718,16 +2748,19 @@ async function processMeetingNow() {
 
 async function redigestMeeting() {
   if (!currentMeeting) return;
-  $("mtg-process-status").textContent = "Re-digesting with strict prompt… (can take ~15s)";
+  $("mtg-process-status").textContent = "Re-digesting with strict prompt… (a long transcript takes about a minute)";
   $("mtg-quality").hidden = true;
+  $("mtg-coverage").hidden = true;
   try {
     const r = await action("meeting_redigest", {
       meeting_id: currentMeeting.id, title: currentMeeting.title, date: currentMeeting.date, url: currentMeeting.url,
     });
     $("mtg-digest").textContent = r.digest_md || "(empty)";
-    $("mtg-process-status").textContent = `strict · ${r.source} · ${r.seconds}s`;
+    $("mtg-process-status").textContent = _digestStatus("strict", r);
     _showQuality(r.quality);
+    _showCoverage(r);
     digestIds.add(currentMeeting.id);
+    if (r.truncated) partialIds.add(currentMeeting.id); else partialIds.delete(currentMeeting.id);
   } catch (e) {
     $("mtg-process-status").textContent = `⚠ ${e.message}`;
   }
@@ -2760,7 +2793,10 @@ function populateMeetings(m) {
   $("mtg-enabled").checked = !!m.enabled;
   $("mtg-url").value = m.mcp_url || "http://127.0.0.1:19532/mcp";
   $("mtg-source").value = m.source || "auto";
-  $("mtg-maxctx").value = m.max_context_tokens ?? 6000;
+  $("mtg-maxctx").value = m.max_context_tokens ?? 16000;
+  $("mtg-temp").value = m.temperature ?? 0.2;
+  loadMeetingModels(m.model, m.model_requirements || {});
+  refreshRedoButton();
   const b = m.batch || {};
   $("mtg-batch-enabled").checked = b.enabled !== false;
   $("mtg-start").value = b.start || "17:00";
@@ -2770,13 +2806,70 @@ function populateMeetings(m) {
   $("mtg-maxrun").value = b.max_per_run ?? 10;
 }
 
+// Meeting-model picker. Options come from the daemon's `meeting_models`, which applies
+// the same floor the digest code enforces (installed, enough context window, >= the
+// minimum parameter count), so the list never offers a model that would be quietly
+// replaced. Installed models below the floor are listed disabled WITH the reason, so
+// it is clear why a small hotkey model (e.g. a translation model) isn't selectable.
+async function loadMeetingModels(configured, req) {
+  const sel = $("mtg-model");
+  const hint = $("mtg-model-hint");
+  const fallback = req.default || "qwen3.5:4b";
+  const current = configured || fallback;
+  let info = null;
+  try {
+    info = await action("meeting_models");
+  } catch {
+    info = null;
+  }
+  const add = (value, label, disabled) => {
+    const opt = document.createElement("option");
+    opt.value = value;
+    opt.textContent = label;
+    opt.disabled = !!disabled;
+    sel.append(opt);
+    return opt;
+  };
+  sel.replaceChildren();
+  sel.disabled = false;
+  if (info && info.applies === false) {
+    add("", "Uses the provider's active model", false);
+    sel.disabled = true;
+    hint.textContent = "FastFlowLM only — with Ollama, meetings run on the model chosen under Models.";
+    return;
+  }
+  if (!info || info.error) {
+    add(current, current, false);
+    sel.value = current;
+    hint.textContent = "Couldn't read the model list — the saved choice is kept.";
+    return;
+  }
+  const usable = info.models.filter((m) => m.usable);
+  if (!usable.some((m) => m.name === current)) {
+    // Saved choice isn't installed / is below the floor: say what will actually run.
+    add(current, `${current} — unavailable, ${fallback} will be used`, false);
+  }
+  for (const m of usable) add(m.name, m.name, false);
+  for (const m of info.models.filter((x) => !x.usable)) add(m.name, `${m.name} — ${m.reason}`, true);
+  sel.value = current;
+  const minB = req.min_params_b ?? 4;
+  const minCtx = req.min_context ?? 8192;
+  hint.textContent = `needs ≥ ${minB}B parameters and ≥ ${minCtx} tokens of context, so a small hotkey model is never used here`;
+}
+
 function meetingsPatch() {
   const ctx = Number($("mtg-maxctx").value);
+  const temp = parseFloat($("mtg-temp").value);
+  const modelSel = $("mtg-model");
   return {
     enabled: $("mtg-enabled").checked,
     mcp_url: $("mtg-url").value.trim() || "http://127.0.0.1:19532/mcp",
     source: $("mtg-source").value,
-    max_context_tokens: Number.isFinite(ctx) && ctx > 0 ? ctx : 6000,
+    max_context_tokens: Number.isFinite(ctx) && ctx > 0 ? ctx : 16000,
+    // Omitted (undefined drops out of the JSON) when there is nothing real to save, so a
+    // disabled picker or a blank field can never overwrite the stored value.
+    model: modelSel.disabled || !modelSel.value ? undefined : modelSel.value,
+    temperature: Number.isFinite(temp) ? temp : undefined,
     batch: {
       enabled: $("mtg-batch-enabled").checked,
       start: $("mtg-start").value || "17:00",
@@ -2788,17 +2881,67 @@ function meetingsPatch() {
   };
 }
 
-async function runBatchNow() {
-  const s = $("mtg-run-status");
-  // Persist the current settings first (incl. the Enable toggle) so "Run now"
-  // reflects what's on screen — otherwise it runs against the last-saved config.
-  s.textContent = "Saving settings…";
+// Persist the current settings first (incl. the Enable toggle) so a run reflects what's
+// on screen — otherwise it runs against the last-saved config.
+async function saveMeetingsBeforeRun(statusEl) {
+  statusEl.textContent = "Saving settings…";
   try {
     await action("apply_config_patch", { patch: { meetings: meetingsPatch() } });
+    return true;
   } catch (e) {
-    s.textContent = `⚠ couldn't save settings: ${e.message}`;
-    return;
+    statusEl.textContent = `⚠ couldn't save settings: ${e.message}`;
+    return false;
   }
+}
+
+// Offer the "re-digest" button only when cached digests actually are cut short.
+async function refreshRedoButton() {
+  const btn = $("mtg-redo-cut");
+  try {
+    const s = await action("meeting_batch_status");
+    const n = Number(s.truncated_digests || 0);
+    btn.dataset.count = String(n);
+    btn.textContent = `Re-digest cut-off digests (${n})`;
+    btn.hidden = n === 0;
+  } catch {
+    btn.hidden = true;
+  }
+}
+
+async function redoCutOffDigests() {
+  const s = $("mtg-run-status");
+  const n = Number($("mtg-redo-cut").dataset.count || 0);
+  const perRun = Math.max(1, Math.min(Number($("mtg-maxrun").value) || 10, 50));
+  const ok = await confirmDialog(
+    `Re-process up to ${Math.min(perRun, n)} of ${n} cut-off digests now, using the “Max context tokens” on screen?\n\n` +
+    "Each one runs again on the meeting model (about a minute each) and replaces its cached digest. " +
+    "Action items you already accepted or rejected may reappear as pending if the new digest words them differently.",
+    "Re-digest",
+  );
+  if (!ok) return;
+  if (!(await saveMeetingsBeforeRun(s))) return;
+  s.textContent = "Re-digesting… (this runs on the local model and can take several minutes)";
+  try {
+    const r = await action("meeting_batch_run", { redigest_truncated: true });
+    if (!r.ok) {
+      s.textContent = `⚠ ${r.error}`;
+    } else if (!r.queued) {
+      s.textContent = "Nothing to redo — these digests already used the current limit. Raise “Max context tokens” first.";
+    } else {
+      s.textContent = `redone ${r.processed} of ${r.queued}`
+        + (r.remaining ? `, ${r.remaining} more waiting — run it again` : "")
+        + (r.errors && r.errors.length ? `, ${r.errors.length} errors (details in logs/daemon.log)` : "");
+    }
+  } catch (e) {
+    s.textContent = `⚠ ${e.message}`;
+  }
+  refreshRedoButton();
+  loadMeetings();
+}
+
+async function runBatchNow() {
+  const s = $("mtg-run-status");
+  if (!(await saveMeetingsBeforeRun(s))) return;
   s.textContent = "Running… (this processes on the local model; may take a while)";
   try {
     const r = await action("meeting_batch_run", {});
@@ -3001,6 +3144,7 @@ document.addEventListener("DOMContentLoaded", () => {
   $("mtg-ask-btn").addEventListener("click", askMeeting);
   $("mtg-ask-input").addEventListener("keydown", (e) => { if (e.key === "Enter") askMeeting(); });
   $("mtg-run-now").addEventListener("click", runBatchNow);
+  $("mtg-redo-cut").addEventListener("click", redoCutOffDigests);
   document.querySelectorAll('input[name="mtg-range"]').forEach((r) => r.addEventListener("change", loadActionItems));
   $("mtg-week-gen").addEventListener("click", generateWeekSummary);
   $("config-save").addEventListener("click", saveConfig);

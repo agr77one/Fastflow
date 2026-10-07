@@ -19,6 +19,7 @@ import urllib.request
 import uuid
 from collections.abc import Iterator
 
+import ffp_llm_client
 import paths as _paths
 
 log = logging.getLogger("ffp.chat")
@@ -199,26 +200,39 @@ def take_staged() -> dict:
 
 # ---------- LLM call -------------------------------------------------------------------
 
-def _default_llm_call(messages: list[dict]) -> str:
+def _default_llm_call(
+    messages: list[dict],
+    *,
+    model: str | None = None,
+    max_tokens: int | None = None,
+    temperature: float | None = None,
+    timeout: int | None = None,
+) -> str:
     """POST /v1/chat/completions to the active provider endpoint, return the reply.
 
     Reads the endpoint/model/auth/timeout from ``grammar_fix``'s provider-resolved
     module globals so chat matches grammar/notes routing. Raises RuntimeError on
     transport/timeout/parse/empty-choices errors.
+
+    ``model`` / ``max_tokens`` / ``temperature`` / ``timeout`` override the active
+    model and the chat defaults for this one call -- the meetings feature runs its
+    own model and sampling (FastFlowLM loads whichever model a request names).
     """
     import grammar_fix
 
     base_url = str(getattr(grammar_fix, "FLM_BASE_URL", "http://127.0.0.1:52625") or "").rstrip("/")
-    model = str(getattr(grammar_fix, "FLM_MODEL", "qwen3.5:4b") or "qwen3.5:4b")
+    model = str(model or getattr(grammar_fix, "FLM_MODEL", "qwen3.5:4b") or "qwen3.5:4b")
     bearer = str(getattr(grammar_fix, "LLM_AUTH_BEARER", "flm") or "")
-    timeout = int(getattr(grammar_fix, "FLM_TIMEOUT_SECONDS", 240) or 240)
+    timeout = int(timeout or getattr(grammar_fix, "FLM_TIMEOUT_SECONDS", 240) or 240)
+    max_tokens = int(max_tokens or MAX_TOKENS)
+    temperature = TEMPERATURE if temperature is None else float(temperature)
 
     body = json.dumps(
         {
             "model": model,
             "messages": messages,
-            "temperature": TEMPERATURE,
-            "max_tokens": MAX_TOKENS,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
             "stream": False,
         }
     ).encode("utf-8")
@@ -229,6 +243,9 @@ def _default_llm_call(messages: list[dict]) -> str:
     try:
         with urllib.request.urlopen(req, timeout=max(2, timeout)) as resp:
             payload = json.loads(resp.read().decode("utf-8", errors="replace"))
+    except urllib.error.HTTPError as e:
+        # HTTPError is a URLError: handle it first, or a server that ANSWERED is "unreachable".
+        raise RuntimeError(ffp_llm_client.describe_http_error(e, base_url, model)) from e
     except urllib.error.URLError as e:
         raise RuntimeError(f"LLM unreachable at {base_url}: {getattr(e, 'reason', e)}") from e
     except TimeoutError:
@@ -245,7 +262,11 @@ def _default_llm_call(messages: list[dict]) -> str:
             detail = provider_error.get("message") if isinstance(provider_error, dict) else provider_error
             raise RuntimeError(str(detail).strip() or "LLM returned an error.")
         raise RuntimeError("LLM returned no choices.")
-    return str((choices[0].get("message") or {}).get("content") or "").strip()
+    choice = choices[0]
+    if choice.get("finish_reason") == "length":
+        # A truncated reply is still returned (partial > nothing) but must be traceable.
+        log.warning("LLM reply hit max_tokens=%d and was cut off (model %s)", max_tokens, model)
+    return str((choice.get("message") or {}).get("content") or "").strip()
 
 
 def _parse_sse_delta(raw_line: str | bytes) -> Iterator[str]:
@@ -304,6 +325,8 @@ def _default_llm_stream(messages: list[dict]) -> Iterator[str]:
     req = urllib.request.Request(base_url + "/v1/chat/completions", data=body, headers=headers, method="POST")
     try:
         resp = urllib.request.urlopen(req, timeout=max(2, timeout))
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(ffp_llm_client.describe_http_error(e, base_url, model)) from e
     except urllib.error.URLError as e:
         raise RuntimeError(f"LLM unreachable at {base_url}: {getattr(e, 'reason', e)}") from e
     with resp:

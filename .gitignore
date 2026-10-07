@@ -17,6 +17,9 @@ data/benchmarks/*
 # Live working config (personal hotkeys/paths). Regenerated on first run from
 # setup/defaults/ or the .example template — both of which ARE tracked.
 config/grammar_hotkey.config.json
+# Safety copies of that file (grammar_hotkey.config.json.bak-<timestamp>) hold the same
+# personal config, so they get the same rule. One was committed by accident in v1.5.0.
+config/*.bak-*
 
 # Machine-specific logs
 logs/

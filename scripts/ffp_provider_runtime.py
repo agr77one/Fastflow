@@ -33,6 +33,10 @@ def _ollama_tags(base_url: str) -> tuple[list[str], str]:
     try:
         with urllib.request.urlopen(url, timeout=4) as resp:
             payload = json.loads(resp.read().decode("utf-8", errors="replace"))
+    except urllib.error.HTTPError as exc:
+        # HTTPError is a URLError: without this branch a server that ANSWERED (404/500...)
+        # is reported as "unreachable".
+        return [], f"Ollama API error: HTTP {exc.code} {exc.reason}"
     except urllib.error.URLError as exc:
         return [], f"Ollama API unreachable: {exc.reason}"
     except TimeoutError:

@@ -145,3 +145,25 @@ def test_install_guards_use_the_shared_resolver(monkeypatch):
 
     monkeypatch.setattr(install, "resolve_exe", lambda _name: "")
     assert install._has_cmd("flm") is False
+
+
+# ---------- the SYSTEM-profile repair must not flood the log (SPEC V74; B62) ------------
+
+def test_system_profile_repair_is_applied_every_time_but_logged_once(monkeypatch, caplog):
+    # The poisoned value is inherited for the life of the process, so flm_env() repairs it on
+    # EVERY flm spawn (list, version, serve, pull...). 172 of 190 warning lines in a month of
+    # daemon logs were this one message repeating.
+    monkeypatch.setattr(ffp_flm_server, "_warned_model_paths", set())
+    poisoned = r"C:\Windows\system32\config\systemprofile\.flm"
+    monkeypatch.setenv("FLM_MODEL_PATH", poisoned)
+    with caplog.at_level("WARNING", logger="ffp.flmserver"):
+        envs = [ffp_flm_server.flm_env() for _ in range(5)]
+    assert all(env["FLM_MODEL_PATH"] != poisoned for env in envs)          # repaired every time
+    assert sum("SYSTEM profile" in r.getMessage() for r in caplog.records) == 1
+
+    # A different poisoned value is new information, so it is reported too.
+    monkeypatch.setenv("FLM_MODEL_PATH", r"C:\Windows\SysWOW64\config\systemprofile\.flm")
+    with caplog.at_level("WARNING", logger="ffp.flmserver"):
+        ffp_flm_server.flm_env()
+    assert sum("SYSTEM profile" in r.getMessage() for r in caplog.records) == 2
+

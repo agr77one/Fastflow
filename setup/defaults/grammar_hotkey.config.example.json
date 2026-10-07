@@ -65,7 +65,9 @@
     "enabled": false,
     "mcp_url": "http://127.0.0.1:19532/mcp",
     "source": "auto",
-    "max_context_tokens": 6000,
+    "max_context_tokens": 16000,
+    "model": "qwen3.5:4b",
+    "temperature": 0.2,
     "batch": {
       "enabled": true,
       "start": "17:00",

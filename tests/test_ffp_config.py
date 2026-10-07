@@ -543,3 +543,51 @@ def test_filter_config_patch_meetings_rejects_junk():
 def test_filter_config_patch_meetings_clamps_context():
     filtered = ffp_config.filter_config_patch({"meetings": {"max_context_tokens": 100}})
     assert filtered["meetings"]["max_context_tokens"] == 500  # clamped to min
+
+
+# meetings.model / meetings.temperature (SPEC V70, V72; B61). The floor itself is
+# enforced where the model is resolved (ffp_meetings.resolve_model), not here.
+
+def test_filter_config_patch_meetings_model_and_temperature():
+    filtered = ffp_config.filter_config_patch({"meetings": {"model": " qwen3.5:9b ", "temperature": "0.35"}})
+    assert filtered["meetings"] == {"model": "qwen3.5:9b", "temperature": 0.35}
+
+
+def test_filter_config_patch_meetings_blank_model_resets_to_default():
+    filtered = ffp_config.filter_config_patch({"meetings": {"model": "   "}})
+    assert filtered["meetings"]["model"] == ffp_config.DEFAULT_MEETING_MODEL
+
+
+@pytest.mark.parametrize("bad", ["../etc/passwd", "a b", "x;rm -rf", "-leading", "q" * 101, "a\"b"])
+def test_filter_config_patch_meetings_rejects_unsafe_model_names(bad):
+    assert "meetings" not in ffp_config.filter_config_patch({"meetings": {"model": bad}})
+
+
+def test_filter_config_patch_meetings_temperature_is_clamped_and_validated():
+    def temp(value):
+        return ffp_config.filter_config_patch({"meetings": {"temperature": value}}).get("meetings", {})
+
+    assert temp(5) == {"temperature": 1.0}
+    assert temp(-1) == {"temperature": 0.0}
+    assert temp(0.456) == {"temperature": 0.46}
+    assert temp("nope") == temp(None) == temp(float("nan")) == temp(float("inf")) == {}
+
+
+def test_meetings_defaults_carry_the_capable_default_model():
+    meetings = ffp_config.DEFAULT_CONFIG["meetings"]
+    assert meetings["model"] == ffp_config.DEFAULT_MEETING_MODEL == "qwen3.5:4b"
+    assert meetings["temperature"] == 0.2
+
+
+def test_existing_config_without_meeting_model_gets_the_default(tmp_path):
+    # Installs predating the setting must not need a migration: deep-merge supplies it.
+    path = tmp_path / "cfg.json"
+    path.write_text(
+        json.dumps({"llm": {"model": "hy-mt2-flash:1.8b"}, "meetings": {"enabled": True}}),
+        encoding="utf-8",
+    )
+    cfg = ffp_config.load_config(path)
+    assert cfg["meetings"]["enabled"] is True
+    assert cfg["meetings"]["model"] == "qwen3.5:4b"
+    assert cfg["llm"]["model"] == "hy-mt2-flash:1.8b"   # the hotkey model is left alone
+

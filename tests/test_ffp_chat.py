@@ -148,3 +148,130 @@ def test_stage_and_take_selection_read_and_clear():
     # Cleared after taking.
     assert not ffp_chat.STAGED_PATH.exists()
     assert ffp_chat.take_staged() == {"text": "", "source_app": ""}
+
+
+# ---------- provider HTTP errors are not "unreachable" (SPEC V71; regression for B61) --
+
+def _http_error(code, reason, body):
+    import io
+    import urllib.error
+    return urllib.error.HTTPError("http://x/v1/chat/completions", code, reason, {}, io.BytesIO(body))
+
+
+@pytest.fixture
+def _flm_url(monkeypatch):
+    import grammar_fix
+    monkeypatch.setattr(grammar_fix, "FLM_BASE_URL", "http://127.0.0.1:52625", raising=False)
+
+
+def test_llm_call_http_400_reports_provider_message_not_unreachable(_flm_url, monkeypatch):
+    # FastFlowLM answers a prompt that overflows the model's context with HTTP 400 and
+    # {"error": {"message": "Max length reached!"}}. The server *was* reachable.
+    body = json.dumps({"error": {"message": "Max length reached!", "type": "model_error", "code": 400}}).encode()
+
+    def boom(*a, **k):
+        raise _http_error(400, "Bad Request", body)
+
+    monkeypatch.setattr(ffp_chat.urllib.request, "urlopen", boom)
+    with pytest.raises(RuntimeError) as ei:
+        ffp_chat._default_llm_call([{"role": "user", "content": "hi"}])
+    msg = str(ei.value)
+    assert "unreachable" not in msg
+    assert "HTTP 400" in msg and "Max length reached!" in msg
+    assert "context window" in msg  # actionable hint for the overflow case
+
+
+def test_llm_call_http_error_without_json_body_falls_back_to_reason(_flm_url, monkeypatch):
+    def boom(*a, **k):
+        raise _http_error(500, "Internal Server Error", b"")
+
+    monkeypatch.setattr(ffp_chat.urllib.request, "urlopen", boom)
+    with pytest.raises(RuntimeError, match=r"HTTP 500.*Internal Server Error"):
+        ffp_chat._default_llm_call([{"role": "user", "content": "hi"}])
+
+
+def test_llm_call_connection_failure_is_still_unreachable(_flm_url, monkeypatch):
+    import urllib.error
+
+    def boom(*a, **k):
+        raise urllib.error.URLError("[WinError 10061] connection refused")
+
+    monkeypatch.setattr(ffp_chat.urllib.request, "urlopen", boom)
+    with pytest.raises(RuntimeError, match="LLM unreachable at http://127.0.0.1:52625"):
+        ffp_chat._default_llm_call([{"role": "user", "content": "hi"}])
+
+
+def test_llm_stream_http_400_reports_provider_message_not_unreachable(_flm_url, monkeypatch):
+    body = json.dumps({"error": {"message": "Max length reached!"}}).encode()
+
+    def boom(*a, **k):
+        raise _http_error(400, "Bad Request", body)
+
+    monkeypatch.setattr(ffp_chat.urllib.request, "urlopen", boom)
+    with pytest.raises(RuntimeError) as ei:
+        list(ffp_chat._default_llm_stream([{"role": "user", "content": "hi"}]))
+    assert "unreachable" not in str(ei.value)
+    assert "Max length reached!" in str(ei.value)
+
+
+# ---------- per-call overrides: meetings run their own model + sampling (SPEC V72) -----
+
+def _capture_urlopen(monkeypatch, reply=None):
+    """Swap urlopen for a recorder that returns a canned completion."""
+    import io
+    seen = {}
+    payload = json.dumps(
+        reply or {"choices": [{"message": {"content": " hi "}, "finish_reason": "stop"}]}
+    ).encode()
+
+    class FakeResp(io.BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+    def fake(req, timeout=None):
+        seen["body"] = json.loads(req.data.decode())
+        seen["timeout"] = timeout
+        return FakeResp(payload)
+
+    monkeypatch.setattr(ffp_chat.urllib.request, "urlopen", fake)
+    return seen
+
+
+@pytest.fixture
+def _active_model(monkeypatch, _flm_url):
+    import grammar_fix
+    monkeypatch.setattr(grammar_fix, "FLM_MODEL", "hotkey-model:1b", raising=False)
+    monkeypatch.setattr(grammar_fix, "FLM_TIMEOUT_SECONDS", 100, raising=False)
+
+
+def test_llm_call_defaults_to_active_model_and_chat_sampling(_active_model, monkeypatch):
+    seen = _capture_urlopen(monkeypatch)
+    assert ffp_chat._default_llm_call([{"role": "user", "content": "hi"}]) == "hi"
+    assert seen["body"]["model"] == "hotkey-model:1b"
+    assert seen["body"]["temperature"] == ffp_chat.TEMPERATURE
+    assert seen["body"]["max_tokens"] == ffp_chat.MAX_TOKENS
+    assert seen["timeout"] == 100
+
+
+def test_llm_call_overrides_apply_to_that_call_only(_active_model, monkeypatch):
+    seen = _capture_urlopen(monkeypatch)
+    ffp_chat._default_llm_call(
+        [{"role": "user", "content": "hi"}],
+        model="qwen3.5:4b", max_tokens=321, temperature=0.0, timeout=240,
+    )
+    assert seen["body"]["model"] == "qwen3.5:4b"
+    assert seen["body"]["max_tokens"] == 321
+    assert seen["body"]["temperature"] == 0.0          # 0.0 is a real value, not "unset"
+    assert seen["timeout"] == 240
+
+
+def test_llm_call_warns_when_the_reply_is_cut_off(_active_model, monkeypatch, caplog):
+    _capture_urlopen(monkeypatch, {"choices": [{"message": {"content": "partial"}, "finish_reason": "length"}]})
+    with caplog.at_level("WARNING", logger="ffp.chat"):
+        out = ffp_chat._default_llm_call([{"role": "user", "content": "hi"}], max_tokens=64)
+    assert out == "partial"                            # still returned: partial > nothing
+    assert "cut off" in caplog.text and "max_tokens=64" in caplog.text
+
