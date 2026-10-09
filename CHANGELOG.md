@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 2.7.0
+
+**Meetings get mind maps.**
 
 ### Added
 
@@ -11,7 +13,7 @@
 
 ### How it works
 
-A meeting is read in ~3,500-character sections at speaker-turn boundaries, one small model call each, and merged in code: duplicate and filler lines are dropped, every timestamp comes from the transcript (not the model), and an action owner who isn't a speaker or a name in the transcript is kept but marked unconfirmed (`?`). One failed section never costs the whole meeting, and a mind map never touches the meeting's digest. On two real hour-long meetings with `qwen3.5:9b`, every section succeeded and a map took 2–3 minutes.
+A meeting is read in ~3,500-character sections at speaker-turn boundaries, one small model call each, and merged in code: duplicate and filler lines are dropped, every timestamp comes from the transcript (not the model), and an action owner who isn't a speaker or a name in the transcript is kept but marked unconfirmed (`?`). One failed section never costs the whole meeting, and a mind map never touches the meeting's digest. On three real meetings (14 to 37 minutes long) with `qwen3.5:9b`, every section succeeded and a map took 30 seconds to 3 minutes.
 
 ## 2.6.0
 

@@ -1,7 +1,7 @@
 # Meeting Intelligence Plan ("2.7")
 
 Date: 2026-10-08
-Status: T46–T50 BUILT on `release/2.7.0` (search T51 and speaker labeling T52 remain for 2.7.x).
+Status: T46–T50 SHIPPED in 2.7.0 (search T51 and speaker labeling T52 remain for 2.7.x).
 The grammar fix (T45) and the dashboard UI rework (T54, T55) shipped in 2.6.0.
 Target release: **2.7.0** (structured meeting record + mind map + summary views + facets);
 **2.7.x** (cross-meeting search + speaker labeling)

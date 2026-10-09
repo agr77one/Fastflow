@@ -17,7 +17,7 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - LLM: FastFlowLM NPU @ `:52625` | Ollama @ `:11434`, OpenAI-compat `POST /v1/chat/completions`
 - dashboard: daemon-served `scripts/ui/web/{index.html,app.js,styles.css}`, CSP `default-src 'self'`
 - paths: `scripts/paths.py` → USER_ROOT/{config,data,logs}; `_version.py` = version src of truth
-- version: `2.6.0` = hotkey long-selection integrity + dashboard/tray parity + Config App section (T45,T54,T55); repo `agr77one/Fastflow`
+- version: `2.7.0` = meeting mind maps: structured meeting record + mind map + summary views + list facets (T46-T50); repo `agr77one/Fastflow`
 - run tree = `flowkey-pub2` (worktree, branch `live`=origin/main). old `FastFlowPrompt_Local_Setup`=1.5.0 stale.
 
 ## §I interfaces
@@ -201,7 +201,7 @@ T49|x|2.7.0: reader summary views (overview/by topic/by person/decisions+actions
 T50|x|2.7.0: mind-map model picker ("same as meeting model" default, qwen3.5:9b recommended, 8B+ marked), model stamped on record, unconfirmed owners marked|V70,V78
 T51|.|2.7.x cross-meeting search: local transcript cache + SQLite FTS5 by turn + search box + Chat retrieval w/ [meeting,m:ss,speaker] citations|V20
 T52|.|2.7.x speaker labeling: `Speaker N`→name from cues+participants+calendar w/ confidence; user confirm, remembered|V78
-T53|.|2.7.0 docs/version/changelog + full gates|V18,V20
+T53|x|2.7.0 docs/version/changelog + full gates|V18,V20
 T54|x|2.6.0: UI parity: Overview Quick controls (perf/tone/history/autostart/clipboard watcher, instant, same daemon actions as tray) + Server & app card (warmup/stop/update check+apply/diagnostics/exit); `get/set_clipboard_watcher` + `refresh_tray`/`exit_app` markers; two-way sync|V81,V5,V20
 T55|x|2.6.0: Config menu: Essentials gains "Startup & clipboard" (autostart moved from Models & AI + clipboard watcher, instant) so it carries all 5 tray quick toggles; new App section (version/model server/updates+install/diagnostics/warm up/stop/exit; shared w/ Overview via id prefix `sa`/`cfg-app`); meeting-intel settings deferred to T47 (no feature yet)|V81,V59,V20
 ```
