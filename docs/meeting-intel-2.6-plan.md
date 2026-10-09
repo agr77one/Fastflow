@@ -2,7 +2,8 @@
 
 Date: 2026-10-08
 Status: PLANNED on `release/2.6.0` (branched from `fix/long-selection-tail-loss`, which carries T45)
-Target release: **2.6.0** (structured meeting record + mind map + summary views + facets);
+Target release: **2.6.0** (structured meeting record + mind map + summary views + facets +
+dashboard ⇄ tray parity UI rework);
 **2.6.x** (cross-meeting search + speaker labeling)
 
 ## Goal
@@ -137,6 +138,48 @@ intel = {
 - **Facets** in the meeting list: category, attendee, theme/topic text, "has open actions".
 - Every item shows the model that built it; "Rebuild with…" re-runs on another model.
 
+## UI rework: dashboard ⇄ tray parity
+
+The tray's right-click menu applies everything instantly. The dashboard either lacks the
+control, shows it read-only, or hides it behind "Save all settings".
+
+| Tray menu item | Daemon action | Dashboard today |
+|---|---|---|
+| Quick toggles › Performance (Balanced / Max) | `set_perf_balanced` / `set_perf_max` | Config › Essentials, needs Save; Overview read-only |
+| Quick toggles › Tone (Formal / Casual / Friendly) | `set_tone_*` | Config › Essentials, needs Save; Overview read-only |
+| Quick toggles › History text (Visible / Redacted) | `set_history_*` | Config › Essentials checkbox, needs Save; Overview read-only |
+| Quick toggles › Start with Windows | `set_autostart` | buried in Config › Models & AI › "LLM provider & server" |
+| Quick toggles › Clipboard watcher | none (AHK marker file) | **missing** |
+| Server › Warmup / Stop | `warmup` / `stop` | **missing** (only a warm-model note) |
+| Server › Check for updates… | `update_check` / `update_apply` | **missing** (only the FLM runtime update check) |
+| Run Diagnostics | `doctor` | **missing** |
+| Open Chat / Dashboard / Exit | — | Exit **missing** |
+
+### Design
+
+- **Quick controls card** replaces the read-only Overview "Preferences" card: every
+  tray toggle, applied instantly with the same daemon actions as the tray, with a toast
+  confirming the change. No Save step.
+- **Server & app card**: model/server status, Warmup, Stop, Check for updates →
+  "Update to x.y.z" (`update_apply`), Run diagnostics (report in a dialog with Copy),
+  Exit Flowkey (confirm first).
+- **One behaviour per control**: Config › Essentials reuses the same instant controls
+  (outside the Save bar) instead of a second, save-gated copy.
+- **Two-way sync**:
+  - dashboard → tray: after an instant change the daemon drops a `refresh_tray` marker;
+    `PollDaemonMarkers` rebuilds the tray menu so its check marks are never stale.
+  - tray → dashboard: the dashboard re-reads state on focus/visibility change.
+- **Clipboard watcher** gets a daemon action (`get/set_clipboard_watcher`) that writes
+  the existing `.clipboard_watcher_on` marker; AHK reconciles its runtime state with
+  the marker on the next poll. **Exit** uses an `exit_app` marker the same way.
+
+### Config menu adjustments (proposed)
+
+- Move "Start with Windows" from Models & AI to Essentials.
+- New **App** section: version, updates, diagnostics, exit, autostart.
+- Meetings section: meeting-intel settings (model with 9B recommended, idle backfill
+  on/off, hide small-talk topics) next to the existing digest settings.
+
 ## Phases
 
 | Phase | Scope | Release |
@@ -147,6 +190,8 @@ intel = {
 | D | mind-map view + export | 2.6.0 |
 | E | summary dimensions + meeting-list facets | 2.6.0 |
 | F | model guidance: recommend 9B in the picker, record model, owner confidence | 2.6.0 |
+| U1 | Quick controls + Server & app cards; clipboard-watcher/exit actions; two-way tray sync | 2.6.0 |
+| U2 | Config menu adjustments (Essentials, new App section, Meetings intel settings) | 2.6.0 |
 | G | cross-meeting search: local transcript cache, SQLite FTS5 index by turn, search box, Chat retrieves top snippets and answers with `[meeting, m:ss, speaker]` citations | 2.6.x |
 | H | speaker labeling: map `Speaker N` → name from transcript cues + participants + calendar, with confidence; user confirms, remembered per person | 2.6.x |
 | — | docs, version 2.6.0, full gates (V18, V20) | 2.6.0 |
@@ -164,6 +209,9 @@ Search (G) needs no new dependency: Python's bundled SQLite has FTS5 (checked: 3
 - **V79** every `start_s` ∈ [0, meeting length]; out-of-range → dropped to `null`.
 - **V80** mind map and summary views are rendered from the stored record — no LLM call
   at view time.
+- **V81** every tray-menu control has a dashboard equivalent with the same daemon action
+  and the same instant semantics; neither surface shows stale state after the other
+  changes it.
 
 ## Tests
 

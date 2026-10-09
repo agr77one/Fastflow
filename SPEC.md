@@ -196,6 +196,8 @@ T50|.|2.6 model guidance: 9B recommended in Config>Meetings, model stamped on in
 T51|.|2.6.x cross-meeting search: local transcript cache + SQLite FTS5 by turn + search box + Chat retrieval w/ [meeting,m:ss,speaker] citations|V20
 T52|.|2.6.x speaker labeling: `Speaker N`→name from cues+participants+calendar w/ confidence; user confirm, remembered|V78
 T53|.|2.6.0 docs/version/changelog + full gates|V18,V20
+T54|.|2.6 UI parity: Overview Quick controls (perf/tone/history/autostart/clipboard watcher, instant, same daemon actions as tray) + Server & app card (warmup/stop/update check+apply/diagnostics/exit); `get/set_clipboard_watcher` + `refresh_tray`/`exit_app` markers; two-way sync|V81,V5,V20
+T55|.|2.6 Config menu: autostart → Essentials, new App section (version/updates/diagnostics/exit), Meetings intel settings; Essentials toggles instant (outside Save bar)|V81,V59,V20
 ```
 
 ## §B bugs
