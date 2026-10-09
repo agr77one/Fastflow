@@ -188,6 +188,14 @@ T42|x|2.5.2: repair poisoned FLM_MODEL_PATH for flm children; repair unlaunchabl
 T43|x|unreleased: meetings on their own model w/ floor (4B/8K) + HTTPError ≠ unreachable + wired reply budgets/temperature/timeout + `meeting_models` + Config>Meetings picker/temperature|V70,V71,V72,V20
 T44|x|unreleased: digest coverage (`truncated`/`coverage`, `✓ partial`, reader note) + 16000 default + Config>Meetings "Re-digest cut-off digests"; HTTPError parity ∀ call sites (hotkeys/Ollama/Quill); log-noise dedupe; `idle_minutes` 0; CSP inline styles|V71,V73,V74,V20
 T45|x|unreleased: hotkey long-selection integrity — grammar covers every chunk (pass-through on failure), rewrite reply budget scales with the text, summarising modes note skipped text|V75,V20
+T46|.|2.6 meeting intel: transcript parser (`[Ns] label:` turns, share %) + turn-boundary sectioner ~3.5k; plan `docs/meeting-intel-2.6-plan.md`|V20
+T47|.|2.6 `intel` record v1 on digest row: map-reduce per-section line extraction (≥1 TOPIC) + code merge/dedupe/owner-grounding/ts-clamp + header + theme-cluster calls; batch + on-demand + idle backfill|V76,V77,V78,V79,V20
+T48|.|2.6 mind-map view (themes→topics m:ss, decisions, actions→owner, questions, people) collapsible + SVG/MD export|V80,V5,V20
+T49|.|2.6 summary dimensions (overview/by topic/by person/decisions+actions/timeline) + meeting-list facets (category/attendee/theme/open actions)|V80,V5,V20
+T50|.|2.6 model guidance: 9B recommended in Config>Meetings, model stamped on intel, unconfirmed owners muted, rebuild-with|V70,V78
+T51|.|2.6.x cross-meeting search: local transcript cache + SQLite FTS5 by turn + search box + Chat retrieval w/ [meeting,m:ss,speaker] citations|V20
+T52|.|2.6.x speaker labeling: `Speaker N`→name from cues+participants+calendar w/ confidence; user confirm, remembered|V78
+T53|.|2.6.0 docs/version/changelog + full gates|V18,V20
 ```
 
 ## §B bugs
