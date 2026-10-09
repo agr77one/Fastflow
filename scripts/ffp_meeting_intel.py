@@ -190,7 +190,8 @@ SECTION_EXAMPLE = (
     "DECISION: Raise the base plan price starting October.\n"
     "ACTION: Draft the customer announcement | Dana\n"
     "QUESTION: Do annual customers keep the old price?\n"
-    "(Use the speaker's name or label from the section as the owner; write NONE if no one owns it.)"
+    "(The example only shows the format -- never repeat its content. Use the speaker's name or label "
+    "from the section as the owner; write NONE if no one owns it.)"
 )
 
 
@@ -203,17 +204,20 @@ def section_messages(section: list[Turn]) -> list[dict]:
 
 _TAG_RE = re.compile(r"^(TOPIC|DECISION|ACTION|QUESTION)\s*:\s*(.+)$", re.IGNORECASE)
 _THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL | re.IGNORECASE)
-# What a model writes when it has nothing for a slot (4B models do this a lot).
+# What a model writes when it has nothing for a slot. Seen on real meetings:
+# "None stated in this section.", "None explicitly stated in this section.",
+# "None agreed or assigned in this section.", "- | -", "N/A".
 _FILLER_RE = re.compile(
-    r"^\W*(none|n/?a|nothing|not (?:stated|specified|mentioned|discussed|applicable)|no (?:decisions?|actions?|"
-    r"tasks?|questions?|topics?)\b.*|none (?:stated|specified|mentioned|identified)\b.*|-+)\W*$",
+    r"^\W*(?:none\b|nothing\b|n/?a\W*$|not (?:stated|specified|mentioned|discussed|applicable)\b"
+    r"|no (?:\w+ )?(?:decisions?|actions?|tasks?|questions?|topics?|items?)\b|-+\W*$)"
+    r"|\bin this section\b",
     re.IGNORECASE,
 )
 _NO_OWNER = {"", "-", "none", "n/a", "unclear", "unknown", "nobody", "no one", "unassigned", "tbd"}
 
 
 def _is_filler(text: str) -> bool:
-    return not text.strip() or bool(_FILLER_RE.match(text.strip()))
+    return not text.strip() or bool(_FILLER_RE.search(text.strip()))
 
 
 def parse_section_reply(reply: str) -> dict[str, list[list[str]]]:
@@ -230,6 +234,11 @@ def parse_section_reply(reply: str) -> dict[str, list[list[str]]]:
             continue
         out[m.group(1).upper()].append(fields)
     return out
+
+
+def _example_texts() -> list[str]:
+    parsed = parse_section_reply(SECTION_EXAMPLE)
+    return [f[0] for items in parsed.values() for f in items] + [f[1] for f in parsed["TOPIC"] if len(f) > 1]
 
 
 # ---------- merge (code, not model) -----------------------------------------------------
@@ -397,6 +406,17 @@ def build_intel(meeting: dict, transcript: str, llm, *,
 
     if not ok:
         raise RuntimeError(f"every section failed ({failed} of {len(parts)})")
+    # The prompt's example leaked into real records ("Do annual customers keep the old
+    # price?" showed up as an open question in two live meetings): drop echoes of it.
+    examples = _example_texts()
+
+    def echo(item: dict, key: str = "text") -> bool:
+        return any(_similar(item[key], e, 0.6) for e in examples)
+
+    topics = [t for t in topics if not echo(t, "label")]
+    decisions = [d for d in decisions if not echo(d)]
+    actions = [a for a in actions if not echo(a)]
+    questions = [q for q in questions if not echo(q)]
     # Adjacent sections often continue one topic: merge those, then dedupe the rest.
     merged: list[dict] = []
     for t in topics:

@@ -144,5 +144,9 @@ jobs:
       - uses: actions/checkout@v5
       # ubuntu-latest ships Node, so no setup-node step (and no extra Node-20
       # action). --check validates syntax without executing browser globals.
-      - name: node --check app.js
-        run: node --check scripts/ui/web/app.js
+      - name: node --check dashboard scripts
+        run: |
+          node --check scripts/ui/web/app.js
+          node --check scripts/ui/web/mindmap.js
+      - name: mind map behaviour tests
+        run: node tests/js/mindmap_test.js

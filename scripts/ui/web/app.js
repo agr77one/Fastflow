@@ -2852,6 +2852,7 @@ async function loadMeetings() {
     digestIds = new Set();
     partialIds = new Set();
   }
+  await loadIntelFacets();
   searchMeetings();
   loadActionItems();
 }
@@ -2887,7 +2888,8 @@ async function _fetchMeetingsPage() {
       tr.dataset.date = m.date || "";
       tr.dataset.url = m.url || "";
       const digestCell = !digestIds.has(m.id) ? "—" : partialIds.has(m.id) ? "✓ partial" : "✓";
-      const cells = [m.title || "(untitled)", (m.date || "").slice(0, 10), m.participants || "", digestCell];
+      const mapCell = mtgIntel.has(m.id) ? "🗺" : "";
+      const cells = [m.title || "(untitled)", (m.date || "").slice(0, 10), m.participants || "", digestCell, mapCell];
       for (const c of cells) {
         const td = document.createElement("td");
         td.textContent = c;
@@ -2903,11 +2905,12 @@ async function _fetchMeetingsPage() {
     $("mtg-header-count").textContent = countLabel ? `(${countLabel})` : "";
     $("mtg-load-more").hidden = !hasMore;
     if (hasMore) mtgOffset += MTG_PAGE;
+    applyMeetingFilters();
   } catch (e) {
     $("mtg-empty").hidden = true;
     const tr = document.createElement("tr");
     const td = document.createElement("td");
-    td.colSpan = 4;
+    td.colSpan = 5;
     td.textContent = `Search failed: ${e.message}`;
     tr.append(td);
     body.append(tr);
@@ -2925,6 +2928,246 @@ function openMeeting(row) {
   $("mtg-ask-input").value = "";
   $("mtg-ask-status").textContent = "";
   loadDigest();
+  currentIntel = null;
+  setStatus("mtg-intel-status", "");
+  setMeetingView(mtgView);
+  loadIntel();
+}
+
+// ---- Meeting mind map + summary views (SPEC T48-T49) --------------------------------
+// The record comes from the daemon (meeting_intel_*); FlowkeyMindMap (mindmap.js) turns
+// it into the SVG map, the outline and the summary views without another model call.
+// A build runs in the background on the daemon; this side polls its progress.
+
+const MTG_VIEW_KEY = "flowkey.meeting.view.v1";
+let mtgView = "digest";
+let currentIntel = null;
+let mindTree = null;
+let intelPoll = null;
+let mtgIntel = new Map();          // meeting id -> facet summary (category, people, themes, actions)
+let intelHideSmallTalk = true;     // Config › Meetings default for "Show small talk"
+
+try { mtgView = localStorage.getItem(MTG_VIEW_KEY) || "digest"; } catch { /* per-viewer preference */ }
+
+function setMeetingView(view) {
+  mtgView = view;
+  try { localStorage.setItem(MTG_VIEW_KEY, view); } catch { /* per-viewer preference */ }
+  document.querySelectorAll("#mtg-views .seg-btn").forEach((b) => {
+    const on = b.dataset.view === view;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-selected", String(on));
+  });
+  $("mtg-digest-view").hidden = view !== "digest";
+  $("mtg-intel-view").hidden = view === "digest";
+  renderIntel();
+}
+
+function intelOpts() {
+  return { showSmallTalk: $("mtg-smalltalk").checked };
+}
+
+function _hasIntel() {
+  return !!(currentIntel && currentIntel.found && !currentIntel.skipped);
+}
+
+function renderIntel() {
+  if (mtgView === "digest") return;
+  const has = _hasIntel();
+  $("mtg-intel-empty").hidden = has;
+  $("mtg-mindmap-wrap").hidden = !has || mtgView !== "mindmap";
+  $("mtg-view-body").hidden = !has || mtgView === "mindmap";
+  $("mtg-export-svg").hidden = !has || mtgView !== "mindmap";
+  $("mtg-export-md").hidden = !has;
+  $("mtg-copy-outline").hidden = !has;
+  $("mtg-smalltalk-row").hidden = !has || !(currentIntel.topics || []).some((t) => t.low_value);
+  $("mtg-intel-build").textContent = has ? "Rebuild" : "Build mind map";
+  if (!has) {
+    $("mtg-intel-empty").textContent = currentIntel && currentIntel.skipped
+      ? `No mind map for this meeting: ${currentIntel.skipped}.`
+      : "No mind map yet. Build one now (about 1–3 minutes on the meeting model), or let the after-hours batch build it.";
+    $("mtg-intel-meta").textContent = "";
+    return;
+  }
+  const opts = intelOpts();
+  if (mtgView === "mindmap") {
+    mindTree = FlowkeyMindMap.buildTree(currentIntel, opts);
+    const draw = () => FlowkeyMindMap.render($("mtg-mindmap"), mindTree, draw);
+    draw();
+  } else {
+    FlowkeyMindMap.renderView($("mtg-view-body"), currentIntel, mtgView, opts);
+  }
+  const s = currentIntel.sections || {};
+  const hidden = opts.showSmallTalk ? 0 : (currentIntel.topics || []).filter((t) => t.low_value).length;
+  $("mtg-intel-meta").textContent =
+    `Built ${(currentIntel.built_at || "").replace("T", " ")} on ${currentIntel.model || "?"} in ${Math.round(currentIntel.seconds || 0)} s` +
+    ` · ${s.ok ?? "?"}/${s.total ?? "?"} sections${s.failed ? ` (${s.failed} failed)` : ""}` +
+    (hidden ? ` · ${hidden} small-talk topic${hidden === 1 ? "" : "s"} hidden` : "") +
+    " · owners marked ? aren't confirmed by the transcript";
+}
+
+async function loadIntel() {
+  if (!currentMeeting) return;
+  const id = currentMeeting.id;
+  $("mtg-smalltalk").checked = !intelHideSmallTalk;
+  try {
+    const rec = await action("meeting_intel_get", { meeting_id: id });
+    if (!currentMeeting || currentMeeting.id !== id) return;
+    currentIntel = rec;
+  } catch (e) {
+    currentIntel = null;
+    setStatus("mtg-intel-status", `⚠ ${e.message}`, false);
+  }
+  renderIntel();
+  // A build may already be running (the batch, or a click before the reader was reopened).
+  try {
+    const st = await action("meeting_intel_status");
+    if (st.running) watchIntelBuild();
+  } catch { /* status is best-effort */ }
+}
+
+async function buildIntel() {
+  if (!currentMeeting) return;
+  setStatus("mtg-intel-status", "Starting…");
+  try {
+    const r = await action("meeting_intel_build", {
+      meeting_id: currentMeeting.id, title: currentMeeting.title, date: currentMeeting.date, url: currentMeeting.url,
+    });
+    if (!r.ok) {
+      setStatus("mtg-intel-status", `⚠ ${r.error}`, false);
+      if (r.status && r.status.running) watchIntelBuild();
+      return;
+    }
+    watchIntelBuild();
+  } catch (e) {
+    setStatus("mtg-intel-status", `⚠ ${e.message}`, false);
+  }
+}
+
+function watchIntelBuild() {
+  if (intelPoll) return;
+  const tick = async () => {
+    let st;
+    try {
+      st = await action("meeting_intel_status");
+    } catch (e) {
+      clearInterval(intelPoll);
+      intelPoll = null;
+      setStatus("mtg-intel-status", `⚠ ${e.message}`, false);
+      return;
+    }
+    const mine = currentMeeting && st.meeting_id === currentMeeting.id;
+    if (st.running) {
+      const where = st.of ? `section ${st.section} of ${st.of}` : "fetching the transcript";
+      setStatus("mtg-intel-status", mine ? `Building the mind map… ${where}` : "Building another meeting's mind map…");
+      return;
+    }
+    clearInterval(intelPoll);
+    intelPoll = null;
+    if (currentMeeting && st.last_meeting_id === currentMeeting.id) {
+      if (st.last_error) setStatus("mtg-intel-status", `⚠ ${st.last_error}`, false);
+      else setStatus("mtg-intel-status", "✅ Mind map ready");
+      await loadIntel();
+      await loadIntelFacets();
+      applyMeetingFilters();
+    } else {
+      setStatus("mtg-intel-status", "");
+    }
+  };
+  intelPoll = setInterval(tick, 1500);
+  tick();
+}
+
+function _slug(text) {
+  return String(text || "meeting").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "meeting";
+}
+
+function downloadText(name, text, type) {
+  const url = URL.createObjectURL(new Blob([text], { type }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+function exportMindMapSvg() {
+  if (!_hasIntel()) return;
+  downloadText(`${_slug(currentIntel.title)}-mind-map.svg`, FlowkeyMindMap.exportSvg($("mtg-mindmap")), "image/svg+xml");
+}
+
+function exportOutline() {
+  if (!_hasIntel()) return;
+  downloadText(`${_slug(currentIntel.title)}.md`, FlowkeyMindMap.outline(currentIntel, intelOpts()), "text/markdown");
+}
+
+async function copyOutline() {
+  if (!_hasIntel()) return;
+  const ok = await copyText(FlowkeyMindMap.outline(currentIntel, intelOpts()));
+  setStatus("mtg-intel-status", ok ? "✅ Outline copied" : "⚠ Copy failed", ok);
+}
+
+// ---- meeting-list filters from the mind-map records ---------------------------------
+// Anonymous labels ("Speaker 2") and audio channels mean nothing across meetings, so
+// only real names are offered as people.
+const _GENERIC_SPEAKER = /^(speaker \d+|mic(rophone)?\b.*|headphones\b.*)$/i;
+
+async function loadIntelFacets() {
+  try {
+    const r = await action("meeting_intel_list");
+    mtgIntel = new Map((r.meetings || []).map((m) => [m.meeting_id, m]));
+  } catch {
+    mtgIntel = new Map();
+  }
+  const cats = [...new Set([...mtgIntel.values()].map((m) => m.category))].sort();
+  const people = new Map();
+  for (const m of mtgIntel.values()) {
+    for (const p of m.people || []) if (!_GENERIC_SPEAKER.test(p)) people.set(p, (people.get(p) || 0) + 1);
+  }
+  const fill = (sel, first, values) => {
+    const keep = sel.value;
+    sel.replaceChildren();
+    const o = document.createElement("option");
+    o.value = "";
+    o.textContent = first;
+    sel.append(o);
+    for (const v of values) {
+      const opt = document.createElement("option");
+      opt.value = v;
+      opt.textContent = v;
+      sel.append(opt);
+    }
+    sel.value = values.includes(keep) ? keep : "";
+  };
+  fill($("mtg-f-category"), "All types", cats);
+  fill($("mtg-f-person"), "Anyone", [...people.entries()].sort((a, b) => b[1] - a[1]).map(([p]) => p));
+  $("mtg-facets").hidden = mtgIntel.size === 0;
+}
+
+function applyMeetingFilters() {
+  const cat = $("mtg-f-category").value;
+  const person = $("mtg-f-person").value;
+  const theme = $("mtg-f-theme").value.trim().toLowerCase();
+  const needActions = $("mtg-f-actions").checked;
+  const active = !!(cat || person || theme || needActions);
+  let shown = 0;
+  let total = 0;
+  for (const tr of document.querySelectorAll("#mtg-results .mtg-row")) {
+    total += 1;
+    const f = mtgIntel.get(tr.dataset.id);
+    let ok = true;
+    if (active) {
+      ok = !!f
+        && (!cat || f.category === cat)
+        && (!person || (f.people || []).includes(person))
+        && (!theme || [f.title, ...(f.themes || [])].some((x) => String(x).toLowerCase().includes(theme)))
+        && (!needActions || f.actions > 0);
+    }
+    tr.hidden = !ok;
+    if (ok) shown += 1;
+  }
+  $("mtg-f-count").textContent = active ? `${shown} of ${total} loaded meetings (filters use mind maps; meetings without one are hidden)` : "";
 }
 
 const _QUALITY_LABELS = {
@@ -3053,7 +3296,7 @@ function populateMeetings(m) {
   $("mtg-source").value = m.source || "auto";
   $("mtg-maxctx").value = m.max_context_tokens ?? 16000;
   $("mtg-temp").value = m.temperature ?? 0.2;
-  loadMeetingModels(m.model, m.model_requirements || {});
+  loadMeetingModels(m.model, m.model_requirements || {}, m.intel || {});
   refreshRedoButton();
   const b = m.batch || {};
   $("mtg-batch-enabled").checked = b.enabled !== false;
@@ -3062,6 +3305,15 @@ function populateMeetings(m) {
   $("mtg-idle").checked = b.only_when_idle !== false;
   $("mtg-idle-min").value = b.idle_minutes ?? 10;
   $("mtg-maxrun").value = b.max_per_run ?? 10;
+  const intel = m.intel || {};
+  $("mtg-intel-enabled").checked = intel.enabled !== false;
+  $("mtg-intel-backfill").checked = intel.backfill !== false;
+  $("mtg-intel-maxrun").value = intel.max_per_run ?? 5;
+  $("mtg-intel-smalltalk").checked = intel.hide_small_talk !== false;
+  intelHideSmallTalk = intel.hide_small_talk !== false;
+  action("meeting_intel_status")
+    .then((s) => { $("mtg-intel-count").textContent = `(${s.built} built)`; })
+    .catch(() => { $("mtg-intel-count").textContent = ""; });
 }
 
 // Meeting-model picker. Options come from the daemon's `meeting_models`, which applies
@@ -3069,7 +3321,7 @@ function populateMeetings(m) {
 // minimum parameter count), so the list never offers a model that would be quietly
 // replaced. Installed models below the floor are listed disabled WITH the reason, so
 // it is clear why a small hotkey model (e.g. a translation model) isn't selectable.
-async function loadMeetingModels(configured, req) {
+async function loadMeetingModels(configured, req, intel = {}) {
   const sel = $("mtg-model");
   const hint = $("mtg-model-hint");
   const fallback = req.default || "qwen3.5:4b";
@@ -3090,6 +3342,7 @@ async function loadMeetingModels(configured, req) {
   };
   sel.replaceChildren();
   sel.disabled = false;
+  fillIntelModels(info, intel);
   if (info && info.applies === false) {
     add("", "Uses the provider's active model", false);
     sel.disabled = true;
@@ -3115,6 +3368,43 @@ async function loadMeetingModels(configured, req) {
   hint.textContent = `needs ≥ ${minB}B parameters and ≥ ${minCtx} tokens of context, so a small hotkey model is never used here`;
 }
 
+// Mind-map model: "" follows the meeting model. 8B+ models extract noticeably better
+// (owners, decisions); the recommended one is marked, nothing is forced.
+function fillIntelModels(info, intel) {
+  const sel = $("mtg-intel-model");
+  const hint = $("mtg-intel-model-hint");
+  const current = intel.model || "";
+  const recommended = intel.recommended_model || "qwen3.5:9b";
+  sel.replaceChildren();
+  const add = (value, label, disabled) => {
+    const opt = document.createElement("option");
+    opt.value = value;
+    opt.textContent = label;
+    opt.disabled = !!disabled;
+    sel.append(opt);
+  };
+  add("", "Same as the meeting model", false);
+  sel.disabled = false;
+  if (!info || info.applies === false || info.error) {
+    if (current) add(current, current, false);
+    sel.value = current;
+    sel.disabled = !!(info && info.applies === false);
+    hint.textContent = sel.disabled ? "FastFlowLM only." : "";
+    return;
+  }
+  const usable = info.models.filter((m) => m.usable);
+  if (current && !usable.some((m) => m.name === current)) add(current, `${current} — unavailable, the meeting model will be used`, false);
+  for (const m of usable) {
+    const big = (parseParamsB(m.name) || 0) >= 8;
+    add(m.name, m.name === recommended ? `${m.name} (recommended)` : big ? `${m.name} (8B+)` : m.name, false);
+  }
+  sel.value = current;
+  const has = usable.some((m) => m.name === recommended);
+  hint.textContent = has
+    ? `8B+ models attribute owners and decisions more reliably; ${recommended} is recommended`
+    : `8B+ models attribute owners and decisions more reliably — install ${recommended} under Models for best results`;
+}
+
 function meetingsPatch() {
   const ctx = Number($("mtg-maxctx").value);
   const temp = parseFloat($("mtg-temp").value);
@@ -3135,6 +3425,13 @@ function meetingsPatch() {
       only_when_idle: $("mtg-idle").checked,
       idle_minutes: Number($("mtg-idle-min").value) || 0,
       max_per_run: Number($("mtg-maxrun").value) || 10,
+    },
+    intel: {
+      enabled: $("mtg-intel-enabled").checked,
+      model: $("mtg-intel-model").disabled ? undefined : $("mtg-intel-model").value,
+      backfill: $("mtg-intel-backfill").checked,
+      max_per_run: Number($("mtg-intel-maxrun").value) || 5,
+      hide_small_talk: $("mtg-intel-smalltalk").checked,
     },
   };
 }
@@ -3398,6 +3695,17 @@ document.addEventListener("DOMContentLoaded", () => {
     if (row) openMeeting(row);
   });
   $("mtg-close").addEventListener("click", () => { $("mtg-reader").hidden = true; });
+  $("mtg-views").addEventListener("click", (e) => {
+    const b = e.target.closest(".seg-btn");
+    if (b) setMeetingView(b.dataset.view);
+  });
+  $("mtg-intel-build").addEventListener("click", buildIntel);
+  $("mtg-smalltalk").addEventListener("change", renderIntel);
+  $("mtg-export-svg").addEventListener("click", exportMindMapSvg);
+  $("mtg-export-md").addEventListener("click", exportOutline);
+  $("mtg-copy-outline").addEventListener("click", copyOutline);
+  for (const id of ["mtg-f-category", "mtg-f-person", "mtg-f-actions"]) $(id).addEventListener("change", applyMeetingFilters);
+  $("mtg-f-theme").addEventListener("input", applyMeetingFilters);
   $("mtg-process").addEventListener("click", processMeetingNow);
   $("mtg-ask-btn").addEventListener("click", askMeeting);
   $("mtg-ask-input").addEventListener("keydown", (e) => { if (e.key === "Enter") askMeeting(); });

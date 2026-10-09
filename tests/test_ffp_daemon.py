@@ -517,6 +517,7 @@ def test_get_static_assets_have_correct_types(daemon_server):
     for path, expected_type in (
         ("/ui/styles.css", "text/css"),
         ("/ui/app.js", "text/javascript"),
+        ("/ui/mindmap.js", "text/javascript"),
         ("/ui/favicon.svg", "image/svg+xml"),
     ):
         with urllib.request.urlopen(base_url + path, timeout=5) as resp:

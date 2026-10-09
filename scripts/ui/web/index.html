@@ -6,6 +6,7 @@
 <title>Flowkey Dashboard</title>
 <link rel="icon" href="/ui/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/ui/styles.css">
+<script src="/ui/mindmap.js" defer></script>
 <script src="/ui/app.js" defer></script>
 </head>
 <body>
@@ -351,9 +352,16 @@
           <input type="text" id="mtg-query" placeholder="Search meetings… (title, people, topics)">
           <button class="btn" id="mtg-search-btn">Search</button>
         </div>
+        <div class="mtg-facets" id="mtg-facets" hidden>
+          <select id="mtg-f-category" aria-label="Meeting type"><option value="">All types</option></select>
+          <select id="mtg-f-person" aria-label="Person"><option value="">Anyone</option></select>
+          <input type="text" id="mtg-f-theme" placeholder="Theme or topic contains…" aria-label="Theme or topic">
+          <label class="check-row label-inline"><input type="checkbox" id="mtg-f-actions"> Has action items</label>
+          <span class="muted small" id="mtg-f-count"></span>
+        </div>
         <div class="table-scroll">
           <table class="data-table">
-            <thead><tr><th>Title</th><th>Date</th><th>Participants</th><th>Digest</th></tr></thead>
+            <thead><tr><th>Title</th><th>Date</th><th>Participants</th><th>Digest</th><th>Map</th></tr></thead>
             <tbody id="mtg-results"></tbody>
           </table>
         </div>
@@ -368,14 +376,41 @@
           <button class="btn" id="mtg-close" title="Close">✕</button>
         </div>
         <p class="muted small"><span id="mtg-meta"></span> <a id="mtg-link" href="#" target="_blank" rel="noopener" hidden>· open in Quill</a></p>
-        <div class="card-actions">
-          <button class="btn btn-primary" id="mtg-process">Process now</button>
-          <button class="btn" id="mtg-redigest">Re-digest (strict)</button>
-          <span class="muted small" id="mtg-process-status"></span>
+        <div class="segmented mtg-views" id="mtg-views" role="tablist" aria-label="Meeting views">
+          <button type="button" class="seg-btn active" role="tab" data-view="digest">Digest</button>
+          <button type="button" class="seg-btn" role="tab" data-view="mindmap">🗺 Mind map</button>
+          <button type="button" class="seg-btn" role="tab" data-view="overview">Overview</button>
+          <button type="button" class="seg-btn" role="tab" data-view="topics">By topic</button>
+          <button type="button" class="seg-btn" role="tab" data-view="people">By person</button>
+          <button type="button" class="seg-btn" role="tab" data-view="actions">Decisions &amp; actions</button>
+          <button type="button" class="seg-btn" role="tab" data-view="timeline">Timeline</button>
         </div>
-        <div id="mtg-quality" class="muted small" hidden></div>
-        <div id="mtg-coverage" class="warn-note small" hidden></div>
-        <pre class="note-body" id="mtg-digest"></pre>
+        <div id="mtg-digest-view">
+          <div class="card-actions">
+            <button class="btn btn-primary" id="mtg-process">Process now</button>
+            <button class="btn" id="mtg-redigest">Re-digest (strict)</button>
+            <span class="muted small" id="mtg-process-status"></span>
+          </div>
+          <div id="mtg-quality" class="muted small" hidden></div>
+          <div id="mtg-coverage" class="warn-note small" hidden></div>
+          <pre class="note-body" id="mtg-digest"></pre>
+        </div>
+        <div id="mtg-intel-view" hidden>
+          <div class="card-actions mtg-intel-bar">
+            <button class="btn btn-primary" id="mtg-intel-build">Build mind map</button>
+            <label class="check-row label-inline" id="mtg-smalltalk-row"><input type="checkbox" id="mtg-smalltalk"> Show small talk</label>
+            <button class="btn" id="mtg-export-svg">Export SVG</button>
+            <button class="btn" id="mtg-export-md">Export outline</button>
+            <button class="btn" id="mtg-copy-outline">Copy outline</button>
+            <span class="muted small" id="mtg-intel-status" aria-live="polite"></span>
+          </div>
+          <p class="muted small" id="mtg-intel-empty" hidden></p>
+          <div class="mindmap-scroll" id="mtg-mindmap-wrap" hidden>
+            <svg id="mtg-mindmap" role="img" aria-label="Meeting mind map"></svg>
+          </div>
+          <div class="mm-view" id="mtg-view-body" hidden></div>
+          <p class="muted small" id="mtg-intel-meta"></p>
+        </div>
         <h2>Ask about this meeting</h2>
         <div class="form-row">
           <input type="text" id="mtg-ask-input" placeholder="e.g. What were the action items?">
@@ -727,6 +762,13 @@
         <div class="form-row"><label for="mtg-maxctx">Max context tokens</label><input type="number" id="mtg-maxctx" min="500" max="32000"><span class="muted small">how much of each meeting is fed to the model — longer meetings are cut here (default 16000 covers most; bigger = slower prefill)</span></div>
         <div class="form-row"><label for="mtg-model">Meeting model</label><select id="mtg-model"></select><span class="muted small" id="mtg-model-hint"></span></div>
         <div class="form-row"><label for="mtg-temp">Temperature</label><input type="number" id="mtg-temp" min="0" max="1" step="0.05"><span class="muted small">lower = more literal digests (default 0.2)</span></div>
+        <h2>Mind maps <span class="muted small" id="mtg-intel-count"></span></h2>
+        <p class="muted small">A structured record per meeting — topics with times, decisions, action items with owners, open questions, who spoke — behind the reader's <em>Mind map</em> and summary views and the meeting-list filters. Built on the local model, one ~3.5k-character section at a time (about 1–3 minutes per meeting).</p>
+        <label class="check-row"><input type="checkbox" id="mtg-intel-enabled"> Build mind maps in the after-hours batch</label>
+        <div class="form-row"><label for="mtg-intel-model">Mind-map model</label><select id="mtg-intel-model"></select><span class="muted small" id="mtg-intel-model-hint"></span></div>
+        <label class="check-row"><input type="checkbox" id="mtg-intel-backfill"> Also build them for older meetings, newest first</label>
+        <div class="form-row"><label for="mtg-intel-maxrun">Mind maps per run</label><input type="number" id="mtg-intel-maxrun" min="1" max="20"></div>
+        <label class="check-row"><input type="checkbox" id="mtg-intel-smalltalk"> Hide small-talk topics by default</label>
         <h2>After-hours batch</h2>
         <label class="check-row"><input type="checkbox" id="mtg-batch-enabled"> Auto-process during the window below</label>
         <div class="form-row">

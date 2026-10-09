@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **Meeting mind maps.** Open a meeting and switch the reader to *🗺 Mind map*: the meeting's themes and topics (each with the minute it started), decisions, action items with owners, open questions, and who spoke how much, as a collapsible map. Export it as SVG or as a Markdown outline, or copy the outline. Small talk is grouped into its own theme and hidden by default.
+- **Summary views of the same record:** *Overview*, *By topic*, *By person* (each person's share of the conversation and the actions they own), *Decisions & actions*, and *Timeline*. They are built from the stored record, so switching views is instant.
+- **Meeting-list filters** by meeting type, person, theme/topic text and "has action items", plus a 🗺 column showing which meetings have a mind map.
+- **Built on the local model, after hours or on demand.** The after-hours batch builds mind maps for newly digested meetings and backfills older ones newest first (5 per run by default); *Build mind map* in the reader builds one now and shows its progress. Settings are in Config › Meetings › *Mind maps*, including the model: 8B+ models attribute owners and decisions more reliably, and `qwen3.5:9b` is recommended.
+
+### How it works
+
+A meeting is read in ~3,500-character sections at speaker-turn boundaries, one small model call each, and merged in code: duplicate and filler lines are dropped, every timestamp comes from the transcript (not the model), and an action owner who isn't a speaker or a name in the transcript is kept but marked unconfirmed (`?`). One failed section never costs the whole meeting, and a mind map never touches the meeting's digest. On two real hour-long meetings with `qwen3.5:9b`, every section succeeded and a map took 2–3 minutes.
+
 ## 2.6.0
 
 **Long selections no longer lose text, and the dashboard can do everything the tray menu can.**

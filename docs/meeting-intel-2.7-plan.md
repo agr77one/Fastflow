@@ -1,8 +1,8 @@
 # Meeting Intelligence Plan ("2.7")
 
 Date: 2026-10-08
-Status: PLANNED. The grammar fix (T45) and the dashboard UI rework (T54, T55) shipped in 2.6.0;
-the meeting work below targets 2.7.0.
+Status: T46–T50 BUILT on `release/2.7.0` (search T51 and speaker labeling T52 remain for 2.7.x).
+The grammar fix (T45) and the dashboard UI rework (T54, T55) shipped in 2.6.0.
 Target release: **2.7.0** (structured meeting record + mind map + summary views + facets);
 **2.7.x** (cross-meeting search + speaker labeling)
 
@@ -93,7 +93,9 @@ the rendered mind map is the reference for Phase D.
 
 ### The `intel` record (schema v1)
 
-Stored on the digest row as `intel` (same jsonl; rows without it stay valid).
+Stored in its own file, `data/meeting_intel.jsonl` (one row per meeting). The plan was a field
+on the digest row; a separate store makes V76 structural — building, skipping or failing a
+mind map can't rewrite a digest.
 
 ```
 intel = {

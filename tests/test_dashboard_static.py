@@ -123,3 +123,27 @@ def test_meeting_model_temperature_and_redo_controls_are_present():
         assert f'id="{element_id}"' in html
     # The redo button must start hidden: it is only meaningful when digests are cut short.
     assert re.search(r'id="mtg-redo-cut"[^>]*\shidden', html)
+
+
+# ---- T48-T49: meeting mind map + summary views ------------------------------------------
+
+def test_mindmap_script_loads_before_app_and_builds_dom_safely():
+    html, mm = _read("index.html"), _read("mindmap.js")
+    assert html.index("/ui/mindmap.js") < html.index("/ui/app.js")   # app.js uses FlowkeyMindMap
+    assert "innerHTML" not in mm and "insertAdjacentHTML" not in mm   # CSP: DOM via createElement only
+    assert "getElementById" not in mm                                 # elements are passed in by app.js
+
+
+def test_reader_offers_every_summary_view_the_renderer_has():
+    html, mm = _read("index.html"), _read("mindmap.js")
+    views = set(re.findall(r'data-view="([a-z]+)"', html))
+    renderer = set(re.findall(r"^    ([a-z]+)\(rec(?:, opts)?\) \{", mm, re.M))
+    assert renderer == {"overview", "topics", "people", "actions", "timeline"}
+    assert views == renderer | {"digest", "mindmap"}
+
+
+def test_mind_map_css_classes_exist():
+    css = _read("styles.css")
+    for cls in ("mtg-views", "mindmap-scroll", "mm-view", "mm-list", "mm-time", "mm-owner",
+                "mm-unconfirmed", "mtg-facets", "mm-toggle"):
+        assert f".{cls}" in css, f".{cls} missing from styles.css"

@@ -238,3 +238,38 @@ def test_store_roundtrip_upserts_one_row_per_meeting():
 def test_rows_from_another_schema_are_ignored():
     MI.INTEL_PATH.write_text('{"schema": 99, "meeting_id": "old"}\nnot json\n', encoding="utf-8")
     assert MI.load_intel() == {}
+
+
+# ---------- seen on real meetings (2026-10-09 live run) -------------------------------------
+
+@pytest.mark.parametrize("text", [
+    "None explicitly stated in this section.", "None agreed or assigned in this section.",
+    "None stated.", "No clear action items.", "No decisions were made.", "Nothing to report", "N/A", "-",
+])
+def test_filler_phrasings_are_dropped(text):
+    assert MI._is_filler(text)
+
+
+@pytest.mark.parametrize("text", [
+    "Noel will send the deck", "Nonetheless we ship Friday", "No-code tool evaluation",
+    "Notify the client by Friday", "No one objected to the Q3 plan", "Review the section 3 budget",
+])
+def test_real_items_that_look_like_filler_are_kept(text):
+    assert not MI._is_filler(text)
+
+
+def test_the_prompt_example_never_reaches_a_record():
+    # The example's question showed up as an open question in two live meetings.
+    class Echo(FakeLLM):
+        def run(self, messages, max_tokens):
+            out = super().run(messages, max_tokens)
+            if messages[0]["content"].startswith("You read ONE section"):
+                out += ("\nQUESTION: Do annual customers keep the old price?"
+                        "\nACTION: Draft the customer announcement | Dana"
+                        "\nDECISION: Raise the base plan price starting October.")
+            return out
+
+    rec = MI.build_intel({"id": "e"}, _meeting_transcript(3), Echo())
+    texts = [x["text"] for k in ("decisions", "actions", "questions") for x in rec[k]]
+    assert not any("annual customers" in t or "announcement" in t or "base plan" in t for t in texts)
+    assert any(t.startswith("Open question") for t in texts)          # real items survive
