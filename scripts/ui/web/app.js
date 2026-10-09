@@ -276,7 +276,7 @@ async function refreshHealth() {
 
 async function loadOverview() {
   loadQuickState();
-  loadServerApp();
+  loadServerApp("sa");
   try {
     const cfg = await action("config_snapshot");
     const llm = cfg.llm || {};
@@ -371,6 +371,7 @@ function renderQuickState(state) {
   document.querySelectorAll('input[name="tone"]').forEach((r) => (r.checked = r.value === values.tone));
   $("cfg-store-text").checked = values.history === "visible";
   $("cfg-autostart").checked = values.autostart === "on";
+  $("cfg-clipwatch").checked = values.clipboard_watcher === "on";
   historyStoreText = values.history === "visible";
   if (state.autostart && !state.autostart_valid) {
     setStatus("qc-status", "⚠ Start with Windows is on but points at a missing program — turn it Off and On to repair.", false);
@@ -407,71 +408,78 @@ function onQuickControlClick(event) {
 }
 
 // ---- Server & app (tray "Server" submenu + Run Diagnostics + Exit) ----------------
+// The same controls appear twice: the Overview card (ids "sa-*") and Config › App
+// (ids "cfg-app-*"). Every function takes that id prefix; each surface reports into
+// its own status line.
 
-async function loadServerApp() {
+const SERVER_APP_PREFIXES = ["sa", "cfg-app"];
+
+async function loadServerApp(p = "sa") {
   try {
     const raw = await action("status");
     const f = {};
     for (const m of String(raw).matchAll(/([a-z_]+)=(\S+)/g)) f[m[1]] = m[2];
     const prov = PROVIDER_LABELS[f.provider] || f.provider || "?";
     const up = f.reachable === "true";
-    $("sa-server").textContent = `${prov} · ${up ? "running ✅" : "not running"} · ${f.model || "?"}`;
+    $(`${p}-server`).textContent = `${prov} · ${up ? "running ✅" : "not running"} · ${f.model || "?"}`;
   } catch (e) {
-    $("sa-server").textContent = `unavailable: ${e.message}`;
+    $(`${p}-server`).textContent = `unavailable: ${e.message}`;
   }
   try {
-    setText("sa-version", `v${await action("version")}`);
+    setText(`${p}-version`, `v${await action("version")}`);
   } catch {
-    setText("sa-version", "?");
+    setText(`${p}-version`, "?");
   }
 }
 
-async function serverAction(name, busyText) {
-  setStatus("sa-status", busyText);
+async function serverAction(p, name, busyText) {
+  setStatus(`${p}-status`, busyText);
   try {
     const out = await action(name);
-    setStatus("sa-status", `✅ ${out || "done"}`);
+    setStatus(`${p}-status`, `✅ ${out || "done"}`);
   } catch (e) {
-    setStatus("sa-status", `⚠ ${e.message}`, false);
+    setStatus(`${p}-status`, `⚠ ${e.message}`, false);
   }
-  loadServerApp();
+  loadServerApp(p);
 }
 
-async function checkAppUpdate() {
-  setStatus("sa-status", "Checking for updates…");
-  $("sa-update-apply").hidden = true;
+async function checkAppUpdate(p) {
+  const install = $(`${p}-update-apply`);
+  setStatus(`${p}-status`, "Checking for updates…");
+  install.hidden = true;
   try {
     const info = await action("update_check");
     if (info.error) {
-      setStatus("sa-status", `⚠ Update feed unreachable: ${info.error}`, false);
+      setStatus(`${p}-status`, `⚠ Update feed unreachable: ${info.error}`, false);
     } else if (info.has_update) {
-      setStatus("sa-status", `Update available: v${info.current} → v${info.latest}`);
-      $("sa-update-apply").textContent = `Install v${info.latest}`;
-      $("sa-update-apply").hidden = false;
+      setStatus(`${p}-status`, `Update available: v${info.current} → v${info.latest}`);
+      install.textContent = `Install v${info.latest}`;
+      install.hidden = false;
     } else {
-      setStatus("sa-status", `✅ You're up to date (v${info.current}).`);
+      setStatus(`${p}-status`, `✅ You're up to date (v${info.current}).`);
     }
   } catch (e) {
-    setStatus("sa-status", `⚠ Update check failed: ${e.message}`, false);
+    setStatus(`${p}-status`, `⚠ Update check failed: ${e.message}`, false);
   }
 }
 
-async function applyAppUpdate() {
+async function applyAppUpdate(p) {
   const ok = await confirmDialog(
     "Download and install the update now?\n\nFlowkey's program files are replaced; restart Flowkey afterwards.",
     "Install",
   );
   if (!ok) return;
-  $("sa-update-apply").disabled = true;
-  setStatus("sa-status", "Downloading update…");
+  const install = $(`${p}-update-apply`);
+  install.disabled = true;
+  setStatus(`${p}-status`, "Downloading update…");
   try {
     const out = await action("update_apply");
-    setStatus("sa-status", `✅ ${out || "Update applied — restart Flowkey."}`);
-    $("sa-update-apply").hidden = true;
+    setStatus(`${p}-status`, `✅ ${out || "Update applied — restart Flowkey."}`);
+    install.hidden = true;
   } catch (e) {
-    setStatus("sa-status", `⚠ Update failed: ${e.message}`, false);
+    setStatus(`${p}-status`, `⚠ Update failed: ${e.message}`, false);
   } finally {
-    $("sa-update-apply").disabled = false;
+    install.disabled = false;
   }
 }
 
@@ -535,18 +543,18 @@ function textDialog(title, body) {
   close.focus();
 }
 
-async function runDiagnostics() {
-  setStatus("sa-status", "Running diagnostics…");
+async function runDiagnostics(p) {
+  setStatus(`${p}-status`, "Running diagnostics…");
   try {
     const report = await action("doctor");
-    setStatus("sa-status", "");
+    setStatus(`${p}-status`, "");
     textDialog("Diagnostics", report || "Diagnostics returned no output.");
   } catch (e) {
-    setStatus("sa-status", `⚠ Diagnostics failed: ${e.message}`, false);
+    setStatus(`${p}-status`, `⚠ Diagnostics failed: ${e.message}`, false);
   }
 }
 
-async function exitFlowkey() {
+async function exitFlowkey(p) {
   const ok = await confirmDialog(
     "Exit Flowkey?\n\nHotkeys stop working and this dashboard disconnects until you start Flowkey again.",
     "Exit",
@@ -555,20 +563,29 @@ async function exitFlowkey() {
   try {
     await action("exit_app");
   } catch (e) {
-    setStatus("sa-status", `⚠ ${e.message}`, false);
+    setStatus(`${p}-status`, `⚠ ${e.message}`, false);
     return;
   }
-  setStatus("sa-status", "Exiting…");
+  setStatus(`${p}-status`, "Exiting…");
   // The tray app polls for the request every 500 ms and then shuts this daemon
   // down; if the daemon is still answering a few seconds later, nobody picked it up.
   setTimeout(async () => {
     try {
       await fetch("/healthz");
-      setStatus("sa-status", "⚠ The tray app didn't respond — is Flowkey's tray icon running?", false);
+      setStatus(`${p}-status`, "⚠ The tray app didn't respond — is Flowkey's tray icon running?", false);
     } catch {
-      setStatus("sa-status", "Flowkey has exited. You can close this window.");
+      setStatus(`${p}-status`, "Flowkey has exited. You can close this window.");
     }
   }, 4000);
+}
+
+function bindServerAppControls(p) {
+  $(`${p}-warmup`).addEventListener("click", () => serverAction(p, "warmup", "Warming up the model server…"));
+  $(`${p}-stop`).addEventListener("click", () => serverAction(p, "stop", "Stopping the model server…"));
+  $(`${p}-update-check`).addEventListener("click", () => checkAppUpdate(p));
+  $(`${p}-update-apply`).addEventListener("click", () => applyAppUpdate(p));
+  $(`${p}-diagnostics`).addEventListener("click", () => runDiagnostics(p));
+  $(`${p}-exit`).addEventListener("click", () => exitFlowkey(p));
 }
 
 // ---- Telemetry -------------------------------------------------------------
@@ -1704,13 +1721,14 @@ function notesConfigPatch() {
 const CONFIG_SECTION_KEY = "flowkey.config.section.v1";
 const CONFIG_COLLAPSED_KEY = "flowkey.config.collapsed.v1";
 const CONFIG_SECTION_META = {
-  essentials: ["Essentials", "Everyday shortcuts, performance, privacy, and tone."],
+  essentials: ["Essentials", "Everyday shortcuts and the tray's quick toggles (these apply instantly)."],
   models: ["Models & AI", "Choose the local provider, runtime, and active model."],
   notes: ["Notes", "Control the vault, categories, capture, and local enrichment."],
   prompts: ["Prompts", "Shape prompt output and create your own prefix modes."],
   notifications: ["Notifications", "Decide which local desktop signals deserve attention."],
   meetings: ["Meetings", "Connect Quill and schedule after-hours digest processing."],
   advanced: ["Advanced", "Tune long-input routing and lower-level behavior."],
+  app: ["App", "Version, updates, diagnostics, the model server, and exiting Flowkey. Everything here acts immediately."],
 };
 
 let activeConfigSection = "essentials";
@@ -2006,7 +2024,8 @@ async function loadConfig() {
   }
   loadServerStatus();
   loadModels();
-  loadAutostart();
+  loadQuickState();          // Essentials' instant toggles (autostart, clipboard watcher, …)
+  loadServerApp("cfg-app");
   if (($("cfg-provider").value || "fastflowlm") === "fastflowlm") loadFlmVersion(false);
 }
 
@@ -2274,15 +2293,6 @@ function commitCombo() {
     return true;
   }
   return false;
-}
-
-async function loadAutostart() {
-  try {
-    const state = await action("get_autostart_state");
-    $("cfg-autostart").checked = !!state.enabled;
-  } catch {
-    /* leave unchecked when the daemon can't read the Run key */
-  }
 }
 
 function renderFlmVersion(info) {
@@ -3444,12 +3454,9 @@ document.addEventListener("DOMContentLoaded", () => {
     setQuick("history", e.target.checked ? "visible" : "redacted", "config-status"));
   $("cfg-autostart").addEventListener("change", (e) =>
     setQuick("autostart", e.target.checked ? "on" : "off", "config-status"));
-  $("sa-warmup").addEventListener("click", () => serverAction("warmup", "Warming up the model server…"));
-  $("sa-stop").addEventListener("click", () => serverAction("stop", "Stopping the model server…"));
-  $("sa-update-check").addEventListener("click", checkAppUpdate);
-  $("sa-update-apply").addEventListener("click", applyAppUpdate);
-  $("sa-diagnostics").addEventListener("click", runDiagnostics);
-  $("sa-exit").addEventListener("click", exitFlowkey);
+  SERVER_APP_PREFIXES.forEach(bindServerAppControls);
+  $("cfg-clipwatch").addEventListener("change", (e) =>
+    setQuick("clipboard_watcher", e.target.checked ? "on" : "off", "config-status"));
   // Tray-side changes: re-read when the dashboard window comes back to the front.
   window.addEventListener("focus", loadQuickState);
   document.addEventListener("visibilitychange", () => {

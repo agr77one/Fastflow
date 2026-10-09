@@ -5,6 +5,7 @@
 ### Added
 
 - **Everything in the tray's right-click menu is now in the dashboard.** Overview has a *Quick controls* card — Performance, Tone, History text, Start with Windows and the clipboard watcher (which had no dashboard control at all) — and a *Server & app* card with Warm up, Stop server, Check for updates / Install, Run diagnostics (report with Copy) and Exit Flowkey. Every control applies instantly through the same action the tray uses, and the two stay in sync: a change in the dashboard updates the tray's check marks within half a second, and a change in the tray shows up when you return to the dashboard.
+- **Config has an App section, and Essentials holds every quick toggle.** *Start with Windows* moved from Models & AI to a new Essentials card, *Startup & clipboard*, next to a clipboard-watcher switch, so Essentials now carries all five of the tray's quick toggles. The new *App* section collects version, model-server status, updates, diagnostics, warm up / stop and Exit.
 
 ### Fixed
 

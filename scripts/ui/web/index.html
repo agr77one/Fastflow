@@ -442,6 +442,9 @@
         <button type="button" role="tab" class="config-section-tab"
                 data-config-section="advanced" aria-controls="config-grid"
                 aria-selected="false">Advanced</button>
+        <button type="button" role="tab" class="config-section-tab"
+                data-config-section="app" aria-controls="config-grid"
+                aria-selected="false">App</button>
       </nav>
     </div>
     <div class="config-save-bar">
@@ -512,7 +515,6 @@
           <button class="btn" id="provider-start">Start server</button>
           <span class="muted small" id="provider-start-status"></span>
         </div>
-        <label class="check-row"><input type="checkbox" id="cfg-autostart"> Launch Flowkey when I sign in (per-user) <span class="muted small">— applies instantly</span></label>
         <label class="check-row"><input type="checkbox" id="cfg-warm-on-start"> Warm FastFlowLM when Flowkey starts</label>
         <div class="form-row">
           <label for="cfg-keep-warm">Keep warm (min; 0 = off)</label>
@@ -574,6 +576,36 @@
           <label><input type="radio" name="tone" value="casual"> 👕 Casual</label>
           <label><input type="radio" name="tone" value="friendly"> 🤝 Friendly</label>
         </div>
+      </div>
+      <div class="card" id="config-startup" data-config-section="essentials">
+        <h2>Startup &amp; clipboard</h2>
+        <p class="muted small">Apply instantly — same as the tray's Quick toggles.</p>
+        <label class="check-row"><input type="checkbox" id="cfg-autostart"> Start Flowkey when I sign in to Windows (per-user)</label>
+        <label class="check-row"><input type="checkbox" id="cfg-clipwatch"> 📋 Clipboard watcher <span class="muted small">— offers actions for copied URLs, stack traces and code; password managers are ignored</span></label>
+      </div>
+      <div class="card card-wide" id="config-app" data-config-section="app" hidden>
+        <h2>Flowkey app</h2>
+        <dl>
+          <dt>Version</dt><dd id="cfg-app-version">…</dd>
+          <dt>Model server</dt><dd id="cfg-app-server">…</dd>
+        </dl>
+        <h3 class="subhead">Updates &amp; diagnostics</h3>
+        <div class="card-actions sa-actions">
+          <button type="button" class="btn" id="cfg-app-update-check">Check for updates</button>
+          <button type="button" class="btn btn-primary" id="cfg-app-update-apply" hidden>Install update</button>
+          <button type="button" class="btn" id="cfg-app-diagnostics">Run diagnostics</button>
+        </div>
+        <h3 class="subhead">Model server</h3>
+        <div class="card-actions sa-actions">
+          <button type="button" class="btn" id="cfg-app-warmup">Warm up</button>
+          <button type="button" class="btn" id="cfg-app-stop">Stop server</button>
+        </div>
+        <h3 class="subhead">Exit</h3>
+        <div class="card-actions sa-actions">
+          <button type="button" class="btn btn-danger" id="cfg-app-exit">Exit Flowkey</button>
+          <span class="muted small">Stops hotkeys, the dashboard and the model server, like the tray's Exit.</span>
+        </div>
+        <p class="muted small" id="cfg-app-status" aria-live="polite"></p>
       </div>
       <div class="card" id="config-prompt-builder"
            data-config-section="prompts" hidden>

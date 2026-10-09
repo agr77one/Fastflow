@@ -198,7 +198,7 @@ T51|.|2.6.x cross-meeting search: local transcript cache + SQLite FTS5 by turn +
 T52|.|2.6.x speaker labeling: `Speaker N`→name from cues+participants+calendar w/ confidence; user confirm, remembered|V78
 T53|.|2.6.0 docs/version/changelog + full gates|V18,V20
 T54|x|unreleased: UI parity: Overview Quick controls (perf/tone/history/autostart/clipboard watcher, instant, same daemon actions as tray) + Server & app card (warmup/stop/update check+apply/diagnostics/exit); `get/set_clipboard_watcher` + `refresh_tray`/`exit_app` markers; two-way sync|V81,V5,V20
-T55|.|2.6 Config menu: autostart → Essentials, new App section (version/updates/diagnostics/exit), Meetings intel settings (Essentials toggles already instant via T54)|V81,V59,V20
+T55|x|unreleased: Config menu: Essentials gains "Startup & clipboard" (autostart moved from Models & AI + clipboard watcher, instant) so it carries all 5 tray quick toggles; new App section (version/model server/updates+install/diagnostics/warm up/stop/exit; shared w/ Overview via id prefix `sa`/`cfg-app`); meeting-intel settings deferred to T47 (no feature yet)|V81,V59,V20
 ```
 
 ## §B bugs

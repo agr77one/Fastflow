@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 
@@ -67,14 +68,44 @@ def test_quick_controls_cover_every_tray_quick_toggle():
         assert re.search(rf"\b{group}: \(v\) =>", app), f"no daemon action wired for {group}"
 
 
-def test_server_and_app_card_covers_the_tray_server_menu_diagnostics_and_exit():
+def test_server_and_app_controls_cover_the_tray_server_menu_diagnostics_and_exit():
     server = _tray_submenu_items("BuildServerMenu_Impl")
     assert {"Warmup", "Stop", "Check for updates…"} <= set(server)
+    html, app = _read("index.html"), _read("app.js")
+    prefixes = json.loads(re.search(r"const SERVER_APP_PREFIXES = (\[.*?\]);", app).group(1))
+    assert prefixes == ["sa", "cfg-app"]          # Overview card + Config › App
+    for p in prefixes:
+        for suffix in ("server", "version", "warmup", "stop", "update-check", "update-apply",
+                       "diagnostics", "exit", "status"):
+            assert f'id="{p}-{suffix}"' in html, f"{p}-{suffix} missing"
+        assert re.search(rf'id="{p}-update-apply"[^>]*\shidden', html)  # only once an update exists
+
+
+def test_config_essentials_carries_every_tray_quick_toggle():
     html = _read("index.html")
-    for element_id in ("sa-warmup", "sa-stop", "sa-update-check", "sa-update-apply",
-                       "sa-diagnostics", "sa-exit"):
-        assert f'id="{element_id}"' in html
-    assert re.search(r'id="sa-update-apply"[^>]*\shidden', html)  # only once an update exists
+    essentials = "".join(
+        m.group(0) for m in re.finditer(
+            r'<div class="card[^"]*" id="config-[a-z-]+"\s+data-config-section="essentials".*?\n      </div>', html, re.S)
+    )
+    for marker in ('name="perf"', 'name="tone"', 'id="cfg-store-text"', 'id="cfg-autostart"', 'id="cfg-clipwatch"'):
+        assert marker in essentials, f"{marker} is not in Config › Essentials"
+
+
+def test_every_config_section_tab_has_cards_and_a_title():
+    html, app = _read("index.html"), _read("app.js")
+    tabs = re.findall(r'role="tab" class="config-section-tab[^"]*"\s+data-config-section="([a-z]+)"', html)
+    meta = re.search(r"const CONFIG_SECTION_META = \{(.*?)\n\};", app, re.S).group(1)
+    for section in tabs:
+        assert re.search(rf"^\s+{section}: \[", meta, re.M), f"no title/description for {section}"
+        assert re.search(rf'<div class="card[^"]*" id="[^"]+"\s+data-config-section="{section}"', html), \
+            f"section {section} has no cards"
+    assert "app" in tabs
+
+
+def test_ids_are_unique():
+    ids = re.findall(r'\sid="([^"]+)"', _read("index.html"))
+    dupes = sorted({i for i in ids if ids.count(i) > 1})
+    assert not dupes, f"duplicate ids (getElementById returns only the first): {dupes}"
 
 
 def test_save_all_never_resends_the_instant_settings():
