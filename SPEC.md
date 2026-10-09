@@ -17,7 +17,7 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - LLM: FastFlowLM NPU @ `:52625` | Ollama @ `:11434`, OpenAI-compat `POST /v1/chat/completions`
 - dashboard: daemon-served `scripts/ui/web/{index.html,app.js,styles.css}`, CSP `default-src 'self'`
 - paths: `scripts/paths.py` → USER_ROOT/{config,data,logs}; `_version.py` = version src of truth
-- version: `2.5.4` = meetings model floor + digest coverage + HTTP-error parity (T43,T44); repo `agr77one/Fastflow`
+- version: `2.6.0` = hotkey long-selection integrity + dashboard/tray parity + Config App section (T45,T54,T55); repo `agr77one/Fastflow`
 - run tree = `flowkey-pub2` (worktree, branch `live`=origin/main). old `FastFlowPrompt_Local_Setup`=1.5.0 stale.
 
 ## §I interfaces
@@ -188,17 +188,17 @@ T41|x|2.5.1: always capture provider output on start failure; flag+refresh stale
 T42|x|2.5.2: repair poisoned FLM_MODEL_PATH for flm children; repair unlaunchable autostart entry; use flm pull --force instead of remove-then-pull|V65,V66,V67
 T43|x|unreleased: meetings on their own model w/ floor (4B/8K) + HTTPError ≠ unreachable + wired reply budgets/temperature/timeout + `meeting_models` + Config>Meetings picker/temperature|V70,V71,V72,V20
 T44|x|unreleased: digest coverage (`truncated`/`coverage`, `✓ partial`, reader note) + 16000 default + Config>Meetings "Re-digest cut-off digests"; HTTPError parity ∀ call sites (hotkeys/Ollama/Quill); log-noise dedupe; `idle_minutes` 0; CSP inline styles|V71,V73,V74,V20
-T45|x|unreleased: hotkey long-selection integrity — grammar covers every chunk (pass-through on failure), rewrite reply budget scales with the text, summarising modes note skipped text|V75,V20
-T46|.|2.6 meeting intel: transcript parser (`[Ns] label:` turns, share %) + turn-boundary sectioner ~3.5k; plan `docs/meeting-intel-2.6-plan.md`|V20
-T47|.|2.6 `intel` record v1 on digest row: map-reduce per-section line extraction (≥1 TOPIC) + code merge/dedupe/owner-grounding/ts-clamp + header + theme-cluster calls; batch + on-demand + idle backfill|V76,V77,V78,V79,V20
-T48|.|2.6 mind-map view (themes→topics m:ss, decisions, actions→owner, questions, people) collapsible + SVG/MD export|V80,V5,V20
-T49|.|2.6 summary dimensions (overview/by topic/by person/decisions+actions/timeline) + meeting-list facets (category/attendee/theme/open actions)|V80,V5,V20
-T50|.|2.6 model guidance: 9B recommended in Config>Meetings, model stamped on intel, unconfirmed owners muted, rebuild-with|V70,V78
-T51|.|2.6.x cross-meeting search: local transcript cache + SQLite FTS5 by turn + search box + Chat retrieval w/ [meeting,m:ss,speaker] citations|V20
-T52|.|2.6.x speaker labeling: `Speaker N`→name from cues+participants+calendar w/ confidence; user confirm, remembered|V78
-T53|.|2.6.0 docs/version/changelog + full gates|V18,V20
-T54|x|unreleased: UI parity: Overview Quick controls (perf/tone/history/autostart/clipboard watcher, instant, same daemon actions as tray) + Server & app card (warmup/stop/update check+apply/diagnostics/exit); `get/set_clipboard_watcher` + `refresh_tray`/`exit_app` markers; two-way sync|V81,V5,V20
-T55|x|unreleased: Config menu: Essentials gains "Startup & clipboard" (autostart moved from Models & AI + clipboard watcher, instant) so it carries all 5 tray quick toggles; new App section (version/model server/updates+install/diagnostics/warm up/stop/exit; shared w/ Overview via id prefix `sa`/`cfg-app`); meeting-intel settings deferred to T47 (no feature yet)|V81,V59,V20
+T45|x|2.6.0: hotkey long-selection integrity — grammar covers every chunk (pass-through on failure), rewrite reply budget scales with the text, summarising modes note skipped text|V75,V20
+T46|.|2.7 meeting intel: transcript parser (`[Ns] label:` turns, share %) + turn-boundary sectioner ~3.5k; plan `docs/meeting-intel-2.7-plan.md`|V20
+T47|.|2.7 `intel` record v1 on digest row: map-reduce per-section line extraction (≥1 TOPIC) + code merge/dedupe/owner-grounding/ts-clamp + header + theme-cluster calls; batch + on-demand + idle backfill; Config>Meetings intel settings (model, backfill, hide small talk)|V76,V77,V78,V79,V20
+T48|.|2.7 mind-map view (themes→topics m:ss, decisions, actions→owner, questions, people) collapsible + SVG/MD export|V80,V5,V20
+T49|.|2.7 summary dimensions (overview/by topic/by person/decisions+actions/timeline) + meeting-list facets (category/attendee/theme/open actions)|V80,V5,V20
+T50|.|2.7 model guidance: 9B recommended in Config>Meetings, model stamped on intel, unconfirmed owners muted, rebuild-with|V70,V78
+T51|.|2.7.x cross-meeting search: local transcript cache + SQLite FTS5 by turn + search box + Chat retrieval w/ [meeting,m:ss,speaker] citations|V20
+T52|.|2.7.x speaker labeling: `Speaker N`→name from cues+participants+calendar w/ confidence; user confirm, remembered|V78
+T53|.|2.7.0 docs/version/changelog + full gates|V18,V20
+T54|x|2.6.0: UI parity: Overview Quick controls (perf/tone/history/autostart/clipboard watcher, instant, same daemon actions as tray) + Server & app card (warmup/stop/update check+apply/diagnostics/exit); `get/set_clipboard_watcher` + `refresh_tray`/`exit_app` markers; two-way sync|V81,V5,V20
+T55|x|2.6.0: Config menu: Essentials gains "Startup & clipboard" (autostart moved from Models & AI + clipboard watcher, instant) so it carries all 5 tray quick toggles; new App section (version/model server/updates+install/diagnostics/warm up/stop/exit; shared w/ Overview via id prefix `sa`/`cfg-app`); meeting-intel settings deferred to T47 (no feature yet)|V81,V59,V20
 ```
 
 ## §B bugs

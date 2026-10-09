@@ -1,10 +1,10 @@
-# Meeting Intelligence Plan ("2.6")
+# Meeting Intelligence Plan ("2.7")
 
 Date: 2026-10-08
-Status: PLANNED on `release/2.6.0` (branched from `fix/long-selection-tail-loss`, which carries T45)
-Target release: **2.6.0** (structured meeting record + mind map + summary views + facets +
-dashboard ⇄ tray parity UI rework);
-**2.6.x** (cross-meeting search + speaker labeling)
+Status: PLANNED. The grammar fix (T45) and the dashboard UI rework (T54, T55) shipped in 2.6.0;
+the meeting work below targets 2.7.0.
+Target release: **2.7.0** (structured meeting record + mind map + summary views + facets);
+**2.7.x** (cross-meeting search + speaker labeling)
 
 ## Goal
 
@@ -178,23 +178,26 @@ control, shows it read-only, or hides it behind "Save all settings".
 - Move "Start with Windows" from Models & AI to Essentials.
 - New **App** section: version, updates, diagnostics, exit, autostart.
 - Meetings section: meeting-intel settings (model with 9B recommended, idle backfill
-  on/off, hide small-talk topics) next to the existing digest settings.
+  on/off, hide small-talk topics) next to the existing digest settings — **moved to T47**:
+  they ship with the feature they configure.
+
+Status: T54 and T55 (all but the meeting settings) are done.
 
 ## Phases
 
 | Phase | Scope | Release |
 |---|---|---|
-| A | T45 grammar fix (done on this branch's base) | 2.6.0 |
-| B | transcript parser + sectioner + tests | 2.6.0 |
-| C | intel pipeline, record, batch + on-demand + idle backfill, daemon actions | 2.6.0 |
-| D | mind-map view + export | 2.6.0 |
-| E | summary dimensions + meeting-list facets | 2.6.0 |
-| F | model guidance: recommend 9B in the picker, record model, owner confidence | 2.6.0 |
-| U1 | Quick controls + Server & app cards; clipboard-watcher/exit actions; two-way tray sync | 2.6.0 |
-| U2 | Config menu adjustments (Essentials, new App section, Meetings intel settings) | 2.6.0 |
-| G | cross-meeting search: local transcript cache, SQLite FTS5 index by turn, search box, Chat retrieves top snippets and answers with `[meeting, m:ss, speaker]` citations | 2.6.x |
-| H | speaker labeling: map `Speaker N` → name from transcript cues + participants + calendar, with confidence; user confirms, remembered per person | 2.6.x |
-| — | docs, version 2.6.0, full gates (V18, V20) | 2.6.0 |
+| A | T45 grammar fix | shipped in 2.6.0 |
+| B | transcript parser + sectioner + tests | 2.7.0 |
+| C | intel pipeline, record, batch + on-demand + idle backfill, daemon actions | 2.7.0 |
+| D | mind-map view + export | 2.7.0 |
+| E | summary dimensions + meeting-list facets | 2.7.0 |
+| F | model guidance: recommend 9B in the picker, record model, owner confidence | 2.7.0 |
+| U1 | Quick controls + Server & app cards; clipboard-watcher/exit actions; two-way tray sync | shipped in 2.6.0 |
+| U2 | Config menu adjustments (Essentials, new App section; Meetings intel settings → C) | shipped in 2.6.0 |
+| G | cross-meeting search: local transcript cache, SQLite FTS5 index by turn, search box, Chat retrieves top snippets and answers with `[meeting, m:ss, speaker]` citations | 2.7.x |
+| H | speaker labeling: map `Speaker N` → name from transcript cues + participants + calendar, with confidence; user confirms, remembered per person | 2.7.x |
+| — | docs, version 2.7.0, full gates (V18, V20) | 2.7.0 |
 
 Search (G) needs no new dependency: Python's bundled SQLite has FTS5 (checked: 3.50.4).
 `embed-gemma:300m` (0.6 GB) is in the FLM catalog if keyword search proves too literal.

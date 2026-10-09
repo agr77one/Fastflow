@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 2.6.0
+
+**Long selections no longer lose text, and the dashboard can do everything the tray menu can.**
 
 ### Added
 
