@@ -348,6 +348,7 @@
     <div class="grid">
       <div class="card card-wide">
         <h2>Meetings <span id="mtg-header-count" class="muted small"></span> <span class="muted small" id="mtg-status">checking Quill…</span></h2>
+        <p class="small" id="mtg-coverage-line" aria-live="polite"></p>
         <div class="form-row">
           <input type="text" id="mtg-query" placeholder="Search meetings… (title, people, topics)">
           <button class="btn" id="mtg-search-btn">Search</button>
@@ -762,28 +763,33 @@
         <div class="form-row"><label for="mtg-maxctx">Max context tokens</label><input type="number" id="mtg-maxctx" min="500" max="32000"><span class="muted small">how much of each meeting is fed to the model — longer meetings are cut here (default 16000 covers most; bigger = slower prefill)</span></div>
         <div class="form-row"><label for="mtg-model">Meeting model</label><select id="mtg-model"></select><span class="muted small" id="mtg-model-hint"></span></div>
         <div class="form-row"><label for="mtg-temp">Temperature</label><input type="number" id="mtg-temp" min="0" max="1" step="0.05"><span class="muted small">lower = more literal digests (default 0.2)</span></div>
-        <h2>Mind maps <span class="muted small" id="mtg-intel-count"></span></h2>
+        <h2>Mind maps</h2>
         <p class="muted small">A structured record per meeting — topics with times, decisions, action items with owners, open questions, who spoke — behind the reader's <em>Mind map</em> and summary views and the meeting-list filters. Built on the local model, one ~3.5k-character section at a time (about 1–3 minutes per meeting).</p>
-        <label class="check-row"><input type="checkbox" id="mtg-intel-enabled"> Build mind maps in the after-hours batch</label>
+        <label class="check-row"><input type="checkbox" id="mtg-intel-enabled"> Build a mind map whenever a meeting is processed</label>
         <div class="form-row"><label for="mtg-intel-model">Mind-map model</label><select id="mtg-intel-model"></select><span class="muted small" id="mtg-intel-model-hint"></span></div>
-        <label class="check-row"><input type="checkbox" id="mtg-intel-backfill"> Also build them for older meetings, newest first</label>
-        <div class="form-row"><label for="mtg-intel-maxrun">Mind maps per run</label><input type="number" id="mtg-intel-maxrun" min="1" max="20"></div>
+        <label class="check-row"><input type="checkbox" id="mtg-intel-backfill"> Also build them for meetings processed before mind maps existed, newest first</label>
         <label class="check-row"><input type="checkbox" id="mtg-intel-smalltalk"> Hide small-talk topics by default</label>
-        <h2>After-hours batch</h2>
-        <label class="check-row"><input type="checkbox" id="mtg-batch-enabled"> Auto-process during the window below</label>
+        <h2>After-hours processing</h2>
+        <p class="muted small">Each meeting gets its digest and its mind map. Overnight there's time for a whole backlog: about 1 minute per digest and 1–3 minutes per mind map on the NPU.</p>
+        <label class="check-row"><input type="checkbox" id="mtg-batch-enabled"> Process meetings automatically during the window below</label>
         <div class="form-row">
           <label for="mtg-start">From</label>
           <input type="time" id="mtg-start">
           <label for="mtg-end" class="label-inline">to</label>
           <input type="time" id="mtg-end">
+          <button type="button" class="btn btn-sm" id="mtg-overnight">Overnight (17:00–08:00)</button>
         </div>
+        <label class="check-row"><input type="checkbox" id="mtg-drain"> Keep going until every meeting is processed (stops when the window ends or you're back at the computer)</label>
+        <label class="check-row"><input type="checkbox" id="mtg-keep-awake"> Keep the PC awake while processing <span class="muted small">— idle sleep only; closing the lid still sleeps</span></label>
         <label class="check-row"><input type="checkbox" id="mtg-idle"> Only when the machine is idle</label>
         <div class="form-row"><label for="mtg-idle-min">Idle threshold (min)</label><input type="number" id="mtg-idle-min" min="0" max="240"></div>
-        <div class="form-row"><label for="mtg-maxrun">Max meetings per run</label><input type="number" id="mtg-maxrun" min="1" max="50"></div>
+        <div class="form-row"><label for="mtg-maxrun">Meetings per chunk</label><input type="number" id="mtg-maxrun" min="1" max="50"><span class="muted small">digests for this many, then their mind maps (fewer model swaps)</span></div>
+        <p class="small" id="mtg-coverage-cfg" aria-live="polite"></p>
         <div class="card-actions">
-          <button class="btn" id="mtg-run-now">Run batch now</button>
+          <button class="btn btn-primary" id="mtg-run-now">Process everything now</button>
+          <button class="btn" id="mtg-run-stop" hidden>Stop</button>
           <button class="btn" id="mtg-redo-cut" hidden title="Process again the digests that only covered part of their meeting, using the Max context tokens above. Replaces the cached digests.">Re-digest cut-off digests</button>
-          <span class="muted small" id="mtg-run-status"></span>
+          <span class="muted small" id="mtg-run-status" aria-live="polite"></span>
         </div>
       </div>
     </div>

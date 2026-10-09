@@ -926,7 +926,7 @@ def _intel_model(messages):
 
 def _intel_cfg(**intel):
     cfg = _cfg()
-    cfg["meetings"]["intel"] = {"enabled": True, "backfill": True, "max_per_run": 5, **intel}
+    cfg["meetings"]["intel"] = {"enabled": True, "backfill": True, **intel}
     return cfg
 
 
@@ -937,7 +937,7 @@ def test_batch_builds_mind_maps_for_new_digests_and_backfills_newest_first():
                    "processed_at": "2026-06-10T11:00:00", "digest_md": "kept"})
     fake = FakeQuill([{"id": "new", "title": "New", "date": "2026-06-18T18:00:00Z"}],
                      minutes="## m\n- a", transcript=_turns_transcript())
-    res = M.run_batch(_intel_cfg(max_per_run=2), client=fake, llm_call=_intel_model)
+    res = M.run_batch(_intel_cfg(), client=fake, llm_call=_intel_model, max_per_run=2)
 
     assert res["ok"] and res["processed"] == 1
     assert res["intel_built"] == 2 and res["intel_errors"] == []
@@ -1011,8 +1011,120 @@ def test_on_demand_build_requires_the_integration():
 
 
 def test_config_snapshot_reports_intel_settings_and_the_recommended_model():
-    snap = M.config_snapshot({"intel": {"model": "qwen3.5:9b", "max_per_run": "x"}})
+    snap = M.config_snapshot({"intel": {"model": "qwen3.5:9b"}, "batch": {"drain": False}})
     assert snap["intel"]["model"] == "qwen3.5:9b"
-    assert snap["intel"]["max_per_run"] == 5                           # bad value -> default
+    assert snap["batch"]["drain"] is False and snap["batch"]["keep_awake"] is True
+    assert M.config_snapshot(None)["batch"]["drain"] is True
     assert snap["intel"]["recommended_model"] == ffp_config.RECOMMENDED_INTEL_MODEL
     assert M.config_snapshot(None)["intel"]["enabled"] is True
+
+
+# ---------- overnight processing: drain, stop, window, progress (SPEC V82) ------------------
+
+def _meetings(n, day=18):
+    return [{"id": f"m{i}", "title": f"Meeting {i}", "date": f"2026-06-{day}T{10 + i:02d}:00:00Z"} for i in range(n)]
+
+
+@pytest.fixture
+def no_sleep_calls(monkeypatch):
+    calls = []
+    monkeypatch.setattr(M, "_keep_awake", lambda on: calls.append(on))
+    return calls
+
+
+def test_draining_processes_every_meeting_digest_and_mind_map_in_chunks(no_sleep_calls):
+    fake = FakeQuill(_meetings(5), minutes="## m\n- a", transcript=_turns_transcript())
+    res = M.run_batch(_intel_cfg(), client=fake, llm_call=_intel_model, max_per_run=2, drain=True)
+    assert res["ok"] and res["processed"] == 5 and res["intel_built"] == 5
+    assert res["stopped"] == "everything is processed"
+    assert set(MI.load_intel()) == {f"m{i}" for i in range(5)}
+    assert no_sleep_calls == [True, False]                          # awake while working, released after
+    status = M.batch_status()
+    assert status["mind_maps"] == 5 and status["mind_maps_pending"] == 0 and status["running"] is False
+
+
+def test_one_chunk_without_drain():
+    fake = FakeQuill(_meetings(5), minutes="## m\n- a", transcript=_turns_transcript())
+    res = M.run_batch(_intel_cfg(), client=fake, llm_call=_intel_model, max_per_run=2)
+    assert res["processed"] == 2 and res["intel_built"] == 2 and res["stopped"] == ""
+
+
+def test_draining_stops_when_the_window_gate_closes():
+    gate = iter([(True, "ok"), (False, "machine_active")])
+    fake = FakeQuill(_meetings(6), minutes="## m\n- a", transcript=_turns_transcript())
+    res = M.run_batch(_intel_cfg(), client=fake, llm_call=_intel_model, max_per_run=2, drain=True,
+                      keep_going=lambda: next(gate))
+    assert res["processed"] == 4                                       # two chunks, then the user came back
+    assert res["stopped"] == "you came back to the computer"
+
+
+def test_stop_batch_halts_after_the_current_meeting():
+    calls = {"n": 0}
+
+    def model(messages):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            M.stop_batch()                                             # pressed Stop during the first digest
+        return _intel_model(messages)
+
+    fake = FakeQuill(_meetings(5), minutes="## m\n- a", transcript=_turns_transcript())
+    res = M.run_batch(_intel_cfg(), client=fake, llm_call=model, max_per_run=3, drain=True)
+    assert res["processed"] == 1 and res["intel_built"] == 0 and res["stopped"] == "stopped"
+
+
+def test_a_meeting_that_keeps_failing_is_not_retried_forever_while_draining():
+    def broken(messages):
+        raise RuntimeError("model fell over")
+
+    fake = FakeQuill(_meetings(3), minutes="## m\n- a", transcript=_turns_transcript())
+    res = M.run_batch(_intel_cfg(), client=fake, llm_call=broken, max_per_run=2, drain=True)
+    assert res["ok"] and res["processed"] == 0 and len(res["errors"]) == 3
+    assert res["stopped"] == "everything is processed"                 # each tried once, then done
+
+
+def test_backfill_builds_mind_maps_for_meetings_digested_before_this_release():
+    for i in range(3):
+        M.save_digest({"meeting_id": f"old{i}", "title": f"Old {i}", "date": f"2026-05-0{i + 1}T10:00:00Z",
+                       "processed_at": "2026-05-01T11:00:00", "digest_md": "kept"})
+    fake = FakeQuill([], transcript=_turns_transcript())                # nothing new in Quill
+    res = M.run_batch(_intel_cfg(), client=fake, llm_call=_intel_model, max_per_run=2, drain=True)
+    assert res["processed"] == 0 and res["intel_built"] == 3
+    assert M.batch_status()["mind_maps_pending"] == 0
+
+
+def test_start_batch_runs_in_the_background_and_refuses_a_second_run(monkeypatch, no_sleep_calls):
+    gate = threading.Event()
+    fake = FakeQuill(_meetings(2), minutes="## m\n- a", transcript=_turns_transcript())
+    monkeypatch.setattr(ffp_quill, "QuillClient", lambda url: fake)
+    monkeypatch.setattr(ffp_chat, "_default_llm_call", lambda messages, **kw: gate.wait(5) and _intel_model(messages))
+    monkeypatch.setattr(M, "resolve_model", lambda mcfg: M.MeetingModel("fake:9b", 32768))
+
+    assert M.start_batch(_intel_cfg())["started"] is True
+    for _ in range(200):
+        if M.batch_status()["running"]:
+            break
+        threading.Event().wait(0.02)
+    assert M.start_batch(_intel_cfg())["ok"] is False                   # busy
+    gate.set()
+    for _ in range(500):
+        if not M.batch_status()["running"]:
+            break
+        threading.Event().wait(0.02)
+    st = M.batch_status()
+    assert st["running"] is False and st["last_processed"] == 2 and st["last_intel_built"] == 2
+
+
+def test_resolve_model_falls_back_to_any_installed_model_that_qualifies(monkeypatch, caplog):
+    # Live: the default was uninstalled and the batch failed for an hour while
+    # qwen3.5:9b and gemma4-it:12b sat installed (B65).
+    catalog = [
+        _entry("hy-mt2-flash:1.8b", ctx=1024, size="1.8B"),
+        _entry("qwen3.5:4b", installed=False, size="4B"),
+        _entry("gemma4-it:12b", ctx=32768, size="12B"),
+        _entry("qwen3.5:9b", ctx=32768, size="9B"),
+    ]
+    _stub_grammar_fix(monkeypatch, catalog)
+    with caplog.at_level("WARNING", logger="ffp.meetings"):
+        got = M.resolve_model({})
+    assert got.name == "qwen3.5:9b"                                    # smallest qualifying = fastest
+    assert "fell back" in caplog.text

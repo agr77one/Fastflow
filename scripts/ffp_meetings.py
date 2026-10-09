@@ -88,7 +88,10 @@ _MIN_REDO_GAIN_CHARS = 1000
 _batch_lock = threading.Lock()   # only one batch run at a time
 _io_lock = threading.Lock()      # serialize digest-file read-modify-write
 _status: dict = {"running": False, "last_run_at": "", "last_processed": 0, "last_errors": 0,
-                 "last_skipped": 0, "last_reason": ""}
+                 "last_skipped": 0, "last_reason": "", "last_intel_built": 0, "last_stopped": "",
+                 # live progress while running (the dashboard polls batch_status)
+                 "phase": "", "current": "", "done": 0, "done_intel": 0, "started_at": ""}
+_stop = threading.Event()        # set by stop_batch(); checked between meetings
 
 # A meeting younger than this may still be waiting on Quill's transcription —
 # keep retrying it. Older with no content = a stub recording that will never
@@ -156,7 +159,7 @@ def should_run_batch(meetings_cfg: dict, now_dt, idle_seconds: float | None) -> 
         return False, "batch_disabled"
     nm = now_dt.hour * 60 + now_dt.minute
     start = _parse_hhmm(b.get("start"), 17 * 60)
-    end = _parse_hhmm(b.get("end"), 21 * 60)
+    end = _parse_hhmm(b.get("end"), 8 * 60)       # default window runs overnight
     if not _in_window(nm, start, end):
         return False, "outside_window"
     if b.get("only_when_idle", True) and idle_seconds is not None:
@@ -474,7 +477,16 @@ def resolve_model(mcfg: dict) -> MeetingModel:
     if catalog is None:  # can't verify -> trust the configuration
         return MeetingModel(configured)
     problems: list[str] = []
-    for name in dict.fromkeys(n for n in (configured, DEFAULT_MODEL, active) if n):
+    # Then any other installed model that qualifies, smallest (fastest) first: with the
+    # default uninstalled, a batch failed for an hour while qwen3.5:9b and gemma4-it:12b
+    # sat installed and usable (B65).
+    import ffp_hardware
+    others = sorted(
+        (n for n, e in catalog.items() if e.get("installed") and n not in (configured, DEFAULT_MODEL, active)),
+        key=lambda n: (ffp_hardware.parse_params_b(n) or ffp_hardware.parse_params_b(
+            str(catalog[n].get("parameter_size") or "")) or 99.0, n),
+    )
+    for name in dict.fromkeys([n for n in (configured, DEFAULT_MODEL, active) if n] + others):
         problem = _model_problem(catalog.get(name))
         if not problem:
             if problems:
@@ -755,112 +767,228 @@ def _redo_queue(mcfg: dict, llm: _LLM, cap: int) -> tuple[list[dict], int]:
     return due[:cap], max(0, len(due) - cap)
 
 
-def run_batch(cfg: dict, *, llm_call=None, client=None, max_per_run=None, reason: str = "manual",
-              redigest_truncated: bool = False) -> dict:
-    """Process up to N undigested recent meetings. Idempotent (skips cached).
+def _keep_awake(on: bool) -> None:
+    """Hold off Windows *idle* sleep while a batch works (ES_SYSTEM_REQUIRED on this
+    thread, released when the batch ends). A closed lid or a manual sleep still
+    sleeps. No-op off Windows."""
+    try:
+        import ctypes
+        ctypes.windll.kernel32.SetThreadExecutionState(0x80000000 | (0x00000001 if on else 0))
+    except Exception:
+        pass
 
-    ``redigest_truncated`` instead redoes digests that were cut short and that the
-    current limit would cover more of (a deliberate, user-initiated pass: it replaces
-    cached digests, so it never runs from the scheduler)."""
+
+def _undigested(client, cap: int, exclude: set[str]) -> list[dict]:
+    """Up to ``cap`` recent Quill meetings (newest first) with no digest and no skip
+    marker, leaving out ``exclude`` (meetings already tried in this run)."""
+    have = {d.get("meeting_id") for d in load_digests()}
+    skips = load_skips()
+    todo: list[dict] = []
+    seen: set[str] = set()
+    offset = 0
+    while len(todo) < cap and offset <= 120:
+        page = ffp_quill.list_recent_meetings(limit=30, offset=offset, client=client)
+        if not page:
+            break
+        for mt in page:
+            mid = mt.get("id")
+            if mid and mid not in seen:
+                seen.add(mid)
+                if mid not in have and mid not in skips and mid not in exclude:
+                    todo.append(mt)
+                    if len(todo) >= cap:
+                        break
+        offset += 30
+    return todo
+
+
+_STOP_REASONS = {
+    "outside_window": "the after-hours window ended",
+    "machine_active": "you came back to the computer",
+    "batch_disabled": "after-hours processing was turned off",
+    "integration_disabled": "the Quill integration was turned off",
+}
+
+
+def run_batch(cfg: dict, *, llm_call=None, client=None, max_per_run=None, reason: str = "manual",
+              redigest_truncated: bool = False, drain: bool = False,
+              keep_going: Callable[[], tuple[bool, str]] | None = None) -> dict:
+    """Process meetings -- a digest and a mind map each.
+
+    Works in chunks of ``batch.max_per_run`` meetings: digests for the chunk, then mind
+    maps for them plus older digests that have none (newest first), so the NPU swaps
+    models twice per chunk rather than twice per meeting. One chunk unless ``drain``:
+    then it keeps taking chunks until nothing is left, ``keep_going()`` says stop (the
+    scheduler passes its window/idle gate), or ``stop_batch()`` is called. Idempotent:
+    cached digests and built mind maps are never redone. ``redigest_truncated`` instead
+    redoes cut-off digests (one chunk, user-initiated only, no mind-map pass)."""
     mcfg = cfg.get("meetings") if isinstance(cfg.get("meetings"), dict) else {}
     if not mcfg.get("enabled"):
         return {"ok": False, "error": "Quill integration is disabled", "processed": 0}
     if not _batch_lock.acquire(blocking=False):
         return {"ok": False, "error": "a batch run is already in progress", "processed": 0}
+    b = mcfg.get("batch") if isinstance(mcfg.get("batch"), dict) else {}
+    keep_awake = bool(b.get("keep_awake", True))
+    _stop.clear()
+    _status.update(running=True, phase="", current="", done=0, done_intel=0, started_at=_now_iso(),
+                   last_reason=reason)
+    if keep_awake:
+        _keep_awake(True)
     try:
-        _status["running"] = True
         url = str(mcfg.get("mcp_url") or ffp_quill.DEFAULT_MCP_URL)
         c = client or ffp_quill.QuillClient(url)
         if not c.connect():
             return {"ok": False, "error": "Quill MCP server is not reachable", "processed": 0}
-        b = mcfg.get("batch") if isinstance(mcfg.get("batch"), dict) else {}
         cap = int(max_per_run if max_per_run is not None else b.get("max_per_run", 10))
         cap = max(1, min(cap, 50))
-
-        todo: list[dict] = []
-        seen: set[str] = set()
-        skips = load_skips()
-        offset = 0
-        while not redigest_truncated and len(todo) < cap and offset <= 120:
-            page = ffp_quill.list_recent_meetings(limit=30, offset=offset, client=c)
-            if not page:
-                break
-            for mt in page:
-                mid = mt.get("id")
-                if mid and mid not in seen:
-                    seen.add(mid)
-                    if not digest_exists(mid) and mid not in skips:
-                        todo.append(mt)
-                        if len(todo) >= cap:
-                            break
-            offset += 30
-
-        llm = llm_call
-        if todo or redigest_truncated:
-            # Resolve the model once for the whole batch; if nothing can run meetings,
-            # every meeting would fail identically -- say so once, up front.
-            try:
-                llm = _resolve_llm(llm_call, mcfg)
-            except MeetingModelError as exc:
-                log.warning("meeting batch not started: %s", exc)
-                return {"ok": False, "error": str(exc), "processed": 0}
-        remaining = 0
         if redigest_truncated:
-            todo, remaining = _redo_queue(mcfg, llm, cap)
+            drain = False
 
-        processed, skipped, errors = 0, 0, []
-        for mt in todo:
-            try:
-                save_digest(process_meeting(mt, cfg, client=c, llm_call=llm))
-                processed += 1
-            except NoContentError as exc:
-                # A redo must never skip-mark: the meeting already has a good (if partial)
-                # digest, and losing its transcript later is not "nothing to digest".
-                if not redigest_truncated and _older_than_days(mt.get("date"), _SKIP_MIN_AGE_DAYS):
-                    save_skip(mt)
-                    skipped += 1
-                    log.info("meeting %s (%s) has no content in Quill; marked skipped — won't re-queue",
-                             mt.get("id"), mt.get("title"))
-                else:
-                    log.warning("digest failed for %s: %s (recent meeting — will retry next run)",
-                                mt.get("id"), exc)
+        processed, skipped, queued, remaining = 0, 0, 0, 0
+        errors: list[dict] = []
+        intel_built, intel_errors = 0, []
+        tried: set[str] = set()          # digest attempts this run (failures aren't re-queued)
+        tried_intel: set[str] = set()
+        llm = llm_call
+        stopped = ""
+        while True:
+            todo = [] if redigest_truncated else _undigested(c, cap, tried)
+            if todo or redigest_truncated:
+                # Resolve the model once; if nothing can run meetings, every meeting
+                # would fail identically -- say so once, up front.
+                if not isinstance(llm, _LLM):
+                    try:
+                        llm = _resolve_llm(llm_call, mcfg)
+                    except MeetingModelError as exc:
+                        log.warning("meeting batch not started: %s", exc)
+                        return {"ok": False, "error": str(exc), "processed": processed}
+            if redigest_truncated:
+                todo, remaining = _redo_queue(mcfg, llm, cap)
+            queued += len(todo)
+
+            _status["phase"] = "digests" if todo else ""
+            fresh: list[dict] = []
+            for mt in todo:
+                if _stop.is_set():
+                    break
+                tried.add(str(mt.get("id") or ""))
+                _status["current"] = str(mt.get("title") or "")
+                try:
+                    save_digest(process_meeting(mt, cfg, client=c, llm_call=llm))
+                    processed += 1
+                    _status["done"] = processed
+                    fresh.append(mt)
+                except NoContentError as exc:
+                    # A redo must never skip-mark: the meeting already has a good (if
+                    # partial) digest, and losing its transcript is not "nothing to digest".
+                    if not redigest_truncated and _older_than_days(mt.get("date"), _SKIP_MIN_AGE_DAYS):
+                        save_skip(mt)
+                        skipped += 1
+                        log.info("meeting %s (%s) has no content in Quill; marked skipped — won't re-queue",
+                                 mt.get("id"), mt.get("title"))
+                    else:
+                        log.warning("digest failed for %s: %s (recent meeting — will retry next run)",
+                                    mt.get("id"), exc)
+                        errors.append({"meeting_id": mt.get("id"), "error": str(exc)})
+                except Exception as exc:
+                    log.warning("digest failed for %s: %s", mt.get("id"), exc)
                     errors.append({"meeting_id": mt.get("id"), "error": str(exc)})
-            except Exception as exc:
-                log.warning("digest failed for %s: %s", mt.get("id"), exc)
-                errors.append({"meeting_id": mt.get("id"), "error": str(exc)})
-        intel = {"built": 0, "errors": []}
-        if not redigest_truncated:
-            fresh = [mt for mt in todo if digest_exists(str(mt.get("id") or ""))]
-            intel = _intel_pass(mcfg, c, llm, llm_call, fresh)
+
+            attempted_intel = 0
+            if not redigest_truncated and not _stop.is_set():
+                res = _intel_pass(mcfg, c, llm, llm_call, fresh, cap, tried_intel)
+                intel_built += res["built"]
+                intel_errors += res["errors"]
+                attempted_intel = res["attempted"]
+                _status["done_intel"] = intel_built
+
+            if not drain:
+                break
+            if _stop.is_set():
+                stopped = "stopped"
+                break
+            if not todo and not attempted_intel:
+                stopped = "everything is processed"
+                break
+            if keep_going is not None:
+                go, why = keep_going()
+                if not go:
+                    stopped = _STOP_REASONS.get(why, why)
+                    break
+        if _stop.is_set():
+            stopped = "stopped"
         _status.update({
             "last_run_at": _now_iso(), "last_processed": processed,
-            "last_errors": len(errors), "last_skipped": skipped, "last_reason": reason,
-            "last_intel_built": intel["built"],
+            "last_errors": len(errors) + len(intel_errors), "last_skipped": skipped,
+            "last_intel_built": intel_built, "last_stopped": stopped,
         })
-        return {"ok": True, "processed": processed, "errors": errors, "queued": len(todo),
-                "skipped": skipped, "remaining": remaining,
-                "intel_built": intel["built"], "intel_errors": intel["errors"]}
+        if stopped:
+            log.info("meeting batch (%s) ended: %s — %d digests, %d mind maps", reason, stopped,
+                     processed, intel_built)
+        return {"ok": True, "processed": processed, "errors": errors, "queued": queued,
+                "skipped": skipped, "remaining": remaining, "intel_built": intel_built,
+                "intel_errors": intel_errors, "stopped": stopped}
     finally:
-        _status["running"] = False
+        if keep_awake:
+            _keep_awake(False)
+        _status.update(running=False, phase="", current="")
         _batch_lock.release()
 
 
+def start_batch(cfg: dict, *, reason: str = "manual", redigest_truncated: bool = False,
+                max_per_run=None) -> dict:
+    """Run a batch on a background thread (the dashboard polls ``batch_status``). A
+    manual run drains -- digests and mind maps for everything outstanding -- until
+    done or stopped; it ignores the after-hours window."""
+    if _batch_lock.locked():
+        return {"ok": False, "error": "a batch run is already in progress"}
+
+    def work():
+        try:
+            result = run_batch(cfg, reason=reason, redigest_truncated=redigest_truncated,
+                               max_per_run=max_per_run, drain=not redigest_truncated)
+            if not result.get("ok"):
+                _status["last_stopped"] = f"not started: {result.get('error')}"
+        except Exception as exc:
+            log.warning("meeting batch (%s) failed: %s", reason, exc)
+            _status["last_stopped"] = f"failed: {exc}"
+
+    threading.Thread(target=work, name="meeting-batch", daemon=True).start()
+    return {"ok": True, "started": True}
+
+
+def stop_batch() -> dict:
+    """Ask a running batch to stop after the meeting it is on."""
+    _stop.set()
+    return {"ok": True, "running": bool(_status.get("running"))}
+
+
 def batch_status() -> dict:
+    import ffp_meeting_intel as MI
     digests = load_digests()
+    intel = MI.load_intel()
+    ids = {d.get("meeting_id") for d in digests}
+    maps = sum(1 for mid, r in intel.items() if mid in ids and not r.get("skipped"))
+    no_map = sum(1 for mid in ids if mid not in intel)
     return {
         **_status,
         "total_digests": len(digests),
         "total_skips": list_skips()["count"],
         # Cached digests that only cover part of their meeting (see digest_truncation).
         "truncated_digests": sum(1 for d in digests if digest_truncation(d)[0]),
+        "mind_maps": maps,
+        "mind_maps_pending": no_map,
+        "intel": dict(_intel_status),
     }
+
 
 # ---------- meeting intelligence (mind map / summary views) ----------------------------
 #
 # ffp_meeting_intel builds the record; this side supplies the transcript, the model
 # and the scheduling. Builds hold the NPU for minutes, so only one runs at a time:
-# on demand from the dashboard (a background thread the UI polls) or as a pass at the
-# end of the after-hours batch, which also backfills older meetings newest first.
+# on demand from the dashboard (a background thread the UI polls, also started by
+# "Process now"), or inside the batch, right after each chunk's digests, which also
+# backfills older digests that have no mind map yet, newest first.
 
 _intel_lock = threading.Lock()
 _intel_status: dict = {"running": False, "meeting_id": "", "section": 0, "of": 0,
@@ -874,7 +1002,6 @@ def intel_settings(mcfg: dict) -> dict:
         "enabled": bool(i.get("enabled", d["enabled"])),
         "model": str(i.get("model") or "").strip(),
         "backfill": bool(i.get("backfill", d["backfill"])),
-        "max_per_run": max(1, _int_or_default(i.get("max_per_run"), d["max_per_run"])),
         "hide_small_talk": bool(i.get("hide_small_talk", d["hide_small_talk"])),
     }
 
@@ -961,9 +1088,9 @@ def intel_status() -> dict:
     return {**_intel_status, "built": sum(1 for r in rows.values() if not r.get("skipped"))}
 
 
-def _intel_queue(fresh: list[dict], cap: int, backfill: bool) -> list[dict]:
-    """Meetings due a mind map: this run's new digests first, then (backfill) older
-    digested meetings without one, newest first."""
+def _intel_queue(fresh: list[dict], cap: int, backfill: bool, exclude: set[str]) -> list[dict]:
+    """Meetings due a mind map: this chunk's new digests first, then (backfill) older
+    digests without one, newest first; ``exclude`` = already tried in this run."""
     import ffp_meeting_intel as MI
     have = MI.load_intel()
     candidates = list(fresh)
@@ -974,7 +1101,7 @@ def _intel_queue(fresh: list[dict], cap: int, backfill: bool) -> list[dict]:
     queue, seen = [], set()
     for m in candidates:
         mid = str(m.get("id") or "")
-        if mid and mid not in have and mid not in seen:
+        if mid and mid not in have and mid not in seen and mid not in exclude:
             seen.add(mid)
             queue.append(m)
             if len(queue) >= cap:
@@ -982,38 +1109,47 @@ def _intel_queue(fresh: list[dict], cap: int, backfill: bool) -> list[dict]:
     return queue
 
 
-def _intel_pass(mcfg: dict, client, llm, llm_call, fresh: list[dict]) -> dict:
-    """The batch's mind-map pass. Never raises: a failure here must not cost the
-    digests the batch already saved (V76)."""
+def _intel_pass(mcfg: dict, client, llm, llm_call, fresh: list[dict], cap: int,
+                tried: set[str]) -> dict:
+    """One chunk's mind maps. Never raises: a failure here must not cost the digests
+    the batch already saved (V76). ``attempted`` lets a draining batch tell "nothing
+    left" from "made progress"."""
     import ffp_meeting_intel as MI
+    out = {"built": 0, "errors": [], "attempted": 0}
     settings = intel_settings(mcfg)
     if not settings["enabled"]:
-        return {"built": 0, "errors": []}
-    queue = _intel_queue(fresh, settings["max_per_run"], settings["backfill"])
+        return out
+    queue = _intel_queue(fresh, cap, settings["backfill"], tried)
     if not queue:
-        return {"built": 0, "errors": []}
+        return out
     if not _intel_lock.acquire(blocking=False):
-        return {"built": 0, "errors": [], "deferred": "a mind map is being built on demand"}
-    built, errors = 0, []
+        out["deferred"] = "a mind map is being built on demand"
+        return out
     try:
         try:
             reuse = isinstance(llm, _LLM) and not settings["model"]
             intel_llm = llm if reuse else _intel_llm(llm_call, mcfg)
         except Exception as exc:
-            return {"built": 0, "errors": [{"meeting_id": "", "error": str(exc)}]}
+            out["errors"].append({"meeting_id": "", "error": str(exc)})
+            return out
+        _status["phase"] = "mind maps"
         for m in queue:
+            if _stop.is_set():
+                break
+            tried.add(str(m.get("id") or ""))
+            out["attempted"] += 1
+            _status["current"] = str(m.get("title") or "")
             try:
                 _build_one_intel(m, client, intel_llm)
-                built += 1
+                out["built"] += 1
             except MI.IntelSkip:
                 pass
             except Exception as exc:
                 log.warning("mind map failed for %s: %s", m.get("id"), exc)
-                errors.append({"meeting_id": m.get("id"), "error": str(exc)})
+                out["errors"].append({"meeting_id": m.get("id"), "error": str(exc)})
     finally:
         _intel_lock.release()
-    return {"built": built, "errors": errors}
-
+    return out
 
 # ---------- on-demand Q&A about one meeting -------------------------------------------
 
@@ -1315,6 +1451,8 @@ def config_snapshot(meetings_cfg) -> dict:
             "only_when_idle": bool(b.get("only_when_idle", db["only_when_idle"])),
             "idle_minutes": _int_or_default(b.get("idle_minutes"), db["idle_minutes"]),
             "max_per_run": int(b.get("max_per_run") or db["max_per_run"]),
+            "drain": bool(b.get("drain", db["drain"])),
+            "keep_awake": bool(b.get("keep_awake", db["keep_awake"])),
         },
         "intel": {**intel_settings(cfg), "recommended_model": ffp_config.RECOMMENDED_INTEL_MODEL},
     }

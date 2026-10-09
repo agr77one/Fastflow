@@ -81,8 +81,9 @@ def test_actions_count_and_expected_names(daemon_module):
     # local-model note organization adds one -> 86;
     # meeting_models (the Meetings model picker's usable/unusable list) -> 87;
     # tray parity (quick_state / set_clipboard_watcher / exit_app) -> 90;
-    # meeting mind maps (meeting_intel_get/build/status/list) -> 94.
-    assert len(daemon_module.ACTIONS) == 94
+    # meeting mind maps (meeting_intel_get/build/status/list) -> 94;
+    # stopping a background batch (meeting_batch_stop) -> 95.
+    assert len(daemon_module.ACTIONS) == 95
     for a in ("chat_threads_list", "chat_thread_get", "chat_send",
               "chat_thread_delete", "chat_stage_selection", "chat_take_staged",
               "note_get", "note_move", "note_delete", "notes_query",
@@ -96,7 +97,8 @@ def test_actions_count_and_expected_names(daemon_module):
               "meeting_actions_list", "meeting_action_set_status", "meeting_week_summary",
               "meeting_redigest", "meeting_models", "prompt_builder_preview",
               "quick_state", "set_clipboard_watcher", "exit_app",
-              "meeting_intel_get", "meeting_intel_build", "meeting_intel_status", "meeting_intel_list"):
+              "meeting_intel_get", "meeting_intel_build", "meeting_intel_status", "meeting_intel_list",
+              "meeting_batch_stop"):
         assert a in daemon_module.ACTIONS
     # notify_gate writes the log + dedupe state, so it must be a WRITE action.
     assert "notify_gate" in daemon_module._WRITE_ACTIONS
@@ -1021,10 +1023,36 @@ def test_meeting_batch_run_redo_flag_is_explicit_and_comes_only_from_the_request
     # Redoing replaces cached digests, so only a deliberate dashboard request may ask for it.
     import ffp_meetings
     seen = []
-    monkeypatch.setattr(ffp_meetings, "run_batch", lambda cfg, **kw: seen.append(kw) or {"ok": True})
+    # The action starts the batch in the background; what it asks for is what matters.
+    monkeypatch.setattr(ffp_meetings, "start_batch", lambda cfg, **kw: seen.append(kw) or {"ok": True})
     daemon_module._act_meeting_batch_run({})
     daemon_module._act_meeting_batch_run({"redigest_truncated": True, "max_per_run": 3})
     assert seen[0]["redigest_truncated"] is False and seen[0]["reason"] == "manual"
     assert seen[1]["redigest_truncated"] is True and seen[1]["reason"] == "manual_redo"
     assert seen[1]["max_per_run"] == 3
 
+
+
+def test_process_now_also_starts_the_mind_map(daemon_module, monkeypatch):
+    # "Process now" = digest AND mind map: the map builds in the background after the digest.
+    import ffp_meetings
+    monkeypatch.setattr(ffp_meetings, "process_meeting", lambda meeting, cfg, **kw: {"meeting_id": meeting["id"]})
+    monkeypatch.setattr(ffp_meetings, "save_digest", lambda rec: None)
+    started = []
+    monkeypatch.setattr(ffp_meetings, "start_intel_build",
+                        lambda mid, cfg, meta=None: started.append(mid) or {"ok": True, "started": True})
+    out = daemon_module._act_meeting_process({"meeting_id": "m1", "title": "T"})
+    assert out["ok"] and out["intel_started"] is True and started == ["m1"]
+
+
+def test_a_mind_map_problem_never_fails_process_now(daemon_module, monkeypatch):
+    import ffp_meetings
+    monkeypatch.setattr(ffp_meetings, "process_meeting", lambda meeting, cfg, **kw: {"meeting_id": meeting["id"]})
+    monkeypatch.setattr(ffp_meetings, "save_digest", lambda rec: None)
+
+    def boom(mid, cfg, meta=None):
+        raise RuntimeError("no model")
+
+    monkeypatch.setattr(ffp_meetings, "start_intel_build", boom)
+    out = daemon_module._act_meeting_process({"meeting_id": "m1"})
+    assert out["ok"] and out["intel_started"] is False and out["intel_error"] == "no model"

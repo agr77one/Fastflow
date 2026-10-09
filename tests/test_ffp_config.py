@@ -597,9 +597,19 @@ def test_filter_config_patch_validates_meeting_intel_settings():
     filtered = ffp_config.filter_config_patch({"meetings": {"intel": {
         "enabled": 0, "model": "qwen3.5:9b", "backfill": "yes", "max_per_run": 999,
         "hide_small_talk": False, "evil": "x"}}})
-    assert filtered == {"meetings": {"intel": {
-        "enabled": False, "model": "qwen3.5:9b", "backfill": True, "max_per_run": 20, "hide_small_talk": False}}}
+    assert filtered == {"meetings": {"intel": {        # max_per_run is gone: the batch chunk covers both
+        "enabled": False, "model": "qwen3.5:9b", "backfill": True, "hide_small_talk": False}}}
     blank = ffp_config.filter_config_patch({"meetings": {"intel": {"model": ""}}})
     assert blank == {"meetings": {"intel": {"model": ""}}}            # "" = use meetings.model
     bad = ffp_config.filter_config_patch({"meetings": {"intel": {"model": "../../etc"}}})
     assert bad == {}
+
+
+def test_filter_config_patch_accepts_overnight_batch_switches():
+    filtered = ffp_config.filter_config_patch({"meetings": {"batch": {"drain": 0, "keep_awake": "yes"}}})
+    assert filtered == {"meetings": {"batch": {"drain": False, "keep_awake": True}}}
+
+
+def test_default_after_hours_window_runs_overnight():
+    b = ffp_config.DEFAULT_CONFIG["meetings"]["batch"]
+    assert (b["start"], b["end"], b["drain"], b["keep_awake"]) == ("17:00", "08:00", True, True)

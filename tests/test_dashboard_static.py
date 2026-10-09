@@ -147,3 +147,21 @@ def test_mind_map_css_classes_exist():
     for cls in ("mtg-views", "mindmap-scroll", "mm-view", "mm-list", "mm-time", "mm-owner",
                 "mm-unconfirmed", "mtg-facets", "mm-toggle"):
         assert f".{cls}" in css, f".{cls} missing from styles.css"
+
+
+# ---- V82: overnight processing controls -------------------------------------------------
+
+def test_overnight_processing_controls_exist():
+    html = _read("index.html")
+    for element_id in ("mtg-drain", "mtg-keep-awake", "mtg-overnight", "mtg-run-now", "mtg-run-stop",
+                       "mtg-coverage-cfg", "mtg-coverage-line"):
+        assert f'id="{element_id}"' in html, element_id
+    assert re.search(r'id="mtg-run-stop"[^>]*\shidden', html)        # only while a batch runs
+    assert 'id="mtg-intel-maxrun"' not in html                       # the chunk size covers both
+
+
+def test_run_now_starts_in_the_background_and_polls():
+    app = _read("app.js")
+    run_now = re.search(r"async function runBatchNow\(\) \{(.*?)\n\}", app, re.S).group(1)
+    assert "watchBatch()" in run_now and "meeting_batch_stop" in app
+

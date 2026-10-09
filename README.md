@@ -11,7 +11,8 @@ Current version: `2.7.0`
 - **Meeting mind maps.** Open a meeting and switch the reader to *🗺 Mind map*: its themes and topics (with the minute each started), decisions, action items with owners, open questions, and who spoke how much, as a collapsible map. Export it as SVG or a Markdown outline. Small talk is grouped and hidden by default.
 - **Five summary views of each meeting** — Overview, By topic, By person, Decisions & actions, Timeline — instant to switch, since they're all drawn from the same stored record.
 - **Filter the meeting list** by meeting type, person, theme or topic, and "has action items"; a 🗺 column shows which meetings have a map.
-- **Built locally, after hours or on demand.** The after-hours batch builds maps for new meetings and backfills older ones newest first; *Build mind map* in the reader builds one now with live progress (1–3 minutes on the NPU). Choose the model in Config › Meetings › *Mind maps* — 8B+ models attribute owners and decisions more reliably, and `qwen3.5:9b` is recommended. An owner the transcript doesn't confirm is marked with `?`.
+- **Your whole meeting backlog, processed overnight.** Each meeting gets its summary and its mind map; the after-hours batch keeps going until everything is done, the window ends, or you're back (and keeps the PC awake while it works). Use *Overnight (17:00–08:00)* in Config › Meetings, or *Process everything now* with live progress and Stop.
+- **Built locally.** *Build mind map* in the reader (re)builds one with live progress (1–3 minutes on the NPU). Choose the model in Config › Meetings › *Mind maps* — 8B+ models attribute owners and decisions more reliably, and `qwen3.5:9b` is recommended. An owner the transcript doesn't confirm is marked with `?`.
 
 ## What's new in 2.6.0
 

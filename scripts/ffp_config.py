@@ -151,18 +151,21 @@ DEFAULT_CONFIG = {
         "temperature": 0.2,
         "batch": {
             "enabled": True,
+            # Overnight by default: a meeting takes ~1 min to digest + 1-3 min for its
+            # mind map on the NPU, so a backlog of hundreds needs the whole night.
             "start": "17:00",
-            "end": "21:00",
+            "end": "08:00",
             "only_when_idle": True,
             "idle_minutes": 10,
-            "max_per_run": 10,
+            "max_per_run": 10,        # chunk size: digests, then their mind maps
+            "drain": True,            # keep taking chunks until done / window ends / you're back
+            "keep_awake": True,       # hold off idle sleep while working
         },
         # Structured meeting record behind the mind map and summary views (T47).
         "intel": {
             "enabled": True,
             "model": "",              # "" = meetings.model
             "backfill": True,         # also build for older digested meetings, newest first
-            "max_per_run": 5,         # each takes ~1.5-3 min on the NPU
             "hide_small_talk": True,
         },
     },
@@ -575,8 +578,9 @@ def _filter_meetings_patch(value: dict) -> dict:
             tv = batch.get(time_key)
             if isinstance(tv, str) and _HHMM_RE.match(tv):
                 fb[time_key] = tv
-        if "only_when_idle" in batch:
-            fb["only_when_idle"] = bool(batch["only_when_idle"])
+        for bk in ("only_when_idle", "drain", "keep_awake"):
+            if bk in batch:
+                fb[bk] = bool(batch[bk])
         for ik, lo, hi in (("idle_minutes", 0, 240), ("max_per_run", 1, 50)):
             if ik in batch:
                 try:
@@ -595,11 +599,6 @@ def _filter_meetings_patch(value: dict) -> dict:
             model = str(intel["model"] or "").strip()
             if not model or _MODEL_NAME_RE.match(model):
                 fi["model"] = model          # "" = use meetings.model
-        if "max_per_run" in intel:
-            try:
-                fi["max_per_run"] = max(1, min(int(intel["max_per_run"]), 20))
-            except (TypeError, ValueError):
-                pass
         if fi:
             out["intel"] = fi
     return out

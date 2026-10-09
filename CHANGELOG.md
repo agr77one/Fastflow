@@ -2,14 +2,20 @@
 
 ## 2.7.0
 
-**Meetings get mind maps.**
+**Every meeting gets a summary and a mind map — and the backlog is processed overnight.**
 
 ### Added
 
 - **Meeting mind maps.** Open a meeting and switch the reader to *🗺 Mind map*: the meeting's themes and topics (each with the minute it started), decisions, action items with owners, open questions, and who spoke how much, as a collapsible map. Export it as SVG or as a Markdown outline, or copy the outline. Small talk is grouped into its own theme and hidden by default.
 - **Summary views of the same record:** *Overview*, *By topic*, *By person* (each person's share of the conversation and the actions they own), *Decisions & actions*, and *Timeline*. They are built from the stored record, so switching views is instant.
 - **Meeting-list filters** by meeting type, person, theme/topic text and "has action items", plus a 🗺 column showing which meetings have a mind map.
-- **Built on the local model, after hours or on demand.** The after-hours batch builds mind maps for newly digested meetings and backfills older ones newest first (5 per run by default); *Build mind map* in the reader builds one now and shows its progress. Settings are in Config › Meetings › *Mind maps*, including the model: 8B+ models attribute owners and decisions more reliably, and `qwen3.5:9b` is recommended.
+- **Processing a meeting now means its summary and its mind map.** The after-hours batch builds both for each meeting, *Process now* in the reader builds both, and meetings summarised before this release get their mind maps too, newest first.
+- **Process everything overnight.** With *Keep going until every meeting is processed* (on by default) the batch no longer stops after 10 meetings: it works through the whole backlog in chunks until it's done, the window ends, or you're back at the computer. *Keep the PC awake while processing* (on by default) stops Windows idle sleep while it works. New installs default to an overnight window (17:00–08:00); an *Overnight* button sets it on existing ones. *Process everything now* runs in the background with live progress and a Stop button, and Config › Meetings and the Meetings tab show how many meetings have a mind map and how many are left.
+- **Choose the model.** *Build mind map* in the reader (re)builds one on its own, with live progress. Settings are in Config › Meetings › *Mind maps*, including the model: 8B+ models attribute owners and decisions more reliably, and `qwen3.5:9b` is recommended.
+
+### Fixed
+
+- **Meetings failed to process when the default model wasn't installed**, even with other suitable models installed (an hour of failed runs on one machine, with `qwen3.5:9b` and `gemma4-it:12b` sitting ready). Any installed model that meets the meeting requirements is now used, smallest first.
 
 ### How it works
 

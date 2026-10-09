@@ -2855,6 +2855,7 @@ async function loadMeetings() {
   await loadIntelFacets();
   searchMeetings();
   loadActionItems();
+  refreshBatchUI();
 }
 
 async function searchMeetings() {
@@ -3064,11 +3065,16 @@ function watchIntelBuild() {
     clearInterval(intelPoll);
     intelPoll = null;
     if (currentMeeting && st.last_meeting_id === currentMeeting.id) {
-      if (st.last_error) setStatus("mtg-intel-status", `⚠ ${st.last_error}`, false);
+      // A stub recording ("transcript too short") is a normal outcome, not a failure.
+      if (/^transcript /.test(st.last_error || "")) setStatus("mtg-intel-status", `No mind map: ${st.last_error}`);
+      else if (st.last_error) setStatus("mtg-intel-status", `⚠ ${st.last_error}`, false);
       else setStatus("mtg-intel-status", "✅ Mind map ready");
       await loadIntel();
       await loadIntelFacets();
+      const row = document.querySelector(`#mtg-results .mtg-row[data-id="${CSS.escape(currentMeeting.id)}"]`);
+      if (row && mtgIntel.has(currentMeeting.id)) row.lastChild.textContent = "🗺";
       applyMeetingFilters();
+      refreshBatchUI();                         // coverage line
     } else {
       setStatus("mtg-intel-status", "");
     }
@@ -3237,11 +3243,13 @@ async function processMeetingNow() {
       meeting_id: currentMeeting.id, title: currentMeeting.title, date: currentMeeting.date, url: currentMeeting.url,
     });
     $("mtg-digest").textContent = r.digest_md || "(empty)";
-    $("mtg-process-status").textContent = _digestStatus("done", r);
+    $("mtg-process-status").textContent = _digestStatus("done", r) +
+      (r.intel_started ? " · building the mind map…" : r.intel_error ? ` · mind map not started: ${r.intel_error}` : "");
     _showQuality(r.quality);
     _showCoverage(r);
     digestIds.add(currentMeeting.id);
     if (r.truncated) partialIds.add(currentMeeting.id); else partialIds.delete(currentMeeting.id);
+    if (r.intel_started) watchIntelBuild();
   } catch (e) {
     $("mtg-process-status").textContent = `⚠ ${e.message}`;
   }
@@ -3305,15 +3313,14 @@ function populateMeetings(m) {
   $("mtg-idle").checked = b.only_when_idle !== false;
   $("mtg-idle-min").value = b.idle_minutes ?? 10;
   $("mtg-maxrun").value = b.max_per_run ?? 10;
+  $("mtg-drain").checked = b.drain !== false;
+  $("mtg-keep-awake").checked = b.keep_awake !== false;
   const intel = m.intel || {};
   $("mtg-intel-enabled").checked = intel.enabled !== false;
   $("mtg-intel-backfill").checked = intel.backfill !== false;
-  $("mtg-intel-maxrun").value = intel.max_per_run ?? 5;
   $("mtg-intel-smalltalk").checked = intel.hide_small_talk !== false;
   intelHideSmallTalk = intel.hide_small_talk !== false;
-  action("meeting_intel_status")
-    .then((s) => { $("mtg-intel-count").textContent = `(${s.built} built)`; })
-    .catch(() => { $("mtg-intel-count").textContent = ""; });
+  refreshBatchUI();
 }
 
 // Meeting-model picker. Options come from the daemon's `meeting_models`, which applies
@@ -3425,12 +3432,13 @@ function meetingsPatch() {
       only_when_idle: $("mtg-idle").checked,
       idle_minutes: Number($("mtg-idle-min").value) || 0,
       max_per_run: Number($("mtg-maxrun").value) || 10,
+      drain: $("mtg-drain").checked,
+      keep_awake: $("mtg-keep-awake").checked,
     },
     intel: {
       enabled: $("mtg-intel-enabled").checked,
       model: $("mtg-intel-model").disabled ? undefined : $("mtg-intel-model").value,
       backfill: $("mtg-intel-backfill").checked,
-      max_per_run: Number($("mtg-intel-maxrun").value) || 5,
       hide_small_talk: $("mtg-intel-smalltalk").checked,
     },
   };
@@ -3475,39 +3483,111 @@ async function redoCutOffDigests() {
   );
   if (!ok) return;
   if (!(await saveMeetingsBeforeRun(s))) return;
-  s.textContent = "Re-digesting… (this runs on the local model and can take several minutes)";
   try {
     const r = await action("meeting_batch_run", { redigest_truncated: true });
-    if (!r.ok) {
-      s.textContent = `⚠ ${r.error}`;
-    } else if (!r.queued) {
-      s.textContent = "Nothing to redo — these digests already used the current limit. Raise “Max context tokens” first.";
-    } else {
-      s.textContent = `redone ${r.processed} of ${r.queued}`
-        + (r.remaining ? `, ${r.remaining} more waiting — run it again` : "")
-        + (r.errors && r.errors.length ? `, ${r.errors.length} errors (details in logs/daemon.log)` : "");
-    }
+    if (!r.ok) { s.textContent = `⚠ ${r.error}`; return; }
+    watchBatch();
   } catch (e) {
     s.textContent = `⚠ ${e.message}`;
   }
-  refreshRedoButton();
-  loadMeetings();
 }
 
 async function runBatchNow() {
   const s = $("mtg-run-status");
   if (!(await saveMeetingsBeforeRun(s))) return;
-  s.textContent = "Running… (this processes on the local model; may take a while)";
   try {
     const r = await action("meeting_batch_run", {});
-    s.textContent = r.ok
-      ? `processed ${r.processed} of ${r.queued} queued`
-        + (r.skipped ? `, ${r.skipped} skipped (no content)` : "")
-        + (r.errors && r.errors.length ? `, ${r.errors.length} errors (details in logs/daemon.log)` : "")
-      : `⚠ ${r.error}`;
+    if (!r.ok) { s.textContent = `⚠ ${r.error}`; return; }
+    watchBatch();
   } catch (e) {
     s.textContent = `⚠ ${e.message}`;
   }
+}
+
+async function stopBatch() {
+  $("mtg-run-stop").disabled = true;
+  try {
+    await action("meeting_batch_stop");
+    $("mtg-run-status").textContent = "Stopping after the current meeting…";
+  } catch (e) {
+    $("mtg-run-status").textContent = `⚠ ${e.message}`;
+  }
+}
+
+// ---- batch progress + coverage (Config › Meetings and the Meetings tab) --------------
+// A batch runs on the daemon in the background -- overnight, or "Process everything
+// now" -- so this side only polls meeting_batch_status while one is running.
+
+let batchPoll = null;
+
+function _coverageText(s) {
+  const total = (s.mind_maps || 0) + (s.mind_maps_pending || 0);
+  if (!total) return "";
+  const pending = s.mind_maps_pending || 0;
+  const hours = (pending * 2) / 60;          // ~1-3 min per mind map on the NPU
+  const eta = pending ? ` — ${pending} to go (roughly ${hours < 1 ? "under an hour" : `${Math.round(hours)} h`} of processing)` : " — all done";
+  return `🗺 Mind maps: ${s.mind_maps || 0} of ${total} processed meetings${eta}`;
+}
+
+function _progressText(s) {
+  const intel = s.intel || {};
+  const where = s.phase === "mind maps" && intel.of ? ` (section ${intel.section} of ${intel.of})` : "";
+  const now = s.current ? ` · ${s.phase}: ${s.current}${where}` : "";
+  return `Processing… ${s.done || 0} digests, ${s.done_intel || 0} mind maps so far${now}`;
+}
+
+function _lastRunText(s) {
+  if (!s.last_run_at) return "";
+  const why = s.last_stopped ? ` — ${s.last_stopped}` : "";
+  return `Last run ${s.last_run_at.replace("T", " ")}: ${s.last_processed || 0} digests, ${s.last_intel_built || 0} mind maps` +
+    (s.last_errors ? `, ${s.last_errors} errors (details in logs/daemon.log)` : "") + why;
+}
+
+function renderBatch(s) {
+  const running = !!s.running;
+  $("mtg-run-stop").hidden = !running;
+  $("mtg-run-stop").disabled = false;
+  $("mtg-run-now").disabled = running;
+  $("mtg-run-status").textContent = running ? _progressText(s) : _lastRunText(s);
+  $("mtg-coverage-cfg").textContent = _coverageText(s);
+  const line = [_coverageText(s), running ? _progressText(s) : ""].filter(Boolean).join(" · ");
+  $("mtg-coverage-line").textContent = line;
+}
+
+async function refreshBatchUI() {
+  try {
+    const s = await action("meeting_batch_status");
+    renderBatch(s);
+    if (s.running) watchBatch();
+    return s;
+  } catch {
+    return null;
+  }
+}
+
+function watchBatch() {
+  if (batchPoll) return;
+  const tick = async () => {
+    let s;
+    try {
+      s = await action("meeting_batch_status");
+    } catch (e) {
+      clearInterval(batchPoll);
+      batchPoll = null;
+      $("mtg-run-status").textContent = `⚠ ${e.message}`;
+      return;
+    }
+    renderBatch(s);
+    if (!s.running) {
+      clearInterval(batchPoll);
+      batchPoll = null;
+      refreshRedoButton();
+      await loadIntelFacets();
+      applyMeetingFilters();
+    }
+  };
+  batchPoll = setInterval(tick, 2000);
+  tick();
 }
 
 // Action-items review board (week/month) — sourced from cached digests; status
@@ -3710,6 +3790,12 @@ document.addEventListener("DOMContentLoaded", () => {
   $("mtg-ask-btn").addEventListener("click", askMeeting);
   $("mtg-ask-input").addEventListener("keydown", (e) => { if (e.key === "Enter") askMeeting(); });
   $("mtg-run-now").addEventListener("click", runBatchNow);
+  $("mtg-run-stop").addEventListener("click", stopBatch);
+  $("mtg-overnight").addEventListener("click", () => {
+    $("mtg-start").value = "17:00";
+    $("mtg-end").value = "08:00";
+    setStatus("config-status", "Overnight window set — click “Save all settings” to keep it.");
+  });
   $("mtg-redo-cut").addEventListener("click", redoCutOffDigests);
   document.querySelectorAll('input[name="mtg-range"]').forEach((r) => r.addEventListener("change", loadActionItems));
   $("mtg-week-gen").addEventListener("click", generateWeekSummary);

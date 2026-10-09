@@ -1076,9 +1076,24 @@ def _act_meeting_process(args: dict) -> dict:
         raise ValueError("meeting_process requires args.meeting_id")
     meeting = {"id": mid, "title": str(args.get("title") or ""),
                "date": str(args.get("date") or ""), "url": str(args.get("url") or "")}
-    rec = ffp_meetings.process_meeting(meeting, grammar_fix.load_config())
+    cfg = grammar_fix.load_config()
+    rec = ffp_meetings.process_meeting(meeting, cfg)
     ffp_meetings.save_digest(rec)
-    return {"ok": True, **rec}
+    return {"ok": True, **rec, **_start_mind_map_after_digest(mid, meeting, cfg)}
+
+
+def _start_mind_map_after_digest(mid: str, meeting: dict, cfg: dict) -> dict:
+    """Processing a meeting means its digest AND its mind map: after a digest, build the
+    mind map in the background (the reader polls meeting_intel_status). Never fails
+    the digest that was just saved."""
+    import ffp_meetings
+    if not ffp_meetings.intel_settings(cfg.get("meetings") or {})["enabled"]:
+        return {"intel_started": False}
+    try:
+        res = ffp_meetings.start_intel_build(mid, cfg, meta=meeting)
+    except Exception as exc:
+        return {"intel_started": False, "intel_error": str(exc)}
+    return {"intel_started": bool(res.get("started")), "intel_error": res.get("error", "")}
 
 
 def _act_meeting_redigest(args: dict) -> dict:
@@ -1089,21 +1104,30 @@ def _act_meeting_redigest(args: dict) -> dict:
         raise ValueError("meeting_redigest requires args.meeting_id")
     meeting = {"id": mid, "title": str(args.get("title") or ""),
                "date": str(args.get("date") or ""), "url": str(args.get("url") or "")}
-    rec = ffp_meetings.process_meeting(meeting, grammar_fix.load_config(), strict=True)
+    cfg = grammar_fix.load_config()
+    rec = ffp_meetings.process_meeting(meeting, cfg, strict=True)
     ffp_meetings.save_digest(rec)
     return {"ok": True, **rec}
 
 
 def _act_meeting_batch_run(args: dict) -> dict:
+    """Start a batch in the background (poll meeting_batch_status; stop with
+    meeting_batch_stop). A plain run processes everything outstanding -- digests and
+    mind maps -- regardless of the after-hours window."""
     import ffp_meetings
     mpr = args.get("max_per_run")
     # redigest_truncated replaces cached digests, so only an explicit dashboard request
     # may set it -- the after-hours scheduler never does.
     redo = bool(args.get("redigest_truncated"))
-    return ffp_meetings.run_batch(grammar_fix.load_config(),
-                                  max_per_run=int(mpr) if mpr else None,
-                                  reason="manual_redo" if redo else "manual",
-                                  redigest_truncated=redo)
+    return ffp_meetings.start_batch(grammar_fix.load_config(),
+                                    max_per_run=int(mpr) if mpr else None,
+                                    reason="manual_redo" if redo else "manual",
+                                    redigest_truncated=redo)
+
+
+def _act_meeting_batch_stop(_args: dict) -> dict:
+    import ffp_meetings
+    return ffp_meetings.stop_batch()
 
 
 def _act_meeting_batch_status(_args: dict) -> dict:
@@ -1246,6 +1270,7 @@ ACTIONS: dict[str, Callable[[dict], Any]] = {
     "meeting_redigest": _act_meeting_redigest,
     "meeting_batch_run": _act_meeting_batch_run,
     "meeting_batch_status": _act_meeting_batch_status,
+    "meeting_batch_stop": _act_meeting_batch_stop,
     "meeting_ask": _act_meeting_ask,
     "meeting_actions_list": _act_meeting_actions_list,
     "meeting_action_set_status": _act_meeting_action_set_status,
@@ -1676,8 +1701,17 @@ def _meeting_scheduler() -> None:
                 cfg.get("meetings") or {}, datetime.datetime.now(), ffp_meetings.machine_idle_seconds()
             )
             if ok:
+                # Drain (the default): keep processing chunk after chunk until nothing
+                # is left, the window ends, or the user comes back -- re-checked between
+                # chunks with the same gate that started it.
+                def keep_going():
+                    return ffp_meetings.should_run_batch(
+                        grammar_fix.load_config().get("meetings") or {}, datetime.datetime.now(),
+                        ffp_meetings.machine_idle_seconds())
+                batch = (cfg.get("meetings") or {}).get("batch") or {}
                 log.info("scheduled meeting batch starting")
-                log.info("scheduled meeting batch result: %s", ffp_meetings.run_batch(cfg, reason="scheduled"))
+                log.info("scheduled meeting batch result: %s", ffp_meetings.run_batch(
+                    cfg, reason="scheduled", drain=bool(batch.get("drain", True)), keep_going=keep_going))
         except Exception as exc:
             log.warning("meeting scheduler tick failed: %s", exc)
 
