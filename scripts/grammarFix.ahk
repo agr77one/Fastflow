@@ -71,6 +71,8 @@ flmReleaseUrl := ""          ; latest FastFlowLM release URL (filled by RefreshF
 clipboardWatcherMarker := runtimePaths["clipboardWatcherMarker"]
 openDashboardMarker  := runtimePaths["openDashboardMarker"]
 reloadHotkeysMarker  := runtimePaths["reloadHotkeysMarker"]
+refreshTrayMarker    := runtimePaths["refreshTrayMarker"]
+exitAppMarker        := runtimePaths["exitAppMarker"]
 
 ; Ensure the runtime folders exist before any code touches them. AHK's
 ; DirCreate is idempotent; the Python side does the same on its first import
@@ -78,6 +80,9 @@ reloadHotkeysMarker  := runtimePaths["reloadHotkeysMarker"]
 try DirCreate(configDir)
 try DirCreate(dataDir)
 try DirCreate(logsDir)
+; An Exit requested from the dashboard while this app wasn't running would
+; otherwise close the next launch the moment it starts polling.
+try FileDelete(exitAppMarker)
 clipboardWatcherEnabled := FileExist(clipboardWatcherMarker) ? true : false
 clipboardWatcherLastFire := 0
 clipboardWatcherBlocklist := ["KeePass.exe", "KeePassXC.exe", "1Password.exe", "Bitwarden.exe", "LastPass.exe"]
@@ -133,9 +138,21 @@ OnExit(ShutdownFlowkeyChildren)
 ; written by the daemon action of the same name (e.g. the first-run wizard's
 ; "open dashboard" nudge); reload_hotkeys after a config patch touches the
 ; hotkeys block (web-dashboard saves). The native AHK dashboard is retired —
-; both dashboard entry points now open the web dashboard.
+; both dashboard entry points now open the web dashboard. refresh_tray follows
+; a Quick-controls change made in the dashboard (the tray's check marks and the
+; clipboard watcher catch up); exit_app is the dashboard's Exit button.
 PollDaemonMarkers() {
-    global openDashboardMarker, reloadHotkeysMarker
+    global openDashboardMarker, reloadHotkeysMarker, refreshTrayMarker, exitAppMarker
+    global clipboardWatcherMarker
+    if FileExist(exitAppMarker) {
+        try FileDelete(exitAppMarker)
+        ExitApp()
+    }
+    if FileExist(refreshTrayMarker) {
+        try FileDelete(refreshTrayMarker)
+        ApplyClipboardWatcher(FileExist(clipboardWatcherMarker) ? true : false)
+        SetupTrayMenu()
+    }
     if FileExist(reloadHotkeysMarker) {
         try FileDelete(reloadHotkeysMarker)
         RegisterHotkeys()
@@ -340,6 +357,10 @@ SetupTrayMenu() {
 
 SetClipboardWatcher(enable) {
     return SetClipboardWatcher_Impl(enable)
+}
+
+ApplyClipboardWatcher(enable) {
+    return ApplyClipboardWatcher_Impl(enable)
 }
 
 CheckForUpdates() {

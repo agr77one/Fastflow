@@ -37,6 +37,55 @@ def test_every_meetings_element_the_script_touches_exists_in_the_markup():
     assert not missing, f"app.js references ids that index.html lacks: {missing}"
 
 
+def test_every_element_the_script_looks_up_by_id_exists_in_the_markup():
+    html, app = _read("index.html"), _read("app.js")
+    wanted = set(re.findall(r'\$\("([A-Za-z0-9_-]+)"\)', app))
+    missing = sorted(i for i in wanted if f'id="{i}"' not in html)
+    assert not missing, f"app.js references ids that index.html lacks: {missing}"
+
+
+# ---- V81: every tray-menu control has a dashboard equivalent ------------------
+
+TRAY = WEB.parent / "tray.ahk"
+
+
+def _tray_submenu_items(builder: str) -> list[str]:
+    src = TRAY.read_text(encoding="utf-8")
+    body = re.search(rf"{builder}\(\) \{{(.*?)\n\}}", src, re.S).group(1)
+    return re.findall(r'm\.Add\("([^"]+)"', body)
+
+
+def test_quick_controls_cover_every_tray_quick_toggle():
+    toggles = _tray_submenu_items("BuildTogglesMenu_Impl")
+    groups = re.findall(r'data-qc="([a-z_]+)"', _read("index.html"))
+    # One dashboard group per tray toggle: adding a tray toggle without a dashboard
+    # control (or the reverse) fails here.
+    assert len(toggles) == len(groups) == 5, (toggles, groups)
+    assert set(groups) == {"performance", "tone", "history", "autostart", "clipboard_watcher"}
+    app = _read("app.js")
+    for group in groups:
+        assert re.search(rf"\b{group}: \(v\) =>", app), f"no daemon action wired for {group}"
+
+
+def test_server_and_app_card_covers_the_tray_server_menu_diagnostics_and_exit():
+    server = _tray_submenu_items("BuildServerMenu_Impl")
+    assert {"Warmup", "Stop", "Check for updates…"} <= set(server)
+    html = _read("index.html")
+    for element_id in ("sa-warmup", "sa-stop", "sa-update-check", "sa-update-apply",
+                       "sa-diagnostics", "sa-exit"):
+        assert f'id="{element_id}"' in html
+    assert re.search(r'id="sa-update-apply"[^>]*\shidden', html)  # only once an update exists
+
+
+def test_save_all_never_resends_the_instant_settings():
+    # Saving the Config form must not carry its (possibly stale) copy of a setting
+    # the tray or Quick controls change instantly -- that silently undid tray changes.
+    app = _read("app.js")
+    save = re.search(r"async function saveConfig\(\) \{(.*?)\n\}", app, re.S).group(1)
+    for leaked in ("performance_mode", "history_store_text", "preset:", "set_autostart"):
+        assert leaked not in save, f"saveConfig still sends {leaked}"
+
+
 def test_meeting_model_temperature_and_redo_controls_are_present():
     html = _read("index.html")
     for element_id in ("mtg-model", "mtg-model-hint", "mtg-temp", "mtg-coverage", "mtg-redo-cut"):

@@ -45,6 +45,7 @@
           <dt>Model</dt><dd id="ov-model">…</dd>
           <dt>Version</dt><dd id="ov-version">…</dd>
           <dt>Endpoint</dt><dd id="ov-url" class="muted">…</dd>
+          <dt>Vault</dt><dd id="ov-vault" class="muted">…</dd>
         </dl>
       </div>
       <div class="card">
@@ -55,14 +56,53 @@
           <div class="stat"><span class="stat-num" id="ov-prompt">0</span><span class="stat-lbl">Prompt</span></div>
         </div>
       </div>
-      <div class="card">
-        <h2>Preferences</h2>
+      <div class="card" id="quick-controls">
+        <h2>Quick controls <span class="muted small">(same as the tray menu — applies instantly)</span></h2>
+        <div class="qc-grid">
+          <span class="qc-label" id="qc-performance-label">Performance</span>
+          <div class="segmented" role="group" aria-labelledby="qc-performance-label" data-qc="performance">
+            <button type="button" class="seg-btn" data-value="balanced">🟡 Balanced</button>
+            <button type="button" class="seg-btn" data-value="max">🔴 Max</button>
+          </div>
+          <span class="qc-label" id="qc-tone-label">Tone</span>
+          <div class="segmented" role="group" aria-labelledby="qc-tone-label" data-qc="tone">
+            <button type="button" class="seg-btn" data-value="formal">🎩 Formal</button>
+            <button type="button" class="seg-btn" data-value="casual">👕 Casual</button>
+            <button type="button" class="seg-btn" data-value="friendly">🤝 Friendly</button>
+          </div>
+          <span class="qc-label" id="qc-history-label">History text</span>
+          <div class="segmented" role="group" aria-labelledby="qc-history-label" data-qc="history">
+            <button type="button" class="seg-btn" data-value="visible">👁 Visible</button>
+            <button type="button" class="seg-btn" data-value="redacted">🙈 Redacted</button>
+          </div>
+          <span class="qc-label" id="qc-autostart-label">Start with Windows</span>
+          <div class="segmented" role="group" aria-labelledby="qc-autostart-label" data-qc="autostart">
+            <button type="button" class="seg-btn" data-value="on">On</button>
+            <button type="button" class="seg-btn" data-value="off">Off</button>
+          </div>
+          <span class="qc-label" id="qc-clipboard-label">📋 Clipboard watcher</span>
+          <div class="segmented" role="group" aria-labelledby="qc-clipboard-label" data-qc="clipboard_watcher">
+            <button type="button" class="seg-btn" data-value="on">On</button>
+            <button type="button" class="seg-btn" data-value="off">Off</button>
+          </div>
+        </div>
+        <p class="muted small" id="qc-status" aria-live="polite"></p>
+      </div>
+      <div class="card" id="server-app">
+        <h2>Server &amp; app</h2>
         <dl>
-          <dt>Performance</dt><dd id="ov-perf">…</dd>
-          <dt>Tone</dt><dd id="ov-tone">…</dd>
-          <dt>History</dt><dd id="ov-history">…</dd>
-          <dt>Vault</dt><dd id="ov-vault" class="muted">…</dd>
+          <dt>Model server</dt><dd id="sa-server">…</dd>
+          <dt>Flowkey</dt><dd id="sa-version">…</dd>
         </dl>
+        <div class="card-actions sa-actions">
+          <button type="button" class="btn" id="sa-warmup">Warm up</button>
+          <button type="button" class="btn" id="sa-stop">Stop server</button>
+          <button type="button" class="btn" id="sa-update-check">Check for updates</button>
+          <button type="button" class="btn btn-primary" id="sa-update-apply" hidden>Install update</button>
+          <button type="button" class="btn" id="sa-diagnostics">Run diagnostics</button>
+          <button type="button" class="btn btn-danger" id="sa-exit">Exit Flowkey</button>
+        </div>
+        <p class="muted small" id="sa-status" aria-live="polite"></p>
       </div>
       <div class="card">
         <h2>Hotkeys</h2>
@@ -472,7 +512,7 @@
           <button class="btn" id="provider-start">Start server</button>
           <span class="muted small" id="provider-start-status"></span>
         </div>
-        <label class="check-row"><input type="checkbox" id="cfg-autostart"> Launch Flowkey when I sign in (per-user)</label>
+        <label class="check-row"><input type="checkbox" id="cfg-autostart"> Launch Flowkey when I sign in (per-user) <span class="muted small">— applies instantly</span></label>
         <label class="check-row"><input type="checkbox" id="cfg-warm-on-start"> Warm FastFlowLM when Flowkey starts</label>
         <div class="form-row">
           <label for="cfg-keep-warm">Keep warm (min; 0 = off)</label>
@@ -518,6 +558,7 @@
       </div>
       <div class="card" id="config-preferences" data-config-section="essentials">
         <h2>Performance &amp; history</h2>
+        <p class="muted small">These apply instantly — same as the tray's Quick toggles; "Save all settings" isn't needed.</p>
         <div class="radio-row" id="perf-block">
           <label><input type="radio" name="perf" value="balanced"> 🟡 Balanced</label>
           <label><input type="radio" name="perf" value="max"> 🔴 Max</label>

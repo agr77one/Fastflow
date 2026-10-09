@@ -2,8 +2,13 @@
 
 ## Unreleased
 
+### Added
+
+- **Everything in the tray's right-click menu is now in the dashboard.** Overview has a *Quick controls* card — Performance, Tone, History text, Start with Windows and the clipboard watcher (which had no dashboard control at all) — and a *Server & app* card with Warm up, Stop server, Check for updates / Install, Run diagnostics (report with Copy) and Exit Flowkey. Every control applies instantly through the same action the tray uses, and the two stay in sync: a change in the dashboard updates the tray's check marks within half a second, and a change in the tray shows up when you return to the dashboard.
+
 ### Fixed
 
+- **"Save all settings" could undo a change made from the tray.** The Config form sent its own copy of performance, tone, history text and autostart with every save, so switching to Max from the tray and later saving any other setting put it back. Those four now apply instantly in Config too and are no longer part of the save.
 - **A long selection no longer comes back shorter than it went in.** Grammar mode split a long selection into chunks but only processed the first three, and the hotkey replaces your selection with the output, so a 10,000-character selection became its first 3,600 characters and the rest was gone. Grammar now covers every chunk, and any chunk it can't reach (timeout, a failed call) is passed through unchanged rather than dropped.
 - **Grammar and tone fixes were cut off mid-text.** The reply budget was a fixed 160–220 tokens, but a rewrite is as long as its input: in one install's history a quarter of the 700–1200 character grammar fixes returned about 30% of their text. The budget now scales with the text (summarize and explain keep their short budget).
 - **Summarize, explain and tone say when they skipped text.** They condense at most 8 chunks (was 3, silently); beyond that the result ends with "(Note: only the first N of M characters of the selection were used.)".

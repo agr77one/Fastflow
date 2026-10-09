@@ -59,7 +59,7 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - data: `data/{meeting_digests,meeting_action_status,meeting_skips,notifications,chat_threads}.jsonl`
 - autostart: HKCU Run `FastFlowPrompt` → bundled `AutoHotkey64.exe` + `grammarFix.ahk`; `FlowkeyGitSync` → `sync.ps1`
 - sched: Windows task `FlowkeyGitSync` daily 12:00 → `sync.ps1` (ff-only pull, guarded)
-- ACTIONS count = 87
+- ACTIONS count = 90
 
 ## §V invariants
 
@@ -138,6 +138,7 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - V73: a digest ! record how much of its source it saw — `transcript_chars`, `truncated`, `coverage` = kept/total; content cut to fit (configured cap ∨ model window, whichever binds) ⇒ truncated. rows written before this (⊥ the fields) ⇒ recognised by the old cap's fingerprint `context_chars` = 24,013, share unknown. dashboard ! say so: `✓ partial` in the meeting list, amber note in the reader (⊥ silent: the cut part is the END of the meeting, where decisions/action items live). redo = `meeting_batch_run {redigest_truncated:true}` — deliberate, dashboard-only (scheduler ⊥: it REPLACES cached digests, V12 stays true for scheduled runs); queues only truncated digests the CURRENT limit reaches ≥ 1000 chars further than they reached (∴ no-op when the limit wasn't raised; a digest that is still cut ⊥ re-queued); newest first, ≤ `max_per_run`, result carries `remaining`; NoContent ⊥ skip-mark; a failure keeps the old digest
 - V74: a condition repeating on every call of a hot path ! be logged once per distinct value, then silent: `flm_env()` repairs a SYSTEM-profile `FLM_MODEL_PATH` on EVERY flm spawn ∧ warns once per distinct value; Quill handshake refusal once per (url,status). ⊥ flood `daemon.log` (172 of 190 WARNING lines in a month were one message)
 - V75: a hotkey ! never return less of the user's text than it received without saying so (the output replaces the selection): grammar processes EVERY chunk (≤ 40), unreached/failed chunks pass through verbatim, the single-call fallback keeps the remainder; summarising modes condense ≤ 8 chunks ∧ append a visible `(Note: only the first N of M characters …)` when they skipped any. reply budget for rewrite-style modes (everything but summarize/explain/prompt) = `rewrite_tokens(chars)` = chars/2.2 + 48 per call/chunk ∧ ⊥ a fixed cap (160/220/180 cut 25% of 701–1200 char fixes in real history to ~30% of their text)
+- V81: ∀ tray-menu control ∃ dashboard equivalent w/ same daemon action + same instant semantics (Overview Quick controls: perf/tone/history/autostart/clipboard watcher; Server & app: warmup/stop/update check+apply/diagnostics/exit); dashboard change → `.refresh_tray` marker → AHK rebuilds tray + reconciles clipboard watcher from its marker; tray change → dashboard re-reads `quick_state` on focus; Config "Save all" ⊥ resend instant settings (stale copy undid tray changes); `.exit_app` deleted at AHK startup
 
 ## §T tasks
 
@@ -196,8 +197,8 @@ T50|.|2.6 model guidance: 9B recommended in Config>Meetings, model stamped on in
 T51|.|2.6.x cross-meeting search: local transcript cache + SQLite FTS5 by turn + search box + Chat retrieval w/ [meeting,m:ss,speaker] citations|V20
 T52|.|2.6.x speaker labeling: `Speaker N`→name from cues+participants+calendar w/ confidence; user confirm, remembered|V78
 T53|.|2.6.0 docs/version/changelog + full gates|V18,V20
-T54|.|2.6 UI parity: Overview Quick controls (perf/tone/history/autostart/clipboard watcher, instant, same daemon actions as tray) + Server & app card (warmup/stop/update check+apply/diagnostics/exit); `get/set_clipboard_watcher` + `refresh_tray`/`exit_app` markers; two-way sync|V81,V5,V20
-T55|.|2.6 Config menu: autostart → Essentials, new App section (version/updates/diagnostics/exit), Meetings intel settings; Essentials toggles instant (outside Save bar)|V81,V59,V20
+T54|x|unreleased: UI parity: Overview Quick controls (perf/tone/history/autostart/clipboard watcher, instant, same daemon actions as tray) + Server & app card (warmup/stop/update check+apply/diagnostics/exit); `get/set_clipboard_watcher` + `refresh_tray`/`exit_app` markers; two-way sync|V81,V5,V20
+T55|.|2.6 Config menu: autostart → Essentials, new App section (version/updates/diagnostics/exit), Meetings intel settings (Essentials toggles already instant via T54)|V81,V59,V20
 ```
 
 ## §B bugs

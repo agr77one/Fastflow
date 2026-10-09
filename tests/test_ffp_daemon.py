@@ -79,8 +79,9 @@ def test_actions_count_and_expected_names(daemon_module):
     # (strict re-run of a digest) -> 74; prompt_builder_preview -> 75;
     # Notes v2 query/CRUD/Trash/board/staging adds 10 -> 85;
     # local-model note organization adds one -> 86;
-    # meeting_models (the Meetings model picker's usable/unusable list) -> 87.
-    assert len(daemon_module.ACTIONS) == 87
+    # meeting_models (the Meetings model picker's usable/unusable list) -> 87;
+    # tray parity (quick_state / set_clipboard_watcher / exit_app) -> 90.
+    assert len(daemon_module.ACTIONS) == 90
     for a in ("chat_threads_list", "chat_thread_get", "chat_send",
               "chat_thread_delete", "chat_stage_selection", "chat_take_staged",
               "note_get", "note_move", "note_delete", "notes_query",
@@ -92,7 +93,8 @@ def test_actions_count_and_expected_names(daemon_module):
               "meeting_digests_list", "meeting_process", "meeting_batch_run",
               "meeting_batch_status", "meeting_ask", "meeting_overview",
               "meeting_actions_list", "meeting_action_set_status", "meeting_week_summary",
-              "meeting_redigest", "meeting_models", "prompt_builder_preview"):
+              "meeting_redigest", "meeting_models", "prompt_builder_preview",
+              "quick_state", "set_clipboard_watcher", "exit_app"):
         assert a in daemon_module.ACTIONS
     # notify_gate writes the log + dedupe state, so it must be a WRITE action.
     assert "notify_gate" in daemon_module._WRITE_ACTIONS
@@ -843,6 +845,95 @@ def test_open_dashboard_writes_marker(daemon_server, tmp_path, monkeypatch):
     assert payload["ok"] is True
     assert payload["result"] == "queued"
     assert (tmp_path / ".open_dashboard").read_text(encoding="utf-8") == "1\n"
+
+
+# ---- V81: dashboard <-> tray parity ------------------------------------------
+
+def _post(base_url: str, name: str, args: dict | None = None):
+    body = json.dumps({"args": args or {}}).encode("utf-8")
+    return _read_json(f"{base_url}/action/{name}", method="POST", body=body)
+
+
+def test_quick_state_reports_every_tray_toggle(daemon_module, monkeypatch):
+    gf = daemon_module.grammar_fix
+    monkeypatch.setattr(gf, "get_current_performance_mode", lambda: "max")
+    monkeypatch.setattr(gf, "get_tone_preset", lambda: "casual")
+    monkeypatch.setattr(gf, "get_history_text_mode", lambda: "visible")
+    monkeypatch.setattr(daemon_module, "_act_get_autostart_state",
+                        lambda _a: {"enabled": True, "valid": False})
+    daemon_module._paths.MARKER_CLIPBOARD_WATCHER.parent.mkdir(parents=True, exist_ok=True)
+    daemon_module._paths.MARKER_CLIPBOARD_WATCHER.write_text("1\n", encoding="utf-8")
+
+    state = daemon_module._act_quick_state({})
+
+    assert state["performance"] == "max"
+    assert state["tone"] == "casual"
+    assert state["history"] == "visible"
+    assert state["autostart"] is True and state["autostart_valid"] is False
+    assert state["clipboard_watcher"] is True
+    assert "provider" in state
+
+
+def test_set_clipboard_watcher_toggles_the_marker_and_refreshes_the_tray(daemon_server):
+    daemon_module, base_url = daemon_server
+    watcher = daemon_module._paths.MARKER_CLIPBOARD_WATCHER
+    refresh = daemon_module._paths.MARKER_REFRESH_TRAY
+
+    status, payload = _post(base_url, "set_clipboard_watcher", {"enabled": True})
+    assert status == 200 and payload["result"] == {"enabled": True}
+    assert watcher.exists()
+    assert refresh.exists()          # the running AHK reconciles on its next poll
+
+    refresh.unlink()
+    _post(base_url, "set_clipboard_watcher", {"enabled": False})
+    assert not watcher.exists()
+    assert refresh.exists()
+    assert "set_clipboard_watcher" in daemon_module._WRITE_ACTIONS
+
+
+def test_tray_state_changes_refresh_the_tray_but_reads_do_not(daemon_server, monkeypatch):
+    daemon_module, base_url = daemon_server
+    refresh = daemon_module._paths.MARKER_REFRESH_TRAY
+    refresh.unlink(missing_ok=True)
+
+    _post(base_url, "tone_preset")                          # read-only
+    assert not refresh.exists()
+
+    status, payload = _post(base_url, "set_tone_casual")
+    assert status == 200 and payload["ok"] is True
+    assert refresh.exists()
+
+
+def test_failed_tray_action_does_not_refresh_the_tray(daemon_server):
+    daemon_module, base_url = daemon_server
+    refresh = daemon_module._paths.MARKER_REFRESH_TRAY
+    refresh.unlink(missing_ok=True)
+    with pytest.raises(urllib.error.HTTPError):
+        _post(base_url, "set_tone", {"preset": "loud"})
+    assert not refresh.exists()
+
+
+def test_config_patch_touching_tray_settings_refreshes_the_tray(daemon_server):
+    daemon_module, base_url = daemon_server
+    refresh = daemon_module._paths.MARKER_REFRESH_TRAY
+    refresh.unlink(missing_ok=True)
+
+    _post(base_url, "apply_config_patch", {"patch": {"hotkeys": {"grammar_fix": "^+g"}}})
+    assert not refresh.exists()
+
+    _post(base_url, "apply_config_patch", {"patch": {"server": {"performance_mode": "max"}}})
+    assert refresh.exists()
+
+
+def test_exit_app_writes_the_exit_marker(daemon_server):
+    daemon_module, base_url = daemon_server
+    marker = daemon_module._paths.MARKER_EXIT_APP
+    marker.unlink(missing_ok=True)
+
+    status, payload = _post(base_url, "exit_app")
+
+    assert status == 200 and payload["result"] == "queued"
+    assert marker.read_text(encoding="utf-8") == "1\n"
 
 
 # ---- B56: autostart entries must name a resolvable exe ----------------------

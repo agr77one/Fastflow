@@ -1444,3 +1444,27 @@ footer { padding: 14px 24px 22px; }
 .modal-actions { justify-content: flex-end; }
 .btn-danger { background: var(--warn); color: #fff; border-color: var(--warn); }
 .btn-danger:hover { filter: brightness(1.08); }
+.modal-wide { max-width: 720px; }
+.modal-pre {
+  max-height: 55vh; overflow: auto; margin: 10px 0 14px; padding: 10px 12px;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--surface);
+  font: 12px/1.45 Consolas, "Cascadia Mono", monospace; white-space: pre-wrap; word-break: break-word;
+}
+.modal-actions .muted { margin-right: auto; align-self: center; }
+.offscreen { position: fixed; left: -9999px; top: 0; opacity: 0; }
+
+/* ---- Overview: Quick controls + Server & app (tray parity, V81) ---- */
+.qc-grid {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 8px 12px;
+  align-items: center;
+}
+.qc-label { font-weight: 600; }
+.qc-grid .segmented { justify-self: start; flex-wrap: wrap; }
+.seg-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.sa-actions { flex-wrap: wrap; margin-top: 12px; }
+@media (max-width: 520px) {
+  .qc-grid { grid-template-columns: 1fr; gap: 4px; }
+  .qc-grid .qc-label { margin-top: 6px; }
+}

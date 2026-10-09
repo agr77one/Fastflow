@@ -537,6 +537,8 @@ def _act_apply_config_patch(args: dict) -> str:
             _paths.MARKER_RELOAD_HOTKEYS.write_text("1\n", encoding="utf-8")
         except OSError as exc:
             log.warning("could not write reload-hotkeys marker: %s", exc)
+    if {"server", "modes", "history_store_text"} & set(patch):
+        _signal_tray()   # performance / tone / history text may have changed
     return result
 
 
@@ -926,6 +928,64 @@ def _act_open_dashboard(_args: dict) -> str:
     return "queued"
 
 
+# ---- Tray parity (SPEC V81) ---------------------------------------------------
+#
+# The tray's Quick toggles and the dashboard's Quick controls drive the same
+# actions. The tray rebuilds its menu (and so its check marks) only when it is
+# told to, so every change made outside the tray drops a refresh marker that the
+# AHK 500ms poll turns into SetupTrayMenu().
+
+def _signal_tray() -> None:
+    try:
+        _paths.DATA_DIR.mkdir(parents=True, exist_ok=True)
+        _paths.MARKER_REFRESH_TRAY.write_text("1\n", encoding="utf-8")
+    except OSError as exc:
+        log.warning("could not write refresh-tray marker: %s", exc)
+
+
+def _act_quick_state(_args: dict) -> dict:
+    """Everything the tray's Quick toggles show, in one round trip."""
+    autostart = _act_get_autostart_state({})
+    return {
+        "performance": grammar_fix.get_current_performance_mode(),
+        "tone": grammar_fix.get_tone_preset(),
+        "history": grammar_fix.get_history_text_mode(),
+        "autostart": bool(autostart.get("enabled")),
+        "autostart_valid": bool(autostart.get("valid")),
+        "clipboard_watcher": _paths.MARKER_CLIPBOARD_WATCHER.exists(),
+        "provider": grammar_fix.LLM_PROVIDER,
+    }
+
+
+def _act_set_clipboard_watcher(args: dict) -> dict:
+    """Turn the clipboard watcher on/off. The marker file is the persisted state
+    (AHK reads it at startup); the running AHK reconciles with it on the next
+    tray refresh."""
+    enabled = bool(args.get("enabled"))
+    marker = _paths.MARKER_CLIPBOARD_WATCHER
+    try:
+        if enabled:
+            _paths.DATA_DIR.mkdir(parents=True, exist_ok=True)
+            marker.write_text("1\n", encoding="utf-8")
+        else:
+            marker.unlink(missing_ok=True)
+    except OSError as exc:
+        raise RuntimeError(f"could not update the clipboard watcher marker: {exc}") from exc
+    return {"enabled": enabled}
+
+
+def _act_exit_app(_args: dict) -> str:
+    """Ask the tray app to exit, exactly like its own Exit item. AHK's exit hook
+    then shuts this daemon down too. AHK deletes a stale marker at startup, so a
+    request nobody picked up can't kill the next launch."""
+    try:
+        _paths.DATA_DIR.mkdir(parents=True, exist_ok=True)
+        _paths.MARKER_EXIT_APP.write_text("1\n", encoding="utf-8")
+    except OSError as exc:
+        raise RuntimeError(f"could not write exit marker: {exc}") from exc
+    return "queued"
+
+
 def _act_shutdown(_args: dict) -> str:
     # The thread that handles this returns first; main thread sees the flag.
     threading.Timer(0.05, lambda: _shutdown_event.set()).start()
@@ -1165,7 +1225,18 @@ ACTIONS: dict[str, Callable[[dict], Any]] = {
     "get_autostart_state": _act_get_autostart_state,
     "set_autostart": _act_set_autostart,
     "open_dashboard": _act_open_dashboard,
+    "quick_state": _act_quick_state,
+    "set_clipboard_watcher": _act_set_clipboard_watcher,
+    "exit_app": _act_exit_app,
     "shutdown": _act_shutdown,
+}
+
+# Actions that change something the tray menu shows a check mark for.
+_TRAY_STATE_ACTIONS = {
+    "toggle_performance", "set_perf_balanced", "set_perf_max",
+    "toggle_history_text", "set_history_visible", "set_history_redacted",
+    "cycle_tone_preset", "set_tone", "set_tone_formal", "set_tone_casual", "set_tone_friendly",
+    "set_autostart", "set_clipboard_watcher",
 }
 
 # Mutating actions get a global lock so concurrent writes can't race the config file.
@@ -1176,7 +1247,7 @@ _WRITE_ACTIONS = {
     "toggle_history_text", "set_history_visible", "set_history_redacted",
     "cycle_tone_preset", "set_tone", "set_tone_formal", "set_tone_casual", "set_tone_friendly",
     "pull_model", "remove_model", "apply_config_patch", "update_apply",
-    "set_autostart", "bench_start", "pull_start",
+    "set_autostart", "set_clipboard_watcher", "bench_start", "pull_start",
     "chat_send", "chat_thread_delete", "chat_stage_selection", "chat_take_staged",
     "note_create", "note_update", "note_organize", "note_archive", "note_trash", "note_restore",
     "note_move", "note_delete", "notes_board_save",
@@ -1384,6 +1455,8 @@ class Handler(BaseHTTPRequestHandler):
                     result = handler(args)
             else:
                 result = handler(args)
+            if action_name in _TRAY_STATE_ACTIONS:
+                _signal_tray()
             elapsed = (time.time() - start) * 1000.0
             log.info("action=%s status=ok elapsed_ms=%.1f", action_name, elapsed)
             self._send_json(200, _ok(result, elapsed))
