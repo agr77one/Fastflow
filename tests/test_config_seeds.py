@@ -78,6 +78,6 @@ def test_seed_templates_agree_with_the_meetings_defaults():
     defaults = ffp_config.DEFAULT_CONFIG["meetings"]
     for path in (DEV_EXAMPLE, SHIPPED_SEED):
         seeded = json.loads(path.read_text(encoding="utf-8"))["meetings"]
-        for key in ("max_context_tokens", "model", "temperature"):
+        for key in ("max_context_tokens", "model", "temperature", "intel"):
             assert seeded[key] == defaults[key], f"{path.name}: meetings.{key} drifted from DEFAULT_CONFIG"
 

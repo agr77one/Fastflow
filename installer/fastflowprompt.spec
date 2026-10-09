@@ -57,6 +57,7 @@ HIDDEN_IMPORTS = [
     "ffp_flm_server",
     "ffp_hardware",
     "ffp_llm_client",
+    "ffp_meeting_intel",
     "ffp_meetings",
     "ffp_notifications",
     "ffp_notify",

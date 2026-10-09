@@ -1138,6 +1138,33 @@ def _act_meeting_week_summary(args: dict) -> dict:
     return ffp_meetings.week_summary(grammar_fix.load_config(), week_offset=offset)
 
 
+def _act_meeting_intel_get(args: dict) -> dict:
+    """One meeting's mind-map record (``found`` false when none has been built)."""
+    import ffp_meeting_intel
+    mid = str(args.get("meeting_id") or args.get("id") or "")
+    rec = ffp_meeting_intel.get_intel(mid)
+    return {"found": rec is not None, "meeting_id": mid, **(rec or {})}
+
+
+def _act_meeting_intel_build(args: dict) -> dict:
+    """Start building one meeting's mind map in the background (poll meeting_intel_status)."""
+    mid = str(args.get("meeting_id") or args.get("id") or "")
+    import ffp_meetings
+    meta = {k: args.get(k) for k in ("title", "date", "url") if args.get(k)}
+    return ffp_meetings.start_intel_build(mid, grammar_fix.load_config(), meta=meta)
+
+
+def _act_meeting_intel_status(_args: dict) -> dict:
+    import ffp_meetings
+    return ffp_meetings.intel_status()
+
+
+def _act_meeting_intel_list(_args: dict) -> dict:
+    """Per-meeting facets (category, people, themes, action count) for the meeting list."""
+    import ffp_meeting_intel
+    return {"meetings": ffp_meeting_intel.summaries()}
+
+
 ACTIONS: dict[str, Callable[[dict], Any]] = {
     "status": _act_status,
     "start": _act_start,
@@ -1222,6 +1249,10 @@ ACTIONS: dict[str, Callable[[dict], Any]] = {
     "meeting_actions_list": _act_meeting_actions_list,
     "meeting_action_set_status": _act_meeting_action_set_status,
     "meeting_week_summary": _act_meeting_week_summary,
+    "meeting_intel_get": _act_meeting_intel_get,
+    "meeting_intel_build": _act_meeting_intel_build,
+    "meeting_intel_status": _act_meeting_intel_status,
+    "meeting_intel_list": _act_meeting_intel_list,
     "get_autostart_state": _act_get_autostart_state,
     "set_autostart": _act_set_autostart,
     "open_dashboard": _act_open_dashboard,

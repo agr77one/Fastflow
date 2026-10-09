@@ -163,6 +163,7 @@ CHAT_THREADS_FILE:   Path = DATA_DIR / "chat_threads.jsonl"
 MEETING_DIGESTS_FILE: Path = DATA_DIR / "meeting_digests.jsonl"
 MEETING_ACTION_STATUS_FILE: Path = DATA_DIR / "meeting_action_status.jsonl"
 MEETING_SKIPS_FILE:  Path = DATA_DIR / "meeting_skips.jsonl"
+MEETING_INTEL_FILE:  Path = DATA_DIR / "meeting_intel.jsonl"
 FLM_PID_FILE:        Path = DATA_DIR / "flm_server.pid"
 
 # Markers (tiny presence-only files)

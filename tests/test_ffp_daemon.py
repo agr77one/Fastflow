@@ -80,8 +80,9 @@ def test_actions_count_and_expected_names(daemon_module):
     # Notes v2 query/CRUD/Trash/board/staging adds 10 -> 85;
     # local-model note organization adds one -> 86;
     # meeting_models (the Meetings model picker's usable/unusable list) -> 87;
-    # tray parity (quick_state / set_clipboard_watcher / exit_app) -> 90.
-    assert len(daemon_module.ACTIONS) == 90
+    # tray parity (quick_state / set_clipboard_watcher / exit_app) -> 90;
+    # meeting mind maps (meeting_intel_get/build/status/list) -> 94.
+    assert len(daemon_module.ACTIONS) == 94
     for a in ("chat_threads_list", "chat_thread_get", "chat_send",
               "chat_thread_delete", "chat_stage_selection", "chat_take_staged",
               "note_get", "note_move", "note_delete", "notes_query",
@@ -94,7 +95,8 @@ def test_actions_count_and_expected_names(daemon_module):
               "meeting_batch_status", "meeting_ask", "meeting_overview",
               "meeting_actions_list", "meeting_action_set_status", "meeting_week_summary",
               "meeting_redigest", "meeting_models", "prompt_builder_preview",
-              "quick_state", "set_clipboard_watcher", "exit_app"):
+              "quick_state", "set_clipboard_watcher", "exit_app",
+              "meeting_intel_get", "meeting_intel_build", "meeting_intel_status", "meeting_intel_list"):
         assert a in daemon_module.ACTIONS
     # notify_gate writes the log + dedupe state, so it must be a WRITE action.
     assert "notify_gate" in daemon_module._WRITE_ACTIONS
@@ -104,7 +106,7 @@ def test_actions_count_and_expected_names(daemon_module):
     # they are intentionally NOT under the global config write-lock (a long batch
     # must not block config saves / notifications).
     for a in ("meeting_process", "meeting_batch_run", "meeting_ask", "meeting_action_set_status",
-              "meeting_models"):
+              "meeting_models", "meeting_intel_build"):
         assert a not in daemon_module._WRITE_ACTIONS
     # popup-era socket actions are gone (chat is daemon-backed now)
     for a in ("chat_send_selection", "chat_reload", "chat_restart"):

@@ -50,6 +50,10 @@ _LEGACY_PROMPT_BUILDER_IDENTITY.pop("prompt_version")
 # a large context window, which the model picked for hotkeys is often not (a 1024-
 # token translation model rejects a digest outright). See ffp_meetings.resolve_model.
 DEFAULT_MEETING_MODEL = "qwen3.5:4b"
+# Mind-map extraction is noticeably better at 8B+: in the 2026-10-08 bake-off a 4B
+# model misattributed action owners and under-reported decisions. Recommended, not
+# required -- an empty meetings.intel.model falls back to meetings.model.
+RECOMMENDED_INTEL_MODEL = "qwen3.5:9b"
 
 DEFAULT_CONFIG = {
     "enabled": True,
@@ -152,6 +156,14 @@ DEFAULT_CONFIG = {
             "only_when_idle": True,
             "idle_minutes": 10,
             "max_per_run": 10,
+        },
+        # Structured meeting record behind the mind map and summary views (T47).
+        "intel": {
+            "enabled": True,
+            "model": "",              # "" = meetings.model
+            "backfill": True,         # also build for older digested meetings, newest first
+            "max_per_run": 5,         # each takes ~1.5-3 min on the NPU
+            "hide_small_talk": True,
         },
     },
     "modes": {
@@ -573,6 +585,23 @@ def _filter_meetings_patch(value: dict) -> dict:
                     pass
         if fb:
             out["batch"] = fb
+    intel = value.get("intel")
+    if isinstance(intel, dict):
+        fi: dict = {}
+        for bk in ("enabled", "backfill", "hide_small_talk"):
+            if bk in intel:
+                fi[bk] = bool(intel[bk])
+        if "model" in intel:
+            model = str(intel["model"] or "").strip()
+            if not model or _MODEL_NAME_RE.match(model):
+                fi["model"] = model          # "" = use meetings.model
+        if "max_per_run" in intel:
+            try:
+                fi["max_per_run"] = max(1, min(int(intel["max_per_run"]), 20))
+            except (TypeError, ValueError):
+                pass
+        if fi:
+            out["intel"] = fi
     return out
 
 

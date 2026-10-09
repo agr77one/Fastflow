@@ -6,10 +6,12 @@ from __future__ import annotations
 
 import datetime
 import sys
+import threading
 import types
 
 import ffp_chat
 import ffp_config
+import ffp_meeting_intel as MI
 import ffp_meetings as M
 import ffp_quill
 import pytest
@@ -20,6 +22,7 @@ def _tmp_digests(tmp_path, monkeypatch):
     monkeypatch.setattr(M, "DIGESTS_PATH", tmp_path / "meeting_digests.jsonl")
     monkeypatch.setattr(M, "ACTION_STATUS_PATH", tmp_path / "meeting_action_status.jsonl")
     monkeypatch.setattr(M, "SKIPS_PATH", tmp_path / "meeting_skips.jsonl")
+    monkeypatch.setattr(MI, "INTEL_PATH", tmp_path / "meeting_intel.jsonl")
 
 
 class FakeQuill:
@@ -897,3 +900,119 @@ def test_config_snapshot_keeps_a_real_zero_idle_threshold():
     assert M.config_snapshot({"batch": {"idle_minutes": None}})["batch"]["idle_minutes"] == 10
     assert M.config_snapshot({"batch": {"idle_minutes": "soon"}})["batch"]["idle_minutes"] == 10
 
+
+
+# ---------- meeting intelligence: batch pass + on-demand build (SPEC T47; V76, V77) -------
+
+def _turns_transcript(n_sections=3):
+    parts = []
+    for i in range(n_sections):
+        parts.append(f"[{i * 300}s] Speaker {1 + i % 2}:\n" + f"talk{i} " * 420)
+        parts.append(f"[{i * 300 + 60}s] Microphone (AG):\nok sure")
+    return "\n".join(parts)
+
+
+def _intel_model(messages):
+    system = messages[0]["content"]
+    if system.startswith("Reply with exactly two lines"):
+        return "TITLE: Delivery sync\nCATEGORY: planning"
+    if system.startswith("Group the numbered"):
+        return "GROUP: Work | 1, 2, 3, 4 | work"
+    if system.startswith("You read ONE section"):
+        tag = messages[1]["content"].split("Section:\n", 1)[1][:30]
+        return f"TOPIC: About {tag} | gist\nACTION: Follow up | Speaker 1"
+    return "## Summary\n- digest"
+
+
+def _intel_cfg(**intel):
+    cfg = _cfg()
+    cfg["meetings"]["intel"] = {"enabled": True, "backfill": True, "max_per_run": 5, **intel}
+    return cfg
+
+
+def test_batch_builds_mind_maps_for_new_digests_and_backfills_newest_first():
+    M.save_digest({"meeting_id": "old1", "title": "Old 1", "date": "2026-06-01T10:00:00Z",
+                   "processed_at": "2026-06-01T11:00:00", "digest_md": "kept"})
+    M.save_digest({"meeting_id": "old2", "title": "Old 2", "date": "2026-06-10T10:00:00Z",
+                   "processed_at": "2026-06-10T11:00:00", "digest_md": "kept"})
+    fake = FakeQuill([{"id": "new", "title": "New", "date": "2026-06-18T18:00:00Z"}],
+                     minutes="## m\n- a", transcript=_turns_transcript())
+    res = M.run_batch(_intel_cfg(max_per_run=2), client=fake, llm_call=_intel_model)
+
+    assert res["ok"] and res["processed"] == 1
+    assert res["intel_built"] == 2 and res["intel_errors"] == []
+    built = MI.load_intel()
+    assert set(built) == {"new", "old2"}                              # new first, then newest backfill
+    assert built["new"]["title"] == "Delivery sync"
+    assert M.get_digest("old1")["digest_md"] == "kept"               # V76: digests untouched
+    assert M.get_digest("old2")["digest_md"] == "kept"
+
+
+def test_batch_skips_the_intel_pass_when_disabled():
+    fake = FakeQuill([{"id": "n", "title": "N", "date": "2026-06-18T18:00:00Z"}],
+                     minutes="## m\n- a", transcript=_turns_transcript())
+    res = M.run_batch(_intel_cfg(enabled=False), client=fake, llm_call=_intel_model)
+    assert res["processed"] == 1 and res["intel_built"] == 0
+    assert MI.load_intel() == {}
+
+
+def test_a_stub_transcript_is_recorded_once_and_not_retried():
+    fake = FakeQuill([{"id": "stub", "title": "S", "date": "2026-06-18T18:00:00Z"}],
+                     minutes="## m\n- a", transcript="[0s] AG:\nThank you.")
+    M.run_batch(_intel_cfg(), client=fake, llm_call=_intel_model)
+    assert MI.get_intel("stub")["skipped"]
+    assert MI.summaries() == []                                       # never shown as a mind map
+    fake.calls.clear()
+    M.run_batch(_intel_cfg(), client=fake, llm_call=_intel_model)
+    assert not [c for c in fake.calls if c[0] == "get_transcript"]
+
+
+def test_a_failing_intel_pass_never_costs_the_digests():
+    def model(messages):
+        if messages[0]["content"].startswith("You read ONE section"):
+            raise RuntimeError("NPU fell over")
+        return "## Summary\n- digest"
+
+    fake = FakeQuill([{"id": "d1", "title": "D", "date": "2026-06-18T18:00:00Z"}],
+                     minutes="## m\n- a", transcript=_turns_transcript())
+    res = M.run_batch(_intel_cfg(), client=fake, llm_call=model)
+    assert res["ok"] and res["processed"] == 1
+    assert M.get_digest("d1")["found"]
+    assert res["intel_built"] == 0 and res["intel_errors"][0]["meeting_id"] == "d1"
+    assert MI.get_intel("d1") is None                                  # retried next run
+
+
+def test_on_demand_build_runs_in_the_background_one_at_a_time():
+    gate = threading.Event()
+
+    def slow_model(messages):
+        gate.wait(5)
+        return _intel_model(messages)
+
+    M.save_digest({"meeting_id": "m9", "title": "Nine", "date": "2026-06-18", "processed_at": "x", "digest_md": "d"})
+    fake = FakeQuill([], transcript=_turns_transcript())
+    first = M.start_intel_build("m9", _intel_cfg(), client=fake, llm_call=slow_model)
+    assert first["ok"] and first["started"]
+    assert M.intel_status()["running"] is True
+    second = M.start_intel_build("m9", _intel_cfg(), client=fake, llm_call=slow_model)
+    assert second["ok"] is False and "already" in second["error"]
+    gate.set()
+    for _ in range(200):
+        if not M.intel_status()["running"]:
+            break
+        threading.Event().wait(0.02)
+    status = M.intel_status()
+    assert status["running"] is False and status["last_error"] == "" and status["built"] == 1
+    assert MI.get_intel("m9")["meeting_title"] == "Nine"                # title came from the digest row
+
+
+def test_on_demand_build_requires_the_integration():
+    assert M.start_intel_build("m1", {"meetings": {"enabled": False}})["ok"] is False
+
+
+def test_config_snapshot_reports_intel_settings_and_the_recommended_model():
+    snap = M.config_snapshot({"intel": {"model": "qwen3.5:9b", "max_per_run": "x"}})
+    assert snap["intel"]["model"] == "qwen3.5:9b"
+    assert snap["intel"]["max_per_run"] == 5                           # bad value -> default
+    assert snap["intel"]["recommended_model"] == ffp_config.RECOMMENDED_INTEL_MODEL
+    assert M.config_snapshot(None)["intel"]["enabled"] is True

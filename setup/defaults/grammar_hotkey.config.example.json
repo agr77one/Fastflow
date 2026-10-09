@@ -75,6 +75,13 @@
       "only_when_idle": true,
       "idle_minutes": 10,
       "max_per_run": 10
+    },
+    "intel": {
+      "enabled": true,
+      "model": "",
+      "backfill": true,
+      "max_per_run": 5,
+      "hide_small_talk": true
     }
   },
   "hotkeys": {

@@ -591,3 +591,15 @@ def test_existing_config_without_meeting_model_gets_the_default(tmp_path):
     assert cfg["meetings"]["model"] == "qwen3.5:4b"
     assert cfg["llm"]["model"] == "hy-mt2-flash:1.8b"   # the hotkey model is left alone
 
+
+
+def test_filter_config_patch_validates_meeting_intel_settings():
+    filtered = ffp_config.filter_config_patch({"meetings": {"intel": {
+        "enabled": 0, "model": "qwen3.5:9b", "backfill": "yes", "max_per_run": 999,
+        "hide_small_talk": False, "evil": "x"}}})
+    assert filtered == {"meetings": {"intel": {
+        "enabled": False, "model": "qwen3.5:9b", "backfill": True, "max_per_run": 20, "hide_small_talk": False}}}
+    blank = ffp_config.filter_config_patch({"meetings": {"intel": {"model": ""}}})
+    assert blank == {"meetings": {"intel": {"model": ""}}}            # "" = use meetings.model
+    bad = ffp_config.filter_config_patch({"meetings": {"intel": {"model": "../../etc"}}})
+    assert bad == {}

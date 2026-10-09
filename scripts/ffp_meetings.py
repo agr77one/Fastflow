@@ -828,12 +828,18 @@ def run_batch(cfg: dict, *, llm_call=None, client=None, max_per_run=None, reason
             except Exception as exc:
                 log.warning("digest failed for %s: %s", mt.get("id"), exc)
                 errors.append({"meeting_id": mt.get("id"), "error": str(exc)})
+        intel = {"built": 0, "errors": []}
+        if not redigest_truncated:
+            fresh = [mt for mt in todo if digest_exists(str(mt.get("id") or ""))]
+            intel = _intel_pass(mcfg, c, llm, llm_call, fresh)
         _status.update({
             "last_run_at": _now_iso(), "last_processed": processed,
             "last_errors": len(errors), "last_skipped": skipped, "last_reason": reason,
+            "last_intel_built": intel["built"],
         })
         return {"ok": True, "processed": processed, "errors": errors, "queued": len(todo),
-                "skipped": skipped, "remaining": remaining}
+                "skipped": skipped, "remaining": remaining,
+                "intel_built": intel["built"], "intel_errors": intel["errors"]}
     finally:
         _status["running"] = False
         _batch_lock.release()
@@ -848,6 +854,165 @@ def batch_status() -> dict:
         # Cached digests that only cover part of their meeting (see digest_truncation).
         "truncated_digests": sum(1 for d in digests if digest_truncation(d)[0]),
     }
+
+# ---------- meeting intelligence (mind map / summary views) ----------------------------
+#
+# ffp_meeting_intel builds the record; this side supplies the transcript, the model
+# and the scheduling. Builds hold the NPU for minutes, so only one runs at a time:
+# on demand from the dashboard (a background thread the UI polls) or as a pass at the
+# end of the after-hours batch, which also backfills older meetings newest first.
+
+_intel_lock = threading.Lock()
+_intel_status: dict = {"running": False, "meeting_id": "", "section": 0, "of": 0,
+                       "last_meeting_id": "", "last_error": "", "last_finished_at": ""}
+
+
+def intel_settings(mcfg: dict) -> dict:
+    d = DEFAULTS["intel"]
+    i = mcfg.get("intel") if isinstance(mcfg.get("intel"), dict) else {}
+    return {
+        "enabled": bool(i.get("enabled", d["enabled"])),
+        "model": str(i.get("model") or "").strip(),
+        "backfill": bool(i.get("backfill", d["backfill"])),
+        "max_per_run": max(1, _int_or_default(i.get("max_per_run"), d["max_per_run"])),
+        "hide_small_talk": bool(i.get("hide_small_talk", d["hide_small_talk"])),
+    }
+
+
+def _intel_llm(llm_call, mcfg: dict) -> _LLM:
+    """meetings.intel.model when set, else meetings.model -- through the same floor
+    resolve_model enforces for digests."""
+    model = intel_settings(mcfg)["model"]
+    return _resolve_llm(llm_call, {**mcfg, "model": model} if model else mcfg)
+
+
+def _build_one_intel(meeting: dict, client, llm: _LLM) -> dict:
+    """Fetch the transcript (intel needs speaker turns; minutes have none), build and
+    store the record. A stub transcript is stored as a skip so backfill moves on."""
+    import ffp_meeting_intel as MI
+    mid = str(meeting.get("id") or meeting.get("meeting_id") or "")
+    meeting = {**meeting, "id": mid}
+    _intel_status.update(running=True, meeting_id=mid, section=0, of=0, last_error="")
+    try:
+        transcript = ffp_quill.get_transcript(mid, client=client)
+        try:
+            rec = MI.build_intel(meeting, transcript, llm,
+                                 progress=lambda n, total: _intel_status.update(section=n, of=total))
+        except MI.IntelSkip as exc:
+            MI.save_intel({"schema": MI.SCHEMA, "meeting_id": mid, "date": str(meeting.get("date") or ""),
+                           "built_at": _now_iso(), "skipped": str(exc)})
+            raise
+        MI.save_intel(rec)
+        return rec
+    except Exception as exc:
+        _intel_status["last_error"] = str(exc)
+        raise
+    finally:
+        _intel_status.update(running=False, last_meeting_id=mid, last_finished_at=_now_iso())
+
+
+def _meeting_ref(meeting_id: str, meta: dict | None = None) -> dict:
+    """Title/date/url for a meeting: its digest row, else what the caller passed."""
+    meta = meta or {}
+    d = get_digest(meeting_id)
+    return {
+        "id": meeting_id,
+        "title": d.get("title") or str(meta.get("title") or ""),
+        "date": d.get("date") or str(meta.get("date") or ""),
+        "url": d.get("url") or str(meta.get("url") or ""),
+    }
+
+
+def start_intel_build(meeting_id: str, cfg: dict, *, meta: dict | None = None,
+                      client=None, llm_call=None) -> dict:
+    """Build one meeting's mind map in the background; poll ``intel_status``."""
+    mcfg = cfg.get("meetings") if isinstance(cfg.get("meetings"), dict) else {}
+    meeting_id = str(meeting_id or "").strip()
+    if not meeting_id:
+        raise ValueError("meeting_id is required")
+    if not mcfg.get("enabled"):
+        return {"ok": False, "error": "Quill integration is disabled"}
+    if not _intel_lock.acquire(blocking=False):
+        return {"ok": False, "error": "a mind map is already being built", "status": dict(_intel_status)}
+    try:
+        llm = _intel_llm(llm_call, mcfg)
+        c = client or ffp_quill.QuillClient(str(mcfg.get("mcp_url") or ffp_quill.DEFAULT_MCP_URL))
+        meeting = _meeting_ref(meeting_id, meta)
+    except Exception:
+        _intel_lock.release()
+        raise
+
+    def work():
+        try:
+            _build_one_intel(meeting, c, llm)
+        except Exception as exc:
+            log.warning("mind map for %s not built: %s", meeting_id, exc)
+        finally:
+            _intel_lock.release()
+
+    _intel_status.update(running=True, meeting_id=meeting_id, section=0, of=0, last_error="")
+    threading.Thread(target=work, name="meeting-intel", daemon=True).start()
+    return {"ok": True, "started": True, "model": llm.model}
+
+
+def intel_status() -> dict:
+    import ffp_meeting_intel as MI
+    rows = MI.load_intel()
+    return {**_intel_status, "built": sum(1 for r in rows.values() if not r.get("skipped"))}
+
+
+def _intel_queue(fresh: list[dict], cap: int, backfill: bool) -> list[dict]:
+    """Meetings due a mind map: this run's new digests first, then (backfill) older
+    digested meetings without one, newest first."""
+    import ffp_meeting_intel as MI
+    have = MI.load_intel()
+    candidates = list(fresh)
+    if backfill:
+        rows = sorted(load_digests(), key=lambda d: str(d.get("date") or ""), reverse=True)
+        candidates += [{"id": d["meeting_id"], "title": d.get("title") or "", "date": d.get("date") or "",
+                        "url": d.get("url") or ""} for d in rows]
+    queue, seen = [], set()
+    for m in candidates:
+        mid = str(m.get("id") or "")
+        if mid and mid not in have and mid not in seen:
+            seen.add(mid)
+            queue.append(m)
+            if len(queue) >= cap:
+                break
+    return queue
+
+
+def _intel_pass(mcfg: dict, client, llm, llm_call, fresh: list[dict]) -> dict:
+    """The batch's mind-map pass. Never raises: a failure here must not cost the
+    digests the batch already saved (V76)."""
+    import ffp_meeting_intel as MI
+    settings = intel_settings(mcfg)
+    if not settings["enabled"]:
+        return {"built": 0, "errors": []}
+    queue = _intel_queue(fresh, settings["max_per_run"], settings["backfill"])
+    if not queue:
+        return {"built": 0, "errors": []}
+    if not _intel_lock.acquire(blocking=False):
+        return {"built": 0, "errors": [], "deferred": "a mind map is being built on demand"}
+    built, errors = 0, []
+    try:
+        try:
+            reuse = isinstance(llm, _LLM) and not settings["model"]
+            intel_llm = llm if reuse else _intel_llm(llm_call, mcfg)
+        except Exception as exc:
+            return {"built": 0, "errors": [{"meeting_id": "", "error": str(exc)}]}
+        for m in queue:
+            try:
+                _build_one_intel(m, client, intel_llm)
+                built += 1
+            except MI.IntelSkip:
+                pass
+            except Exception as exc:
+                log.warning("mind map failed for %s: %s", m.get("id"), exc)
+                errors.append({"meeting_id": m.get("id"), "error": str(exc)})
+    finally:
+        _intel_lock.release()
+    return {"built": built, "errors": errors}
 
 
 # ---------- on-demand Q&A about one meeting -------------------------------------------
@@ -1151,4 +1316,5 @@ def config_snapshot(meetings_cfg) -> dict:
             "idle_minutes": _int_or_default(b.get("idle_minutes"), db["idle_minutes"]),
             "max_per_run": int(b.get("max_per_run") or db["max_per_run"]),
         },
+        "intel": {**intel_settings(cfg), "recommended_model": ffp_config.RECOMMENDED_INTEL_MODEL},
     }
