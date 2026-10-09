@@ -4,7 +4,14 @@ Flowkey is a Windows desktop assistant that adds local-LLM hotkeys for grammar f
 
 Everything runs locally through [FastFlowLM](https://fastflowlm.com) (AMD Ryzen AI NPU) or, on machines without the NPU, through [Ollama](https://ollama.com) (CPU/GPU) as a secondary provider. No cloud service, analytics, or telemetry is used by the app.
 
-Current version: `2.5.4`
+Current version: `2.6.0`
+
+## What's new in 2.6.0
+
+- **Long selections no longer lose text.** Grammar mode only ever processed the first three chunks of a long selection, and the hotkey replaces your selection with the result — so a 10,000-character selection came back as its first 3,600 characters and the rest was gone. Every chunk is processed now, and a chunk that can't be reached is passed through unchanged. Grammar and tone fixes of 700–1200 characters were also cut off mid-text by a fixed reply budget; the budget now scales with the text. Summaries say when part of a very long selection wasn't used.
+- **Everything in the tray menu is in the dashboard.** Overview has *Quick controls* (Performance, Tone, History text, Start with Windows, Clipboard watcher) and *Server & app* (Warm up, Stop, Check for updates / Install, Run diagnostics, Exit). They apply instantly, like the tray, and the two stay in sync.
+- **Config is reorganized.** Essentials now holds every quick toggle, including Start with Windows (moved from Models & AI) and the clipboard watcher; a new **App** section collects version, updates, diagnostics, the model server and Exit.
+- **"Save all settings" no longer undoes tray changes.** Saving the Config form used to resend its own copy of performance, tone, history text and autostart, reverting a change made from the tray since the tab was opened.
 
 ## What's new in 2.5.4
 

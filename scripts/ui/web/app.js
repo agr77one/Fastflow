@@ -275,6 +275,8 @@ async function refreshHealth() {
 // ---- Overview --------------------------------------------------------------
 
 async function loadOverview() {
+  loadQuickState();
+  loadServerApp("sa");
   try {
     const cfg = await action("config_snapshot");
     const llm = cfg.llm || {};
@@ -283,9 +285,6 @@ async function loadOverview() {
     setText("ov-provider", fellBack ? `${prov} (fallback from ${PROVIDER_LABELS[llm.configured_provider]})` : prov);
     setText("ov-model", llm.model || cfg.flm_model);
     setText("ov-url", llm.base_url || cfg.flm_base_url);
-    setText("ov-perf", PERF_LABELS[(cfg.server || {}).performance_mode] || (cfg.server || {}).performance_mode);
-    setText("ov-tone", TONE_LABELS[(cfg.tone || {}).preset] || (cfg.tone || {}).preset);
-    setText("ov-history", cfg.history_store_text ? "Visible (text stored)" : "Redacted (text not stored)");
     setText("ov-vault", (cfg.notes || {}).vault_dir);
     const hk = cfg.hotkeys || {};
     setText("hk-grammar", humanHotkey(hk.grammar_fix));
@@ -318,6 +317,275 @@ async function loadOverview() {
   } catch {
     $("ov-mtg-detail").textContent = "";
   }
+}
+
+// ---- Quick controls (tray parity, SPEC V81) ------------------------------------
+// The same toggles as the tray's right-click "Quick toggles", driving the same
+// daemon actions and applying instantly. The daemon tells the tray to rebuild its
+// check marks; tray-side changes show up here when the window regains focus.
+// Config › Essentials binds its copies to the same setQuick(), so the two
+// surfaces can never disagree or overwrite each other on "Save all settings".
+
+const QC_ACTIONS = {
+  performance: (v) => [v === "max" ? "set_perf_max" : "set_perf_balanced", {}],
+  tone: (v) => [`set_tone_${v}`, {}],
+  history: (v) => [v === "visible" ? "set_history_visible" : "set_history_redacted", {}],
+  autostart: (v) => ["set_autostart", { enabled: v === "on" }],
+  clipboard_watcher: (v) => ["set_clipboard_watcher", { enabled: v === "on" }],
+};
+const QC_LABELS = {
+  performance: { label: "Performance", values: PERF_LABELS },
+  tone: { label: "Tone", values: TONE_LABELS },
+  history: { label: "History text", values: { visible: "👁 Visible", redacted: "🙈 Redacted" } },
+  autostart: { label: "Start with Windows", values: { on: "On", off: "Off" } },
+  clipboard_watcher: { label: "Clipboard watcher", values: { on: "On", off: "Off" } },
+};
+
+function quickValues(state) {
+  return {
+    performance: state.performance,
+    tone: state.tone,
+    history: state.history,
+    autostart: state.autostart ? "on" : "off",
+    clipboard_watcher: state.clipboard_watcher ? "on" : "off",
+  };
+}
+
+function renderQuickState(state) {
+  const values = quickValues(state);
+  const isFlm = state.provider === "fastflowlm";
+  document.querySelectorAll("[data-qc]").forEach((group) => {
+    const key = group.dataset.qc;
+    group.querySelectorAll(".seg-btn").forEach((btn) => {
+      const active = btn.dataset.value === values[key];
+      btn.classList.toggle("active", active);
+      btn.setAttribute("aria-pressed", active ? "true" : "false");
+      if (key === "performance") {
+        btn.disabled = !isFlm;
+        btn.title = isFlm ? "" : "Performance modes are FastFlowLM-only.";
+      }
+    });
+  });
+  // Config › Essentials copies of the same settings.
+  document.querySelectorAll('input[name="perf"]').forEach((r) => (r.checked = r.value === values.performance));
+  document.querySelectorAll('input[name="tone"]').forEach((r) => (r.checked = r.value === values.tone));
+  $("cfg-store-text").checked = values.history === "visible";
+  $("cfg-autostart").checked = values.autostart === "on";
+  $("cfg-clipwatch").checked = values.clipboard_watcher === "on";
+  historyStoreText = values.history === "visible";
+  if (state.autostart && !state.autostart_valid) {
+    setStatus("qc-status", "⚠ Start with Windows is on but points at a missing program — turn it Off and On to repair.", false);
+  }
+}
+
+async function loadQuickState() {
+  try {
+    renderQuickState(await action("quick_state"));
+  } catch (e) {
+    setStatus("qc-status", `⚠ Couldn't read settings: ${e.message}`, false);
+  }
+}
+
+async function setQuick(key, value, statusId = "qc-status") {
+  const [name, args] = QC_ACTIONS[key](value);
+  const meta = QC_LABELS[key];
+  try {
+    const out = await action(name, args);
+    // set_autostart reports failure in its result instead of raising.
+    if (out && typeof out === "object" && out.ok === false) throw new Error(out.error || "failed");
+    setStatus(statusId, `✅ ${meta.label}: ${meta.values[value] || value}`);
+  } catch (e) {
+    setStatus(statusId, `⚠ ${meta.label} change failed: ${e.message}`, false);
+  }
+  await loadQuickState();      // re-sync both surfaces with what was actually saved
+}
+
+function onQuickControlClick(event) {
+  const btn = event.target.closest(".seg-btn");
+  const group = btn && btn.closest("[data-qc]");
+  if (!group || btn.disabled || btn.classList.contains("active")) return;
+  setQuick(group.dataset.qc, btn.dataset.value);
+}
+
+// ---- Server & app (tray "Server" submenu + Run Diagnostics + Exit) ----------------
+// The same controls appear twice: the Overview card (ids "sa-*") and Config › App
+// (ids "cfg-app-*"). Every function takes that id prefix; each surface reports into
+// its own status line.
+
+const SERVER_APP_PREFIXES = ["sa", "cfg-app"];
+
+async function loadServerApp(p = "sa") {
+  try {
+    const raw = await action("status");
+    const f = {};
+    for (const m of String(raw).matchAll(/([a-z_]+)=(\S+)/g)) f[m[1]] = m[2];
+    const prov = PROVIDER_LABELS[f.provider] || f.provider || "?";
+    const up = f.reachable === "true";
+    $(`${p}-server`).textContent = `${prov} · ${up ? "running ✅" : "not running"} · ${f.model || "?"}`;
+  } catch (e) {
+    $(`${p}-server`).textContent = `unavailable: ${e.message}`;
+  }
+  try {
+    setText(`${p}-version`, `v${await action("version")}`);
+  } catch {
+    setText(`${p}-version`, "?");
+  }
+}
+
+async function serverAction(p, name, busyText) {
+  setStatus(`${p}-status`, busyText);
+  try {
+    const out = await action(name);
+    setStatus(`${p}-status`, `✅ ${out || "done"}`);
+  } catch (e) {
+    setStatus(`${p}-status`, `⚠ ${e.message}`, false);
+  }
+  loadServerApp(p);
+}
+
+async function checkAppUpdate(p) {
+  const install = $(`${p}-update-apply`);
+  setStatus(`${p}-status`, "Checking for updates…");
+  install.hidden = true;
+  try {
+    const info = await action("update_check");
+    if (info.error) {
+      setStatus(`${p}-status`, `⚠ Update feed unreachable: ${info.error}`, false);
+    } else if (info.has_update) {
+      setStatus(`${p}-status`, `Update available: v${info.current} → v${info.latest}`);
+      install.textContent = `Install v${info.latest}`;
+      install.hidden = false;
+    } else {
+      setStatus(`${p}-status`, `✅ You're up to date (v${info.current}).`);
+    }
+  } catch (e) {
+    setStatus(`${p}-status`, `⚠ Update check failed: ${e.message}`, false);
+  }
+}
+
+async function applyAppUpdate(p) {
+  const ok = await confirmDialog(
+    "Download and install the update now?\n\nFlowkey's program files are replaced; restart Flowkey afterwards.",
+    "Install",
+  );
+  if (!ok) return;
+  const install = $(`${p}-update-apply`);
+  install.disabled = true;
+  setStatus(`${p}-status`, "Downloading update…");
+  try {
+    const out = await action("update_apply");
+    setStatus(`${p}-status`, `✅ ${out || "Update applied — restart Flowkey."}`);
+    install.hidden = true;
+  } catch (e) {
+    setStatus(`${p}-status`, `⚠ Update failed: ${e.message}`, false);
+  } finally {
+    install.disabled = false;
+  }
+}
+
+// The async Clipboard API can be refused (permission policy, embedded browser);
+// a hidden textarea + execCommand("copy") still works inside a click handler.
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    const area = document.createElement("textarea");
+    area.value = text;
+    area.setAttribute("readonly", "");
+    area.className = "offscreen";
+    document.body.append(area);
+    area.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch { ok = false; }
+    area.remove();
+    return ok;
+  }
+}
+
+// Read-only text in a modal with Copy (diagnostics report). DOM via
+// createElement/textContent only (CSP-safe), like confirmDialog.
+function textDialog(title, body) {
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  const box = document.createElement("div");
+  box.className = "card modal-box modal-wide";
+  const heading = document.createElement("h2");
+  heading.textContent = title;
+  const pre = document.createElement("pre");
+  pre.className = "modal-pre";
+  pre.textContent = body;
+  const note = document.createElement("span");
+  note.className = "muted small";
+  const row = document.createElement("div");
+  row.className = "card-actions modal-actions";
+  const copy = document.createElement("button");
+  copy.className = "btn";
+  copy.textContent = "Copy";
+  const close = document.createElement("button");
+  close.className = "btn btn-primary";
+  close.textContent = "Close";
+  row.append(note, copy, close);
+  box.append(heading, pre, row);
+  overlay.append(box);
+  document.body.append(overlay);
+  const dismiss = () => {
+    overlay.remove();
+    document.removeEventListener("keydown", onKey);
+  };
+  function onKey(e) { if (e.key === "Escape") dismiss(); }
+  copy.addEventListener("click", async () => {
+    note.textContent = (await copyText(body)) ? "Copied ✓" : "Copy failed — select the text and press Ctrl+C.";
+  });
+  close.addEventListener("click", dismiss);
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) dismiss(); });
+  document.addEventListener("keydown", onKey);
+  close.focus();
+}
+
+async function runDiagnostics(p) {
+  setStatus(`${p}-status`, "Running diagnostics…");
+  try {
+    const report = await action("doctor");
+    setStatus(`${p}-status`, "");
+    textDialog("Diagnostics", report || "Diagnostics returned no output.");
+  } catch (e) {
+    setStatus(`${p}-status`, `⚠ Diagnostics failed: ${e.message}`, false);
+  }
+}
+
+async function exitFlowkey(p) {
+  const ok = await confirmDialog(
+    "Exit Flowkey?\n\nHotkeys stop working and this dashboard disconnects until you start Flowkey again.",
+    "Exit",
+  );
+  if (!ok) return;
+  try {
+    await action("exit_app");
+  } catch (e) {
+    setStatus(`${p}-status`, `⚠ ${e.message}`, false);
+    return;
+  }
+  setStatus(`${p}-status`, "Exiting…");
+  // The tray app polls for the request every 500 ms and then shuts this daemon
+  // down; if the daemon is still answering a few seconds later, nobody picked it up.
+  setTimeout(async () => {
+    try {
+      await fetch("/healthz");
+      setStatus(`${p}-status`, "⚠ The tray app didn't respond — is Flowkey's tray icon running?", false);
+    } catch {
+      setStatus(`${p}-status`, "Flowkey has exited. You can close this window.");
+    }
+  }, 4000);
+}
+
+function bindServerAppControls(p) {
+  $(`${p}-warmup`).addEventListener("click", () => serverAction(p, "warmup", "Warming up the model server…"));
+  $(`${p}-stop`).addEventListener("click", () => serverAction(p, "stop", "Stopping the model server…"));
+  $(`${p}-update-check`).addEventListener("click", () => checkAppUpdate(p));
+  $(`${p}-update-apply`).addEventListener("click", () => applyAppUpdate(p));
+  $(`${p}-diagnostics`).addEventListener("click", () => runDiagnostics(p));
+  $(`${p}-exit`).addEventListener("click", () => exitFlowkey(p));
 }
 
 // ---- Telemetry -------------------------------------------------------------
@@ -1453,13 +1721,14 @@ function notesConfigPatch() {
 const CONFIG_SECTION_KEY = "flowkey.config.section.v1";
 const CONFIG_COLLAPSED_KEY = "flowkey.config.collapsed.v1";
 const CONFIG_SECTION_META = {
-  essentials: ["Essentials", "Everyday shortcuts, performance, privacy, and tone."],
+  essentials: ["Essentials", "Everyday shortcuts and the tray's quick toggles (these apply instantly)."],
   models: ["Models & AI", "Choose the local provider, runtime, and active model."],
   notes: ["Notes", "Control the vault, categories, capture, and local enrichment."],
   prompts: ["Prompts", "Shape prompt output and create your own prefix modes."],
   notifications: ["Notifications", "Decide which local desktop signals deserve attention."],
   meetings: ["Meetings", "Connect Quill and schedule after-hours digest processing."],
   advanced: ["Advanced", "Tune long-input routing and lower-level behavior."],
+  app: ["App", "Version, updates, diagnostics, the model server, and exiting Flowkey. Everything here acts immediately."],
 };
 
 let activeConfigSection = "essentials";
@@ -1755,7 +2024,8 @@ async function loadConfig() {
   }
   loadServerStatus();
   loadModels();
-  loadAutostart();
+  loadQuickState();          // Essentials' instant toggles (autostart, clipboard watcher, …)
+  loadServerApp("cfg-app");
   if (($("cfg-provider").value || "fastflowlm") === "fastflowlm") loadFlmVersion(false);
 }
 
@@ -2025,15 +2295,6 @@ function commitCombo() {
   return false;
 }
 
-async function loadAutostart() {
-  try {
-    const state = await action("get_autostart_state");
-    $("cfg-autostart").checked = !!state.enabled;
-  } catch {
-    /* leave unchecked when the daemon can't read the Run key */
-  }
-}
-
 function renderFlmVersion(info) {
   const cur = info.current ? `v${info.current}` : "not detected";
   // A cache past its TTL is a guess, not a fact — say so rather than printing
@@ -2097,8 +2358,9 @@ async function saveConfig() {
     }
     seen.add(key);
   }
-  const perf = document.querySelector('input[name="perf"]:checked');
-  const tone = document.querySelector('input[name="tone"]:checked');
+  // Performance, tone, history text and autostart are NOT saved here: they apply
+  // instantly (setQuick), and sending this form's copy would undo a change made
+  // from the tray or Overview since the tab was loaded.
   const provider = $("cfg-provider").value || "fastflowlm";
   const timeout = Number($("cfg-timeout").value) || PROVIDER_DEFAULTS[provider].timeout_seconds;
   const patch = {
@@ -2109,9 +2371,7 @@ async function saveConfig() {
         timeout_seconds: timeout,
       },
     },
-    history_store_text: $("cfg-store-text").checked,
     server: {
-      performance_mode: perf ? perf.value : "balanced",
       warm_on_start: $("cfg-warm-on-start").checked,
       keep_warm_minutes: Math.max(0, Math.min(Number($("cfg-keep-warm").value) || 0, 1440)),
     },
@@ -2122,7 +2382,6 @@ async function saveConfig() {
       min_chunk_chars: Number($("cfg-min-chunk").value) || 700,
     },
     prompt_builder: promptBuilderPatch(),
-    modes: { tone: { preset: tone ? tone.value : "formal" } },
     hotkeys,
     notes: notesPatch,
     notifications: notificationsPatch(),
@@ -2130,7 +2389,6 @@ async function saveConfig() {
   };
   try {
     await action("apply_config_patch", { patch });
-    await action("set_autostart", { enabled: $("cfg-autostart").checked });
     await loadConfig(); // provider switch changes model lists + status
     setStatus("config-status", "✅ Saved — hotkeys reload in the running app within a second.");
   } catch (e) {
@@ -3185,6 +3443,24 @@ document.addEventListener("DOMContentLoaded", () => {
     e.preventDefault();
     if ($("pull-options").hidden) { $("pull-name").focus(); openCombo(); }
     else closeCombo();
+  });
+  // Quick controls (Overview) and their instant Config › Essentials copies.
+  $("quick-controls").addEventListener("click", onQuickControlClick);
+  document.querySelectorAll('input[name="perf"]').forEach((r) =>
+    r.addEventListener("change", () => setQuick("performance", r.value, "config-status")));
+  document.querySelectorAll('input[name="tone"]').forEach((r) =>
+    r.addEventListener("change", () => setQuick("tone", r.value, "config-status")));
+  $("cfg-store-text").addEventListener("change", (e) =>
+    setQuick("history", e.target.checked ? "visible" : "redacted", "config-status"));
+  $("cfg-autostart").addEventListener("change", (e) =>
+    setQuick("autostart", e.target.checked ? "on" : "off", "config-status"));
+  SERVER_APP_PREFIXES.forEach(bindServerAppControls);
+  $("cfg-clipwatch").addEventListener("change", (e) =>
+    setQuick("clipboard_watcher", e.target.checked ? "on" : "off", "config-status"));
+  // Tray-side changes: re-read when the dashboard window comes back to the front.
+  window.addEventListener("focus", loadQuickState);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") loadQuickState();
   });
   $("cfg-provider").addEventListener("change", onProviderChanged);
   $("provider-start").addEventListener("click", startProviderServer);

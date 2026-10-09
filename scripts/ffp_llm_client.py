@@ -118,6 +118,14 @@ def split_chunks(text: str, chunk_size: int, routing_cfg: dict) -> list[str]:
     return merged
 
 
+def rewrite_tokens(chars: int) -> int:
+    """Reply budget for a mode whose output is about as long as its input (grammar, tone,
+    translate). A fixed budget silently cut longer selections off mid-text: in one install's
+    history a quarter of the 700-1200 character grammar fixes came back at ~30% of their input.
+    ~2.2 chars/token is deliberately pessimistic (non-English text tokenizes denser)."""
+    return int(chars / 2.2) + 48
+
+
 def select_runtime(runtime: LlmRuntimeConfig, mode: str, input_text: str) -> tuple[str, int, str]:
     text_len = len(input_text or "")
     routing_enabled = bool(runtime.routing_cfg.get("enabled", True))
@@ -145,6 +153,9 @@ def select_runtime(runtime: LlmRuntimeConfig, mode: str, input_text: str) -> tup
         else:
             max_tokens = 180
             strategy = "grammar_long"
+        if mode not in ("summarize", "explain"):
+            # Routed (>= long_threshold) input is sent chunk by chunk, each sized below.
+            max_tokens = max(max_tokens, rewrite_tokens(min(text_len, 1400)))
 
     if not routing_enabled:
         strategy = f"{strategy}_noroute"
@@ -343,7 +354,12 @@ def call_flm(
     routing_enabled = bool(runtime.routing_cfg.get("enabled", True))
     long_threshold = int(runtime.routing_cfg.get("long_threshold_chars") or 1400)
     chunk_size = int(runtime.routing_cfg.get("chunk_size_chars") or 1200)
-    max_chunks = 3
+    # Summarising modes condense each chunk first, so they stay bounded; grammar must cover
+    # EVERY chunk -- its output replaces the user's selection, so text it never reached would
+    # simply vanish (a 10k-character selection used to come back as its first 3.6k).
+    max_chunks = 8
+    max_grammar_chunks = 40
+    skipped_note = ""
 
     def remaining_timeout() -> int:
         return max(2, int(deadline - time.time()))
@@ -361,16 +377,18 @@ def call_flm(
         and len(masked_input or "") >= long_threshold
         and not (is_prompt_mode(mode) and prompt_settings.uses_prompt_v2_contract())
     ):
-        chunks = split_chunks(masked_input, chunk_size, runtime.routing_cfg)[:max_chunks]
+        all_chunks = split_chunks(masked_input, chunk_size, runtime.routing_cfg)
+        chunks = all_chunks[: (max_grammar_chunks if mode == "grammar" else max_chunks)]
         if mode == "grammar":
             out_parts: list[str] = []
             model_used = model
             per_chunk_tokens = max(100, int(max_tokens * 0.75))
             for chunk in chunks:
+                chunk_tokens = max(per_chunk_tokens, rewrite_tokens(len(chunk)))
                 if time.time() >= deadline - 2:
                     break
                 try:
-                    out, model_used = call_api(model, system_prompt, chunk, per_chunk_tokens, remaining_timeout())
+                    out, model_used = call_api(model, system_prompt, chunk, chunk_tokens, remaining_timeout())
                     out_parts.append(out)
                 except Exception as exc:
                     log.warning("grammar chunk call failed, stopping chunk loop: %s", exc)
@@ -381,10 +399,16 @@ def call_flm(
                     model,
                     system_prompt,
                     fallback_chunk,
-                    max(120, per_chunk_tokens // 2),
+                    max(120, rewrite_tokens(len(fallback_chunk))),
                     remaining_timeout(),
                 )
+                rest = (masked_input or "")[len(fallback_chunk):].strip()
+                if rest:
+                    text = f"{text}\n\n{rest}"
             else:
+                # Chunks the loop did not reach (deadline, failure, chunk cap) go through
+                # unchanged: uncorrected is acceptable, missing is not.
+                out_parts.extend(all_chunks[len(out_parts):])
                 text = "\n\n".join(part for part in out_parts if part.strip())
         else:
             condensed: list[str] = []
@@ -403,6 +427,11 @@ def call_flm(
                     log.warning("prompt-compression chunk call failed, stopping chunk loop: %s", exc)
                     break
             merged = "\n".join(condensed) if condensed else masked_input[:chunk_size]
+            used = len(condensed) if condensed else 1
+            if used < len(all_chunks):    # judged by chunk, not by characters: chunking drops separators
+                covered = sum(len(c) for c in all_chunks[:used])
+                total = sum(len(c) for c in all_chunks)
+                skipped_note = f"(Note: only the first {covered} of {total} characters of the selection were used.)"
             try:
                 text, model_used = call_api(model, system_prompt, merged, max_tokens, remaining_timeout())
             except Exception as exc:
@@ -512,4 +541,6 @@ def call_flm(
     if not text.strip():
         raise RuntimeError("Local LLM returned no usable text.")
     text = dict_restore(text, dict_mapping)
+    if skipped_note:
+        text = f"{text}\n\n{skipped_note}"
     return text, round(time.time() - started, 2), model_used, strategy

@@ -170,6 +170,8 @@ MARKER_CLIPBOARD_WATCHER: Path = DATA_DIR / ".clipboard_watcher_on"
 MARKER_FIRST_RUN_DONE:    Path = DATA_DIR / ".first_run_done"
 MARKER_OPEN_DASHBOARD:    Path = DATA_DIR / ".open_dashboard"
 MARKER_RELOAD_HOTKEYS:    Path = DATA_DIR / ".reload_hotkeys"
+MARKER_REFRESH_TRAY:      Path = DATA_DIR / ".refresh_tray"
+MARKER_EXIT_APP:          Path = DATA_DIR / ".exit_app"
 
 # Logs
 DAEMON_LOG_FILE:     Path = LOGS_DIR / "daemon.log"

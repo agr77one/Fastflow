@@ -60,6 +60,8 @@ BuildRuntimePaths() {
         "counterPath", userRoot "\\data\\prompt_counters.ini",
         "clipboardWatcherMarker", userRoot "\\data\\.clipboard_watcher_on",
         "openDashboardMarker", userRoot "\\data\\.open_dashboard",
-        "reloadHotkeysMarker", userRoot "\\data\\.reload_hotkeys"
+        "reloadHotkeysMarker", userRoot "\\data\\.reload_hotkeys",
+        "refreshTrayMarker", userRoot "\\data\\.refresh_tray",
+        "exitAppMarker", userRoot "\\data\\.exit_app"
     )
 }

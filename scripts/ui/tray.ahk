@@ -36,17 +36,29 @@ SetClipboardWatcher_Impl(enable) {
     global clipboardWatcherEnabled, clipboardWatcherMarker
     if (clipboardWatcherEnabled = enable)
         return
-    clipboardWatcherEnabled := enable
     if (enable) {
         try FileAppend("1`n", clipboardWatcherMarker, "UTF-8")
-        OnClipboardChange(ClipboardWatcher, 1)
         Notify("Flowkey", "📋 Clipboard watcher: On (off by default; URLs / stack traces / code only)")
     } else {
         try FileDelete(clipboardWatcherMarker)
-        try OnClipboardChange(ClipboardWatcher, 0)
         Notify("Flowkey", "📋 Clipboard watcher: Off")
     }
+    ApplyClipboardWatcher_Impl(enable)
     SetupTrayMenu()
+}
+
+; Runtime half of the toggle: (un)register the clipboard hook. The marker file is
+; the persisted state; the dashboard writes it via the daemon and this catches
+; the running app up (see PollDaemonMarkers).
+ApplyClipboardWatcher_Impl(enable) {
+    global clipboardWatcherEnabled
+    if (clipboardWatcherEnabled = enable)
+        return
+    clipboardWatcherEnabled := enable
+    if (enable)
+        OnClipboardChange(ClipboardWatcher, 1)
+    else
+        try OnClipboardChange(ClipboardWatcher, 0)
 }
 
 BuildPerformanceMenu_Impl() {
