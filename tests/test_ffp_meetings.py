@@ -23,6 +23,8 @@ def _tmp_digests(tmp_path, monkeypatch):
     monkeypatch.setattr(M, "ACTION_STATUS_PATH", tmp_path / "meeting_action_status.jsonl")
     monkeypatch.setattr(M, "SKIPS_PATH", tmp_path / "meeting_skips.jsonl")
     monkeypatch.setattr(MI, "INTEL_PATH", tmp_path / "meeting_intel.jsonl")
+    import ffp_capture
+    monkeypatch.setattr(ffp_capture, "CAPTURE_DIR", tmp_path / "captures")
 
 
 class FakeQuill:

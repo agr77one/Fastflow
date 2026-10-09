@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Flowkey</title>
+<link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <strong>Flowkey</strong>
+    <span id="daemon" class="pill">checking…</span>
+  </header>
+
+  <section>
+    <h2>This tab</h2>
+    <p id="tab-status" class="muted">Open a Google Meet call to capture it.</p>
+    <dl id="tab-details" hidden>
+      <dt>Meeting</dt><dd id="t-title">–</dd>
+      <dt>Captions</dt><dd id="t-captions">–</dd>
+      <dt>Captured</dt><dd id="t-segments">–</dd>
+      <dt>Speakers</dt><dd id="t-speakers">–</dd>
+    </dl>
+  </section>
+
+  <section>
+    <label><input type="checkbox" id="opt-enabled"> Capture Meet calls</label>
+    <label><input type="checkbox" id="opt-captions"> Turn on Meet captions automatically</label>
+    <p class="muted small">Captions show each speaker's name — that's how Flowkey gets real names. Let people know you're keeping notes of the call.</p>
+  </section>
+
+  <section class="actions">
+    <button id="open-dashboard">Open meetings in Flowkey</button>
+    <button id="retry" hidden>Send queued</button>
+    <button id="diagnostics">Copy diagnostics</button>
+  </section>
+  <p id="note" class="muted small" aria-live="polite"></p>
+
+  <script src="popup.js"></script>
+</body>
+</html>

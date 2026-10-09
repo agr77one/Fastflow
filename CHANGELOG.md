@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **Flowkey Meeting Companion, a browser extension for Google Meet (preview).** It reads Meet's live captions — each line already names its speaker — plus the participant list and the meeting title, and sends them to Flowkey: no "Speaker 1", no audio recorded, nothing leaving your computer. Captures appear under Meetings → *Captured in Chrome* and get a digest and a mind map like any other meeting, overnight or with *Process now*, even when Quill isn't running. Install it from the `extension` folder (see `extension/README.md`).
+
 ## 2.7.0
 
 **Every meeting gets a summary and a mind map — and the backlog is processed overnight.**

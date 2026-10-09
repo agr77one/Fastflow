@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "Flowkey Meeting Companion",
+  "version": "0.1.0",
+  "description": "Captures Google Meet captions with real speaker names into your local Flowkey app. Nothing leaves your computer.",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://meet.google.com/*",
+    "http://127.0.0.1:52650/*"
+  ],
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [
+    {
+      "matches": ["https://meet.google.com/*"],
+      "js": ["captions.js", "content-meet.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": { "default_title": "Flowkey", "default_popup": "popup.html" }
+}

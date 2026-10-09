@@ -150,3 +150,7 @@ jobs:
           node --check scripts/ui/web/mindmap.js
       - name: mind map behaviour tests
         run: node tests/js/mindmap_test.js
+      - name: browser extension checks
+        run: |
+          for f in extension/*.js; do node --check "$f"; done
+          node tests/js/captions_test.js

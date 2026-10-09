@@ -2853,9 +2853,44 @@ async function loadMeetings() {
     partialIds = new Set();
   }
   await loadIntelFacets();
+  loadCaptures();
   searchMeetings();
   loadActionItems();
   refreshBatchUI();
+}
+
+// Browser-extension captures (Google Meet with real speaker names) as meeting rows. Same
+// row shape as Quill results, so they open in the same reader and get the same digest
+// and mind map.
+async function loadCaptures() {
+  let rows = [];
+  try {
+    rows = (await action("captures_list")).captures || [];
+  } catch {
+    rows = [];
+  }
+  const body = $("mtg-captures");
+  body.replaceChildren();
+  for (const m of rows) {
+    const tr = document.createElement("tr");
+    tr.className = "mtg-row";
+    tr.dataset.id = m.id;
+    tr.dataset.title = m.title || "";
+    tr.dataset.date = m.date || "";
+    tr.dataset.url = m.url || "";
+    const digest = !m.ended ? "recording…" : digestIds.has(m.id) ? "✓" : "—";
+    const cells = [m.title, (m.date || "").slice(0, 16).replace("T", " "), (m.speakers || []).join(", ") || "—",
+                   digest, mtgIntel.has(m.id) ? "🗺" : ""];
+    for (const c of cells) {
+      const td = document.createElement("td");
+      td.textContent = c;
+      tr.append(td);
+    }
+    body.append(tr);
+  }
+  $("mtg-captures-table").hidden = rows.length === 0;
+  $("mtg-captures-empty").hidden = rows.length > 0;
+  $("mtg-captures-count").textContent = rows.length ? `(${rows.length})` : "";
 }
 
 async function searchMeetings() {
@@ -2924,6 +2959,7 @@ function openMeeting(row) {
   $("mtg-title").textContent = currentMeeting.title || "Meeting";
   $("mtg-meta").textContent = (currentMeeting.date || "").slice(0, 16).replace("T", " ");
   const link = $("mtg-link");
+  link.textContent = currentMeeting.id.startsWith("capture:") ? "· open in Meet" : "· open in Quill";
   if (currentMeeting.url) { link.href = currentMeeting.url; link.hidden = false; } else { link.hidden = true; }
   $("mtg-answer").hidden = true;
   $("mtg-ask-input").value = "";
@@ -3771,6 +3807,10 @@ document.addEventListener("DOMContentLoaded", () => {
   $("mtg-load-more").addEventListener("click", loadMoreMeetings);
   $("mtg-redigest").addEventListener("click", redigestMeeting);
   $("mtg-results").addEventListener("click", (e) => {
+    const row = e.target.closest(".mtg-row");
+    if (row) openMeeting(row);
+  });
+  $("mtg-captures").addEventListener("click", (e) => {
     const row = e.target.closest(".mtg-row");
     if (row) openMeeting(row);
   });

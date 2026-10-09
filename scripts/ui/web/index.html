@@ -371,6 +371,16 @@
         <p class="muted small" id="mtg-empty" hidden>No meetings. Make sure Quill is running and the integration is enabled in Config.</p>
         <p class="muted small">Click a meeting to read its cached digest, generate one now, or ask a question about it.</p>
       </div>
+      <div class="card card-wide" id="mtg-captures-card">
+        <h2>Captured in Chrome <span class="muted small" id="mtg-captures-count"></span></h2>
+        <p class="muted small" id="mtg-captures-empty">Google Meet calls captured by the <strong>Flowkey Meeting Companion</strong> browser extension appear here, with every speaker named from Meet's captions. To install it: open <code>chrome://extensions</code>, turn on Developer mode, click <em>Load unpacked</em> and pick the <code>extension</code> folder inside Flowkey.</p>
+        <div class="table-scroll" id="mtg-captures-table" hidden>
+          <table class="data-table">
+            <thead><tr><th>Title</th><th>Date</th><th>Speakers</th><th>Digest</th><th>Map</th></tr></thead>
+            <tbody id="mtg-captures"></tbody>
+          </table>
+        </div>
+      </div>
       <div class="card card-wide" id="mtg-reader" hidden>
         <div class="card-actions reader-head">
           <h2 id="mtg-title" class="nr-title">Meeting</h2>

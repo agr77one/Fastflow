@@ -82,8 +82,9 @@ def test_actions_count_and_expected_names(daemon_module):
     # meeting_models (the Meetings model picker's usable/unusable list) -> 87;
     # tray parity (quick_state / set_clipboard_watcher / exit_app) -> 90;
     # meeting mind maps (meeting_intel_get/build/status/list) -> 94;
-    # stopping a background batch (meeting_batch_stop) -> 95.
-    assert len(daemon_module.ACTIONS) == 95
+    # stopping a background batch (meeting_batch_stop) -> 95;
+    # browser-extension captures (capture_push/captures_list/capture_get) -> 98.
+    assert len(daemon_module.ACTIONS) == 98
     for a in ("chat_threads_list", "chat_thread_get", "chat_send",
               "chat_thread_delete", "chat_stage_selection", "chat_take_staged",
               "note_get", "note_move", "note_delete", "notes_query",
@@ -98,7 +99,7 @@ def test_actions_count_and_expected_names(daemon_module):
               "meeting_redigest", "meeting_models", "prompt_builder_preview",
               "quick_state", "set_clipboard_watcher", "exit_app",
               "meeting_intel_get", "meeting_intel_build", "meeting_intel_status", "meeting_intel_list",
-              "meeting_batch_stop"):
+              "meeting_batch_stop", "capture_push", "captures_list", "capture_get"):
         assert a in daemon_module.ACTIONS
     # notify_gate writes the log + dedupe state, so it must be a WRITE action.
     assert "notify_gate" in daemon_module._WRITE_ACTIONS
@@ -1056,3 +1057,18 @@ def test_a_mind_map_problem_never_fails_process_now(daemon_module, monkeypatch):
     monkeypatch.setattr(ffp_meetings, "start_intel_build", boom)
     out = daemon_module._act_meeting_process({"meeting_id": "m1"})
     assert out["ok"] and out["intel_started"] is False and out["intel_error"] == "no model"
+
+
+def test_the_extension_can_push_a_capture_over_http(daemon_server, tmp_path, monkeypatch):
+    daemon_module, base_url = daemon_server
+    import ffp_capture
+    monkeypatch.setattr(ffp_capture, "CAPTURE_DIR", tmp_path / "captures")
+    body = json.dumps({"args": {"session_id": "meet-20261009150000-abc-defg-hij", "title": "Sync",
+                                "started_at": 1791500000000, "ended": True,
+                                "segments": [{"id": "s1", "speaker": "Dana", "text": "hi", "t0": 1791500001000}]}})
+    status, payload = _read_json(base_url + "/action/capture_push", method="POST", body=body.encode("utf-8"))
+    assert status == 200 and payload["result"] == {"session_id": "meet-20261009150000-abc-defg-hij",
+                                                   "segments": 1, "ended": True}
+    status, payload = _read_json(base_url + "/action/capture_get", method="POST",
+                                 body=b'{"args": {"session_id": "capture:meet-20261009150000-abc-defg-hij"}}')
+    assert payload["result"]["transcript"] == "[1s] Dana:\nhi"

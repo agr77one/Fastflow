@@ -59,7 +59,7 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - data: `data/{meeting_digests,meeting_action_status,meeting_skips,notifications,chat_threads}.jsonl`
 - autostart: HKCU Run `FastFlowPrompt` → bundled `AutoHotkey64.exe` + `grammarFix.ahk`; `FlowkeyGitSync` → `sync.ps1`
 - sched: Windows task `FlowkeyGitSync` daily 12:00 → `sync.ps1` (ff-only pull, guarded)
-- ACTIONS count = 95
+- ACTIONS count = 98
 
 ## §V invariants
 
@@ -145,6 +145,7 @@ Caveman-encoded (compression, not amputation). Paths / ids / action names / numb
 - V80: mind map + summary views (overview/topics/people/actions/timeline) + outline/SVG export rendered from the stored record by `ui/web/mindmap.js` (served from `_WEB_ROUTES`), ∅ model call at view time; DOM via createElement only
 - V81: ∀ tray-menu control ∃ dashboard equivalent w/ same daemon action + same instant semantics (Overview Quick controls: perf/tone/history/autostart/clipboard watcher; Server & app: warmup/stop/update check+apply/diagnostics/exit); dashboard change → `.refresh_tray` marker → AHK rebuilds tray + reconciles clipboard watcher from its marker; tray change → dashboard re-reads `quick_state` on focus; Config "Save all" ⊥ resend instant settings (stale copy undid tray changes); `.exit_app` deleted at AHK startup
 - V82: processing a meeting = digest + mind map, ∀ entry point (batch, `meeting_process`): batch works in chunks (`batch.max_per_run`) = digests for the chunk, then mind maps for them + backfill (digests w/o a map, newest first); `drain` (`batch.drain`, def on; manual run always) repeats chunks until ∅ work ∨ `keep_going()` false (scheduler: same window+idle gate, re-checked between chunks) ∨ `stop_batch()`; a meeting/map that fails is tried once per run (∄ infinite loop); manual run = background thread + `meeting_batch_status` progress (phase/current/done) + `meeting_batch_stop`; `batch.keep_awake` (def on) holds ES_SYSTEM_REQUIRED only while working; def window 17:00–08:00
+- V83: browser capture (`extension/` MV3 + `ffp_capture`): extension reads Meet captions (speaker name per line) + participants + title, ∅ audio; host_permissions = meet.google.com + 127.0.0.1:52650 only; `capture_push` = idempotent upsert (header every push, segment re-sent under same id when Meet revises it) ∴ queued pushes replay w/o dupes; session id `^[A-Za-z0-9][A-Za-z0-9_-]{5,79}$` (∄ path escape); capture = meeting `capture:<sid>`, `transcript()` Quill-shaped (`[Ns] Name:`) w/ `You`→self name ∴ digest + mind-map pipelines read it unchanged; finished captures queue before Quill meetings + run w/o Quill reachable
 
 ## §T tasks
 
@@ -206,6 +207,7 @@ T53|x|2.7.0 docs/version/changelog + full gates|V18,V20
 T54|x|2.6.0: UI parity: Overview Quick controls (perf/tone/history/autostart/clipboard watcher, instant, same daemon actions as tray) + Server & app card (warmup/stop/update check+apply/diagnostics/exit); `get/set_clipboard_watcher` + `refresh_tray`/`exit_app` markers; two-way sync|V81,V5,V20
 T55|x|2.6.0: Config menu: Essentials gains "Startup & clipboard" (autostart moved from Models & AI + clipboard watcher, instant) so it carries all 5 tray quick toggles; new App section (version/model server/updates+install/diagnostics/warm up/stop/exit; shared w/ Overview via id prefix `sa`/`cfg-app`); meeting-intel settings deferred to T47 (no feature yet)|V81,V59,V20
 T56|x|2.7.0: overnight processing: digest+map per meeting ∀ entry points, drain chunks until done/window/user back, background run + progress + Stop, keep-awake, Overnight window button, coverage line (Config + Meetings tab), model fallback to any installed qualifying model|V82,V76,V77,V20
+T57|x|unreleased (feat/browser-capture): Flowkey Meeting Companion extension for Google Meet (captions w/ real speaker names, participants, title; auto-captions; queue while daemon down; popup status + structure-only diagnostics) + `ffp_capture` store + `capture_push/captures_list/capture_get` + Meetings tab "Captured in Chrome"|V83,V76,V82,V20
 ```
 
 ## §B bugs

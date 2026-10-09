@@ -1179,6 +1179,28 @@ def _act_meeting_intel_build(args: dict) -> dict:
     return ffp_meetings.start_intel_build(mid, grammar_fix.load_config(), meta=meta)
 
 
+def _act_capture_push(args: dict) -> dict:
+    """Upsert a meeting capture from the browser extension (idempotent; see ffp_capture)."""
+    import ffp_capture
+    return ffp_capture.push(args)
+
+
+def _act_captures_list(_args: dict) -> dict:
+    """Browser captures as meeting rows, newest first."""
+    import ffp_capture
+    return {"captures": ffp_capture.list_captures()}
+
+
+def _act_capture_get(args: dict) -> dict:
+    """One capture: its meeting row plus the speaker-named transcript."""
+    import ffp_capture
+    sid = str(args.get("session_id") or args.get("meeting_id") or "")
+    rec = ffp_capture.get(sid)
+    if not rec:
+        return {"found": False}
+    return {"found": True, **ffp_capture.meeting_ref(rec), "transcript": ffp_capture.transcript(sid)}
+
+
 def _act_meeting_intel_status(_args: dict) -> dict:
     import ffp_meetings
     return ffp_meetings.intel_status()
@@ -1279,6 +1301,9 @@ ACTIONS: dict[str, Callable[[dict], Any]] = {
     "meeting_intel_build": _act_meeting_intel_build,
     "meeting_intel_status": _act_meeting_intel_status,
     "meeting_intel_list": _act_meeting_intel_list,
+    "capture_push": _act_capture_push,
+    "captures_list": _act_captures_list,
+    "capture_get": _act_capture_get,
     "get_autostart_state": _act_get_autostart_state,
     "set_autostart": _act_set_autostart,
     "open_dashboard": _act_open_dashboard,

@@ -35,6 +35,7 @@ import threading
 import time
 from collections.abc import Callable
 
+import ffp_capture
 import ffp_config
 import ffp_quill
 import paths as _paths
@@ -631,7 +632,11 @@ def _input_limit(mcfg: dict, llm: _LLM, max_tokens: int) -> int:
 
 
 def _fetch_full(meeting_id: str, cfg_meetings: dict, client) -> tuple[str, str]:
-    """Return (content, source) uncut. Prefers minutes unless source='transcript'."""
+    """Return (content, source) uncut. Prefers minutes unless source='transcript'.
+    A browser capture (``capture:...``) is read from the local capture store."""
+    if ffp_capture.is_capture_id(meeting_id):
+        content = ffp_capture.transcript(meeting_id)
+        return content, ("capture" if content else "")
     source_pref = str(cfg_meetings.get("source") or "auto")
     content, used = "", ""
     if source_pref != "transcript":
@@ -778,15 +783,19 @@ def _keep_awake(on: bool) -> None:
         pass
 
 
-def _undigested(client, cap: int, exclude: set[str]) -> list[dict]:
-    """Up to ``cap`` recent Quill meetings (newest first) with no digest and no skip
-    marker, leaving out ``exclude`` (meetings already tried in this run)."""
+def _undigested(client, cap: int, exclude: set[str], quill: bool = True) -> list[dict]:
+    """Up to ``cap`` meetings with no digest and no skip marker, leaving out ``exclude``
+    (already tried this run): finished browser captures first, then recent Quill
+    meetings newest first (skipped when Quill isn't reachable)."""
     have = {d.get("meeting_id") for d in load_digests()}
     skips = load_skips()
-    todo: list[dict] = []
+    todo: list[dict] = [
+        m for m in ffp_capture.list_captures()
+        if m["ended"] and m["segments"] and m["id"] not in have and m["id"] not in skips and m["id"] not in exclude
+    ][:cap]
     seen: set[str] = set()
     offset = 0
-    while len(todo) < cap and offset <= 120:
+    while quill and len(todo) < cap and offset <= 120:
         page = ffp_quill.list_recent_meetings(limit=30, offset=offset, client=client)
         if not page:
             break
@@ -837,7 +846,8 @@ def run_batch(cfg: dict, *, llm_call=None, client=None, max_per_run=None, reason
     try:
         url = str(mcfg.get("mcp_url") or ffp_quill.DEFAULT_MCP_URL)
         c = client or ffp_quill.QuillClient(url)
-        if not c.connect():
+        quill_ok = c.connect()
+        if not quill_ok and not any(m["ended"] for m in ffp_capture.list_captures()):
             return {"ok": False, "error": "Quill MCP server is not reachable", "processed": 0}
         cap = int(max_per_run if max_per_run is not None else b.get("max_per_run", 10))
         cap = max(1, min(cap, 50))
@@ -852,7 +862,7 @@ def run_batch(cfg: dict, *, llm_call=None, client=None, max_per_run=None, reason
         llm = llm_call
         stopped = ""
         while True:
-            todo = [] if redigest_truncated else _undigested(c, cap, tried)
+            todo = [] if redigest_truncated else _undigested(c, cap, tried, quill_ok)
             if todo or redigest_truncated:
                 # Resolve the model once; if nothing can run meetings, every meeting
                 # would fail identically -- say so once, up front.
@@ -1021,7 +1031,8 @@ def _build_one_intel(meeting: dict, client, llm: _LLM) -> dict:
     meeting = {**meeting, "id": mid}
     _intel_status.update(running=True, meeting_id=mid, section=0, of=0, last_error="")
     try:
-        transcript = ffp_quill.get_transcript(mid, client=client)
+        transcript = (ffp_capture.transcript(mid) if ffp_capture.is_capture_id(mid)
+                      else ffp_quill.get_transcript(mid, client=client))
         try:
             rec = MI.build_intel(meeting, transcript, llm,
                                  progress=lambda n, total: _intel_status.update(section=n, of=total))
@@ -1042,6 +1053,11 @@ def _meeting_ref(meeting_id: str, meta: dict | None = None) -> dict:
     """Title/date/url for a meeting: its digest row, else what the caller passed."""
     meta = meta or {}
     d = get_digest(meeting_id)
+    if not d.get("found") and ffp_capture.is_capture_id(meeting_id):
+        rec = ffp_capture.get(meeting_id)
+        if rec:
+            ref = ffp_capture.meeting_ref(rec)
+            return {"id": meeting_id, "title": ref["title"], "date": ref["date"], "url": ref["url"]}
     return {
         "id": meeting_id,
         "title": d.get("title") or str(meta.get("title") or ""),
@@ -1168,7 +1184,7 @@ def ask(meeting_id: str, question: str, cfg: dict, *, client=None, llm_call=None
         raise ValueError("empty question")
     url = str(mcfg.get("mcp_url") or ffp_quill.DEFAULT_MCP_URL)
     c = client or ffp_quill.QuillClient(url)
-    if not c.connect():
+    if not ffp_capture.is_capture_id(meeting_id) and not c.connect():
         return {"ok": False, "error": "Quill MCP server is not reachable"}
     # Prefer a cached digest as the grounding context (cheap); fall back to live content.
     cached = get_digest(meeting_id)

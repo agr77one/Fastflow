@@ -165,3 +165,27 @@ def test_run_now_starts_in_the_background_and_polls():
     run_now = re.search(r"async function runBatchNow\(\) \{(.*?)\n\}", app, re.S).group(1)
     assert "watchBatch()" in run_now and "meeting_batch_stop" in app
 
+
+
+# ---- browser extension (extension/) -------------------------------------------------------
+
+EXT = WEB.parents[2] / "extension"
+
+
+def test_extension_manifest_is_minimal_and_local_only():
+    manifest = json.loads((EXT / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["manifest_version"] == 3
+    # Only Meet pages and the local Flowkey daemon: nothing else is reachable.
+    assert sorted(manifest["host_permissions"]) == ["http://127.0.0.1:52650/*", "https://meet.google.com/*"]
+    assert manifest["permissions"] == ["storage"]
+    scripts = manifest["content_scripts"][0]["js"]
+    assert scripts == ["captions.js", "content-meet.js"]               # the assembler loads first
+    for name in [*scripts, manifest["background"]["service_worker"], "popup.js", "popup.html"]:
+        assert (EXT / name).exists(), name
+
+
+def test_extension_never_injects_markup_or_remote_code():
+    for js in EXT.glob("*.js"):
+        src = js.read_text(encoding="utf-8")
+        assert "innerHTML" not in src and "eval(" not in src and "new Function" not in src, js.name
+    assert "<script>" not in (EXT / "popup.html").read_text(encoding="utf-8")    # MV3: no inline scripts
