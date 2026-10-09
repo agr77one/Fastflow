@@ -44,7 +44,7 @@ SCHEMA = 1
 SECTION_CHARS = 3500          # ~1k tokens: small enough that a 4B model stays reliable
 SECTION_MAX_TOKENS = 450
 HEADER_MAX_TOKENS = 60
-CLUSTER_MAX_TOKENS = 220
+CLUSTER_MAX_TOKENS = 400      # 220 cut off a 15-topic meeting's grouping mid-list (live)
 MIN_TRANSCRIPT_CHARS = 400    # Quill keeps stub recordings ("Thank you.", "null")
 MAX_THEMES = 6
 CLUSTER_MIN_TOPICS = 4        # fewer topics read fine without grouping
@@ -184,12 +184,15 @@ SECTION_SYSTEM = (
     "agreed or was asked to do (ACTION, with the owner after ' | '), and every open question the section "
     "states. Never invent anything the section does not say."
 )
+# Deliberately from an unrelated domain (a bakery): a 9B model echoed a business-y
+# example ("Do annual customers keep the old price?") into two real meetings, once
+# verbatim and once paraphrased. Echoes are also filtered in code (_echoes_example).
 SECTION_EXAMPLE = (
-    "Example output:\n"
-    "TOPIC: Q3 pricing change | The team debates raising the base plan price by 10 percent.\n"
-    "DECISION: Raise the base plan price starting October.\n"
-    "ACTION: Draft the customer announcement | Dana\n"
-    "QUESTION: Do annual customers keep the old price?\n"
+    "Example output (from a bakery):\n"
+    "TOPIC: Oven schedule | The bakers agree to start the sourdough before 6 am.\n"
+    "DECISION: Move the sourdough bake to 5 am from Monday.\n"
+    "ACTION: Order a second proofing rack | Priya\n"
+    "QUESTION: Can the flour delivery arrive before 7 am?\n"
     "(The example only shows the format -- never repeat its content. Use the speaker's name or label "
     "from the section as the owner; write NONE if no one owns it.)"
 )
@@ -239,6 +242,32 @@ def parse_section_reply(reply: str) -> dict[str, list[list[str]]]:
 def _example_texts() -> list[str]:
     parsed = parse_section_reply(SECTION_EXAMPLE)
     return [f[0] for items in parsed.values() for f in items] + [f[1] for f in parsed["TOPIC"] if len(f) > 1]
+
+
+_STOPWORDS = frozenset(
+    "the and for with will from that this are was were has have its their our your into about what when "
+    "who does did can could should would may might".split()
+)
+
+
+def _stems(text: str) -> set[str]:
+    """Content-word stems (first 4 letters), so a paraphrase still matches:
+    "price"/"pricing" -> "pric", "customers" -> "cust"."""
+    return {w[:4] for w in re.findall(r"[a-z]+", str(text).lower()) if len(w) >= 3 and w not in _STOPWORDS}
+
+
+def _echoes_example(text: str, examples: list[str]) -> bool:
+    """True when ``text`` carries most (>= 60%) of some example line's content words --
+    word-set similarity missed a paraphrased echo ("Will annual customers retain the
+    old pricing structure?")."""
+    words = _stems(text)
+    for example in examples:
+        ex = _stems(example)
+        shared = len(ex & words)
+        # >= 3 shared words: a two-word line ("Oven schedule") is too generic to call an echo.
+        if shared >= 3 and shared / len(ex) >= 0.6:
+            return True
+    return False
 
 
 # ---------- merge (code, not model) -----------------------------------------------------
@@ -330,10 +359,50 @@ def parse_clusters(reply: str, n_topics: int) -> list[dict]:
         if idx:
             themes.append({"label": m.group(1).strip().strip('"'), "topics": idx,
                            "low_value": (m.group(3) or "").lower() == "social"})
+    # Groups past the limit are folded into "Other" rather than cut: cutting dropped
+    # their topics from the record's themes, and so from the map.
+    for extra in themes[MAX_THEMES:]:
+        used.difference_update(extra["topics"])
+    themes = themes[:MAX_THEMES]
     rest = [i for i in range(n_topics) if i not in used]
     if rest:
         themes.append({"label": "Other", "topics": rest, "low_value": False})
-    return themes[: MAX_THEMES + 1]
+    return themes
+
+
+ASSIGN_MAX_TOKENS = 200
+ASSIGN_SYSTEM = (
+    "Assign each numbered topic to exactly one of the listed themes. Output one line per topic: "
+    "'<topic number> | <theme name exactly as listed>'. Use 'Other' only if no theme fits."
+)
+_ASSIGN_RE = re.compile(r"^\W*(\d+)\s*[|:.)-]\s*(.+?)\s*$")
+
+
+def assign_leftovers(themes: list[dict], topics: list[dict], llm) -> list[dict]:
+    """The grouping call regularly leaves a few topics out of every group (3 of 15 on a
+    live meeting), which parks them in "Other". One short follow-up call places them in
+    the themes the model already chose; whatever it can't place stays in "Other"."""
+    named, other = themes[:-1], themes[-1]
+    by_name = {t["label"].lower(): t for t in named}
+    reply = llm.run([
+        {"role": "system", "content": ASSIGN_SYSTEM},
+        {"role": "user", "content": "Themes:\n" + "\n".join(f"- {t['label']}" for t in named)
+                                    + "\n\nTopics:\n" + "\n".join(f"{i + 1}. {topics[i]['label']}" for i in other["topics"])},
+    ], ASSIGN_MAX_TOKENS)
+    moved: set[int] = set()
+    for line in _THINK_RE.sub("", str(reply or "")).splitlines():
+        m = _ASSIGN_RE.match(line.replace("**", ""))
+        if not m:
+            continue
+        i = int(m.group(1)) - 1
+        theme = by_name.get(m.group(2).strip().strip('"').lower())
+        if theme is not None and i in other["topics"] and i not in moved:
+            theme["topics"].append(i)
+            moved.add(i)
+    for theme in named:
+        theme["topics"].sort()
+    rest = [i for i in other["topics"] if i not in moved]
+    return named + ([{"label": "Other", "topics": rest, "low_value": False}] if rest else [])
 
 
 def _real_speakers(ppl: list[dict]) -> list[dict]:
@@ -406,14 +475,14 @@ def build_intel(meeting: dict, transcript: str, llm, *,
 
     if not ok:
         raise RuntimeError(f"every section failed ({failed} of {len(parts)})")
-    # The prompt's example leaked into real records ("Do annual customers keep the old
-    # price?" showed up as an open question in two live meetings): drop echoes of it.
+    # The prompt's example leaked into real records (an earlier example's question showed
+    # up in two live meetings, verbatim and paraphrased): drop echoes of it.
     examples = _example_texts()
 
     def echo(item: dict, key: str = "text") -> bool:
-        return any(_similar(item[key], e, 0.6) for e in examples)
+        return _echoes_example(item[key], examples)
 
-    topics = [t for t in topics if not echo(t, "label")]
+    topics = [t for t in topics if not (echo(t, "label") or echo(t, "gist"))]
     decisions = [d for d in decisions if not echo(d)]
     actions = [a for a in actions if not echo(a)]
     questions = [q for q in questions if not echo(q)]
@@ -443,6 +512,11 @@ def build_intel(meeting: dict, transcript: str, llm, *,
                 CLUSTER_MAX_TOKENS), len(topics))
         except Exception as exc:
             log.warning("intel clustering failed for %s: %s", meeting.get("id"), exc)
+    if themes and themes[-1]["label"] == "Other" and len(themes) > 1:
+        try:
+            themes = assign_leftovers(themes, topics, llm)
+        except Exception as exc:
+            log.warning("intel leftover assignment failed for %s: %s", meeting.get("id"), exc)
     for theme in themes:
         for i in theme["topics"]:
             topics[i]["theme"] = theme["label"]

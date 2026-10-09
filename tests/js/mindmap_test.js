@@ -10,9 +10,22 @@ const path = require("path");
 const vm = require("vm");
 
 const src = fs.readFileSync(path.join(__dirname, "..", "..", "scripts", "ui", "web", "mindmap.js"), "utf8");
+// Just enough DOM for the summary views: nodes that keep children and text.
+function fakeNode(tag) {
+  return {
+    tag, children: [], textContent: "", className: "", title: "",
+    append(...kids) { this.children.push(...kids); },
+    replaceChildren(...kids) { this.children = kids; },
+    text() { return [this.textContent, ...this.children.map((c) => c.text())].join(" "); },
+  };
+}
 const ctx = {
   getComputedStyle: () => ({ getPropertyValue: () => "", fontFamily: "sans-serif" }),
-  document: { documentElement: {}, body: {} },
+  document: {
+    documentElement: {}, body: {},
+    createElement: fakeNode,
+    createDocumentFragment: () => fakeNode("#fragment"),
+  },
 };
 vm.createContext(ctx);
 vm.runInContext(`${src}\nthis.FlowkeyMindMap = FlowkeyMindMap;`, ctx);
@@ -35,6 +48,7 @@ const rec = {
   actions: [
     { text: "Draft timeline", owner: "Justin", owner_confirmed: true, due: null, start_s: 332 },
     { text: "Send notes", owner: "Joseph", owner_confirmed: false, due: "Fri", start_s: 400 },
+    { text: "Take the kids to a corn maze", owner: "AG", owner_confirmed: true, due: null, start_s: 2027 },
   ],
   questions: [],
   people: [
@@ -77,6 +91,25 @@ test("unconfirmed owners are marked, confirmed ones are not", () => {
   assert.strictEqual(actions[1].muted, true);
 });
 
+test("items from a small-talk-only section are hidden with it", () => {
+  const hidden = MM.buildTree(rec, {}).children.find((b) => b.label === "Actions").children;
+  assert.ok(!hidden.some((a) => a.label.includes("corn maze")));
+  const shown = MM.buildTree(rec, { showSmallTalk: true }).children.find((b) => b.label === "Actions").children;
+  assert.ok(shown.some((a) => a.label.includes("corn maze")));
+});
+
+test("every summary view renders", () => {
+  for (const view of MM.VIEWS) {
+    for (const showSmallTalk of [false, true]) {
+      const box = fakeNode("div");
+      MM.renderView(box, rec, view, { showSmallTalk });
+      assert.ok(box.text().trim().length > 0, `${view} rendered nothing`);
+      assert.strictEqual(box.text().includes("corn maze"), showSmallTalk && view !== "overview" && view !== "topics",
+        `${view} small-talk filtering (showSmallTalk=${showSmallTalk})`);
+    }
+  }
+});
+
 test("silent mixed channels are left out of People", () => {
   const people = MM.buildTree(rec, {}).children.find((b) => b.label === "People").children;
   eq(people.map((p) => p.label), ["AG · 61%"]);
@@ -94,6 +127,7 @@ test("markdown outline", () => {
   assert.ok(md.includes("- **Work**\n  - [0:00] Status — Where things are"));
   assert.ok(!md.includes("Holidays"));                                         // hidden small talk
   assert.ok(md.includes("- Send notes → Joseph (unconfirmed) (due Fri)"));
+  assert.ok(!md.includes("corn maze"));
   assert.ok(!md.includes("Headphones"));
   assert.ok(!md.includes("## Open questions"));                                // empty sections omitted
 });

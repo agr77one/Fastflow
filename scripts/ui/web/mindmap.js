@@ -44,6 +44,17 @@ const FlowkeyMindMap = (() => {
     return (rec.topics || []).filter((t) => showSmallTalk || !t.low_value);
   }
 
+  // Decisions/actions/questions carry the start of the section they came from. A section
+  // whose topics are all small talk ("take the kids to a corn maze") is hidden with them.
+  function items(rec, kind, opts = {}) {
+    const all = rec[kind] || [];
+    if (opts.showSmallTalk) return all;
+    const work = new Set();
+    const social = new Set();
+    for (const t of rec.topics || []) (t.low_value ? social : work).add(t.start_s);
+    return all.filter((x) => !(social.has(x.start_s) && !work.has(x.start_s)));
+  }
+
   function buildTree(rec, opts = {}) {
     const showSmallTalk = !!opts.showSmallTalk;
     const branches = [];
@@ -68,13 +79,13 @@ const FlowkeyMindMap = (() => {
     const simple = (kind, label, items, fmt) => {
       if (items && items.length) branches.push({ label, kind, children: items.map(fmt) });
     };
-    simple("decisions", "Decisions", rec.decisions, (d) => ({ label: d.text, title: d.text }));
-    simple("actions", "Actions", rec.actions, (a) => ({
+    simple("decisions", "Decisions", items(rec, "decisions", opts), (d) => ({ label: d.text, title: d.text }));
+    simple("actions", "Actions", items(rec, "actions", opts), (a) => ({
       label: `${a.text}${ownerText(a)}`,
       title: `${a.text}${a.owner ? ` (owner: ${a.owner}${a.owner_confirmed ? "" : " — not confirmed by the transcript"})` : ""}${a.due ? ` · due ${a.due}` : ""}`,
       muted: !!a.owner && !a.owner_confirmed,
     }));
-    simple("questions", "Open questions", rec.questions, (q) => ({ label: q.text, title: q.text }));
+    simple("questions", "Open questions", items(rec, "questions", opts), (q) => ({ label: q.text, title: q.text }));
     simple("people", "People", (rec.people || []).filter((p) => p.share_pct > 0 || !p.is_mixed),
       (p) => ({ label: `${p.label} · ${p.share_pct}%`, title: `${p.turns} turns${p.is_self ? " · you" : ""}` }));
     const hidden = (rec.topics || []).length - topics.length;
@@ -249,9 +260,9 @@ const FlowkeyMindMap = (() => {
     const list = (title, items, fmt) => {
       if (items && items.length) { lines.push("", `## ${title}`); items.forEach((x) => lines.push(`- ${fmt(x)}`)); }
     };
-    list("Decisions", rec.decisions, (d) => d.text);
-    list("Actions", rec.actions, (a) => `${a.text}${a.owner ? ` → ${a.owner}${a.owner_confirmed ? "" : " (unconfirmed)"}` : ""}${a.due ? ` (due ${a.due})` : ""}`);
-    list("Open questions", rec.questions, (q) => q.text);
+    list("Decisions", items(rec, "decisions", opts), (d) => d.text);
+    list("Actions", items(rec, "actions", opts), (a) => `${a.text}${a.owner ? ` → ${a.owner}${a.owner_confirmed ? "" : " (unconfirmed)"}` : ""}${a.due ? ` (due ${a.due})` : ""}`);
+    list("Open questions", items(rec, "questions", opts), (q) => q.text);
     list("People", (rec.people || []).filter((p) => !p.is_mixed), (p) => `${p.label} — ${p.share_pct}% of speech`);
     return `${lines.join("\n")}\n`;
   }
@@ -292,7 +303,7 @@ const FlowkeyMindMap = (() => {
       row("Category", rec.category || "other");
       if (rec.length_s) row("Length", `${Math.round(rec.length_s / 60)} min`);
       row("People", (rec.people || []).filter((p) => !p.is_mixed).map((p) => `${p.label} (${p.share_pct}%)`).join(", ") || "—");
-      row("Captured", `${(rec.topics || []).length} topics · ${(rec.decisions || []).length} decisions · ${(rec.actions || []).length} actions · ${(rec.questions || []).length} open questions`);
+      row("Captured", `${(rec.topics || []).length} topics · ${items(rec, "decisions", opts).length} decisions · ${items(rec, "actions", opts).length} actions · ${items(rec, "questions", opts).length} open questions`);
       out.append(dl);
       const themes = (rec.themes || []).filter((t) => opts.showSmallTalk || !t.low_value);
       if (themes.length) {
@@ -322,26 +333,26 @@ const FlowkeyMindMap = (() => {
       }
       return out;
     },
-    people(rec) {
+    people(rec, opts) {
       const people = (rec.people || []).filter((p) => !p.is_mixed);
       if (!people.length) return empty("No speakers found.");
       const out = document.createDocumentFragment();
       for (const p of people) {
         out.append(h("h3", `${p.label}${p.is_self ? " (you)" : ""} · ${p.share_pct}% of speech · ${p.turns} turns`, "subhead"));
-        const mine = (rec.actions || []).filter((a) => a.owner && a.owner.toLowerCase() === p.label.toLowerCase());
+        const mine = items(rec, "actions", opts).filter((a) => a.owner && a.owner.toLowerCase() === p.label.toLowerCase());
         out.append(mine.length ? ul(mine, (li, a) => li.append(h("span", a.text))) : empty("No actions assigned."));
       }
       return out;
     },
-    actions(rec) {
+    actions(rec, opts) {
       const out = document.createDocumentFragment();
       out.append(h("h3", "Decisions", "subhead"));
-      out.append((rec.decisions || []).length
-        ? ul(rec.decisions, (li, d) => li.append(h("span", mmss(d.start_s), "mm-time"), h("span", ` ${d.text}`)))
+      out.append(items(rec, "decisions", opts).length
+        ? ul(items(rec, "decisions", opts), (li, d) => li.append(h("span", mmss(d.start_s), "mm-time"), h("span", ` ${d.text}`)))
         : empty("No decisions captured."));
       out.append(h("h3", "Actions", "subhead"));
-      out.append((rec.actions || []).length
-        ? ul(rec.actions, (li, a) => {
+      out.append(items(rec, "actions", opts).length
+        ? ul(items(rec, "actions", opts), (li, a) => {
           li.append(h("span", mmss(a.start_s), "mm-time"), h("span", ` ${a.text}`));
           const o = ownerSpan(a);
           if (o) li.append(o);
@@ -349,20 +360,20 @@ const FlowkeyMindMap = (() => {
         })
         : empty("No actions captured."));
       out.append(h("h3", "Open questions", "subhead"));
-      out.append((rec.questions || []).length
-        ? ul(rec.questions, (li, q) => li.append(h("span", mmss(q.start_s), "mm-time"), h("span", ` ${q.text}`)))
+      out.append(items(rec, "questions", opts).length
+        ? ul(items(rec, "questions", opts), (li, q) => li.append(h("span", mmss(q.start_s), "mm-time"), h("span", ` ${q.text}`)))
         : empty("No open questions captured."));
       return out;
     },
     timeline(rec, opts) {
-      const items = [];
-      visibleTopics(rec, opts.showSmallTalk).forEach((t) => items.push([t.start_s, "🗂", `${t.label}${t.gist ? ` — ${t.gist}` : ""}`]));
-      (rec.decisions || []).forEach((d) => items.push([d.start_s, "✅", d.text]));
-      (rec.actions || []).forEach((a) => items.push([a.start_s, "📌", `${a.text}${ownerText(a)}`]));
-      (rec.questions || []).forEach((q) => items.push([q.start_s, "❓", q.text]));
-      items.sort((a, b) => (a[0] ?? 0) - (b[0] ?? 0));
-      if (!items.length) return empty("Nothing captured.");
-      return ul(items, (li, [s, icon, text]) => li.append(h("span", mmss(s), "mm-time"), h("span", ` ${icon} ${text}`)));
+      const rows = [];
+      visibleTopics(rec, opts.showSmallTalk).forEach((t) => rows.push([t.start_s, "🗂", `${t.label}${t.gist ? ` — ${t.gist}` : ""}`]));
+      items(rec, "decisions", opts).forEach((d) => rows.push([d.start_s, "✅", d.text]));
+      items(rec, "actions", opts).forEach((a) => rows.push([a.start_s, "📌", `${a.text}${ownerText(a)}`]));
+      items(rec, "questions", opts).forEach((q) => rows.push([q.start_s, "❓", q.text]));
+      rows.sort((a, b) => (a[0] ?? 0) - (b[0] ?? 0));
+      if (!rows.length) return empty("Nothing captured.");
+      return ul(rows, (li, [s, icon, text]) => li.append(h("span", mmss(s), "mm-time"), h("span", ` ${icon} ${text}`)));
     },
   };
 

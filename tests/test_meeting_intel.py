@@ -259,17 +259,91 @@ def test_real_items_that_look_like_filler_are_kept(text):
 
 
 def test_the_prompt_example_never_reaches_a_record():
-    # The example's question showed up as an open question in two live meetings.
+    # An earlier example's question showed up in two live meetings, verbatim and then
+    # paraphrased: echoes are dropped by content-word overlap, not exact text.
     class Echo(FakeLLM):
         def run(self, messages, max_tokens):
             out = super().run(messages, max_tokens)
             if messages[0]["content"].startswith("You read ONE section"):
-                out += ("\nQUESTION: Do annual customers keep the old price?"
-                        "\nACTION: Draft the customer announcement | Dana"
-                        "\nDECISION: Raise the base plan price starting October.")
+                out += "\n".join([
+                    "",
+                    "QUESTION: Can the flour delivery arrive before 7 am?",     # verbatim
+                    "QUESTION: Could the flour delivery come before 7am?",      # paraphrase
+                    "ACTION: Order another proofing rack | Priya",
+                    "TOPIC: Bake times | The bakers agree to start the sourdough before 6 am.",
+                ])
             return out
 
     rec = MI.build_intel({"id": "e"}, _meeting_transcript(3), Echo())
     texts = [x["text"] for k in ("decisions", "actions", "questions") for x in rec[k]]
-    assert not any("annual customers" in t or "announcement" in t or "base plan" in t for t in texts)
+    texts += [t["label"] for t in rec["topics"]] + [t["gist"] for t in rec["topics"]]
+    assert not any(w in t.lower() for t in texts for w in ("flour", "proofing", "sourdough"))
     assert any(t.startswith("Open question") for t in texts)          # real items survive
+
+
+@pytest.mark.parametrize("text", [
+    "Schedule the oven maintenance",                 # shares only the 2 words of a 2-word example line
+    "Can the vendor deliver the hardware before Q4?",
+    "Create a detailed finish-by-date schedule",
+    "Raise prices for enterprise customers",
+])
+def test_real_items_are_not_mistaken_for_example_echoes(text):
+    assert not MI._echoes_example(text, MI._example_texts())
+
+
+def test_the_example_is_from_an_unrelated_domain():
+    assert "bakery" in MI.SECTION_EXAMPLE and "never repeat its content" in MI.SECTION_EXAMPLE
+
+
+# ---------- grouping leftovers (live: 3 of 15 topics left out of every group) ---------------
+
+def test_groups_past_the_limit_fold_into_other_instead_of_vanishing():
+    reply = "\n".join(f"GROUP: G{n} | {n}" for n in range(1, 9))     # 8 groups, limit 6
+    themes = MI.parse_clusters(reply, 8)
+    assert [t["label"] for t in themes] == ["G1", "G2", "G3", "G4", "G5", "G6", "Other"]
+    assert themes[-1]["topics"] == [6, 7]
+    assert sorted(i for t in themes for i in t["topics"]) == list(range(8))
+
+
+class _Assigner:
+    model = "fake"
+
+    def __init__(self, reply):
+        self.reply, self.calls = reply, []
+
+    def run(self, messages, max_tokens):
+        self.calls.append(messages[1]["content"])
+        return self.reply
+
+
+def test_leftover_topics_are_placed_in_the_existing_themes():
+    topics = [{"label": f"t{i}"} for i in range(6)]
+    themes = [{"label": "Delivery", "topics": [0, 1], "low_value": False},
+              {"label": "Chat", "topics": [2], "low_value": True},
+              {"label": "Other", "topics": [3, 4, 5], "low_value": False}]
+    llm = _Assigner("4 | Delivery\n5 | **chat**\n6 | Nonsense theme\n4 | Chat")
+    out = MI.assign_leftovers(themes, topics, llm)
+    assert out == [{"label": "Delivery", "topics": [0, 1, 3], "low_value": False},
+                   {"label": "Chat", "topics": [2, 4], "low_value": True},
+                   {"label": "Other", "topics": [5], "low_value": False}]
+    assert "4. t3" in llm.calls[0] and "- Delivery" in llm.calls[0]
+
+
+def test_build_intel_runs_the_leftover_pass_only_when_needed():
+    class Partial(FakeLLM):
+        def run(self, messages, max_tokens):
+            if messages[0]["content"].startswith("Group the numbered"):
+                self.calls.append(("Group", max_tokens))
+                return "GROUP: Delivery | 1, 2 | work"                   # leaves topics 3+ out
+            if messages[0]["content"].startswith("Assign each"):
+                self.calls.append(("Assign", max_tokens))
+                return "\n".join(f"{n} | Delivery" for n in range(3, 10))
+            return super().run(messages, max_tokens)
+
+    rec = MI.build_intel({"id": "p"}, _meeting_transcript(4), Partial())
+    assert [t["label"] for t in rec["themes"]] == ["Delivery"]
+    assert all(t.get("theme") == "Delivery" for t in rec["topics"])
+
+    llm = FakeLLM()                                                     # groups everything itself
+    MI.build_intel({"id": "q"}, _meeting_transcript(4), llm)
+    assert not any(s.startswith("Assign") for s, _ in llm.calls)
